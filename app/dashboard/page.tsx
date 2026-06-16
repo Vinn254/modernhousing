@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 
 interface DashboardStats {
@@ -66,7 +65,6 @@ interface Comment {
 }
 
 export default function DashboardPage() {
-  const searchParams = useSearchParams();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -101,6 +99,7 @@ export default function DashboardPage() {
   const [userRole, setUserRole] = useState('');
   const [roleLoaded, setRoleLoaded] = useState(false);
   const [message, setMessage] = useState('');
+  const [assignedPropertyParam, setAssignedPropertyParam] = useState('');
 
   async function loadDashboard(refresh = false) {
     if (refresh) setRefreshing(true); else setLoading(true);
@@ -134,7 +133,7 @@ export default function DashboardPage() {
       setProperties(propertiesResult.properties ?? []);
 
       if (userRole === 'agent') {
-        const assignedProperty = selectedPropertyId || searchParams.get('property') || localStorage.getItem('agentPropertyId') || '';
+        const assignedProperty = selectedPropertyId || assignedPropertyParam || localStorage.getItem('agentPropertyId') || '';
         const [notificationsResponse, commentsResponse] = await Promise.all([
           fetch(`/api/notifications?propertyId=${encodeURIComponent(assignedProperty)}`),
           fetch(`/api/comments?propertyId=${encodeURIComponent(assignedProperty)}`),
@@ -163,9 +162,10 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const assignedProperty = searchParams.get('property') || localStorage.getItem('agentPropertyId') || '';
+    const assignedProperty = new URLSearchParams(window.location.search).get('property') || localStorage.getItem('agentPropertyId') || '';
+    setAssignedPropertyParam(assignedProperty);
     if (assignedProperty) setSelectedPropertyId(assignedProperty);
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     if (roleLoaded) loadDashboard();
