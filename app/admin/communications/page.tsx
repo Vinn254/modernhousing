@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import AdminTopNav from '../../components/AdminTopNav';
 
 interface Announcement {
   id: string;
@@ -30,12 +31,7 @@ export default function CommunicationsPage() {
             </span>
             Springfield Systems
           </Link>
-          <div className="nav-links">
-            <a href="/admin">Dashboard</a>
-            <a href="/admin/project-managers">Landlords</a>
-            <a href="/admin/tenants">Tenants</a>
-            <a href="/admin/payments">Payments</a>
-          </div>
+          <AdminTopNav variant="admin" />
         </nav>
 
         <div className="hero-inner">
