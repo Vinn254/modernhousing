@@ -15,8 +15,14 @@ export async function POST(request: NextRequest) {
   const { action, email, password, fullName } = body;
 
   if (action === 'create-super-admin') {
-    const { data: existingUser } = await supabaseAdmin.auth.getUserByEmail(email);
-    if (existingUser?.user) {
+    const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+
+    if (usersError) {
+      return NextResponse.json({ message: usersError.message }, { status: 500 });
+    }
+
+    const existingUser = usersData?.users.find((user) => user.email === email);
+    if (existingUser) {
       return NextResponse.json({ message: 'Super admin already exists.' }, { status: 200 });
     }
 

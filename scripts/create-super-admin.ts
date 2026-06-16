@@ -14,8 +14,13 @@ async function createSuperAdmin() {
   const password = 'Vin@2020';
   const fullName = 'Super Admin';
 
-  const { data: existingUser } = await supabaseAdmin.auth.getUserByEmail(email);
-  if (existingUser?.user) {
+  const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+  if (usersError) {
+    console.error('Error listing users:', usersError.message);
+    return;
+  }
+
+  if (usersData?.users.some((user) => user.email === email)) {
     console.log('Super admin already exists.');
     return;
   }
