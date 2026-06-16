@@ -952,8 +952,8 @@ body {
 
 .pricing-section {
   max-width: 1200px;
-  margin: -70px auto 0;
-  padding: 0 28px 90px;
+  margin: 0 auto;
+  padding: 34px 28px 90px;
   position: relative;
   z-index: 2;
 }
