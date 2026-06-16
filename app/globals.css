@@ -349,6 +349,59 @@ body {
 .arrow { transition: transform .2s; }
 .card-cta:hover .arrow { transform: translateX(2px); }
 
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.form-grid .field-group-wide {
+  grid-column: span 2;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 13px;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.form-grid button {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 900;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+  color: #052e1f;
+  transition: all .2s;
+}
+
+.form-grid button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.form-grid button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(16,185,129,0.28);
+}
+
 .card-pm { background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); }
 .pm-visual {
   margin-top: 24px;
@@ -620,6 +673,129 @@ body {
 
 .property-modal {
   width: min(100%, 760px);
+}
+
+.property-page-main {
+  padding-top: 96px;
+}
+
+.property-hero-card {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 34px;
+}
+
+.property-page-title {
+  margin: 0 0 10px;
+  font-size: clamp(34px, 5vw, 56px);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.property-page-subtitle {
+  max-width: 680px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.property-header-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(100px, 1fr));
+  gap: 10px;
+  min-width: 360px;
+}
+
+.property-header-metrics div {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.property-header-metrics span,
+.property-header-metrics strong {
+  display: block;
+}
+
+.property-header-metrics span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.property-header-metrics strong {
+  color: #fff;
+  font-size: 22px;
+}
+
+.property-alert {
+  margin: 0 0 16px;
+}
+
+.property-section {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.property-page-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.property-form-card,
+.property-list-card {
+  min-width: 0;
+}
+
+.property-form-card h3 {
+  margin-bottom: 18px;
+}
+
+.property-form-actions {
+  grid-column: span 2;
+}
+
+.property-detail-card {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+}
+
+.property-detail-card p {
+  margin: 6px 0 14px;
+  color: var(--ink-3);
+}
+
+.property-list-header {
+  margin-bottom: 18px;
+}
+
+.property-list-header h2 {
+  margin: 0;
+}
+
+.property-empty {
+  padding: 42px 16px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.property-table small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-3);
+  font-weight: 500;
 }
 
 
@@ -1306,6 +1482,28 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .property-hero-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .property-header-metrics {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .property-page-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field-group-wide {
+    grid-column: span 1;
+  }
+
   .landlord-add-button {
     width: 100%;
   }
@@ -1531,7 +1729,133 @@ footer {
   color: var(--accent-bright);
 }
 
-/* ========== ADMIN PAGES ========== */
+/* ========== APP HEADER ========== */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  min-height: 72px;
+  background: rgba(250, 250, 250, 0.88);
+  border-bottom: 1px solid rgba(228, 228, 231, 0.8);
+  backdrop-filter: blur(18px);
+}
+
+.app-header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 28px 16px 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.app-logo {
+  color: var(--navy-900);
+  font-weight: 900;
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.menu-toggle {
+  position: fixed;
+  top: 18px;
+  left: 20px;
+  z-index: 80;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(6, 21, 40, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 30px rgba(6, 21, 40, 0.12);
+  color: var(--navy-900);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 90;
+  width: 292px;
+  padding: 88px 18px 24px;
+  background: linear-gradient(180deg, var(--navy-900), var(--navy-800));
+  color: #fff;
+  box-shadow: 24px 0 60px rgba(6, 21, 40, 0.28);
+  transform: translateX(-105%);
+  transition: transform .22s ease;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-header {
+  padding: 0 10px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logo {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.sidebar-nav {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+}
+
+.sidebar-nav a,
+.sidebar-logout {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: rgba(255, 255, 255, 0.82);
+  background: transparent;
+  text-decoration: none;
+  text-align: left;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.sidebar-nav a:hover,
+.sidebar-logout:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-logout {
+  margin-top: 12px;
+  color: #fecaca;
+  background: rgba(220, 38, 38, 0.16);
+}
+
+.sidebar-logout:hover {
+  color: #fff;
+  background: rgba(220, 38, 38, 0.28);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(6, 21, 40, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+
+.overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .card-admin-header {
   background: linear-gradient(135deg, var(--navy-700) 0%, var(--navy-800) 100%);
   color: var(--surface);
