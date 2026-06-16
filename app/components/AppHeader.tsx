@@ -1,84 +1,98 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
+import { supabase } from '../../lib/supabaseClient';
+
+type Role = 'super_admin' | 'admin' | 'landlord' | 'agent' | 'tenant' | 'user';
 
 export default function AppHeader() {
   const pathname = usePathname();
+  const router = useRouter();
+  const menuRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string>('user');
+  const [role, setRole] = useState<Role>('user');
+  const [roleLoaded, setRoleLoaded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+
+  const resolveRole = (currentUser: any): Role => {
+    if (currentUser?.email === 'vin.oumaotieno@gmail.com') return 'super_admin';
+    const metadataRole = currentUser?.user_metadata?.role;
+    if (metadataRole === 'admin') return 'landlord';
+    if (metadataRole === 'super_admin') return 'super_admin';
+    if (metadataRole === 'agent') return 'agent';
+    if (metadataRole === 'tenant') return 'tenant';
+    return 'user';
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-      if (data.user?.email === 'vin.oumaotieno@gmail.com') {
-        setUserRole('super-admin');
-      } else if (data.user?.email?.includes('admin') || data.user?.user_metadata?.role === 'admin') {
-        setUserRole('admin');
-      } else {
-        setUserRole('user');
-      }
+      setUser(data.user ?? null);
+      setRole(resolveRole(data.user));
+      setRoleLoaded(true);
     });
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setRole(resolveRole(session?.user));
+      setRoleLoaded(true);
     });
+
     return () => listener?.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const getInitials = (name: string) => {
-    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+    return name?.split(' ').map((part) => part[0]).join('').toUpperCase() || 'U';
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    setRoleLoaded(false);
     router.push('/');
   };
 
-  const isAdmin = userRole === 'admin' || userRole === 'super-admin';
-  const isSuperAdmin = userRole === 'super-admin';
+  const shouldHideHeader = pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname?.startsWith('/super-admin') || pathname?.startsWith('/admin') || pathname?.startsWith('/tenant');
 
-  // Hide header on auth pages and dashboard pages (they have their own nav)
-  const shouldHideHeader = pathname === '/' || pathname === '/login' || pathname === '/signup' || 
-    pathname?.startsWith('/super-admin') || pathname?.startsWith('/admin');
+  if (shouldHideHeader || !roleLoaded) return null;
 
-  if (shouldHideHeader) {
-    return null;
-  }
+  const isTenant = role === 'tenant';
+  const isAgent = role === 'agent';
+  const isLandlord = role === 'landlord';
+  const isSuperAdmin = role === 'super_admin';
+
+  const dashboardHref = isTenant ? '/tenant/dashboard' : '/dashboard';
+  const dashboardLabel = isTenant ? 'Tenant Dashboard' : isAgent ? 'Agent Dashboard' : 'Landlord Dashboard';
 
   return (
     <>
       {user && (
         <>
-          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>
-            ☰
-          </button>
+          <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">☰</button>
 
           <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
             <div className="sidebar-header">
               <h2 className="sidebar-logo">Springfield</h2>
             </div>
             <nav className="sidebar-nav">
-              <Link href="/dashboard">My Dashboard</Link>
-              <Link href="/properties">Properties</Link>
-              <Link href="/tenants">Tenants</Link>
-              <Link href="/payments">Payments</Link>
+              <Link href={dashboardHref}>{dashboardLabel}</Link>
+              {!isTenant && <Link href="/properties">Properties</Link>}
+              {!isTenant && <Link href="/tenants">Tenants</Link>}
+              {!isTenant && <Link href="/payments">Payments</Link>}
+              {isSuperAdmin && <Link href="/super-admin">Super Admin</Link>}
               <button onClick={handleLogout} className="sidebar-logout">Logout</button>
             </nav>
           </div>
@@ -89,15 +103,21 @@ export default function AppHeader() {
 
       <header className="app-header">
         <div className="app-header-content">
-          <Link href="/" className="app-logo" title="Springfield Systems">Springfield Systems</Link>
+          <Link href={isTenant ? '/tenant/dashboard' : '/'} className="app-logo" title="Springfield Systems">Springfield Systems</Link>
           {user && (
             <div className="header-menu" ref={menuRef}>
-              <button className="header-menu-trigger" onClick={() => setMenuOpen(!menuOpen)}>
+              <button className="header-menu-trigger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Open account menu">
                 <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
               </button>
               {menuOpen && (
                 <div className="menu-dropdown">
-                  <Link href="/dashboard">My Dashboard</Link>
+                  <div style={{ padding: '8px 12px', color: 'var(--ink-3)', fontSize: '12px', borderBottom: '1px solid var(--line-soft)' }}>{user.email}</div>
+                  <Link href={dashboardHref}>{dashboardLabel}</Link>
+                  {!isTenant && <Link href="/properties">Properties</Link>}
+                  {!isTenant && <Link href="/tenants">Tenants</Link>}
+                  {!isTenant && <Link href="/payments">Payments</Link>}
+                  {isSuperAdmin && <Link href="/super-admin">Super Admin</Link>}
+                  {isLandlord && <Link href="/dashboard">Agent Management</Link>}
                   <button onClick={handleLogout}>Logout</button>
                 </div>
               )}

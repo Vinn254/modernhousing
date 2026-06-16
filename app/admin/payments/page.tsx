@@ -34,7 +34,7 @@ export default function PaymentsPage() {
           </Link>
           <div className="nav-links">
             <a href="/admin">Dashboard</a>
-            <a href="/admin/project-managers">Project Managers</a>
+            <a href="/admin/project-managers">Landlords</a>
             <a href="/admin/tenants">Tenants</a>
             <a href="/admin/communications">Announcements</a>
           </div>
@@ -76,7 +76,7 @@ export default function PaymentsPage() {
                     <th style={{ textAlign: 'left', padding: '12px 12px', fontWeight: 600, color: 'var(--ink-2)' }}>Amount</th>
                     <th style={{ textAlign: 'left', padding: '12px 12px', fontWeight: 600, color: 'var(--ink-2)' }}>Date</th>
                     <th style={{ textAlign: 'left', padding: '12px 12px', fontWeight: 600, color: 'var(--ink-2)' }}>Status</th>
-                    <th style={{ textAlign: 'left', padding: '12px 12px', fontWeight: 600, color: 'var(--ink-2)' }}>PM</th>
+                    <th style={{ textAlign: 'left', padding: '12px 12px', fontWeight: 600, color: 'var(--ink-2)' }}>Landlord</th>
                   </tr>
                 </thead>
                 <tbody>

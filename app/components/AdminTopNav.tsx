@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 
-type Role = 'super_admin' | 'admin' | 'agent' | 'project_manager' | 'user';
+type Role = 'super_admin' | 'admin' | 'landlord' | 'agent' | 'tenant' | 'user';
 
 type NavLink = {
   label: string;

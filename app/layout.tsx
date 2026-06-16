@@ -4,7 +4,7 @@ import AppHeader from './components/AppHeader';
 
 export const metadata: Metadata = {
   title: 'Springfield Systems',
-  description: 'Apartment management portal for PMs and agents',
+  description: 'Apartment management portal for landlords, agents, admins, and tenants',
 };
 
 export default function RootLayout({

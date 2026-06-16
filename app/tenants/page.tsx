@@ -1,91 +1,172 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+interface Tenant {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  unit: string;
+  property: string;
+  address?: string;
+  lease_start: string;
+  lease_end: string;
+  deposit_amount: number;
+  created_at?: string;
+}
 
 export default function TenantsPage() {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [propertyId, setPropertyId] = useState('');
   const [unitId, setUnitId] = useState('');
   const [leaseStart, setLeaseStart] = useState('');
   const [leaseEnd, setLeaseEnd] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  async function loadTenants() {
+    const response = await fetch('/api/tenants');
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to load tenants.');
+      setLoading(false);
+      return;
+    }
+    setTenants(result.tenants ?? []);
+    setLoading(false);
+  }
+
+  async function loadProperties() {
+    const response = await fetch('/api/properties');
+    const result = await response.json();
+    if (response.ok) setProperties(result.properties ?? []);
+  }
+
+  useEffect(() => {
+    Promise.all([loadTenants(), loadProperties()]);
+  }, []);
 
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
+    setError('');
 
     const response = await fetch('/api/tenants', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fullName, email, phone, unitId, leaseStart, leaseEnd, depositAmount: Number(depositAmount) }),
+      body: JSON.stringify({ fullName, email, phone, propertyId, unitId, leaseStart, leaseEnd, depositAmount: Number(depositAmount) }),
     });
 
-    if (response.ok) {
-      setMessage('Tenant created successfully.');
-      setFullName('');
-      setEmail('');
-      setPhone('');
-      setUnitId('');
-      setLeaseStart('');
-      setLeaseEnd('');
-      setDepositAmount('');
-    } else {
-      const result = await response.json();
-      setMessage(result.message || 'Unable to create tenant.');
+    const result = await response.json();
+
+    if (!response.ok) {
+      setError(result.message || 'Unable to create tenant.');
+      return;
     }
+
+    setMessage('Tenant created successfully.');
+    setFullName('');
+    setEmail('');
+    setPhone('');
+    setPropertyId('');
+    setUnitId('');
+    setLeaseStart('');
+    setLeaseEnd('');
+    setDepositAmount('');
+    await loadTenants();
+  }
+
+  async function handleRemove(tenantId: string) {
+    if (!confirm('Mark this tenant as relocated and remove the active record?')) return;
+
+    const response = await fetch(`/api/tenants?id=${encodeURIComponent(tenantId)}`, { method: 'DELETE' });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setError(result.message || 'Unable to remove tenant.');
+      return;
+    }
+
+    setMessage('Tenant removed because they relocated.');
+    await loadTenants();
   }
 
   return (
-    <main className="container">
-      <div className="card" style={{ marginBottom: 24 }}>
-        <header className="header">
-          <div>
-            <p className="heading">Tenants</p>
-            <p className="subheading">Add tenants and manage lease details</p>
-          </div>
-        </header>
+    <main className="container" style={{ padding: '34px 0 80px' }}>
+      <div className="card-admin-header">
+        <p className="heading">Tenants</p>
+        <p className="subheading">Create tenant records, assign units, and manage active leases.</p>
       </div>
 
-      <div className="card" style={{ maxWidth: '700px' }}>
-        <form onSubmit={handleCreate} className="grid" style={{ gap: 16 }}>
-          <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-            <label style={{ gridColumn: 'span 2' }}>
-              Tenant full name
-              <input value={fullName} onChange={(event) => setFullName(event.target.value)} required placeholder="John Doe" />
-            </label>
-            <label>
-              Email address
-              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="tenant@example.com" />
-            </label>
-            <label>
-              Phone number
-              <input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+1 (555) 123-4567" />
-            </label>
-            <label>
-              Unit ID
-              <input value={unitId} onChange={(event) => setUnitId(event.target.value)} required placeholder="A-101" />
-            </label>
-            <label>
-              Lease start
-              <input type="date" value={leaseStart} onChange={(event) => setLeaseStart(event.target.value)} required />
-            </label>
-            <label>
-              Lease end
-              <input type="date" value={leaseEnd} onChange={(event) => setLeaseEnd(event.target.value)} required />
-            </label>
-            <label style={{ gridColumn: 'span 2' }}>
-              Security deposit amount
-              <input type="number" value={depositAmount} onChange={(event) => setDepositAmount(event.target.value)} placeholder="0" />
-            </label>
-          </div>
+      {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
+      {error && <p style={{ color: '#dc2626', fontWeight: 700, marginBottom: 16 }}>{error}</p>}
 
-          {message ? <p style={{ color: 'var(--accent)', fontWeight: 500 }}>{message}</p> : null}
+      <section style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 20, alignItems: 'start' }}>
+        <div className="card">
+          <div className="card-label">Tenant Setup</div>
+          <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
+          <form onSubmit={handleCreate} className="form-grid">
+            <input value={fullName} onChange={(event) => setFullName(event.target.value)} required placeholder="Tenant full name" />
+            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="Tenant email" />
+            <input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Phone" />
+            <select value={propertyId} onChange={(event) => setPropertyId(event.target.value)} required>
+              <option value="">Select property</option>
+              {properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}
+            </select>
+            <input value={unitId} onChange={(event) => setUnitId(event.target.value)} required placeholder="Unit name / number" />
+            <input type="date" value={leaseStart} onChange={(event) => setLeaseStart(event.target.value)} required />
+            <input type="date" value={leaseEnd} onChange={(event) => setLeaseEnd(event.target.value)} required />
+            <input type="number" value={depositAmount} onChange={(event) => setDepositAmount(event.target.value)} placeholder="Deposit" />
+            <button type="submit" style={{ gridColumn: 'span 2' }}>Add Tenant</button>
+          </form>
+        </div>
 
-          <button type="submit">Create Tenant</button>
-        </form>
-      </div>
+        <div className="card">
+          <div className="card-label">Tenant Records</div>
+          <h3 style={{ marginBottom: 16 }}>All Tenants</h3>
+          {loading ? <p style={{ color: 'var(--ink-3)' }}>Loading tenants…</p> : tenants.length === 0 ? (
+            <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--line)' }}>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Tenant</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Unit</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Lease</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Deposit</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tenants.map((tenant) => (
+                    <tr key={tenant.id} style={{ borderBottom: '1px solid var(--line-soft)' }}>
+                      <td style={{ padding: '14px 12px' }}>
+                        <strong>{tenant.full_name}</strong>
+                        <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{tenant.email}</div>
+                        <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{tenant.property}</div>
+                      </td>
+                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.unit}</td>
+                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.lease_start} → {tenant.lease_end}</td>
+                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.deposit_amount}</td>
+                      <td style={{ padding: '14px 12px' }}>
+                        <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(220,38,38,0.1)', color: '#7f1212' }} onClick={() => handleRemove(tenant.id)}>Mark Relocated</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
     </main>
   );
 }

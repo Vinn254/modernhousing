@@ -32,7 +32,7 @@ export default function CommunicationsPage() {
           </Link>
           <div className="nav-links">
             <a href="/admin">Dashboard</a>
-            <a href="/admin/project-managers">Project Managers</a>
+            <a href="/admin/project-managers">Landlords</a>
             <a href="/admin/tenants">Tenants</a>
             <a href="/admin/payments">Payments</a>
           </div>
@@ -114,7 +114,7 @@ export default function CommunicationsPage() {
                 <label>Audience</label>
                 <select>
                   <option>All Users</option>
-                  <option>Project Managers</option>
+                  <option>Landlords</option>
                   <option>All Tenants</option>
                 </select>
               </div>

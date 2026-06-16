@@ -19,10 +19,7 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
 
     if (signUpError || !data.user) {
       setError(signUpError?.message ?? 'Unable to create account.');
@@ -33,12 +30,7 @@ export default function SignupPage() {
     const response = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: data.user.id,
-        organizationName,
-        managerName,
-        email,
-      }),
+      body: JSON.stringify({ userId: data.user.id, organizationName, managerName, email }),
     });
 
     const result = await response.json();
@@ -48,66 +40,44 @@ export default function SignupPage() {
       return;
     }
 
-    router.push('/dashboard');
+    router.push('/admin');
   }
 
   return (
     <main className="container">
-      <div className="hero" style={{ padding: '40px 20px' }}>
-        <h1>Create Account</h1>
-        <p>Register as a project manager to manage properties, tenants, and payments.</p>
+      <div className="hero" style={{ padding: '40px 20px 140px' }}>
+        <h1>Create Landlord Account</h1>
+        <p>Register a landlord workspace to manage properties, agents, tenants, and payments.</p>
       </div>
 
-      <div className="card" style={{ maxWidth: '480px', margin: '0 auto' }}>
-        <h2 style={{ marginTop: 0, color: 'var(--dark-blue-accent)', marginBottom: 8 }}>Project Manager Registration</h2>
+      <div className="card" style={{ maxWidth: '520px', margin: '-80px auto 0' }}>
+        <h2 style={{ marginTop: 0, color: 'var(--dark-blue-accent)', marginBottom: 8 }}>Landlord Registration</h2>
 
         <form onSubmit={handleSubmit} className="grid" style={{ gap: 16, marginTop: 8 }}>
           <label>
             Organization name
-            <input
-              value={organizationName}
-              onChange={(event) => setOrganizationName(event.target.value)}
-              required
-              placeholder="My Property Group"
-            />
+            <input value={organizationName} onChange={(event) => setOrganizationName(event.target.value)} required placeholder="Springfield Properties" />
           </label>
 
           <label>
             Full name
-            <input
-              value={managerName}
-              onChange={(event) => setManagerName(event.target.value)}
-              required
-              placeholder="Jane Doe"
-            />
+            <input value={managerName} onChange={(event) => setManagerName(event.target.value)} required placeholder="Jane Doe" />
           </label>
 
           <label>
             Email address
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              placeholder="pm@example.com"
-            />
+            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="landlord@example.com" />
           </label>
 
           <label>
             Password
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              placeholder="Choose a secure password"
-            />
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="Choose a secure password" />
           </label>
 
           {error ? <p style={{ color: '#ef4444', fontSize: '0.9rem' }}>{error}</p> : null}
 
           <button type="submit" disabled={loading}>
-            {loading ? 'Creating account…' : 'Sign Up as PM'}
+            {loading ? 'Creating account…' : 'Create Landlord Account'}
           </button>
         </form>
 
