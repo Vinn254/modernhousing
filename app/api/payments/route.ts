@@ -10,6 +10,27 @@ if (!supabaseUrl || !serviceRoleKey) {
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+export async function GET() {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('payments')
+      .select('*, tenants(full_name, email)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const payments = (data ?? []).map((payment: any) => ({
+      ...payment,
+      tenant_name: payment.tenants?.full_name ?? payment.tenant ?? '',
+      tenant_email: payment.tenants?.email ?? '',
+    }));
+
+    return NextResponse.json({ payments });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message ?? 'Unable to load payments.' }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { tenantId, description, transactionType, amount, balanceRemaining } = body;

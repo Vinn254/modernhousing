@@ -29,9 +29,19 @@ export default function AppHeader() {
   };
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user ?? null);
-      setRole(resolveRole(data.user));
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        setUser(data.session.user);
+        setRole(resolveRole(data.session.user));
+      }
+      setRoleLoaded(true);
+    });
+
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (!error && data.user) {
+        setUser(data.user);
+        setRole(resolveRole(data.user));
+      }
       setRoleLoaded(true);
     });
 

@@ -11,9 +11,9 @@ export default function HomePage() {
             </span>
             Springfield Systems
           </Link>
-          <div className="nav-links">
-            <a href="/login">Log In</a>
-            <a href="/signup" className="nav-cta">Create Landlord Account</a>
+          <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <a href="/pricing" className="nav-pricing-link" style={{ color: '#fff', textDecoration: 'none', fontWeight: 800 }}>Pricing</a>
+            <a href="/login" className="nav-login" style={{ display: 'inline-flex', alignItems: 'center', padding: '9px 16px', borderRadius: '999px', background: 'linear-gradient(135deg, #10b981, #34d399)', border: '1px solid rgba(52,211,153,0.35)', fontSize: 13, fontWeight: 800, color: '#052e1f', textDecoration: 'none', boxShadow: '0 6px 18px rgba(16,185,129,0.28)' }}>Log In</a>
           </div>
         </nav>
 
@@ -22,8 +22,8 @@ export default function HomePage() {
           <h1>Landlord, agent, and tenant workflows in one secure portal.</h1>
           <p className="hero-sub">Manage properties, assign agents, onboard tenants, collect payments, send notices, and track house problems from a single dashboard.</p>
           <div className="hero-ctas">
-            <Link href="/signup" className="btn btn-primary">Start as Landlord</Link>
-            <Link href="/login" className="btn btn-ghost">Log In</Link>
+            <Link href="/login" className="btn btn-primary">Log In</Link>
+            <Link href="/tenant/register" className="btn btn-ghost">Tenant Registration</Link>
           </div>
         </div>
 
@@ -40,7 +40,7 @@ export default function HomePage() {
             <div className="card-label"><span className="badge badge-pm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Landlord Workspace</div>
             <h3>Control your property portfolio.</h3>
             <p>Create properties, assign agents, add tenants, review payments, and monitor balances from the landlord dashboard.</p>
-            <Link href="/signup" className="card-cta">Create Landlord Account <svg className="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></Link>
+            <Link href="/login" className="card-cta">Landlord Login <svg className="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></Link>
           </article>
 
           <article className="card card-agent">
@@ -77,8 +77,9 @@ export default function HomePage() {
             Springfield Systems
           </div>
           <div className="footer-links">
+            <a href="/">Home</a>
+            <a href="/pricing">Pricing</a>
             <a href="/login">Log In</a>
-            <a href="/signup">Landlord Signup</a>
             <a href="/tenant/register">Tenant Registration</a>
           </div>
           <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>

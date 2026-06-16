@@ -1,9 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../lib/supabaseClient';
+
+type UserRole = 'admin' | 'agent' | 'tenant' | 'super_admin';
+
+const roleRoutes: Record<UserRole, string> = {
+  admin: '/admin',
+  agent: '/dashboard',
+  tenant: '/tenant/dashboard',
+  super_admin: '/super-admin',
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,55 +29,85 @@ export default function LoginPage() {
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (signInError) {
-      setError(signInError.message);
+      setError(signInError.message === 'FetchError: Failed to fetch' ? 'Unable to connect to Springfield Systems. Check your internet connection and Supabase configuration.' : signInError.message);
       setLoading(false);
       return;
     }
 
-    const role = data.user?.user_metadata?.role;
-    if (role === 'super_admin') {
-      router.push('/super-admin');
-    } else if (role === 'admin') {
-      router.push('/admin');
-    } else if (role === 'agent') {
-      router.push('/dashboard');
-    } else if (role === 'tenant') {
-      router.push('/tenant/dashboard');
-    } else {
-      router.push('/dashboard');
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      setError('Login succeeded, but the session could not be saved. Please try again.');
+      setLoading(false);
+      return;
     }
+
+    const role = data.user?.user_metadata?.role ?? 'admin';
+    router.push(roleRoutes[role as UserRole] ?? roleRoutes.admin);
   }
 
   return (
     <main className="auth-page">
-      <div className="auth-card">
-        <div className="auth-header">
-          <div className="auth-badge">Springfield Systems</div>
-          <h2>Welcome Back</h2>
-          <p>Log in to access your landlord, agent, admin, or tenant workspace.</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="field-group">
-            <label htmlFor="email">Email address</label>
-            <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="you@example.com" />
+      <div className="auth-layout">
+        <section className="auth-visual" aria-hidden="true">
+          <div className="auth-brand-lockup">
+            <span className="auth-logo">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+            </span>
+            Springfield Systems
           </div>
 
-          <div className="field-group">
-            <label htmlFor="password">Password</label>
-            <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="••••••••" />
+          <div className="auth-visual-copy">
+            <span className="auth-eyebrow">Housing Management Platform</span>
+            <h1>Manage properties, tenants, agents, and payments from one workspace.</h1>
+            <p>Secure access for landlords, agents, and tenants with role-based dashboards.</p>
           </div>
 
-          {error && <p className="auth-error">{error}</p>}
+          <div className="auth-stats">
+            <div>
+              <strong>Landlords</strong>
+              <span>Property and subscription access</span>
+            </div>
+            <div>
+              <strong>Agents</strong>
+              <span>Property and tenant coordination</span>
+            </div>
+            <div>
+              <strong>Tenants</strong>
+              <span>Rent, comments, and notices</span>
+            </div>
+          </div>
+        </section>
 
-          <button type="submit" className="auth-submit" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign In'}
-          </button>
-        </form>
+        <section className="auth-panel">
+          <div className="auth-header">
+            <span className="auth-badge">Welcome Back</span>
+            <h2>Sign in to Springfield Systems</h2>
+            <p>Use your landlord, agent, or tenant credentials to continue.</p>
+          </div>
 
-        <p className="auth-alt">
-          Don&apos;t have an account? <Link href="/signup">Create landlord account</Link> · <Link href="/tenant/register">Tenant registration</Link>
-        </p>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <div className="field-group">
+              <label htmlFor="email">Email address</label>
+              <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="you@example.com" />
+            </div>
+
+            <div className="field-group">
+              <label htmlFor="password">Password</label>
+              <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="••••••••" />
+            </div>
+
+            {error && <p className="auth-error">{error}</p>}
+
+            <button type="submit" className="auth-submit" disabled={loading}>
+              {loading ? 'Signing in…' : 'Sign In'}
+            </button>
+          </form>
+
+          <p className="auth-alt">
+            Need tenant access? <Link href="/tenant/register">Tenant registration</Link>
+          </p>
+        </section>
       </div>
     </main>
   );

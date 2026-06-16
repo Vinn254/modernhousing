@@ -19,7 +19,6 @@ export default function AnalyticsPage() {
             <a href="/super-admin/admins">Admins</a>
             <a href="/super-admin/agents">Agents</a>
             <a href="/super-admin/properties">Properties</a>
-            <a href="/super-admin/tenants">Tenants</a>
             <a href="/super-admin/payments">Payments</a>
           </div>
         </nav>
@@ -55,13 +54,13 @@ export default function AnalyticsPage() {
 
           <article className="card" style={{ gridColumn: 'span 4' }}>
             <div className="card-label">
-              <span className="badge badge-agent" style={{ background: 'var(--amber)' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg>
+              <span className="badge" style={{ background: 'var(--rose)' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               </span>
-              Tenants
+              Overdue Subscriptions
             </div>
-            <h3 style={{ fontSize: '36px', fontWeight: 700, margin: '8px 0 4px', color: 'var(--amber)' }}>156</h3>
-            <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '14px' }}>Currently renting</p>
+            <h3 style={{ fontSize: '36px', fontWeight: 700, margin: '8px 0 4px', color: 'var(--rose)' }}>24</h3>
+            <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '14px' }}>Landlord renewals due</p>
           </article>
 
           <article className="card" style={{ gridColumn: 'span 4' }}>

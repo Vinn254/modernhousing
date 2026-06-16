@@ -63,7 +63,50 @@ create table payments (
   created_at timestamp with time zone default now()
 );
 
+create table subscriptions (
+  id uuid primary key default uuid_generate_v4(),
+  admin_id uuid,
+  admin_name text not null,
+  email text not null,
+  plan text not null check (plan in ('monthly', 'quarterly', 'yearly')),
+  amount numeric(12,2) not null default 0,
+  status text not null default 'paid' check (status in ('paid', 'pending', 'overdue', 'expired', 'active')),
+  start_date date,
+  expiry_date date,
+  paid_at timestamp with time zone,
+  created_at timestamp with time zone default now()
+);
+
+create table notifications (
+  id uuid primary key default uuid_generate_v4(),
+  tenant_id uuid references tenants(id) on delete cascade,
+  property_id uuid references properties(id) on delete cascade,
+  agent_id uuid,
+  recipient text not null default 'tenant' check (recipient in ('tenant', 'landlord')),
+  admin_id uuid,
+  admin_name text,
+  admin_email text,
+  type text not null default 'overdue',
+  message text not null,
+  status text not null default 'sent',
+  created_at timestamp with time zone default now()
+);
+
+create table comments (
+  id uuid primary key default uuid_generate_v4(),
+  tenant_id uuid references tenants(id) on delete cascade,
+  property_id uuid references properties(id) on delete cascade,
+  recipient_role text not null,
+  recipient_id uuid,
+  message text not null,
+  status text not null default 'open',
+  created_at timestamp with time zone default now()
+);
+
 create index on properties (organization_id);
 create index on units (property_id);
 create index on tenants (unit_id);
 create index on payments (tenant_id);
+create index on notifications (recipient);
+create index on notifications (admin_id);
+create index on notifications (created_at);

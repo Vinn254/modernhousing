@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import AdminTopNav from '../../components/AdminTopNav';
 
 interface Property {
   id: string;
@@ -59,13 +60,7 @@ export default function PropertiesPage() {
             </span>
             Springfield Systems
           </Link>
-          <div className="nav-links">
-            <a href="/super-admin">Dashboard</a>
-            <a href="/super-admin/admins">Admins</a>
-            <a href="/super-admin/agents">Agents</a>
-            <a href="/super-admin/tenants">Tenants</a>
-            <a href="/super-admin/payments">Payments</a>
-          </div>
+          <AdminTopNav variant="super" />
         </nav>
 
         <div className="hero-inner">

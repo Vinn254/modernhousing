@@ -182,6 +182,38 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await requireJson(request);
+    const userId = String(body.userId ?? '').trim();
+    const fullName = String(body.fullName ?? '').trim();
+    const status = body.status === 'inactive' ? 'inactive' : 'active';
+
+    if (!userId) {
+      return badRequest('Admin ID is required.');
+    }
+
+    const users = await getAllAdminUsers();
+    const user = users.find((item) => item.id === userId);
+    if (!user) {
+      return NextResponse.json({ message: 'Administrator not found.' }, { status: 404 });
+    }
+
+    const role: AdminRole = user.user_metadata?.role === 'super_admin' ? 'super_admin' : 'admin';
+    const updated = await updateAdminUser({
+      userId,
+      fullName: fullName || user.user_metadata?.full_name || user.email,
+      role,
+    });
+
+    const profile = await upsertProfile(userId, fullName || user.user_metadata?.full_name || user.email || '', user.email, role, status);
+
+    return NextResponse.json({ admin: normalizeAdmin(updated, profile) });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message ?? 'Unable to update administrator.' }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const userId = request.nextUrl.searchParams.get('id');
