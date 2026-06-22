@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function TenantLayout({
@@ -10,8 +10,11 @@ export default function TenantLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname === '/tenant/register') return;
+    
     const checkTenant = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -25,7 +28,7 @@ export default function TenantLayout({
       }
     };
     checkTenant();
-  }, [router]);
+  }, [router, pathname]);
 
   return <>{children}</>;
 }
