@@ -105,32 +105,32 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { propertyId, unitNumber, rentAmount, size, agentEmail } = body;
+    try {
+      const body = await request.json();
+      const { propertyId, unitNumber, rentAmount, size, agentEmail, occupancyStatus } = body;
 
-    if (!propertyId || !unitNumber) {
-      return badRequest('Property ID and unit number are required.');
+      if (!propertyId || !unitNumber) {
+        return badRequest('Property ID and unit number are required.');
+      }
+
+      const result = await supabaseAdmin.from('units').insert({
+        property_id: propertyId,
+        unit_number: unitNumber,
+        rent_amount: rentAmount ?? 0,
+        size,
+        agent_email: agentEmail,
+        occupancy_status: occupancyStatus ?? 'vacant',
+      }).select().single();
+
+      if (result.error) {
+        return requestError(result.error);
+      }
+
+      return NextResponse.json({ unit: result.data, message: 'Unit created.' }, { status: 201 });
+    } catch (error: any) {
+      return NextResponse.json({ message: error.message ?? 'Unable to create unit.' }, { status: 500 });
     }
-
-    const result = await supabaseAdmin.from('units').insert({
-      property_id: propertyId,
-      unit_number: unitNumber,
-      rent_amount: rentAmount ?? 0,
-      size,
-      agent_email: agentEmail,
-      occupancy_status: 'vacant',
-    }).select().single();
-
-    if (result.error) {
-      return requestError(result.error);
-    }
-
-    return NextResponse.json({ unit: result.data, message: 'Unit created.' }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ message: error.message ?? 'Unable to create unit.' }, { status: 500 });
   }
-}
 
 export async function PATCH(request: NextRequest) {
   try {

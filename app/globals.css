@@ -1510,6 +1510,12 @@ body {
   filter: saturate(1.08);
 }
 
+.dashboard-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
 @media (max-width: 900px) {
   .admin-nav-links {
     max-width: 100%;
@@ -1548,46 +1554,10 @@ body {
 
   .property-hero-card {
     align-items: flex-start;
-    flex-direction: column;
   }
 
-  .property-header-metrics {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .property-page-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .field-group-wide {
-    grid-column: span 1;
-  }
-
-  .landlord-add-button {
-    width: 100%;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .composer-controls {
-    grid-template-columns: 1fr;
-  }
-
-  .pricing-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .pricing-card,
-  .pricing-card.popular {
-    transform: none;
-    min-height: auto;
+  .dashboard-section-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -1800,12 +1770,8 @@ footer {
 .app-header {
   position: sticky;
   top: 0;
-  z-index: 50;
-  min-height: 72px;
-  background: linear-gradient(90deg, var(--navy-900), var(--navy-800));
-  color: #fff;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  backdrop-filter: blur(18px);
+  z-index: 100;
+  background: var(--navy-800);
 }
 
 .app-header-content {

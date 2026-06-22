@@ -12,6 +12,7 @@ create table profiles (
   user_id uuid references auth.users(id) on delete cascade,
   full_name text not null,
   email text not null,
+  phone text,
   role text not null check (role in ('super_admin', 'admin', 'project_manager', 'agent')),
   organization_id uuid references organizations(id) on delete set null,
   status text not null default 'active' check (status in ('active', 'inactive', 'pending')),

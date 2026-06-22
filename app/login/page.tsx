@@ -22,6 +22,9 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<string>('');
   const [paying, setPaying] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
   const subscribe = searchParams.get('subscribe');
@@ -87,6 +90,23 @@ function LoginForm() {
     } finally {
       setPaying(false);
     }
+  }
+
+  async function handleForgotEmail(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setForgotMessage('');
+    setError('');
+    setForgotLoading(true);
+
+    const response = await fetch('/api/auth/forgot-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: forgotEmail }),
+    });
+
+    const result = await response.json();
+    setForgotMessage(result.message);
+    setForgotLoading(false);
   }
 
   if (restricted || subscribe) {
@@ -206,6 +226,23 @@ function LoginForm() {
           <p className="auth-alt">
             Need tenant access? <Link href="/tenant/register">Tenant registration</Link>
           </p>
+
+          <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--line)' }}>
+            <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--ink)' }}>Forgot your email?</p>
+            <form onSubmit={handleForgotEmail} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="email"
+                value={forgotEmail}
+                onChange={(event) => setForgotEmail(event.target.value)}
+                placeholder="Enter your email"
+                style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid var(--line)', fontSize: 14 }}
+              />
+              <button type="submit" disabled={forgotLoading} className="btn btn-ghost" style={{ whiteSpace: 'nowrap' }}>
+                {forgotLoading ? 'Checking…' : 'Send Reminder'}
+              </button>
+            </form>
+            {forgotMessage && <p style={{ fontSize: 12, marginTop: 8, color: 'var(--accent)' }}>{forgotMessage}</p>}
+          </div>
         </section>
       </div>
     </main>

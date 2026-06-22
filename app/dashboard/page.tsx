@@ -396,11 +396,11 @@ export default function DashboardPage() {
 
       {isAgent && (
         <>
-          <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
-            <div className="card">
-              <div className="card-label">Agent Tenant Management</div>
-              <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
-              <form onSubmit={handleAgentTenantCreate} className="form-grid">
+<section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
+             <div className="card">
+               <div className="card-label">Agent Tenant Management</div>
+               <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
+               <form onSubmit={handleAgentTenantCreate} className="form-grid">
                 <input value={agentTenantName} onChange={(event) => setAgentTenantName(event.target.value)} required placeholder="Tenant name" />
                 <input type="email" value={agentTenantEmail} onChange={(event) => setAgentTenantEmail(event.target.value)} required placeholder="Tenant email" />
                 <input value={agentTenantPhone} onChange={(event) => setAgentTenantPhone(event.target.value)} placeholder="Phone" />
@@ -451,11 +451,11 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          </section>
+</section>
 
-          <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
-            <div className="card">
-              <div className="card-label">Overdue Notifications</div>
+           <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
+             <div className="card">
+               <div className="card-label">Overdue Notifications</div>
               <h3 style={{ marginBottom: 16 }}>Send Notice</h3>
               <form onSubmit={handleSendNotification} className="form-grid">
                 <select value={notificationTenantId} onChange={(event) => setNotificationTenantId(event.target.value)} required>
@@ -492,10 +492,10 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          {!isAgent && (
-            <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
-              <div className="card">
-                <div className="card-label">Properties and Agents</div>
+{!isAgent && (
+             <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
+               <div className="card">
+                 <div className="card-label">Properties and Agents</div>
                 <h3 style={{ marginBottom: 16 }}>Add Property</h3>
                 <form onSubmit={handleAddProperty} className="form-grid" style={{ marginBottom: 24 }}>
                   <input value={propertyName} onChange={(event) => setPropertyName(event.target.value)} required placeholder="Property name" />

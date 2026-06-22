@@ -26,7 +26,7 @@ export default function UnitsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [form, setForm] = useState({ propertyId: '', unitNumber: '', rentAmount: '', size: '', agentEmail: '' });
+  const [form, setForm] = useState({ propertyId: '', unitNumber: '', rentAmount: '', size: '', agentEmail: '', occupancyStatus: 'vacant' });
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -94,7 +94,7 @@ export default function UnitsPage() {
     }
 
     setMessage(editingUnit ? 'Unit updated.' : 'Unit added.');
-    setForm({ propertyId: '', unitNumber: '', rentAmount: '', size: '', agentEmail: '' });
+    setForm({ propertyId: '', unitNumber: '', rentAmount: '', size: '', agentEmail: '', occupancyStatus: 'vacant' });
     setEditingUnit(null);
     await loadUnits();
   }
@@ -112,12 +112,12 @@ export default function UnitsPage() {
 
   function handleEdit(unit: Unit) {
     setEditingUnit(unit);
-    setForm({ propertyId: unit.property_id, unitNumber: unit.unit_number, rentAmount: String(unit.rent_amount), size: unit.size ?? '', agentEmail: unit.agent_email ?? '' });
+    setForm({ propertyId: unit.property_id, unitNumber: unit.unit_number, rentAmount: String(unit.rent_amount), size: unit.size ?? '', agentEmail: unit.agent_email ?? '', occupancyStatus: unit.occupancy_status ?? 'vacant' });
     scrollToForm();
   }
 
   function resetForm() {
-    setForm({ propertyId: '', unitNumber: '', rentAmount: '', size: '', agentEmail: '' });
+    setForm({ propertyId: '', unitNumber: '', rentAmount: '', size: '', agentEmail: '', occupancyStatus: 'vacant' });
     setEditingUnit(null);
     setMessage('');
     setError('');
@@ -149,6 +149,10 @@ export default function UnitsPage() {
                 <input type="number" value={form.rentAmount} onChange={e => setForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount" />
                 <input value={form.size} onChange={e => setForm(f => ({ ...f, size: e.target.value }))} placeholder="Size / description" />
                 <input value={form.agentEmail} onChange={e => setForm(f => ({ ...f, agentEmail: e.target.value }))} placeholder="Agent email" />
+                <select value={form.occupancyStatus} onChange={e => setForm(f => ({ ...f, occupancyStatus: e.target.value }))}>
+                  <option value="vacant">Vacant</option>
+                  <option value="occupied">Occupied</option>
+                </select>
                 <button type="submit">{editingUnit ? 'Update Unit' : 'Add Unit'}</button>
                 {editingUnit && <button type="button" className="secondary-button" onClick={resetForm}>Cancel Edit</button>}
               </form>
