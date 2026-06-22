@@ -62,7 +62,7 @@ export default function AppHeader() {
     router.push('/');
   };
 
-  const shouldHideHeader = pathname === '/' || pathname === '/login' || pathname === '/signup';
+  const shouldHideHeader = pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/reset-password' || pathname.startsWith('/tenant/register');
 
   if (shouldHideHeader || !roleLoaded) return null;
 
