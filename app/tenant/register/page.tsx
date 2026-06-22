@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import TopRightLogout from '../../components/TopRightLogout';
 
 export default function TenantRegisterPage() {
   const [email, setEmail] = useState('');
@@ -46,31 +45,24 @@ export default function TenantRegisterPage() {
 
   return (
     <main className="auth-page">
-      <TopRightLogout />
-      <div className="login-layout">
-        <div className="login-intro">
-          <div className="intro-badge">Tenant Portal</div>
-          <h1>Activate your tenant account.</h1>
-          <p>Use the same email your agent or landlord used when adding you as a tenant. You can set your own password here.</p>
-          <div className="intro-points">
-            <div className="intro-point">
-              <strong>Registered by agent</strong>
-              <span>Your tenant email must already exist in the tenant records.</span>
-            </div>
-            <div className="intro-point">
-              <strong>Set your password</strong>
-              <span>Create a password you will use to sign in to the tenant dashboard.</span>
-            </div>
-            <div className="intro-point">
-              <strong>Access your home portal</strong>
-              <span>View apartment details, payments, notices, and raise complaints.</span>
-            </div>
+      <div className="auth-layout">
+        <section className="auth-visual" aria-hidden="true">
+          <div className="auth-brand-lockup">
+            <span className="auth-logo">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+            </span>
+            Springfield Systems
           </div>
-        </div>
+          <div className="auth-visual-copy">
+            <span className="auth-eyebrow">Tenant Portal</span>
+            <h1>Activate your tenant account.</h1>
+            <p>Use the same email your agent or landlord used when adding you as a tenant. You can set your own password here.</p>
+          </div>
+        </section>
 
-        <div className="auth-card login-card">
+        <section className="auth-panel">
           <div className="auth-header">
-            <div className="auth-badge">Tenant Registration</div>
+            <span className="auth-badge">Tenant Registration</span>
             <h2>Create tenant login</h2>
             <p>Enter your registered tenant email and choose a password.</p>
           </div>
@@ -119,7 +111,7 @@ export default function TenantRegisterPage() {
           <p className="auth-alt">
             Already activated? <Link href="/login">Sign in as tenant</Link>
           </p>
-        </div>
+        </section>
       </div>
     </main>
   );
