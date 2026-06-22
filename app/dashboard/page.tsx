@@ -30,6 +30,8 @@ interface Payment {
   amount: number;
   balance_remaining: number;
   created_at: string;
+  transaction_type: string;
+  description: string;
 }
 
 interface Agent {
@@ -62,6 +64,18 @@ interface Comment {
   message: string;
   status: string;
   created_at: string;
+}
+
+interface UtilityPayment {
+  id: string;
+  tenant: string;
+  tenant_email: string;
+  property: string;
+  amount: number;
+  balance_remaining: number;
+  created_at: string;
+  transaction_type: string;
+  description: string;
 }
 
 export default function DashboardPage() {
@@ -100,31 +114,35 @@ export default function DashboardPage() {
   const [roleLoaded, setRoleLoaded] = useState(false);
   const [message, setMessage] = useState('');
   const [assignedPropertyParam, setAssignedPropertyParam] = useState('');
+  const [utilityPayments, setUtilityPayments] = useState<UtilityPayment[]>([]);
+  const [utilityTenantId, setUtilityTenantId] = useState('');
+  const [utilityType, setUtilityType] = useState('water');
+  const [utilityAmount, setUtilityAmount] = useState('');
+  const [utilityDescription, setUtilityDescription] = useState('');
+  const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'];
 
   async function loadDashboard(refresh = false) {
     if (refresh) setRefreshing(true); else setLoading(true);
     setError('');
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+
       const [statsResponse, tenantsResponse, paymentsResponse, agentsResponse, propertiesResponse] = await Promise.all([
-        fetch('/api/dashboard' + (selectedPropertyId ? `?propertyId=${encodeURIComponent(selectedPropertyId)}` : '')),
-        fetch('/api/tenants'),
-        fetch('/api/payments'),
-        fetch('/api/agents'),
-        fetch('/api/properties'),
+        fetch('/api/dashboard' + (selectedPropertyId ? `?propertyId=${encodeURIComponent(selectedPropertyId)}` : ''), { headers }).catch(() => null),
+        fetch('/api/tenants', { headers }).catch(() => null),
+        fetch('/api/payments', { headers }).catch(() => null),
+        fetch('/api/agents', { headers }).catch(() => null),
+        fetch('/api/properties', { headers }).catch(() => null),
       ]);
 
-      const statsResult = await statsResponse.json();
-      const tenantsResult = await tenantsResponse.json();
-      const paymentsResult = await paymentsResponse.json();
-      const agentsResult = await agentsResponse.json();
-      const propertiesResult = await propertiesResponse.json();
-
-      if (!statsResponse.ok) throw new Error(statsResult.message ?? 'Unable to load dashboard analytics.');
-      if (!tenantsResponse.ok) throw new Error(tenantsResult.message ?? 'Unable to load tenants.');
-      if (!paymentsResponse.ok) throw new Error(paymentsResult.message ?? 'Unable to load payments.');
-      if (!agentsResponse.ok) throw new Error(agentsResult.message ?? 'Unable to load agents.');
-      if (!propertiesResponse.ok) throw new Error(propertiesResult.message ?? 'Unable to load properties.');
+      const statsResult = statsResponse ? await statsResponse.json().catch(() => ({})) : {};
+      const tenantsResult = tenantsResponse ? await tenantsResponse.json().catch(() => ({})) : {};
+      const paymentsResult = paymentsResponse ? await paymentsResponse.json().catch(() => ({})) : {};
+      const agentsResult = agentsResponse ? await agentsResponse.json().catch(() => ({})) : {};
+      const propertiesResult = propertiesResponse ? await propertiesResponse.json().catch(() => ({})) : {};
 
       setStats(statsResult);
       setTenants(tenantsResult.tenants ?? []);
@@ -321,6 +339,41 @@ export default function DashboardPage() {
     setNotificationMessage('');
   }
 
+  async function handleAddUtility(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedPropertyId) {
+      setError('Agent property is not assigned.');
+      return;
+    }
+
+    setError('');
+    const response = await fetch('/api/payments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: utilityTenantId,
+        description: utilityDescription || `${utilityType} payment`,
+        transactionType: utilityType,
+        amount: Number(utilityAmount),
+        balanceRemaining: 0,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to record utility payment.');
+      return;
+    }
+
+    setUtilityTenantId('');
+    setUtilityType('water');
+    setUtilityAmount('');
+    setUtilityDescription('');
+    setMessage('Utility payment recorded.');
+    await loadDashboard(true);
+  }
+
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
   const isAgent = roleLoaded && userRole === 'agent';
 
@@ -342,55 +395,88 @@ export default function DashboardPage() {
       {message && <p style={{ color: 'var(--accent)' }}>{message}</p>}
 
       {isAgent && (
-        <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
-          <div className="card">
-            <div className="card-label">Agent Tenant Management</div>
-            <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
-            <form onSubmit={handleAgentTenantCreate} className="form-grid">
-              <input value={agentTenantName} onChange={(event) => setAgentTenantName(event.target.value)} required placeholder="Tenant name" />
-              <input type="email" value={agentTenantEmail} onChange={(event) => setAgentTenantEmail(event.target.value)} required placeholder="Tenant email" />
-              <input value={agentTenantPhone} onChange={(event) => setAgentTenantPhone(event.target.value)} placeholder="Phone" />
-              <input value={agentTenantUnit} onChange={(event) => setAgentTenantUnit(event.target.value)} required placeholder="Unit name / number" />
-              <input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required />
-              <input type="date" value={agentLeaseEnd} onChange={(event) => setAgentLeaseEnd(event.target.value)} required />
-              <input type="number" value={agentDeposit} onChange={(event) => setAgentDeposit(event.target.value)} placeholder="Deposit" />
-              <button type="submit" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Tenant'}</button>
-            </form>
+        <>
+          <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
+            <div className="card">
+              <div className="card-label">Agent Tenant Management</div>
+              <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
+              <form onSubmit={handleAgentTenantCreate} className="form-grid">
+                <input value={agentTenantName} onChange={(event) => setAgentTenantName(event.target.value)} required placeholder="Tenant name" />
+                <input type="email" value={agentTenantEmail} onChange={(event) => setAgentTenantEmail(event.target.value)} required placeholder="Tenant email" />
+                <input value={agentTenantPhone} onChange={(event) => setAgentTenantPhone(event.target.value)} placeholder="Phone" />
+                <input value={agentTenantUnit} onChange={(event) => setAgentTenantUnit(event.target.value)} required placeholder="Unit name / number" />
+                <input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required />
+                <input type="date" value={agentLeaseEnd} onChange={(event) => setAgentLeaseEnd(event.target.value)} required />
+                <input type="number" value={agentDeposit} onChange={(event) => setAgentDeposit(event.target.value)} placeholder="Deposit" />
+                <button type="submit" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Tenant'}</button>
+              </form>
 
-            <h3 style={{ marginTop: 24, marginBottom: 12 }}>Tenants in My Property</h3>
-            {tenants.map((tenant) => (
-              <div key={tenant.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                <div>
-                  <strong>{tenant.full_name}</strong>
-                  <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{tenant.property} · Unit {tenant.unit}</div>
+              <h3 style={{ marginTop: 24, marginBottom: 12 }}>Tenants in My Property</h3>
+              {tenants.map((tenant) => (
+                <div key={tenant.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                  <div>
+                    <strong>{tenant.full_name}</strong>
+                    <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{tenant.property} · Unit {tenant.unit}</div>
+                  </div>
+                  <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(220,38,38,0.1)', color: '#7f1212' }} onClick={() => handleAgentTenantRemove(tenant.id)}>Mark Relocated</button>
                 </div>
-                <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(220,38,38,0.1)', color: '#7f1212' }} onClick={() => handleAgentTenantRemove(tenant.id)}>Mark Relocated</button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div className="card">
-            <div className="card-label">Overdue Notifications</div>
-            <h3 style={{ marginBottom: 16 }}>Send Notice</h3>
-            <form onSubmit={handleSendNotification} className="form-grid">
-              <select value={notificationTenantId} onChange={(event) => setNotificationTenantId(event.target.value)} required>
-                <option value="">Select tenant</option>
-                {tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} — Unit {tenant.unit}</option>)}
-              </select>
-              <textarea value={notificationMessage} onChange={(event) => setNotificationMessage(event.target.value)} required placeholder="Overdue rent reminder..." style={{ gridColumn: 'span 2', minHeight: 90, padding: 12, borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)' }} />
-              <button type="submit" style={{ gridColumn: 'span 2' }}>Send Notification</button>
-            </form>
+            <div className="card">
+              <div className="card-label">Utility Payments</div>
+              <h3 style={{ marginBottom: 16 }}>Record Utility Bill</h3>
+              <form onSubmit={handleAddUtility} className="form-grid">
+                <select value={utilityTenantId} onChange={(event) => setUtilityTenantId(event.target.value)} required>
+                  <option value="">Select tenant</option>
+                  {tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} — Unit {tenant.unit}</option>)}
+                </select>
+                <select value={utilityType} onChange={(event) => setUtilityType(event.target.value)} required>
+                  <option value="">Utility type</option>
+                  {utilityTypes.map((type) => <option key={type} value={type}>{type.replace('_', ' ')}</option>)}
+                </select>
+                <input type="number" value={utilityAmount} onChange={(event) => setUtilityAmount(event.target.value)} required placeholder="Amount (KSH)" />
+                <input value={utilityDescription} onChange={(event) => setUtilityDescription(event.target.value)} placeholder="Description (optional)" />
+                <button type="submit">Record Utility</button>
+              </form>
 
-            <h3 style={{ marginTop: 24, marginBottom: 12 }}>Tenant Complaints</h3>
-            {comments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No complaints yet.</p> : comments.map((comment) => (
-              <div key={comment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                <strong>{comment.tenant}</strong>
-                <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{comment.message}</div>
-                <span style={{ display: 'inline-block', marginTop: 6, padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: comment.status === 'open' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)', color: comment.status === 'open' ? 'var(--amber)' : 'var(--accent)' }}>{comment.status}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+              <h3 style={{ marginTop: 24, marginBottom: 12 }}>Recent Utilities</h3>
+              {(payments.filter(p => utilityTypes.includes(p.transaction_type))).length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No utility records yet.</p> : payments.filter(p => utilityTypes.includes(p.transaction_type)).slice(0, 5).map((payment) => (
+                <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <strong>{payment.tenant}</strong>
+                    <span style={{ color: '#0ea5e9', fontWeight: 700 }}>{formatCurrency(payment.amount)}</span>
+                  </div>
+                  <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.transaction_type} · {payment.created_at ? new Date(payment.created_at).toLocaleDateString() : ''}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
+            <div className="card">
+              <div className="card-label">Overdue Notifications</div>
+              <h3 style={{ marginBottom: 16 }}>Send Notice</h3>
+              <form onSubmit={handleSendNotification} className="form-grid">
+                <select value={notificationTenantId} onChange={(event) => setNotificationTenantId(event.target.value)} required>
+                  <option value="">Select tenant</option>
+                  {tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} — Unit {tenant.unit}</option>)}
+                </select>
+                <textarea value={notificationMessage} onChange={(event) => setNotificationMessage(event.target.value)} required placeholder="Overdue rent reminder..." style={{ gridColumn: 'span 2', minHeight: 90, padding: 12, borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)' }} />
+                <button type="submit" style={{ gridColumn: 'span 2' }}>Send Notification</button>
+              </form>
+
+              <h3 style={{ marginTop: 24, marginBottom: 12 }}>Tenant Complaints</h3>
+              {comments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No complaints yet.</p> : comments.map((comment) => (
+                <div key={comment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                  <strong>{comment.tenant}</strong>
+                  <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{comment.message}</div>
+                  <span style={{ display: 'inline-block', marginTop: 6, padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: comment.status === 'open' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)', color: comment.status === 'open' ? 'var(--amber)' : 'var(--accent)' }}>{comment.status}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
       )}
 
       {stats && (
@@ -411,7 +497,7 @@ export default function DashboardPage() {
               <div className="card">
                 <div className="card-label">Properties and Agents</div>
                 <h3 style={{ marginBottom: 16 }}>Add Property</h3>
-                <form onSubmit={handleAddProperty} className="dashboard-agent-form" style={{ marginBottom: 24 }}>
+                <form onSubmit={handleAddProperty} className="form-grid" style={{ marginBottom: 24 }}>
                   <input value={propertyName} onChange={(event) => setPropertyName(event.target.value)} required placeholder="Property name" />
                   <input value={propertyAddress} onChange={(event) => setPropertyAddress(event.target.value)} required placeholder="Property address" />
                   <input value={propertySize} onChange={(event) => setPropertySize(event.target.value)} placeholder="Size / units" />
@@ -420,7 +506,7 @@ export default function DashboardPage() {
 
                 <h3 style={{ marginBottom: 16 }}>Add Agent</h3>
                 {properties.length === 0 ? <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: '#92400e', marginBottom: 16 }}>Add a property first, then assign an agent to that property.</p> : null}
-                <form onSubmit={handleAddAgent} className="dashboard-agent-form" style={{ gap: 12 }}>
+                <form onSubmit={handleAddAgent} className="form-grid">
                   <input value={agentName} onChange={(event) => setAgentName(event.target.value)} required placeholder="Agent full name" />
                   <input type="email" value={agentEmail} onChange={(event) => setAgentEmail(event.target.value)} required placeholder="Agent email" />
                   <input type="password" value={agentPassword} onChange={(event) => setAgentPassword(event.target.value)} required placeholder="Password" />

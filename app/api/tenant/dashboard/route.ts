@@ -76,6 +76,20 @@ async function getTenantComments(tenantId: string) {
   }));
 }
 
+async function getTenantDocuments(tenantId: string) {
+  const { data, error } = await supabaseAdmin
+    .from('tenant_documents')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    if (!isMissingTableError(error, 'tenant_documents')) throw error;
+    return [];
+  }
+  return data ?? [];
+}
+
 function findTenantByEmail(tenants: any[], email: string) {
   const normalized = email.trim().toLowerCase();
   return tenants.find((tenant) => tenant.email?.trim().toLowerCase() === normalized) ?? null;
@@ -124,11 +138,12 @@ export async function GET(request: NextRequest) {
 
     const property = tenant.units?.properties;
 
-    const [payments, notifications, comments] = await Promise.all([
-      getTenantPayments(tenant.id),
-      getTenantNotifications(tenant.id),
-      getTenantComments(tenant.id),
-    ]);
+const [payments, notifications, comments, documents] = await Promise.all([
+       getTenantPayments(tenant.id),
+       getTenantNotifications(tenant.id),
+       getTenantComments(tenant.id),
+       getTenantDocuments(tenant.id),
+     ]);
 
     const firstPayment = [...payments]
       .sort((a, b) => new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime())[0];
@@ -139,19 +154,20 @@ export async function GET(request: NextRequest) {
         ? new Date(new Date(tenant.lease_start).getTime() + 30 * dayMs).toISOString().slice(0, 10)
         : '';
 
-    return NextResponse.json({
-      tenant: {
-        ...tenant,
-        property_id: tenant.units?.property_id ?? '',
-        property_name: property?.name ?? '',
-        property_address: property?.address ?? '',
-        unit_number: tenant.units?.unit_number ?? '',
-        next_payment_date: nextPaymentDate,
-      },
-      payments: payments ?? [],
-      notifications: notifications ?? [],
-      comments: comments ?? [],
-    });
+return NextResponse.json({
+       tenant: {
+         ...tenant,
+         property_id: tenant.units?.property_id ?? '',
+         property_name: property?.name ?? '',
+         property_address: property?.address ?? '',
+         unit_number: tenant.units?.unit_number ?? '',
+         next_payment_date: nextPaymentDate,
+       },
+       payments: payments ?? [],
+       notifications: notifications ?? [],
+       comments: comments ?? [],
+       documents: documents ?? [],
+     });
   } catch (error) {
     return requestError(error);
   }

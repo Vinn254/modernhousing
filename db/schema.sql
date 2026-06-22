@@ -14,7 +14,7 @@ create table profiles (
   email text not null,
   role text not null check (role in ('super_admin', 'admin', 'project_manager', 'agent')),
   organization_id uuid references organizations(id) on delete set null,
-  status text not null default 'active' check (status in ('active', 'inactive')),
+  status text not null default 'active' check (status in ('active', 'inactive', 'pending')),
   created_at timestamp with time zone default now()
 );
 
@@ -82,7 +82,7 @@ create table notifications (
   tenant_id uuid references tenants(id) on delete cascade,
   property_id uuid references properties(id) on delete cascade,
   agent_id uuid,
-  recipient text not null default 'tenant' check (recipient in ('tenant', 'landlord')),
+  recipient text not null default 'tenant' check (recipient in ('tenant', 'landlord', 'project_manager')),
   admin_id uuid,
   admin_name text,
   admin_email text,

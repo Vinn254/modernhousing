@@ -1,28 +1,38 @@
+'use client';
+
+import { Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 const plans = [
   {
     name: 'Monthly',
     price: 'KSH 2,500',
-    description: 'Best for landlords managing one or two properties.',
-    features: ['Landlord dashboard', 'Agent assignment', 'Tenant onboarding', 'Payment tracking', 'Renewal reminders'],
+    duration: 'month',
+    description: 'Best for project managers managing one or two properties.',
+    features: ['Project manager dashboard', 'Agent assignment', 'Tenant onboarding', 'Payment tracking', 'Renewal reminders'],
   },
   {
     name: 'Quarterly',
     price: 'KSH 5,000',
+    duration: 'quarter',
     description: 'Save with a three-month subscription package.',
-    features: ['Everything in Monthly', 'Quarterly renewal cycle', 'Priority support', 'Subscription monitoring', 'Landlord workspace access'],
+    features: ['Everything in Monthly', 'Quarterly renewal cycle', 'Priority support', 'Subscription monitoring', 'Workspace access'],
     popular: true,
   },
   {
     name: 'Yearly',
     price: 'KSH 6,000',
-    description: 'Best value for long-term landlord workspace access.',
+    duration: 'year',
+    description: 'Best value for long-term project manager workspace access.',
     features: ['Everything in Quarterly', 'Annual renewal cycle', 'Reduced monthly cost', 'Advanced renewal tracking', 'Priority account support'],
   },
 ];
 
-export default function PricingPage() {
+function PricingContent() {
+  const searchParams = useSearchParams();
+  const restricted = searchParams.get('restricted') === 'true';
+
   return (
     <>
       <section className="hero">
@@ -40,8 +50,12 @@ export default function PricingPage() {
 
         <div className="pricing-hero-inner">
           <span className="eyebrow"><span className="pulse"></span> Subscription Packages</span>
-          <h1>Choose a landlord workspace plan.</h1>
-          <p className="hero-sub">Simple subscription packages for landlords who need secure property, agent, tenant, and payment management.</p>
+          <h1>{restricted ? 'Subscription Required' : 'Choose a project manager workspace plan.'}</h1>
+          <p className="hero-sub">
+            {restricted
+              ? 'Your subscription has expired. Renew below to regain access to your workspace.'
+              : 'Simple subscription packages for project managers who need secure property, agent, tenant, and payment management.'}
+          </p>
         </div>
       </section>
 
@@ -63,7 +77,7 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/login" className="pricing-button">Choose {plan.name}</Link>
+              <Link href={`/login?subscribe=${plan.duration}${restricted ? '&restricted=true' : ''}`} className="pricing-button">Choose {plan.name}</Link>
             </article>
           ))}
         </div>
@@ -72,10 +86,17 @@ export default function PricingPage() {
       <footer>
         <div className="footer-inner">
           <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
-          <div className="footer-links"><a href="/">Home</a><a href="/pricing">Pricing</a><a href="/login">Log In</a></div>
           <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
         </div>
       </footer>
     </>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '40px', display: 'flex', justifyContent: 'center' }}>Loading…</div>}>
+      <PricingContent />
+    </Suspense>
   );
 }

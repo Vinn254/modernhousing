@@ -90,12 +90,19 @@ async function upsertProfile(userId: string, fullName: string, email: string, ro
   return data as AdminProfile;
 }
 
-async function getAdminProfiles() {
-  const { data, error } = await supabaseAdmin
+async function getAdminProfiles(role?: string) {
+  let query = supabaseAdmin
     .from('profiles')
     .select('*')
     .in('role', ['admin', 'super_admin']);
 
+  if (role === 'admin') {
+    query = supabaseAdmin.from('profiles').select('*').eq('role', 'admin');
+  } else if (role === 'super_admin') {
+    query = supabaseAdmin.from('profiles').select('*').eq('role', 'super_admin');
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as AdminProfile[];
 }
@@ -111,9 +118,10 @@ async function getProfile(userId: string) {
   return (data ?? null) as AdminProfile | null;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const [users, profiles] = await Promise.all([getAllAdminUsers(), getAdminProfiles()]);
+    const role = request.nextUrl.searchParams.get('role');
+    const [users, profiles] = await Promise.all([getAllAdminUsers(), getAdminProfiles(role || undefined)]);
     const profileByUserId = new Map(profiles.map((profile) => [profile.user_id, profile]));
     const adminIds = new Set<string>();
 

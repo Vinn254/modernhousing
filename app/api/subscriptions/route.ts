@@ -62,6 +62,9 @@ export async function POST(request: NextRequest) {
     const email = String(body.email ?? '').trim();
     const plan = String(body.plan ?? 'monthly').trim();
     const adminId = String(body.adminId ?? body.admin_id ?? '').trim() || null;
+    const status = String(body.status ?? 'pending').trim();
+    const startDate = String(body.start_date ?? new Date().toISOString().slice(0, 10)).trim();
+    const expiryDate = String(body.expiry_date ?? todayPlus(plan)).trim();
 
     if (!adminName || !email || !planAmounts[plan]) {
       return badRequest('Administrator name, email, and valid plan are required.');
@@ -73,10 +76,10 @@ export async function POST(request: NextRequest) {
       email,
       plan,
       amount: planAmounts[plan],
-      status: 'paid',
-      start_date: new Date().toISOString().slice(0, 10),
-      expiry_date: todayPlus(plan),
-      paid_at: new Date().toISOString(),
+      status,
+      start_date: startDate,
+      expiry_date: expiryDate,
+      paid_at: status === 'paid' ? new Date().toISOString() : null,
     };
 
     const { data, error } = await supabaseAdmin.from('subscriptions').insert(payload).select('*').single();

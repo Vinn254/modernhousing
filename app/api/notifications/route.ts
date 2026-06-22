@@ -86,7 +86,7 @@ async function insertFallbackLandlordNotification(body: {
 
   return {
     ...data,
-    recipient: 'landlord',
+    recipient: 'project_manager',
     admin_id: body.adminId,
     admin_name: body.adminName,
     admin_email: body.adminEmail,
@@ -145,11 +145,11 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (recipient === 'landlord') {
-      query.eq('recipient', 'landlord');
-    } else if (recipient === 'tenant') {
-      query.eq('recipient', 'tenant');
-    }
+if (recipient === 'landlord' || recipient === 'project_manager') {
+       query.eq('recipient', recipient);
+     } else if (recipient === 'tenant') {
+       query.eq('recipient', 'tenant');
+     }
 
     if (propertyId) {
       query.eq('property_id', propertyId);
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
     const tenantId = request.nextUrl.searchParams.get('tenantId') ?? request.nextUrl.searchParams.get('tenant_id');
     const { data, error } = await query;
     if (error) {
-      if (recipient === 'landlord') {
+      if (recipient === 'landlord' || recipient === 'project_manager') {
         return NextResponse.json({ notifications: await getFallbackLandlordNotifications() });
       }
       if (isMissingTableError(error, 'notifications')) {
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ notifications: data ?? [] });
   } catch (error) {
     const requestUrl = request.nextUrl.toString();
-    if (requestUrl.includes('recipient=landlord')) {
+    if (requestUrl.includes('recipient=landlord') || requestUrl.includes('recipient=project_manager')) {
       try {
         return NextResponse.json({ notifications: await getFallbackLandlordNotifications() });
       } catch {
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
     const adminId = String(body.adminId ?? body.admin_id ?? '').trim() || null;
     const adminName = String(body.adminName ?? body.admin_name ?? '').trim();
     const adminEmail = String(body.adminEmail ?? body.admin_email ?? '').trim();
-    const recipient = String(body.recipient ?? '').trim() || (tenantId || propertyId ? 'tenant' : 'landlord');
+    const recipient = String(body.recipient ?? '').trim() || (tenantId || propertyId ? 'tenant' : 'project_manager');
     const type = String(body.type ?? 'overdue').trim();
     const message = String(body.message ?? '').trim();
 
@@ -198,9 +198,9 @@ export async function POST(request: NextRequest) {
       return badRequest('Notification message is required.');
     }
 
-    if (recipient === 'landlord') {
+    if (recipient === 'landlord' || recipient === 'project_manager') {
       if (!adminId || !adminName || !adminEmail) {
-        return badRequest('Landlord ID, name, and email are required for landlord notifications.');
+        return badRequest('Landlord ID, name, and email are required for notifications.');
       }
 
       await ensureNotificationTable();
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
           tenant_id: null,
           property_id: null,
           agent_id: null,
-          recipient: 'landlord',
+          recipient: 'project_manager',
           admin_id: adminId,
           admin_name: adminName,
           admin_email: adminEmail,
@@ -224,10 +224,10 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         const fallbackNotification = await insertFallbackLandlordNotification({ adminId, adminName, adminEmail, type, message });
-        return NextResponse.json({ notification: fallbackNotification, message: 'Landlord notification saved.' }, { status: 201 });
+        return NextResponse.json({ notification: fallbackNotification, message: 'Notification saved.' }, { status: 201 });
       }
 
-      return NextResponse.json({ notification: data, message: 'Landlord notification sent.' }, { status: 201 });
+      return NextResponse.json({ notification: data, message: 'Notification sent.' }, { status: 201 });
     }
 
     if (!tenantId || !propertyId) {

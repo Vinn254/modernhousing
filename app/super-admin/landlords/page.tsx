@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import AdminTopNav from '../../components/AdminTopNav';
 
 interface Landlord {
   id: string;
@@ -29,7 +27,7 @@ interface Subscription {
 
 interface Notification {
   id: string;
-  recipient: 'tenant' | 'landlord';
+  recipient: 'tenant' | 'landlord' | 'project_manager';
   admin_id?: string | null;
   admin_name?: string | null;
   admin_email?: string | null;
@@ -79,7 +77,7 @@ function generateNotificationMessage(subscription: Subscription, landlord: Landl
   const expiry = new Date(subscription.expiry_date).toLocaleDateString();
 
   if (risk === 'overdue') {
-    return `Hello ${landlord.full_name}, your Springfield Systems subscription for ${landlord.organization} is overdue. Please renew your ${subscription.plan} subscription to keep landlord workspace access active.`;
+    return `Hello ${landlord.full_name}, your Springfield Systems subscription for ${landlord.organization} is overdue. Please renew your ${subscription.plan} subscription to keep project manager workspace access active.`;
   }
 
   if (risk === 'expiring') {
@@ -101,6 +99,7 @@ export default function LandlordManagementPage() {
   const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
   const [organization, setOrganization] = useState('');
+  const [newPlan, setNewPlan] = useState('monthly');
   const [loading, setLoading] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -121,7 +120,7 @@ export default function LandlordManagementPage() {
     const subscriptionsResult = await subscriptionsResponse.json();
     const subscriptions = subscriptionsResponse.ok ? (subscriptionsResult.subscriptions ?? []) : [];
 
-    const notificationsResponse = await fetch('/api/notifications?recipient=landlord');
+    const notificationsResponse = await fetch('/api/notifications?recipient=project_manager');
     const notificationsResult = await notificationsResponse.json();
     const notifications = notificationsResponse.ok ? (notificationsResult.notifications ?? []) : [];
 
@@ -170,17 +169,43 @@ export default function LandlordManagementPage() {
     const result = await response.json();
 
     if (!response.ok) {
-      setError(result.message ?? 'Unable to create landlord.');
+      setError(result.message ?? 'Unable to create project manager.');
       setLoading(false);
       return;
     }
 
-    setMessage('Landlord created.');
+    setMessage('Project manager created. Awaiting super admin approval.');
     setShowAddModal(false);
     setNewEmail('');
     setNewPassword('');
     setNewName('');
     setOrganization('');
+    setNewPlan('monthly');
+
+    if (result.landlord?.id) {
+      const planAmounts: Record<string, number> = { monthly: 2500, quarterly: 5000, yearly: 6000 };
+
+      const subscriptionResponse = await fetch('/api/subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminId: result.landlord.id,
+          adminName: newName,
+          email: newEmail,
+          plan: newPlan,
+          amount: planAmounts[newPlan],
+          status: 'pending',
+        }),
+      });
+
+      const subscriptionResult = await subscriptionResponse.json();
+      if (!subscriptionResponse.ok) {
+        setError(subscriptionResult.message ?? 'Unable to create subscription.');
+        setLoading(false);
+        return;
+      }
+    }
+
     await loadData();
   }
 
@@ -193,42 +218,99 @@ export default function LandlordManagementPage() {
 
     const result = await response.json();
     if (!response.ok) {
-      setError(result.message ?? 'Unable to approve landlord.');
+      setError(result.message ?? 'Unable to approve project manager.');
       return;
     }
 
     setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, ...result.landlord } : item)));
-    setMessage('Landlord approved and activated.');
+    setMessage('Project manager approved and activated.');
   }
 
-  async function handleDeactivate(landlord: Landlord) {
-    if (!confirm(`Deactivate ${landlord.full_name}?`)) return;
+  async function handleDeleteLandlord(landlord: Landlord) {
+    if (!confirm(`Permanently delete ${landlord.full_name}? This cannot be undone.`)) return;
 
     const response = await fetch(`/api/landlords?id=${encodeURIComponent(landlord.id)}`, { method: 'DELETE' });
     const result = await response.json();
 
     if (!response.ok) {
-      setError(result.message ?? 'Unable to deactivate landlord.');
+      setError(result.message ?? 'Unable to delete project manager.');
       return;
     }
 
-    setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, ...result.landlord } : item)));
-    setMessage('Landlord deactivated.');
+    setLandlords((current) => current.filter((item) => item.id !== landlord.id));
+    setMessage('Project manager permanently deleted.');
   }
 
-  async function sendNotification() {
-    if (!selectedSubscription || !selectedLandlord) return;
+  async function handleResetPassword(landlord: Landlord) {
+    const newPassword = prompt('Enter new password for ' + landlord.full_name + ':');
+    if (!newPassword) return;
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
+    const response = await fetch('/api/landlords', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: landlord.id, fullName: landlord.full_name, password: newPassword }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to reset password.');
+      return;
+    }
+
+    setMessage(`Password reset for ${landlord.full_name}.`);
+  }
+
+  async function handleUpgradeSubscription(landlord: Landlord) {
+    const plans = ['monthly', 'quarterly', 'yearly'];
+    const plan = prompt('Enter new subscription plan (monthly, quarterly, or yearly):\nCurrent subscription: ' + (getSubscriptionForLandlord(landlord, subscriptions)?.plan || 'none'));
+    if (!plan) return;
+    if (!plans.includes(plan.toLowerCase())) {
+      setError('Invalid plan. Choose: monthly, quarterly, or yearly.');
+      return;
+    }
+
+    const planAmounts: Record<string, number> = { monthly: 2500, quarterly: 5000, yearly: 6000 };
+
+    const response = await fetch('/api/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adminId: landlord.id,
+        adminName: landlord.full_name,
+        email: landlord.email,
+        plan: plan.toLowerCase(),
+        amount: planAmounts[plan.toLowerCase()],
+      }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to upgrade subscription.');
+      return;
+    }
+
+    await loadData();
+    setMessage(`Subscription upgraded to ${plan.toLowerCase()} for ${landlord.full_name}.`);
+  }
+
+  async function sendNotification(subscription?: Subscription | null) {
+    const resolvedSubscription = subscription ?? selectedSubscription;
+    if (!selectedLandlord) return;
 
     setNotificationLoading(true);
     const response = await fetch('/api/notifications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        recipient: 'landlord',
+        recipient: 'project_manager',
         adminId: selectedLandlord.id,
         adminName: selectedLandlord.full_name,
         adminEmail: selectedLandlord.email,
-        type: getRisk(selectedSubscription) === 'overdue' ? 'overdue' : 'subscription_expiring',
+        type: resolvedSubscription ? (getRisk(resolvedSubscription) === 'overdue' ? 'overdue' : 'subscription_expiring') : 'subscription_expiring',
         message: notificationText,
       }),
     });
@@ -241,7 +323,7 @@ export default function LandlordManagementPage() {
       return;
     }
 
-    setMessage('Notification sent to landlord.');
+    setMessage('Notification sent to project manager.');
     setNotifications((current) => [result.notification, ...current]);
     setSelectedSubscription(null);
     setSelectedLandlord(null);
@@ -260,7 +342,11 @@ export default function LandlordManagementPage() {
     setSelectedLandlord(landlord);
     const subscription = landlord ? getSubscriptionForLandlord(landlord, subscriptions) ?? null : null;
     setSelectedSubscription(subscription);
-    setNotificationText(landlord && subscription ? generateNotificationMessage(subscription, landlord) : '');
+    if (landlord && subscription) {
+      setNotificationText(generateNotificationMessage(subscription, landlord));
+    } else {
+      setNotificationText('');
+    }
   }
 
   function handleComposerSubscriptionChange(event: React.ChangeEvent<HTMLSelectElement>) {
@@ -272,196 +358,101 @@ export default function LandlordManagementPage() {
   }
 
   const activeCount = landlords.filter((landlord) => landlord.status === 'active').length;
-  const inactiveCount = landlords.filter((landlord) => landlord.status !== 'active').length;
   const expiringCount = landlords.filter((landlord) => getRisk(getSubscriptionForLandlord(landlord, subscriptions)) === 'expiring').length;
   const overdueCount = landlords.filter((landlord) => getRisk(getSubscriptionForLandlord(landlord, subscriptions)) === 'overdue').length;
-  const composerSubscriptions = landlords
-    .map((landlord) => getSubscriptionForLandlord(landlord, subscriptions))
-    .filter((subscription): subscription is Subscription => Boolean(subscription));
+  const composerSubscriptions = subscriptions;
 
   return (
     <>
-      <section className="hero">
-        <nav className="nav">
-          <Link href="/" className="logo">
-            <span className="logo-mark">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-            </span>
-            Springfield Systems
-          </Link>
-          <AdminTopNav variant="super" />
-        </nav>
-
-        <div className="hero-inner">
-          <span className="eyebrow"><span className="pulse"></span> Super Admin</span>
-          <h1>Landlords</h1>
-          <p className="hero-sub">Add landlords, manage subscriptions, and send renewal notifications from one place.</p>
-        </div>
-      </section>
-
-      <section className="landlord-section">
-        <div className="landlord-stats">
-          <article className="landlord-stat">
-            <span>Landlords</span>
-            <strong>{landlords.length}</strong>
-            <p>Total landlord workspaces.</p>
-          </article>
-          <article className="landlord-stat">
-            <span>Active</span>
-            <strong>{activeCount}</strong>
-            <p>Approved landlord accounts.</p>
-          </article>
-          <article className="landlord-stat expiring-stat">
-            <span>Expiring Soon</span>
-            <strong>{expiringCount}</strong>
-            <p>Subscriptions ending within 7 days.</p>
-          </article>
-          <article className="landlord-stat overdue-stat">
-            <span>Overdue</span>
-            <strong>{overdueCount}</strong>
-            <p>Overdue or expired subscriptions.</p>
-          </article>
-        </div>
-
-        <div className="landlord-panel">
-          <div className="landlord-panel-header">
-            <div>
-              <span className="landlord-kicker">Landlords</span>
-              <h2>Landlord Accounts and Subscriptions</h2>
-            </div>
-            <button className="landlord-add-button" onClick={() => setShowAddModal(true)}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Landlord
-            </button>
+      <main className="container admin-no-hero" style={{ padding: '34px 0 80px' }}>
+        <div className="card-admin-header">
+          <div>
+            <p className="heading">Project Managers</p>
+            <p className="subheading">Add project managers, manage subscriptions, approve accounts, and send renewal notifications from one place.</p>
           </div>
+        </div>
 
-          {loading && <p className="landlord-muted">Loading landlords…</p>}
-          {message && <p className="landlord-success">{message}</p>}
-          {error && <p className="landlord-error">{error}</p>}
+        <section className="bento-section">
+          <div className="bento">
+            <article className="card">
+              <div className="card-label"><span className="badge badge-pm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>Project Manager Accounts</div>
+              <h3 style={{ marginBottom: 16 }}>Workspace Accounts and Subscriptions</h3>
 
-          <div className="table-shell">
-            <table className="landlord-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Organization</th>
-                  <th>Email</th>
-                  <th>Subscription</th>
-                  <th>Expiry</th>
-                  <th>Renewal Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {landlords.length === 0 && !loading ? (
-                  <tr>
-                    <td colSpan={7} className="landlord-empty">No landlords found.</td>
-                  </tr>
-                ) : landlords.map((landlord) => {
-                  const subscription = getSubscriptionForLandlord(landlord, subscriptions);
-                  const risk = getRisk(subscription);
-                  return (
-                    <tr key={landlord.id} className={`risk-row ${risk}`}>
-                      <td className="landlord-name">{landlord.full_name}</td>
-                      <td>{landlord.organization || '—'}</td>
-                      <td>{landlord.email}</td>
-                      <td>{subscription ? `${subscription.plan} · KSH ${Number(subscription.amount ?? 0).toLocaleString()}` : 'No subscription'}</td>
-                      <td>{subscription?.expiry_date ? new Date(subscription.expiry_date).toLocaleDateString() : '—'}</td>
-                      <td>
-                        <span className={`renewal-pill ${risk}`}>{getRiskLabel(subscription)}</span>
-                      </td>
-                      <td>
-                        <div className="landlord-actions">
-                          <button className="action-button" onClick={() => setSelectedLandlord(landlord)}>View</button>
-                          {subscription && <button className="action-button notify" onClick={() => openNotification(subscription, landlord)}>Notify</button>}
-                          {landlord.status !== 'active' && <button className="action-button primary" onClick={() => handleApprove(landlord)}>Approve</button>}
-                          <button className="action-button danger" onClick={() => handleDeactivate(landlord)}>Deactivate</button>
-                        </div>
-                      </td>
+              {loading && <p className="landlord-muted">Loading project managers…</p>}
+              {message && <p className="landlord-success">{message}</p>}
+              {error && <p className="landlord-error">{error}</p>}
+
+              <div className="table-shell">
+                <table className="landlord-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Organization</th>
+                      <th>Email</th>
+                      <th>Subscription</th>
+                      <th>Expiry</th>
+                      <th>Renewal Status</th>
+                      <th>Actions</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                  </thead>
+                  <tbody>
+                    {landlords.length === 0 && !loading ? (
+                      <tr>
+                        <td colSpan={7} className="landlord-empty">No project managers found.</td>
+                      </tr>
+                    ) : landlords.map((landlord) => {
+                      const subscription = getSubscriptionForLandlord(landlord, subscriptions);
+                      const risk = getRisk(subscription);
+                      return (
+                        <tr key={landlord.id} className={`risk-row ${risk}`}>
+                          <td className="landlord-name">{landlord.full_name}</td>
+                          <td>{landlord.organization || '—'}</td>
+                          <td>{landlord.email}</td>
+                          <td>{subscription ? `${subscription.plan} · KSH ${Number(subscription.amount ?? 0).toLocaleString()}` : 'No subscription'}</td>
+                          <td>{subscription?.expiry_date ? new Date(subscription.expiry_date).toLocaleDateString() : '—'}</td>
+                          <td>
+                            <span className={`renewal-pill ${risk}`}>{getRiskLabel(subscription)}</span>
+                          </td>
+                          <td>
+                            <div className="landlord-actions">
+                              <button className="action-button" onClick={() => setSelectedLandlord(landlord)}>View</button>
+                              {subscription && <button className="action-button notify" onClick={() => openNotification(subscription, landlord)}>Notify</button>}
+                              {subscription && <button className="action-button" onClick={() => handleUpgradeSubscription(landlord)}>Upgrade</button>}
+                              {landlord.status !== 'active' && <button className="action-button primary" onClick={() => handleApprove(landlord)}>Approve</button>}
+                              <button className="action-button" onClick={() => handleResetPassword(landlord)}>Reset Password</button>
+                              <button className="action-button danger" onClick={() => handleDeleteLandlord(landlord)}>Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-        <div className="landlord-panel notification-panel">
-          <div className="landlord-panel-header">
-            <div>
-              <span className="landlord-kicker">Notifications</span>
-              <h2>Subscription Renewal Messages</h2>
-            </div>
-          </div>
-          <p className="landlord-muted">Send auto-generated renewal reminders to landlords. Expiring subscriptions are orange; overdue subscriptions are red.</p>
-
-          <div className="notification-composer">
-            <div className="composer-card">
-              <div className="composer-controls">
-                <label>
-                  Landlord
-                  <select value={selectedLandlord?.id ?? ''} onChange={handleComposerLandlordChange} disabled={!selectedLandlord}>
-                    <option value="">Select landlord</option>
-                    {landlords.map((landlord) => (
-                      <option key={landlord.id} value={landlord.id}>{landlord.full_name} · {landlord.organization || landlord.email}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Subscription
-                  <select value={selectedSubscription?.id ?? ''} onChange={handleComposerSubscriptionChange} disabled={!selectedSubscription}>
-                    <option value="">Select subscription</option>
-                    {composerSubscriptions.map((subscription) => (
-                        <option key={subscription.id} value={subscription.id}>
-                          {subscription.plan} · {subscription.status} · KSH {Number(subscription.amount ?? 0).toLocaleString()}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <button className="landlord-add-button" onClick={() => selectedLandlord && selectedSubscription && openNotification(selectedSubscription, selectedLandlord)}>
-                  Generate Message
+              <div style={{ margin: '28px 0 0' }}>
+                <button className="landlord-add-button" onClick={() => setShowAddModal(true)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Add Project Manager
                 </button>
               </div>
-              <textarea value={notificationText} onChange={(event) => setNotificationText(event.target.value)} rows={5} placeholder="Auto-generated renewal message will appear here." />
-              <div className="modal-actions">
-                <button onClick={sendNotification} disabled={notificationLoading || !notificationText.trim() || !selectedLandlord || !selectedSubscription}>{notificationLoading ? 'Sending…' : 'Send Notification'}</button>
-                <button type="button" className="secondary-button" onClick={() => { setSelectedSubscription(null); setSelectedLandlord(null); setNotificationText(''); }}>Clear</button>
-              </div>
-            </div>
+            </article>
           </div>
-
-          <div className="notification-history">
-            <div className="history-title">
-              <span>Recent Messages</span>
-              <strong>{notifications.length}</strong>
-            </div>
-            {notifications.slice(0, 6).map((notification) => (
-              <div className="notification-item" key={notification.id}>
-                <div>
-                  <strong>{notification.admin_name || 'Landlord'}</strong>
-                  <span>{notification.admin_email || notification.type}</span>
-                </div>
-                <p>{notification.message}</p>
-                <small>{new Date(notification.created_at).toLocaleString()}</small>
-              </div>
-            ))}
-            {notifications.length === 0 && <div className="landlord-empty">No landlord notifications sent yet.</div>}
-          </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
       {showAddModal && (
         <div className="modal-overlay">
           <div className="modal-card landlord-modal">
             <div className="modal-title-row">
-              <h3>Add New Landlord</h3>
+              <h3>Add New Project Manager</h3>
               <button className="icon-button" onClick={() => setShowAddModal(false)}>×</button>
             </div>
             {error && <p className="landlord-error">{error}</p>}
             <form onSubmit={handleAddLandlord} className="landlord-form">
               <div className="field-group">
                 <label>Email</label>
-                <input type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} required placeholder="landlord@example.com" />
+                <input type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} required placeholder="manager@example.com" />
               </div>
               <div className="field-group">
                 <label>Password</label>
@@ -475,8 +466,16 @@ export default function LandlordManagementPage() {
                 <label>Organization</label>
                 <input value={organization} onChange={(event) => setOrganization(event.target.value)} required placeholder="Springfield Properties" />
               </div>
+              <div className="field-group">
+                <label>Subscription Plan</label>
+                <select value={newPlan} onChange={(event) => setNewPlan(event.target.value)} required>
+                  <option value="monthly">Monthly - KSH 2,500</option>
+                  <option value="quarterly">Quarterly - KSH 5,000</option>
+                  <option value="yearly">Yearly - KSH 6,000</option>
+                </select>
+              </div>
               <div className="modal-actions">
-                <button type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create Landlord'}</button>
+                <button type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create Project Manager'}</button>
                 <button type="button" className="secondary-button" onClick={() => setShowAddModal(false)} disabled={loading}>Cancel</button>
               </div>
             </form>
@@ -488,7 +487,7 @@ export default function LandlordManagementPage() {
         <div className="modal-overlay" onClick={(event) => event.target === event.currentTarget && setSelectedLandlord(null)}>
           <div className="modal-card landlord-modal">
             <div className="modal-title-row">
-              <h3>Landlord Details</h3>
+              <h3>Project Manager Details</h3>
               <button className="icon-button" onClick={() => setSelectedLandlord(null)}>×</button>
             </div>
             <div className="detail-grid">

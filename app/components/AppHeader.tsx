@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
@@ -11,12 +11,10 @@ type Role = 'super_admin' | 'admin' | 'landlord' | 'agent' | 'tenant' | 'user';
 export default function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const menuRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<Role>('user');
   const [roleLoaded, setRoleLoaded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const resolveRole = (currentUser: any): Role => {
     if (currentUser?.email === 'vin.oumaotieno@gmail.com') return 'super_admin';
@@ -26,6 +24,10 @@ export default function AppHeader() {
     if (metadataRole === 'agent') return 'agent';
     if (metadataRole === 'tenant') return 'tenant';
     return 'user';
+  };
+
+  const getInitials = (name: string) => {
+    return name?.split(' ').map((part) => part[0]).join('').toUpperCase() || 'U';
   };
 
   useEffect(() => {
@@ -54,28 +56,13 @@ export default function AppHeader() {
     return () => listener?.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const getInitials = (name: string) => {
-    return name?.split(' ').map((part) => part[0]).join('').toUpperCase() || 'U';
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setRoleLoaded(false);
     router.push('/');
   };
 
-  const shouldHideHeader = pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname?.startsWith('/super-admin') || pathname?.startsWith('/admin') || pathname?.startsWith('/tenant');
+  const shouldHideHeader = pathname === '/' || pathname === '/login' || pathname === '/signup';
 
   if (shouldHideHeader || !roleLoaded) return null;
 
@@ -83,9 +70,57 @@ export default function AppHeader() {
   const isAgent = role === 'agent';
   const isLandlord = role === 'landlord';
   const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin';
 
   const dashboardHref = isTenant ? '/tenant/dashboard' : '/dashboard';
   const dashboardLabel = isTenant ? 'Tenant Dashboard' : isAgent ? 'Agent Dashboard' : 'Landlord Dashboard';
+
+  const agentLinks: {label: string; href: string}[] = [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Tenants', href: '/agent/tenants' },
+    { label: 'Utilities', href: '/agent/utilities' },
+    { label: 'Notifications', href: '/agent/notifications' },
+    { label: 'Complaints', href: '/agent/complaints' },
+  ];
+
+  const tenantLinks: {label: string; href: string}[] = [
+    { label: 'Dashboard', href: '/tenant/dashboard' },
+    { label: 'Payments', href: '/tenant/payments' },
+    { label: 'Documents', href: '/tenant/documents' },
+    { label: 'Complaints', href: '/tenant/complaints' },
+    { label: 'Notifications', href: '/tenant/notifications' },
+  ];
+
+  const landlordPMLinks: {label: string; href: string}[] = [
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Properties', href: '/properties' },
+    { label: 'Units', href: '/admin/units' },
+    { label: 'Tenants', href: '/admin/tenants' },
+    { label: 'Agents', href: '/admin/agents' },
+    { label: 'Payments', href: '/admin/payments' },
+    { label: 'Utilities', href: '/admin/utilities' },
+    { label: 'Communications', href: '/admin/communications' },
+  ];
+
+  const adminLinks: {label: string; href: string}[] = [
+    { label: 'Dashboard', href: '/admin' },
+    { label: 'Landlords', href: '/admin/project-managers' },
+    { label: 'Agents', href: '/admin/agents' },
+    { label: 'Tenants', href: '/admin/tenants' },
+    { label: 'Payments', href: '/admin/payments' },
+    { label: 'Communications', href: '/admin/communications' },
+  ];
+
+  const superAdminLinks: {label: string; href: string}[] = [
+    { label: 'Dashboard', href: '/super-admin' },
+    { label: 'Landlords', href: '/super-admin/landlords' },
+    { label: 'Agents', href: '/super-admin/agents' },
+    { label: 'Tenants', href: '/super-admin/tenants' },
+    { label: 'Payments', href: '/super-admin/payments' },
+    { label: 'Analytics', href: '/super-admin/analytics' },
+  ];
+
+  const navLinks = isTenant ? tenantLinks : (isAgent ? agentLinks : (isSuperAdmin ? superAdminLinks : (isAdmin ? adminLinks : landlordPMLinks)));
 
   return (
     <>
@@ -98,13 +133,11 @@ export default function AppHeader() {
               <h2 className="sidebar-logo">Springfield</h2>
             </div>
             <nav className="sidebar-nav">
-              <Link href={dashboardHref}>{dashboardLabel}</Link>
-              {!isTenant && <Link href="/properties">Properties</Link>}
-              {!isTenant && <Link href="/tenants">Tenants</Link>}
-              {!isTenant && <Link href="/payments">Payments</Link>}
-              {isSuperAdmin && <Link href="/super-admin">Super Admin</Link>}
-              <button onClick={handleLogout} className="sidebar-logout">Logout</button>
+              {navLinks.map((link) => (
+                <Link key={link.href} href={link.href} onClick={() => setSidebarOpen(false)}>{link.label}</Link>
+              ))}
             </nav>
+            <button onClick={handleLogout} className="sidebar-logout">Logout</button>
           </div>
 
           <div className={`overlay ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)}></div>
@@ -115,22 +148,9 @@ export default function AppHeader() {
         <div className="app-header-content">
           <Link href={isTenant ? '/tenant/dashboard' : '/'} className="app-logo" title="Springfield Systems">Springfield Systems</Link>
           {user && (
-            <div className="header-menu" ref={menuRef}>
-              <button className="header-menu-trigger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Open account menu">
-                <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
-              </button>
-              {menuOpen && (
-                <div className="menu-dropdown">
-                  <div style={{ padding: '8px 12px', color: 'var(--ink-3)', fontSize: '12px', borderBottom: '1px solid var(--line-soft)' }}>{user.email}</div>
-                  <Link href={dashboardHref}>{dashboardLabel}</Link>
-                  {!isTenant && <Link href="/properties">Properties</Link>}
-                  {!isTenant && <Link href="/tenants">Tenants</Link>}
-                  {!isTenant && <Link href="/payments">Payments</Link>}
-                  {isSuperAdmin && <Link href="/super-admin">Super Admin</Link>}
-                  {isLandlord && <Link href="/dashboard">Agent Management</Link>}
-                  <button onClick={handleLogout}>Logout</button>
-                </div>
-              )}
+            <div className="header-profile">
+              <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
+              <span className="user-name">{user.user_metadata?.full_name || user.email}</span>
             </div>
           )}
         </div>

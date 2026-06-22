@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import AdminTopNav from '../../components/AdminTopNav';
 
 interface Subscription {
   id: string;
@@ -67,115 +65,93 @@ export default function SuperAdminPaymentsPage() {
 
   return (
     <>
-      <section className="hero">
-        <nav className="nav">
-          <Link href="/" className="logo">
-            <span className="logo-mark">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-            </span>
-            Springfield Systems
-          </Link>
-          <AdminTopNav variant="super" />
-        </nav>
-
-        <div className="hero-inner">
-          <span className="eyebrow">
-            <span className="pulse"></span>
-            Super Admin
-          </span>
-
-          <h1>Payments</h1>
-
-          <p className="hero-sub">
-            Review landlord subscription payments, renewals, overdue access payments, and system revenue.
-          </p>
+      <main className="container admin-no-hero" style={{ padding: '34px 0 80px' }}>
+        <div className="card-admin-header">
+          <div>
+            <p className="heading">Payments</p>
+            <p className="subheading">Review landlord subscription payments, renewals, overdue access payments, and system revenue.</p>
+          </div>
         </div>
-      </section>
 
-      <section className="bento-section">
-        <div className="bento">
-          {loading && <p style={{ color: 'var(--ink-3)', gridColumn: 'span 12' }}>Loading subscriptions…</p>}
-          {message && <p style={{ color: 'var(--accent)', gridColumn: 'span 12' }}>{message}</p>}
-          {error && <p style={{ color: '#dc2626', gridColumn: 'span 12' }}>{error}</p>}
+        <section className="bento-section">
+          <div className="bento">
+            <article className="card">
+              <div className="card-label">Landlord Subscriptions</div>
+              <h3 style={{ fontSize: '34px', margin: 0 }}>KSH {totalSubscriptions.toLocaleString()}</h3>
+              <p>Total landlord system access payments.</p>
+            </article>
 
-          <article className="card" style={{ gridColumn: 'span 3' }}>
-            <div className="card-label">Landlord Subscriptions</div>
-            <h3 style={{ fontSize: '34px', margin: 0 }}>KSH {totalSubscriptions.toLocaleString()}</h3>
-            <p>Total landlord system access payments.</p>
-          </article>
+            <article className="card">
+              <div className="card-label">Active</div>
+              <h3 style={{ fontSize: '34px', margin: 0 }}>{activeSubscriptions}</h3>
+              <p>Landlords with active access.</p>
+            </article>
 
-          <article className="card" style={{ gridColumn: 'span 3' }}>
-            <div className="card-label">Active</div>
-            <h3 style={{ fontSize: '34px', margin: 0 }}>{activeSubscriptions}</h3>
-            <p>Landlords with active access.</p>
-          </article>
+            <article className="card">
+              <div className="card-label">Overdue</div>
+              <h3 style={{ fontSize: '34px', margin: 0, color: 'var(--rose)' }}>{overdueSubscriptions}</h3>
+              <p>Renewals requiring follow-up.</p>
+            </article>
 
-          <article className="card" style={{ gridColumn: 'span 3' }}>
-            <div className="card-label">Overdue</div>
-            <h3 style={{ fontSize: '34px', margin: 0, color: 'var(--rose)' }}>{overdueSubscriptions}</h3>
-            <p>Renewals requiring follow-up.</p>
-          </article>
+            <article className="card">
+              <div className="card-label">Pending</div>
+              <h3 style={{ fontSize: '34px', margin: 0, color: 'var(--amber)' }}>{expiringSubscriptions}</h3>
+              <p>Payments awaiting confirmation.</p>
+            </article>
 
-          <article className="card" style={{ gridColumn: 'span 3' }}>
-            <div className="card-label">Pending</div>
-            <h3 style={{ fontSize: '34px', margin: 0, color: 'var(--amber)' }}>{expiringSubscriptions}</h3>
-            <p>Payments awaiting confirmation.</p>
-          </article>
+            <article className="card">
+              <div className="card-label">System Access Payments</div>
+              <h3 style={{ marginBottom: 16 }}>Landlord Subscriptions</h3>
 
-          <article className="card card-pm" style={{ gridColumn: 'span 12' }}>
-            <div className="card-label">Landlord Subscriptions</div>
-            <h3 style={{ marginBottom: 16 }}>System Access Payments</h3>
+              {loading && <p className="landlord-muted">Loading subscriptions…</p>}
+              {message && <p className="landlord-success">{message}</p>}
+              {error && <p className="landlord-error">{error}</p>}
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--line)' }}>
-                    <th style={{ textAlign: 'left', padding: '12px', color: 'var(--ink-2)' }}>Landlord</th>
-                    <th style={{ textAlign: 'left', padding: '12px', color: 'var(--ink-2)' }}>Plan</th>
-                    <th style={{ textAlign: 'left', padding: '12px', color: 'var(--ink-2)' }}>Amount</th>
-                    <th style={{ textAlign: 'left', padding: '12px', color: 'var(--ink-2)' }}>Start</th>
-                    <th style={{ textAlign: 'left', padding: '12px', color: 'var(--ink-2)' }}>Expiry</th>
-                    <th style={{ textAlign: 'left', padding: '12px', color: 'var(--ink-2)' }}>Status</th>
-                    <th style={{ textAlign: 'left', padding: '12px', color: 'var(--ink-2)' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subscriptions.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} style={{ padding: '24px', color: 'var(--ink-3)', textAlign: 'center' }}>No subscription payments recorded yet.</td>
-                    </tr>
-                  ) : subscriptions.map((subscription) => (
-                    <tr key={subscription.id} style={{ borderBottom: '1px solid var(--line-soft)' }}>
-                      <td style={{ padding: '14px 12px' }}>
-                        <strong>{subscription.admin_name}</strong>
-                        <div style={{ color: 'var(--ink-3)', fontSize: '12px' }}>{subscription.email}</div>
-                      </td>
-                      <td style={{ padding: '14px 12px', textTransform: 'capitalize' }}>{subscription.plan}</td>
-                      <td style={{ padding: '14px 12px', color: 'var(--accent)', fontWeight: 700 }}>KSH {Number(subscription.amount).toLocaleString()}</td>
-                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{subscription.start_date}</td>
-                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{subscription.expiry_date}</td>
-                      <td style={{ padding: '14px 12px' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '4px 10px',
-                          borderRadius: '999px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          background: subscription.status === 'paid' || subscription.status === 'active' ? 'rgba(16,185,129,0.12)' : subscription.status === 'overdue' ? 'rgba(220,38,38,0.1)' : 'rgba(245,158,11,0.1)',
-                          color: subscription.status === 'paid' || subscription.status === 'active' ? 'var(--accent)' : subscription.status === 'overdue' ? '#dc2626' : 'var(--amber)'
-                        }}>{subscription.status}</span>
-                      </td>
-                      <td style={{ padding: '14px 12px' }}>
-                        <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 10px', background: 'rgba(245,158,11,0.1)', color: '#92400e' }} onClick={() => markOverdue(subscription)}>Mark Overdue</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </article>
-        </div>
-      </section>
+              {subscriptions.length === 0 ? (
+                <p className="landlord-empty">No subscription payments recorded yet.</p>
+              ) : (
+                <div className="table-shell">
+                  <table className="landlord-table">
+                    <thead>
+                      <tr>
+                        <th>Landlord</th>
+                        <th>Plan</th>
+                        <th>Amount</th>
+                        <th>Start</th>
+                        <th>Expiry</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subscriptions.map((subscription) => (
+                        <tr key={subscription.id}>
+                          <td>
+                            <strong>{subscription.admin_name}</strong>
+                            <div style={{ color: 'var(--ink-3)', fontSize: '12px' }}>{subscription.email}</div>
+                          </td>
+                          <td style={{ textTransform: 'capitalize' }}>{subscription.plan}</td>
+                          <td style={{ color: 'var(--accent)', fontWeight: 700 }}>KSH {Number(subscription.amount).toLocaleString()}</td>
+                          <td>{subscription.start_date}</td>
+                          <td>{subscription.expiry_date}</td>
+                          <td>
+                            <span className={`status-pill ${subscription.status === 'paid' || subscription.status === 'active' ? 'status-active' : subscription.status === 'overdue' ? 'status-pending danger' : 'status-pending'}`}>
+                              {subscription.status}
+                            </span>
+                          </td>
+                          <td>
+                            <button className="action-button" onClick={() => markOverdue(subscription)}>Mark Overdue</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </article>
+          </div>
+        </section>
+      </main>
 
       <footer>
         <div className="footer-inner">
@@ -189,7 +165,7 @@ export default function SuperAdminPaymentsPage() {
             <a href="/">Home</a>
             <a href="/super-admin">Dashboard</a>
           </div>
-          <div className="footer-copy">© 2024 Springfield Systems. All rights reserved.</div>
+          <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
         </div>
       </footer>
     </>

@@ -33,7 +33,7 @@ function normalizeLandlord(user: any, profile?: LandlordProfile) {
   return {
     id: user?.id ?? profile?.user_id,
     email: profile?.email ?? user?.email ?? '',
-    full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Landlord',
+    full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Project Manager',
     organization: profile?.organization_id ?? '',
     status: profile?.status ?? (user?.email_confirmed_at ? 'active' : 'pending'),
     created_at: profile?.created_at ?? user?.created_at ?? '',
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     const password = String(body.password ?? '');
     const fullName = String(body.fullName ?? body.name ?? '').trim();
     const organization = String(body.organization ?? '').trim();
-    const status: LandlordProfile['status'] = body.status === 'pending' ? 'pending' : 'active';
+    const status: LandlordProfile['status'] = body.status ?? 'pending';
 
     if (!email || !password || !fullName || !organization) {
       return badRequest('Email, password, full name, and organization are required.');
@@ -179,11 +179,14 @@ export async function DELETE(request: NextRequest) {
     const userId = request.nextUrl.searchParams.get('id');
     if (!userId) return badRequest('Landlord ID is required.');
 
-    const user = await updateLandlordMetadata(userId, { status: 'inactive' });
-    await supabaseAdmin.from('profiles').update({ status: 'inactive' }).eq('user_id', userId);
+    await supabaseAdmin.from('notifications').delete().eq('admin_id', userId);
+    await supabaseAdmin.from('payments').delete().eq('tenant_id', null).eq('transaction_type', 'landlord_notification');
+    await supabaseAdmin.from('subscriptions').delete().eq('admin_id', userId);
+    await supabaseAdmin.from('profiles').delete().eq('user_id', userId);
+    await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE' });
 
-    return NextResponse.json({ landlord: normalizeLandlord(user) });
+    return NextResponse.json({ message: 'Project manager permanently removed.' });
   } catch (error: any) {
-    return NextResponse.json({ message: error.message ?? 'Unable to remove landlord.' }, { status: 500 });
+    return NextResponse.json({ message: error.message ?? 'Unable to remove project manager.' }, { status: 500 });
   }
 }

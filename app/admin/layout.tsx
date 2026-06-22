@@ -19,8 +19,8 @@ export default function AdminLayout({
         router.push('/login');
         return;
       }
-      // Check if user is admin or super-admin
-      const isAdmin = user.email?.includes('admin') || user.user_metadata?.role === 'admin';
+      const userRole = user.user_metadata?.role;
+      const isAdmin = user.email?.includes('admin') || userRole === 'admin' || userRole === 'project_manager';
       const isSuperAdmin = user.email === 'vin.oumaotieno@gmail.com';
       if (!isAdmin && !isSuperAdmin) {
         router.push('/');

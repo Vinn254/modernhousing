@@ -1,10 +1,12 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import AppHeader from './components/AppHeader';
+import dynamic from 'next/dynamic';
+
+const AppHeader = dynamic(() => import('./components/AppHeader'), { ssr: false });
 
 export const metadata: Metadata = {
   title: 'Springfield Systems',
-  description: 'Apartment management portal for landlords, agents, admins, and tenants',
+  description: 'Apartment management portal for project managers, agents, admins, and tenants',
 };
 
 export default function RootLayout({

@@ -7,7 +7,7 @@ export interface Profile {
   role: UserRole;
   organization_id: string | null;
   email: string;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'pending';
   created_at: string;
 }
 

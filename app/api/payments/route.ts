@@ -10,12 +10,18 @@ if (!supabaseUrl || !serviceRoleKey) {
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('payments')
-      .select('*, tenants(full_name, email)')
-      .order('created_at', { ascending: false });
+    const propertyId = request.nextUrl.searchParams.get('propertyId');
+
+    const selectQuery = '*, tenants(full_name, email, units!inner(property_id))';
+    let query: any = supabaseAdmin.from('payments').select(selectQuery);
+
+    if (propertyId) {
+      query = query.eq('tenants.units.property_id', propertyId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) throw error;
 
@@ -27,7 +33,7 @@ export async function GET() {
 
     return NextResponse.json({ payments });
   } catch (error: any) {
-    return NextResponse.json({ message: error.message ?? 'Unable to load payments.' }, { status: 500 });
+    return NextResponse.json({ payments: [], message: error.message ?? 'Unable to load payments.' }, { status: 500 });
   }
 }
 

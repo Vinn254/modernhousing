@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 interface Property {
   id: string;
@@ -24,6 +25,13 @@ const emptyForm = {
   ownershipInfo: '',
 };
 
+async function getAuthHeaders() {
+  const { data } = await supabase.auth.getSession();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+  return headers;
+}
+
 export default function PropertiesPage() {
   const formRef = useRef<HTMLDivElement>(null);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -39,7 +47,9 @@ export default function PropertiesPage() {
     setLoading(true);
     setError('');
 
-    const response = await fetch('/api/properties');
+    const response = await fetch('/api/properties', {
+      headers: await getAuthHeaders(),
+    });
     const result = await response.json();
 
     if (!response.ok) {
@@ -85,7 +95,7 @@ export default function PropertiesPage() {
 
     const response = await fetch('/api/properties', {
       method: editingProperty ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await getAuthHeaders(),
       body: JSON.stringify(editingProperty ? { ...form, id: editingProperty.id } : form),
     });
 
@@ -119,7 +129,10 @@ export default function PropertiesPage() {
   async function handleRemove(propertyId: string) {
     if (!confirm('Remove this property? Units and tenants assigned to it will also be removed.')) return;
 
-    const response = await fetch(`/api/properties?id=${encodeURIComponent(propertyId)}`, { method: 'DELETE' });
+    const response = await fetch(`/api/properties?id=${encodeURIComponent(propertyId)}`, {
+      method: 'DELETE',
+      headers: await getAuthHeaders(),
+    });
     const result = await response.json();
 
     if (!response.ok) {
@@ -142,7 +155,7 @@ export default function PropertiesPage() {
     <main className="container property-page-main">
       <div className="card-admin-header property-hero-card">
         <div>
-          <span className="landlord-kicker">Landlord Workspace</span>
+          <span className="landlord-kicker">Project Manager Workspace</span>
           <h1 className="property-page-title">Properties</h1>
           <p className="property-page-subtitle">Build your portfolio, track units, and keep every property ready for agents and tenants.</p>
         </div>
