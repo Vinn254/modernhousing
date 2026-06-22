@@ -126,8 +126,6 @@ export default function AppHeader() {
     <>
       {user && (
         <>
-          <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">☰</button>
-
           <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
             <div className="sidebar-header">
               <h2 className="sidebar-logo">Springfield</h2>
@@ -148,9 +146,10 @@ export default function AppHeader() {
         <div className="app-header-content">
           <Link href={isTenant ? '/tenant/dashboard' : '/'} className="app-logo" title="Springfield Systems">Springfield Systems</Link>
           {user && (
-            <div className="header-profile">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
-              <span className="user-name">{user.user_metadata?.full_name || user.email}</span>
+              <span className="user-name" style={{ color: '#fff', fontSize: '14px' }}>{user.user_metadata?.full_name || user.email}</span>
+              <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu" style={{ position: 'static', marginLeft: '8px' }}>☰</button>
             </div>
           )}
         </div>

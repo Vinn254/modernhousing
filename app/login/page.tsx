@@ -226,6 +226,9 @@ function LoginForm() {
           <p className="auth-alt">
             Need tenant access? <Link href="/tenant/register">Tenant registration</Link>
           </p>
+          <p className="auth-alt">
+            <Link href="/forgot-password">Forgot password?</Link>
+          </p>
 
           <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--line)' }}>
             <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--ink)' }}>Forgot your email?</p>
