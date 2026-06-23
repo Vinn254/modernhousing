@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password`,
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://modernhousing.vercel.app'}/reset-password`,
     });
 
     if (error) {
