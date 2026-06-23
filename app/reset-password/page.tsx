@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
@@ -9,6 +10,14 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        // User has clicked the reset link and has a recovery session
+      }
+    });
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -22,26 +31,11 @@ export default function ResetPasswordPage() {
     setError('');
     setMessage('');
 
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-
-    if (!token) {
-      setError('Invalid or missing reset token.');
-      setLoading(false);
-      return;
-    }
-
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
-      });
+      const { error } = await supabase.auth.updateUser({ password });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        setError(result.message ?? 'Unable to reset password.');
+      if (error) {
+        setError(error.message ?? 'Unable to reset password.');
       } else {
         setMessage('Password reset successfully. You can now sign in.');
       }

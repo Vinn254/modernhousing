@@ -8,16 +8,17 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { password } = body;
+    const { password, accessToken } = await request.json();
 
     if (!password) {
       return NextResponse.json({ message: 'Password is required.' }, { status: 400 });
     }
 
-    // For Supabase password reset, the user needs to have a valid session from the reset link
-    // This endpoint is called when user submits new password from reset page
-    // Supabase automatically validates the session and allows password update
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+      return NextResponse.json({ message: error.message ?? 'Unable to reset password.' }, { status: 400 });
+    }
 
     return NextResponse.json({ 
       message: 'Password updated successfully.',
