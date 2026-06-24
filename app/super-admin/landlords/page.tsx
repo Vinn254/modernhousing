@@ -7,6 +7,7 @@ interface Landlord {
   email: string;
   full_name: string;
   organization: string;
+  phone?: string | null;
   status: 'active' | 'inactive' | 'pending';
   created_at: string;
 }
@@ -99,6 +100,7 @@ export default function LandlordManagementPage() {
   const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
   const [organization, setOrganization] = useState('');
+  const [newPhone, setNewPhone] = useState('');
   const [newPlan, setNewPlan] = useState('monthly');
   const [loading, setLoading] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
@@ -163,6 +165,7 @@ export default function LandlordManagementPage() {
         password: newPassword,
         fullName: newName,
         organization,
+        phone: newPhone || null,
       }),
     });
 
@@ -180,6 +183,7 @@ export default function LandlordManagementPage() {
     setNewPassword('');
     setNewName('');
     setOrganization('');
+    setNewPhone('');
     setNewPlan('monthly');
 
     if (result.landlord?.id) {
@@ -467,6 +471,10 @@ export default function LandlordManagementPage() {
                 <input value={organization} onChange={(event) => setOrganization(event.target.value)} required placeholder="Springfield Properties" />
               </div>
               <div className="field-group">
+                <label>Phone (optional)</label>
+                <input type="tel" value={newPhone} onChange={(event) => setNewPhone(event.target.value)} placeholder="+254 7xx xxx xxx" />
+              </div>
+              <div className="field-group">
                 <label>Subscription Plan</label>
                 <select value={newPlan} onChange={(event) => setNewPlan(event.target.value)} required>
                   <option value="monthly">Monthly - KSH 2,500</option>
@@ -494,8 +502,45 @@ export default function LandlordManagementPage() {
               <div className="detail-card"><span>Full name</span><strong>{selectedLandlord.full_name}</strong></div>
               <div className="detail-card"><span>Organization</span><strong>{selectedLandlord.organization || '—'}</strong></div>
               <div className="detail-card"><span>Email</span><strong>{selectedLandlord.email}</strong></div>
+              {selectedLandlord.phone && <div className="detail-card"><span>Phone</span><strong>{selectedLandlord.phone}</strong></div>}
               <div className="detail-card"><span>Status</span><strong>{selectedLandlord.status}</strong></div>
               <div className="detail-card"><span>Created</span><strong>{new Date(selectedLandlord.created_at).toLocaleDateString()}</strong></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedLandlord && selectedSubscription && (
+        <div className="modal-overlay" onClick={(event) => event.target === event.currentTarget && (setSelectedLandlord(null), setSelectedSubscription(null))}>
+          <div className="modal-card landlord-modal">
+            <div className="modal-title-row">
+              <h3>Send Subscription Notification</h3>
+              <button className="icon-button" onClick={() => (setSelectedLandlord(null), setSelectedSubscription(null))}>×</button>
+            </div>
+            <div className="notification-composer">
+              <div className="composer-card">
+                <label>To: {selectedLandlord.full_name}</label>
+                <label>Plan: {selectedSubscription.plan}</label>
+              </div>
+              <div className="composer-card">
+                <textarea rows={4} value={notificationText} onChange={(event) => setNotificationText(event.target.value)} placeholder="Notification message..." />
+              </div>
+              <div className="composer-controls">
+                <select value={selectedLandlord.id} onChange={handleComposerLandlordChange}>
+                  {landlords.map((landlord) => (
+                    <option key={landlord.id} value={landlord.id}>{landlord.full_name}</option>
+                  ))}
+                </select>
+                <select value={selectedSubscription.id} onChange={handleComposerSubscriptionChange}>
+                  {composerSubscriptions.filter((s) => s.admin_id === selectedLandlord.id).map((subscription) => (
+                    <option key={subscription.id} value={subscription.id}>{subscription.plan} - {new Date(subscription.expiry_date).toLocaleDateString()}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="modal-actions">
+                <button type="button" disabled={notificationLoading} onClick={() => sendNotification(selectedSubscription)}>Send Notification</button>
+                <button type="button" className="secondary-button" onClick={() => (setSelectedLandlord(null), setSelectedSubscription(null))} disabled={notificationLoading}>Cancel</button>
+              </div>
             </div>
           </div>
         </div>

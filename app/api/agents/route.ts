@@ -23,13 +23,14 @@ interface AgentProfile {
   user_id: string;
   full_name: string;
   email: string;
+  phone?: string | null;
   role: 'agent';
   status: string;
   organization_id?: string | null;
   created_at: string;
 }
 
-async function upsertAgentProfile(userId: string, fullName: string, email: string) {
+async function upsertAgentProfile(userId: string, fullName: string, email: string, phone?: string | null) {
   const { data: existingProfile, error: profileFetchError } = await supabaseAdmin
     .from('profiles')
     .select('*')
@@ -44,6 +45,7 @@ async function upsertAgentProfile(userId: string, fullName: string, email: strin
     user_id: userId,
     full_name: fullName,
     email,
+    phone,
     role: 'agent' as const,
     status: 'active',
     organization_id: existingProfile?.organization_id ?? null,
@@ -131,6 +133,7 @@ export async function POST(request: NextRequest) {
     const email = String(body.email ?? '').trim();
     const password = String(body.password ?? '');
     const fullName = String(body.fullName ?? body.name ?? '').trim();
+    const phone = body.phone ? String(body.phone).trim() : undefined;
     const propertyId = String(body.propertyId ?? body.property_id ?? '').trim();
     const propertyName = String(body.propertyName ?? body.property_name ?? '').trim();
     const landlordId = String(body.landlordId ?? body.landlord_id ?? '').trim();
@@ -149,7 +152,7 @@ export async function POST(request: NextRequest) {
     if (user) {
       user = await updateAgentMetadata(user.id, { fullName, propertyId, propertyName, status: 'active', landlordId });
     } else {
-      const created = await createAdminUser({ email, password, fullName, role: 'agent' });
+      const created = await createAdminUser({ email, password, fullName, role: 'agent', phone });
       user = created.user;
       user = await updateAgentMetadata(user.id, { fullName, propertyId, propertyName, status: 'active', landlordId });
     }
@@ -158,7 +161,7 @@ export async function POST(request: NextRequest) {
       throw new Error('Unable to create agent.');
     }
 
-    const profile = await upsertAgentProfile(user.id, fullName, email);
+    const profile = await upsertAgentProfile(user.id, fullName, email, phone);
 
     return NextResponse.json({ agent: normalizeAgent(user, profile) }, { status: existingUser ? 200 : 201 });
   } catch (error: any) {

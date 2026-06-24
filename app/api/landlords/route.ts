@@ -23,6 +23,7 @@ interface LandlordProfile {
   user_id: string;
   full_name: string;
   email: string;
+  phone?: string | null;
   role: 'project_manager';
   organization_id?: string | null;
   status: 'active' | 'inactive' | 'pending';
@@ -35,6 +36,7 @@ function normalizeLandlord(user: any, profile?: LandlordProfile) {
     email: profile?.email ?? user?.email ?? '',
     full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Project Manager',
     organization: profile?.organization_id ?? '',
+    phone: profile?.phone ?? null,
     status: profile?.status ?? (user?.email_confirmed_at ? 'active' : 'pending'),
     created_at: profile?.created_at ?? user?.created_at ?? '',
   };
@@ -52,27 +54,28 @@ async function getProfile(userId: string) {
   return (data ?? null) as LandlordProfile | null;
 }
 
-async function upsertProfile(userId: string, fullName: string, email: string, organizationId: string | null, status: LandlordProfile['status']) {
-  const existing = await getProfile(userId);
-  const payload = {
-    user_id: userId,
-    full_name: fullName,
-    email,
-    role: 'project_manager' as const,
-    organization_id: organizationId,
-    status,
-  };
+async function upsertProfile(userId: string, fullName: string, email: string, organizationId: string | null, status: LandlordProfile['status'], phone?: string | null) {
+    const existing = await getProfile(userId);
+    const payload = {
+      user_id: userId,
+      full_name: fullName,
+      email,
+      role: 'project_manager' as const,
+      organization_id: organizationId,
+      status,
+      phone,
+    };
 
-  if (existing) {
-    const { data, error } = await supabaseAdmin.from('profiles').update(payload).eq('user_id', userId).select('*').single();
+    if (existing) {
+      const { data, error } = await supabaseAdmin.from('profiles').update(payload).eq('user_id', userId).select('*').single();
+      if (error) throw error;
+      return data as LandlordProfile;
+    }
+
+    const { data, error } = await supabaseAdmin.from('profiles').insert(payload).select('*').single();
     if (error) throw error;
     return data as LandlordProfile;
   }
-
-  const { data, error } = await supabaseAdmin.from('profiles').insert(payload).select('*').single();
-  if (error) throw error;
-  return data as LandlordProfile;
-}
 
 async function updateLandlordMetadata(userId: string, input: { fullName?: string; status?: LandlordProfile['status']; password?: string }) {
   const users = await getAllAdminUsers();
@@ -126,6 +129,7 @@ export async function POST(request: NextRequest) {
     const password = String(body.password ?? '');
     const fullName = String(body.fullName ?? body.name ?? '').trim();
     const organization = String(body.organization ?? '').trim();
+    const phone = body.phone ? String(body.phone).trim() : null;
     const status: LandlordProfile['status'] = body.status ?? 'pending';
 
     if (!email || !password || !fullName || !organization) {
@@ -145,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) throw new Error('Unable to create landlord.');
 
-    const profile = await upsertProfile(user.id, fullName, email, null, status);
+    const profile = await upsertProfile(user.id, fullName, email, null, status, phone);
 
     return NextResponse.json({ landlord: normalizeLandlord(user, profile) }, { status: existingUser ? 200 : 201 });
   } catch (error: any) {
@@ -160,13 +164,14 @@ export async function PATCH(request: NextRequest) {
     const fullName = String(body.fullName ?? '').trim();
     const status = body.status as LandlordProfile['status'] | undefined;
     const password = body.password ? String(body.password) : '';
+    const phone = body.phone ? String(body.phone).trim() : undefined;
 
     if (!userId || !fullName) {
       return badRequest('Landlord ID and full name are required.');
     }
 
     const user = await updateLandlordMetadata(userId, { fullName, status, password: password || undefined });
-    const profile = await upsertProfile(userId, fullName, user.email, null, status ?? 'active');
+    const profile = await upsertProfile(userId, fullName, user.email, null, status ?? 'active', phone ?? undefined);
 
     return NextResponse.json({ landlord: normalizeLandlord(user, profile) });
   } catch (error: any) {

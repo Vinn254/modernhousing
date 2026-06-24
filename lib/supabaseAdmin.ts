@@ -76,6 +76,7 @@ export async function createAdminUser(input: {
   password: string;
   fullName: string;
   role: 'admin' | 'super_admin' | 'agent' | 'project_manager' | 'tenant';
+  phone?: string;
 }): Promise<{ user: AdminUser; error: Error | null }> {
   const user = await adminRequest<any>('/auth/v1/admin/users', {
     method: 'POST',
@@ -86,6 +87,7 @@ export async function createAdminUser(input: {
       user_metadata: {
         full_name: input.fullName,
         role: input.role,
+        phone: input.phone,
       },
     }),
   });

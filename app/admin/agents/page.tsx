@@ -15,6 +15,7 @@ interface Agent {
   full_name: string;
   property_name?: string;
   status: string;
+  phone?: string | null;
 }
 
 export default function AgentsPage() {
@@ -86,6 +87,7 @@ export default function AgentsPage() {
         email: form.agentEmail,
         password: form.agentPassword,
         fullName: form.agentName,
+        phone: form.agentPhone || undefined,
         propertyId: form.agentPropertyId,
         propertyName: selectedProperty?.name ?? '',
       }),
@@ -143,6 +145,7 @@ export default function AgentsPage() {
               <form onSubmit={handleSubmit} className="form-grid">
                 <input value={form.agentName} onChange={e => setForm(f => ({ ...f, agentName: e.target.value }))} required placeholder="Agent full name" />
                 <input type="email" value={form.agentEmail} onChange={e => setForm(f => ({ ...f, agentEmail: e.target.value }))} required placeholder="Agent email" />
+                <input type="tel" value={form.agentPhone} onChange={e => setForm(f => ({ ...f, agentPhone: e.target.value }))} placeholder="Phone (optional)" />
                 <input type="password" value={form.agentPassword} onChange={e => setForm(f => ({ ...f, agentPassword: e.target.value }))} required placeholder="Password" />
                 <select value={form.agentPropertyId} onChange={e => setForm(f => ({ ...f, agentPropertyId: e.target.value }))} required>
                   <option value="">Select property</option>
