@@ -11,8 +11,11 @@ if (!supabaseUrl || !serviceRoleKey) {
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const landlordId = url.searchParams.get('landlordId');
+
     const [users, profilesResult, landlordProfilesResult] = await Promise.all([
       getAllAdminUsers(),
       supabaseAdmin.from('profiles').select('*').eq('role', 'agent'),
@@ -27,13 +30,14 @@ export async function GET() {
     const landlordById = new Map(landlordProfiles.map((profile: any) => [profile.user_id, profile]));
     const usersById = new Map(users.map((user: any) => [user.id, user]));
 
-    const agents = profiles.map((profile: any) => {
+    let agents = profiles.map((profile: any) => {
       const user = usersById.get(profile.user_id);
       const landlord = landlordById.get(user?.user_metadata?.landlord_id || '');
       return {
         id: profile.user_id,
         name: user?.user_metadata?.full_name || profile.full_name,
         email: profile.email,
+        phone: profile.phone,
         property_name: user?.user_metadata?.property_name || '',
         property_id: user?.user_metadata?.property_id || '',
         status: user?.user_metadata?.agent_status || profile.status || 'active',
@@ -42,6 +46,10 @@ export async function GET() {
         created_at: profile.created_at,
       };
     });
+
+    if (landlordId) {
+      agents = agents.filter((agent: any) => agent.landlord_email === landlordId || agent.property_id === landlordId);
+    }
 
     return NextResponse.json({ agents });
   } catch (error) {

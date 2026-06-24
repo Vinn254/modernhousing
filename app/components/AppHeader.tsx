@@ -19,6 +19,7 @@ export default function AppHeader() {
   const resolveRole = (currentUser: any): Role => {
     if (currentUser?.email === 'vin.oumaotieno@gmail.com') return 'super_admin';
     const metadataRole = currentUser?.user_metadata?.role;
+    if (metadataRole === 'project_manager') return 'landlord';
     if (metadataRole === 'admin') return 'landlord';
     if (metadataRole === 'super_admin') return 'super_admin';
     if (metadataRole === 'agent') return 'agent';
@@ -72,8 +73,8 @@ export default function AppHeader() {
   const isSuperAdmin = role === 'super_admin';
   const isAdmin = role === 'admin';
 
-  const dashboardHref = isTenant ? '/tenant/dashboard' : '/dashboard';
-  const dashboardLabel = isTenant ? 'Tenant Dashboard' : isAgent ? 'Agent Dashboard' : 'Landlord Dashboard';
+  const dashboardHref = isTenant ? '/tenant/dashboard' : '/admin';
+  const dashboardLabel = isTenant ? 'Tenant Dashboard' : isAgent ? 'Agent Dashboard' : 'Project Manager Dashboard';
 
   const agentLinks: {label: string; href: string}[] = [
     { label: 'Dashboard', href: '/dashboard' },
@@ -92,14 +93,14 @@ export default function AppHeader() {
   ];
 
   const landlordPMLinks: {label: string; href: string}[] = [
-    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Dashboard', href: '/admin' },
     { label: 'Properties', href: '/properties' },
-    { label: 'Units', href: '/admin/units' },
-    { label: 'Tenants', href: '/admin/tenants' },
     { label: 'Agents', href: '/admin/agents' },
-    { label: 'Payments', href: '/admin/payments' },
+    { label: 'Tenants', href: '/admin/tenants' },
+    { label: 'Payments', href: '/payments' },
     { label: 'Utilities', href: '/admin/utilities' },
     { label: 'Communications', href: '/admin/communications' },
+    { label: 'Documents', href: '/admin/documents' },
   ];
 
   const adminLinks: {label: string; href: string}[] = [

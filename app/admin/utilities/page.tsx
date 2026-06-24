@@ -10,6 +10,14 @@ interface Property {
   unit_count?: number;
 }
 
+interface Tenant {
+  id: string;
+  full_name: string;
+  email: string;
+  unit: string;
+  property: string;
+}
+
 interface UtilityPayment {
   id: string;
   tenant: string;
@@ -24,6 +32,7 @@ interface UtilityPayment {
 
 export default function UtilitiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [utilityPayments, setUtilityPayments] = useState<UtilityPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,20 +66,20 @@ export default function UtilitiesPage() {
     setError('');
 
     try {
-      const [propsResponse, paymentsResponse] = await Promise.all([
+      const [propsResponse, tenantsResponse, paymentsResponse] = await Promise.all([
         fetch('/api/properties', { headers: await getAuthHeaders() }),
+        fetch('/api/tenants', { headers: await getAuthHeaders() }),
         fetch('/api/payments', { headers: await getAuthHeaders() }),
       ]);
 
       const propsResult = await propsResponse.json();
+      const tenantsResult = await tenantsResponse.json();
       const paymentsResult = await paymentsResponse.json();
 
-      if (!propsResponse.ok) throw new Error(propsResult.message ?? 'Failed to load properties');
-      if (!paymentsResponse.ok) throw new Error(paymentsResult.message ?? 'Failed to load payments');
-
       setProperties(propsResult.properties ?? []);
+      setTenants(tenantsResult.tenants ?? []);
       setUtilityPayments((paymentsResult.payments ?? []).filter((p: any) =>
-        ['water', 'garbage', 'service_charge', 'parking', 'security', 'other', 'utility', 'overdue'].includes(p.transaction_type)
+        ['water', 'garbage', 'service_charge', 'parking', 'security', 'other', 'utility'].includes(p.transaction_type)
       ));
     } catch (err: any) {
       setError(err.message);
@@ -87,6 +96,11 @@ export default function UtilitiesPage() {
     event.preventDefault();
     setMessage('');
     setError('');
+
+    if (!utilityForm.tenantId || !utilityForm.utilityType || !utilityForm.amount) {
+      setError('All fields are required.');
+      return;
+    }
 
     const response = await fetch('/api/payments', {
       method: 'POST',
@@ -132,9 +146,9 @@ export default function UtilitiesPage() {
               </span>Record Utility Payment</div>
               <h3>Utility Billing</h3>
               <form onSubmit={handleAddUtility} className="form-grid">
-                <select value={utilityForm.propertyId} onChange={e => setUtilityForm(f => ({ ...f, propertyId: e.target.value }))} required>
-                  <option value="">Select property</option>
-                  {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                <select value={utilityForm.tenantId} onChange={e => setUtilityForm(f => ({ ...f, tenantId: e.target.value }))} required>
+                  <option value="">Select tenant</option>
+                  {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} - {t.property}</option>)}
                 </select>
                 <select value={utilityForm.utilityType} onChange={e => setUtilityForm(f => ({ ...f, utilityType: e.target.value }))} required>
                   <option value="">Utility type</option>
@@ -191,7 +205,7 @@ export default function UtilitiesPage() {
       <footer>
         <div className="footer-inner">
           <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
-          <div className="footer-links"><a href="/">Home</a><a href="/dashboard">Dashboard</a></div>
+          <div className="footer-links"><a href="/">Home</a><a href="/admin">Dashboard</a></div>
           <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
         </div>
       </footer>

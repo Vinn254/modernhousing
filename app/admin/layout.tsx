@@ -13,20 +13,20 @@ export default function AdminLayout({
   const router = useRouter();
 
   useEffect(() => {
-    const checkAdmin = async () => {
+    const checkLandlord = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push('/login');
         return;
       }
       const userRole = user.user_metadata?.role;
-      const isAdmin = user.email?.includes('admin') || userRole === 'admin' || userRole === 'project_manager';
+      const isLandlord = userRole === 'project_manager';
       const isSuperAdmin = user.email === 'vin.oumaotieno@gmail.com';
-      if (!isAdmin && !isSuperAdmin) {
+      if (!isLandlord && !isSuperAdmin) {
         router.push('/');
       }
     };
-    checkAdmin();
+    checkLandlord();
   }, [router]);
 
   return <>{children}</>;
