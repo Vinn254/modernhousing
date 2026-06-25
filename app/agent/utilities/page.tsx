@@ -64,11 +64,11 @@ export default function AgentUtilitiesPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         tenantId: utilityTenantId,
+        propertyId: agentPropertyId,
         description: utilityDescription || `${utilityType} payment`,
         transactionType: utilityType,
         amount: Number(utilityAmount),
         balanceRemaining: 0,
-        propertyId: agentPropertyId,
       }),
     });
 

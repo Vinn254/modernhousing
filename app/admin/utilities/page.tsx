@@ -16,6 +16,7 @@ interface Tenant {
   email: string;
   unit: string;
   property: string;
+  property_id?: string;
 }
 
 interface UtilityPayment {
@@ -102,11 +103,15 @@ export default function UtilitiesPage() {
       return;
     }
 
+    const selectedTenant = tenants.find(t => t.id === utilityForm.tenantId);
+    const tenantPropertyId = selectedTenant?.property_id || utilityForm.propertyId;
+
     const response = await fetch('/api/payments', {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         tenantId: utilityForm.tenantId,
+        propertyId: tenantPropertyId,
         description: utilityForm.description || `${utilityForm.utilityType} payment`,
         transactionType: utilityForm.utilityType,
         amount: Number(utilityForm.amount),
