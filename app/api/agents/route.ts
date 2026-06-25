@@ -7,6 +7,7 @@ import {
   getAllAdminUsers,
   getUserByEmail,
   requestError,
+  isMissingTableError,
 } from '../../../lib/supabaseAdmin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -28,6 +29,37 @@ interface AgentProfile {
   status: string;
   organization_id?: string | null;
   created_at: string;
+}
+
+async function getAuthContext(request: NextRequest) {
+  const headers: Record<string, string> = {
+    cookie: request.headers.get('cookie') ?? '',
+  };
+  const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
+  if (authorization) headers.Authorization = authorization;
+
+  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
+    global: { headers },
+  });
+
+  const { data: sessionData, error: sessionError } = await supabaseAuth.auth.getSession();
+
+  if (sessionError || !sessionData.session) {
+    return { isSuperAdmin: false, profile: null };
+  }
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, user_id, organization_id, role, full_name, email')
+    .eq('user_id', sessionData.session.user.id)
+    .single();
+
+  return {
+    isSuperAdmin: profile?.role === 'super_admin',
+    profile: profile ?? null,
+    userId: sessionData.session.user.id,
+    userEmail: sessionData.session.user.email,
+  };
 }
 
 async function upsertAgentProfile(userId: string, fullName: string, email: string, phone?: string | null) {
@@ -108,7 +140,7 @@ async function updateAgentMetadata(userId: string, input: { fullName?: string; p
   });
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const [users, profilesResult] = await Promise.all([
       getAllAdminUsers(),
@@ -118,7 +150,6 @@ export async function GET() {
     if (profilesResult.error) throw profilesResult.error;
 
     const profiles = (profilesResult.data ?? []) as AgentProfile[];
-    const profileByUserId = new Map(profiles.map((profile) => [profile.user_id, profile]));
     const agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
 
     return NextResponse.json({ agents });

@@ -10,16 +10,8 @@ if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
 }
 
 type AuthContext = {
-  session: { user: { id: string } } | null;
-  profile: {
-    id: string;
-    user_id: string;
-    organization_id: string | null;
-    role: string;
-    full_name: string;
-    email: string;
-  } | null;
   isSuperAdmin: boolean;
+  organization_id: string | null;
 };
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
@@ -32,7 +24,7 @@ function forbidden(message: string) {
   return NextResponse.json({ message }, { status: 403 });
 }
 
-async function getAuthContext(request: NextRequest): Promise<AuthContext | NextResponse> {
+async function getAuthContext(request: NextRequest) {
   const headers: Record<string, string> = {
     cookie: request.headers.get('cookie') ?? '',
   };
@@ -49,72 +41,20 @@ async function getAuthContext(request: NextRequest): Promise<AuthContext | NextR
 
   if (sessionError || !sessionData.session) {
     return {
-      session: { user: { id: '' } },
-      profile: {
-        id: '',
-        user_id: '',
-        organization_id: null,
-        role: 'project_manager',
-        full_name: '',
-        email: '',
-      },
       isSuperAdmin: false,
+      organization_id: null,
     };
   }
 
-  const { data: profile, error: profileError } = await supabaseAdmin
+  const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionData.session.user.id)
     .single();
 
-  if (profileError && profileError.code === 'PGRST116') {
-    const role = sessionData.session.user.user_metadata?.role ?? 'project_manager';
-    const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
-    const { data: createdProfile, error: createError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: sessionData.session.user.id,
-        full_name: fullName,
-        email: sessionData.session.user.email,
-        role,
-        organization_id: null,
-        status: 'active',
-      })
-      .select('*')
-      .single();
-    if (createError) {
-      return {
-        session: sessionData.session,
-        profile: {
-          id: '',
-          user_id: '',
-          organization_id: null,
-          role: 'project_manager',
-          full_name: '',
-          email: '',
-        },
-        isSuperAdmin: false,
-      };
-    }
-    return {
-      session: sessionData.session,
-      profile: createdProfile,
-      isSuperAdmin: createdProfile.role === 'super_admin',
-    };
-  }
-
   return {
-    session: sessionData.session,
-    profile: profile ?? {
-      id: '',
-      user_id: '',
-      organization_id: null,
-      role: 'project_manager',
-      full_name: '',
-      email: '',
-    },
     isSuperAdmin: profile?.role === 'super_admin',
+    organization_id: profile?.organization_id ?? null,
   };
 }
 
@@ -174,11 +114,11 @@ async function enrichProperties(rows: any[]) {
   });
 }
 
-async function assertPropertyAccess(request: NextRequest, propertyId: string, authContext: AuthContext) {
+async function assertPropertyAccess(request: NextRequest, propertyId: string, organizationId: string | null, isSuperAdmin: boolean) {
   const property = await getPropertyById(propertyId);
   if (!property) return null;
 
-  if (!authContext.isSuperAdmin && property.organization_id !== authContext.profile?.organization_id) {
+  if (!isSuperAdmin && property.organization_id !== organizationId) {
     return forbidden('You can only manage properties in your own landlord workspace.');
   }
 
@@ -186,7 +126,13 @@ async function assertPropertyAccess(request: NextRequest, propertyId: string, au
 }
 
 export async function GET(request: NextRequest) {
-  const query = supabaseAdmin.from('properties').select('*');
+  const authContext = await getAuthContext(request);
+
+  let query: any = supabaseAdmin.from('properties').select('*');
+
+  if (!authContext.isSuperAdmin && authContext.organization_id) {
+    query = query.eq('organization_id', authContext.organization_id);
+  }
 
   const { data, error } = await query.order('created_at', { ascending: false });
 

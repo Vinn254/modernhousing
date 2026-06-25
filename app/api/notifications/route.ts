@@ -53,12 +53,12 @@ async function getFallbackLandlordNotifications() {
 
   return (data ?? []).map((item: any) => ({
     ...item,
-    recipient: 'landlord',
+    recipient: 'project_manager',
     admin_id: item.admin_id ?? null,
     admin_name: item.admin_name ?? null,
     admin_email: item.admin_email ?? null,
     message: item.description ?? '',
-    status: item.transaction_type === 'landlord_notification' ? 'sent' : item.status,
+    status: item.status,
   }));
 }
 
@@ -140,16 +140,17 @@ export async function GET(request: NextRequest) {
   try {
     const recipient = request.nextUrl.searchParams.get('recipient');
     const propertyId = request.nextUrl.searchParams.get('propertyId');
+
     const query = supabaseAdmin
       .from('notifications')
       .select('*')
       .order('created_at', { ascending: false });
 
-if (recipient === 'landlord' || recipient === 'project_manager') {
-       query.eq('recipient', recipient);
-     } else if (recipient === 'tenant') {
-       query.eq('recipient', 'tenant');
-     }
+    if (recipient === 'landlord' || recipient === 'project_manager') {
+      query.eq('recipient', 'project_manager');
+    } else if (recipient === 'tenant') {
+      query.eq('recipient', 'tenant');
+    }
 
     if (propertyId) {
       query.eq('property_id', propertyId);
@@ -169,14 +170,6 @@ if (recipient === 'landlord' || recipient === 'project_manager') {
 
     return NextResponse.json({ notifications: data ?? [] });
   } catch (error) {
-    const requestUrl = request.nextUrl.toString();
-    if (requestUrl.includes('recipient=landlord') || requestUrl.includes('recipient=project_manager')) {
-      try {
-        return NextResponse.json({ notifications: await getFallbackLandlordNotifications() });
-      } catch {
-        return requestError(error);
-      }
-    }
     return requestError(error);
   }
 }

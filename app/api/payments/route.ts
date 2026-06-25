@@ -10,14 +10,46 @@ if (!supabaseUrl || !serviceRoleKey) {
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+async function getAuthContext(request: NextRequest) {
+  const headers: Record<string, string> = {
+    cookie: request.headers.get('cookie') ?? '',
+  };
+  const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
+  if (authorization) headers.Authorization = authorization;
+
+  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
+    global: { headers },
+  });
+
+  const { data: sessionData, error: sessionError } = await supabaseAuth.auth.getSession();
+
+  if (sessionError || !sessionData.session) {
+    return { isSuperAdmin: false, organization_id: null };
+  }
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, user_id, organization_id, role, full_name, email')
+    .eq('user_id', sessionData.session.user.id)
+    .single();
+
+  return {
+    isSuperAdmin: profile?.role === 'super_admin',
+    organization_id: profile?.organization_id ?? null,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
+    const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
-    const selectQuery = '*, tenants(full_name, email, units!inner(property_id))';
+    let selectQuery = '*, tenants(full_name, email, units!inner(property_id, properties!inner(organization_id)))';
     let query: any = supabaseAdmin.from('payments').select(selectQuery);
 
-    if (propertyId) {
+    if (!authContext.isSuperAdmin && authContext.organization_id) {
+      query = query.eq('tenants.units.properties.organization_id', authContext.organization_id);
+    } else if (propertyId) {
       query = query.eq('tenants.units.property_id', propertyId);
     }
 
