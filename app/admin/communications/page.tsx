@@ -37,7 +37,8 @@ export default function CommunicationsPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/notifications?recipient=project_manager', {
+      const { data: { user } } = await supabase.auth.getUser();
+      const response = await fetch(`/api/notifications?recipient=project_manager&adminEmail=${encodeURIComponent(user?.email ?? '')}`, {
         headers: await getAuthHeaders(),
       });
 

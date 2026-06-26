@@ -42,13 +42,18 @@ async function ensureNotificationTable() {
   });
 }
 
-async function getFallbackLandlordNotifications() {
-  const { data, error } = await supabaseAdmin
+async function getFallbackLandlordNotifications(adminEmail?: string) {
+  let query: any = supabaseAdmin
     .from('payments')
     .select('*')
     .eq('transaction_type', 'landlord_notification')
     .order('created_at', { ascending: false });
 
+  if (adminEmail) {
+    query = query.eq('admin_email', adminEmail);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
 
   return (data ?? []).map((item: any) => ({
@@ -96,7 +101,7 @@ async function insertFallbackLandlordNotification(body: {
   };
 }
 
-async function getFallbackNotifications(propertyId?: string, tenantId?: string) {
+async function getFallbackNotifications(propertyId?: string, tenantId?: string, adminEmail?: string) {
   let tenantIds: string[] | null = null;
 
   if (propertyId) {
@@ -113,14 +118,18 @@ async function getFallbackNotifications(propertyId?: string, tenantId?: string) 
     tenantIds = tenantIds ? tenantIds.filter((id) => id === tenantId) : [tenantId];
   }
 
-  const query = supabaseAdmin
+  let query = supabaseAdmin
     .from('payments')
     .select('*, tenants(full_name, email)')
     .eq('transaction_type', 'notification')
     .order('created_at', { ascending: false });
 
   if (tenantIds && tenantIds.length > 0) {
-    query.in('tenant_id', tenantIds);
+    query = query.in('tenant_id', tenantIds);
+  }
+
+  if (adminEmail) {
+    query = query.eq('admin_email', adminEmail);
   }
 
   const { data, error } = await query;
@@ -140,30 +149,35 @@ export async function GET(request: NextRequest) {
   try {
     const recipient = request.nextUrl.searchParams.get('recipient');
     const propertyId = request.nextUrl.searchParams.get('propertyId');
+    const adminEmail = request.nextUrl.searchParams.get('adminEmail');
 
-    const query = supabaseAdmin
+    let query: any = supabaseAdmin
       .from('notifications')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (recipient === 'landlord' || recipient === 'project_manager') {
-      query.eq('recipient', 'project_manager');
+      query = query.eq('recipient', 'project_manager');
     } else if (recipient === 'tenant') {
-      query.eq('recipient', 'tenant');
+      query = query.eq('recipient', 'tenant');
     }
 
     if (propertyId) {
-      query.eq('property_id', propertyId);
+      query = query.eq('property_id', propertyId);
+    }
+
+    if (adminEmail) {
+      query = query.eq('admin_email', adminEmail);
     }
 
     const tenantId = request.nextUrl.searchParams.get('tenantId') ?? request.nextUrl.searchParams.get('tenant_id');
     const { data, error } = await query;
     if (error) {
       if (recipient === 'landlord' || recipient === 'project_manager') {
-        return NextResponse.json({ notifications: await getFallbackLandlordNotifications() });
+        return NextResponse.json({ notifications: await getFallbackLandlordNotifications(adminEmail ?? undefined) });
       }
       if (isMissingTableError(error, 'notifications')) {
-        return NextResponse.json({ notifications: await getFallbackNotifications(propertyId || undefined, tenantId || undefined) });
+        return NextResponse.json({ notifications: await getFallbackNotifications(propertyId || undefined, tenantId || undefined, adminEmail ?? undefined) });
       }
       throw error;
     }
@@ -227,6 +241,9 @@ export async function POST(request: NextRequest) {
       return badRequest('Tenant and property are required for tenant notifications.');
     }
 
+    const { data: property } = await supabaseAdmin.from('properties').select('organization_id').eq('id', propertyId).single();
+    const orgId = property?.organization_id;
+
     const { data, error } = await supabaseAdmin
       .from('notifications')
       .insert({
@@ -237,6 +254,7 @@ export async function POST(request: NextRequest) {
         type,
         message,
         status: 'sent',
+        admin_email: adminEmail || '',
       })
       .select('*')
       .single();
@@ -252,6 +270,7 @@ export async function POST(request: NextRequest) {
             amount: 0,
             balance_remaining: 0,
             paid_at: new Date().toISOString(),
+            admin_email: adminEmail || '',
           })
           .select('*, tenants(full_name, email)')
           .single();
