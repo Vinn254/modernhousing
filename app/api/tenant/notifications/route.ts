@@ -43,10 +43,14 @@ export async function GET(request: NextRequest) {
       .from('notifications')
       .select('*')
       .eq('tenant_id', tenantId)
+      .eq('recipient', 'tenant')
       .order('created_at', { ascending: false });
 
     if (error) {
-      const fallback = await supabaseAdmin.from('payments').select('*').eq('tenant_id', tenantId).eq('transaction_type', 'notification');
+      const fallback = await supabaseAdmin.from('payments')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('transaction_type', 'notification');
       return NextResponse.json({ notifications: fallback.data?.map((p: any) => ({ ...p, message: p.description })) ?? [] });
     }
 
