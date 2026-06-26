@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 interface TenantOption {
   id: string;
@@ -25,6 +26,13 @@ interface Payment {
   created_at: string;
 }
 
+async function getAuthHeaders() {
+  const { data } = await supabase.auth.getSession();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+  return headers;
+}
+
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
@@ -38,7 +46,7 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(true);
 
   async function loadPayments() {
-    const response = await fetch('/api/payments');
+    const response = await fetch('/api/payments', { headers: await getAuthHeaders() });
     const result = await response.json();
     if (!response.ok) {
       setError(result.message ?? 'Unable to load payments.');
@@ -50,7 +58,7 @@ export default function PaymentsPage() {
   }
 
   async function loadTenants() {
-    const response = await fetch('/api/tenants');
+    const response = await fetch('/api/tenants', { headers: await getAuthHeaders() });
     const result = await response.json();
     if (response.ok) setTenants(result.tenants ?? []);
   }
@@ -66,7 +74,7 @@ export default function PaymentsPage() {
 
     const response = await fetch('/api/payments', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await getAuthHeaders(),
       body: JSON.stringify({ tenantId, description, transactionType, amount: Number(amount), balanceRemaining: Number(balanceRemaining) }),
     });
 

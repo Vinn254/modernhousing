@@ -62,7 +62,7 @@ async function getAuthContext(request: NextRequest) {
   };
 }
 
-async function upsertAgentProfile(userId: string, fullName: string, email: string, phone?: string | null) {
+async function upsertAgentProfile(userId: string, fullName: string, email: string, phone?: string | null, organizationId?: string | null) {
   const { data: existingProfile, error: profileFetchError } = await supabaseAdmin
     .from('profiles')
     .select('*')
@@ -80,7 +80,7 @@ async function upsertAgentProfile(userId: string, fullName: string, email: strin
     phone,
     role: 'agent' as const,
     status: 'active',
-    organization_id: existingProfile?.organization_id ?? null,
+    organization_id: organizationId ?? existingProfile?.organization_id ?? null,
   };
 
   if (existingProfile) {
@@ -142,6 +142,9 @@ async function updateAgentMetadata(userId: string, input: { fullName?: string; p
 
 export async function GET(request: NextRequest) {
   try {
+    const authContext = await getAuthContext(request);
+    const propertyId = request.nextUrl.searchParams.get('propertyId');
+
     const [users, profilesResult] = await Promise.all([
       getAllAdminUsers(),
       supabaseAdmin.from('profiles').select('*').eq('role', 'agent'),
@@ -149,8 +152,27 @@ export async function GET(request: NextRequest) {
 
     if (profilesResult.error) throw profilesResult.error;
 
-    const profiles = (profilesResult.data ?? []) as AgentProfile[];
-    const agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
+    let profiles = (profilesResult.data ?? []) as AgentProfile[];
+
+    if (!authContext.isSuperAdmin && authContext.profile?.organization_id) {
+      const { data: orgProperties } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('organization_id', authContext.profile.organization_id);
+      const validPropertyIds = new Set((orgProperties ?? []).map((p: any) => p.id));
+      profiles = profiles.filter((p) => {
+        const user = users.find((u) => u.id === p.user_id);
+        return user?.user_metadata?.property_id && validPropertyIds.has(user.user_metadata.property_id);
+      });
+    } else if (!authContext.isSuperAdmin) {
+      profiles = [];
+    }
+
+    let agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
+
+    if (propertyId) {
+      agents = agents.filter((a) => a.property_id === propertyId);
+    }
 
     return NextResponse.json({ agents });
   } catch (error) {
@@ -160,6 +182,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authContext = await getAuthContext(request);
     const body = await request.json();
     const email = String(body.email ?? '').trim();
     const password = String(body.password ?? '');
@@ -177,6 +200,10 @@ export async function POST(request: NextRequest) {
       return badRequest('Assign the agent to one property.');
     }
 
+    if (!authContext.isSuperAdmin && !authContext.profile?.organization_id) {
+      return badRequest('Organization context required.');
+    }
+
     const existingUser = await getUserByEmail(email);
     let user = existingUser;
 
@@ -192,7 +219,7 @@ export async function POST(request: NextRequest) {
       throw new Error('Unable to create agent.');
     }
 
-    const profile = await upsertAgentProfile(user.id, fullName, email, phone);
+    const profile = await upsertAgentProfile(user.id, fullName, email, phone, authContext.profile?.organization_id ?? null);
 
     return NextResponse.json({ agent: normalizeAgent(user, profile) }, { status: existingUser ? 200 : 201 });
   } catch (error: any) {

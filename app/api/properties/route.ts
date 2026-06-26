@@ -128,6 +128,10 @@ async function assertPropertyAccess(request: NextRequest, propertyId: string, or
 export async function GET(request: NextRequest) {
   const authContext = await getAuthContext(request);
 
+  if (!authContext.isSuperAdmin && !authContext.organization_id) {
+    return NextResponse.json({ properties: [] });
+  }
+
   let query: any = supabaseAdmin.from('properties').select('*');
 
   if (!authContext.isSuperAdmin && authContext.organization_id) {
@@ -144,33 +148,39 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { name, address, size, amenities, ownershipInfo, organizationId } = body;
+   const authContext = await getAuthContext(request);
 
-  if (!name?.trim() || !address?.trim()) {
-    return NextResponse.json({ message: 'Property name and address are required.' }, { status: 400 });
-  }
+   if (!authContext.isSuperAdmin && !authContext.organization_id) {
+     return NextResponse.json({ message: 'Organization context required.' }, { status: 403 });
+   }
 
-  const result = await supabaseAdmin
-    .from('properties')
-    .insert({
-      organization_id: organizationId ?? null,
-      name: name.trim(),
-      address: address.trim(),
-      size,
-      amenities,
-      ownership_info: ownershipInfo,
-    })
-    .select()
-    .single();
+   const body = await request.json();
+   const { name, address, size, amenities, ownershipInfo, organizationId } = body;
 
-  if (result.error) {
-    return NextResponse.json({ message: result.error.message }, { status: 500 });
-  }
+   if (!name?.trim() || !address?.trim()) {
+     return NextResponse.json({ message: 'Property name and address are required.' }, { status: 400 });
+   }
 
-  const enriched = await enrichProperties([result.data]);
-  return NextResponse.json({ message: 'Property created.', property: enriched[0] }, { status: 201 });
-}
+   const result = await supabaseAdmin
+     .from('properties')
+     .insert({
+       organization_id: authContext.isSuperAdmin ? organizationId : authContext.organization_id,
+       name: name.trim(),
+       address: address.trim(),
+       size,
+       amenities,
+       ownership_info: ownershipInfo,
+     })
+     .select()
+     .single();
+
+   if (result.error) {
+     return NextResponse.json({ message: result.error.message }, { status: 500 });
+   }
+
+   const enriched = await enrichProperties([result.data]);
+   return NextResponse.json({ message: 'Property created.', property: enriched[0] }, { status: 201 });
+ }
 
 export async function PATCH(request: NextRequest) {
   const body = await request.json();

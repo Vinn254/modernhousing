@@ -44,6 +44,10 @@ export async function GET(request: NextRequest) {
     const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
+    if (!authContext.isSuperAdmin && !authContext.organization_id) {
+      return NextResponse.json({ tenants: [] });
+    }
+
     let selectQuery = 'id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties!inner(name, address, organization_id))';
     let query: any = supabaseAdmin.from('tenants').select(selectQuery);
 

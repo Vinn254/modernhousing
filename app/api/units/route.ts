@@ -64,6 +64,10 @@ export async function GET(request: NextRequest) {
     const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
+    if (!authContext?.profile) {
+      return NextResponse.json({ units: [] });
+    }
+
     let query = supabaseAdmin
       .from('units')
       .select(`
@@ -76,7 +80,7 @@ export async function GET(request: NextRequest) {
         tenants(id, full_name, email, lease_start, lease_end)
       `);
 
-    if (!authContext?.isSuperAdmin && authContext?.profile?.organization_id) {
+    if (!authContext.isSuperAdmin && authContext.profile?.organization_id) {
       const { data: orgProperties } = await supabaseAdmin
         .from('properties')
         .select('id')
@@ -85,6 +89,8 @@ export async function GET(request: NextRequest) {
       query = query.in('property_id', propertyIds);
     } else if (propertyId) {
       query = query.eq('property_id', propertyId);
+    } else if (!authContext.isSuperAdmin) {
+      return NextResponse.json({ units: [] });
     }
 
     const { data: units, error } = await query.order('unit_number', { ascending: true });

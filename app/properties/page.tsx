@@ -42,6 +42,18 @@ export default function PropertiesPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [userOrgId, setUserOrgId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchUserOrg() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('user_id', user.id).single();
+        setUserOrgId(profile?.organization_id ?? null);
+      }
+    }
+    fetchUserOrg();
+  }, []);
 
   async function loadProperties() {
     setLoading(true);
@@ -96,7 +108,7 @@ export default function PropertiesPage() {
     const response = await fetch('/api/properties', {
       method: editingProperty ? 'PATCH' : 'POST',
       headers: await getAuthHeaders(),
-      body: JSON.stringify(editingProperty ? { ...form, id: editingProperty.id } : form),
+      body: JSON.stringify(editingProperty ? { ...form, id: editingProperty.id } : { ...form, organizationId: userOrgId }),
     });
 
     const result = await response.json();
