@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         file_path,
         file_name,
         created_at,
-        tenants(full_name)
+        tenants(full_name, units(property_id))
       `)
       .order('created_at', { ascending: false });
 
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ documents: [], message: error.message }, { status: 500 });
     }
 
-    const documents = (data ?? [])
+    let documents = (data ?? [])
       .filter((d: any) => d.tenant_id)
       .map((d: any) => ({
         id: d.id,
@@ -58,7 +58,18 @@ export async function GET(request: NextRequest) {
         file_path: d.file_path,
         file_name: d.file_name,
         created_at: d.created_at,
+        property_id: d.tenants?.units?.property_id,
       }));
+
+    if (profile?.organization_id) {
+      const { data: orgProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('organization_id', profile.organization_id);
+      const propIds = new Set((orgProps ?? []).map((p: any) => p.id));
+
+      documents = documents.filter((d: any) => d.property_id && propIds.has(d.property_id));
+    }
 
     return NextResponse.json({ documents });
   } catch (error: any) {
