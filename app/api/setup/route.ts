@@ -106,7 +106,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ message: 'All landlords set up.', count: profiles?.length ?? 0 });
+    const firstLandlord = (profiles ?? [])[0];
+    if (firstLandlord?.organization_id) {
+      await supabaseAdmin
+        .from('properties')
+        .update({ organization_id: firstLandlord.organization_id })
+        .eq('organization_id', null);
+    }
+
+    return NextResponse.json({ message: 'All landlords set up.', count: profiles?.length ?? 0, firstLandlordEmail: firstLandlord?.email });
   }
 
   return NextResponse.json({ message: 'Invalid action.' }, { status: 400 });
