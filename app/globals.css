@@ -2460,15 +2460,25 @@ footer {
 }
 
 @media (max-width: 520px) {
-  .auth-page {
-    padding: 20px 14px;
-  }
+   .auth-page {
+     padding: 20px 14px;
+   }
 
-  .auth-layout {
-    border-radius: 20px;
-  }
+   .auth-layout {
+     border-radius: 20px;
+   }
 
-  .auth-panel {
-    padding: 26px 18px;
-  }
-}
+   .auth-panel {
+     padding: 26px 18px;
+   }
+ }
+
+ .admin-layout-wrapper {
+   min-height: 100vh;
+   display: flex;
+   flex-direction: column;
+ }
+
+ .admin-layout-wrapper main {
+   flex: 1;
+ }
