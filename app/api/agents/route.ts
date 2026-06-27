@@ -142,7 +142,6 @@ async function updateAgentMetadata(userId: string, input: { fullName?: string; p
 
 export async function GET(request: NextRequest) {
   try {
-    const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
     const [users, profilesResult] = await Promise.all([
@@ -152,22 +151,7 @@ export async function GET(request: NextRequest) {
 
     if (profilesResult.error) throw profilesResult.error;
 
-    let profiles = (profilesResult.data ?? []) as AgentProfile[];
-
-    if (!authContext.isSuperAdmin && authContext.profile?.organization_id) {
-      const { data: orgProperties } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('organization_id', authContext.profile.organization_id);
-      const validPropertyIds = new Set((orgProperties ?? []).map((p: any) => p.id));
-      profiles = profiles.filter((p) => {
-        const user = users.find((u) => u.id === p.user_id);
-        return user?.user_metadata?.property_id && validPropertyIds.has(user.user_metadata.property_id);
-      });
-    } else if (!authContext.isSuperAdmin) {
-      profiles = [];
-    }
-
+    const profiles = (profilesResult.data ?? []) as AgentProfile[];
     let agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
 
     if (propertyId) {
@@ -182,7 +166,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authContext = await getAuthContext(request);
     const body = await request.json();
     const email = String(body.email ?? '').trim();
     const password = String(body.password ?? '');
@@ -200,10 +183,6 @@ export async function POST(request: NextRequest) {
       return badRequest('Assign the agent to one property.');
     }
 
-    if (!authContext.isSuperAdmin && !authContext.profile?.organization_id) {
-      return badRequest('Organization context required.');
-    }
-
     const existingUser = await getUserByEmail(email);
     let user = existingUser;
 
@@ -219,7 +198,7 @@ export async function POST(request: NextRequest) {
       throw new Error('Unable to create agent.');
     }
 
-    const profile = await upsertAgentProfile(user.id, fullName, email, phone, authContext.profile?.organization_id ?? null);
+    const profile = await upsertAgentProfile(user.id, fullName, email, phone);
 
     return NextResponse.json({ agent: normalizeAgent(user, profile) }, { status: existingUser ? 200 : 201 });
   } catch (error: any) {

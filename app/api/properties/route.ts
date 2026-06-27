@@ -167,31 +167,7 @@ async function assertPropertyAccess(request: NextRequest, propertyId: string, or
 }
 
 export async function GET(request: NextRequest) {
-   const authContext = await getAuthContext(request);
-
-   let query: any = supabaseAdmin.from('properties').select('*');
-
-   if (!authContext.isSuperAdmin) {
-     let orgId = authContext.organization_id;
-
-     if (!orgId && authContext.userId) {
-       const { data: newOrg } = await supabaseAdmin
-         .from('organizations')
-         .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'Property Manager'} Organization` })
-         .select('id')
-         .single();
-       if (newOrg) {
-         orgId = newOrg.id;
-         await supabaseAdmin.from('profiles').update({ organization_id: orgId }).eq('user_id', authContext.userId);
-       }
-     }
-
-     if (orgId) {
-       query = query.eq('organization_id', orgId);
-     } else {
-       return NextResponse.json({ properties: [] });
-     }
-   }
+   const query = supabaseAdmin.from('properties').select('*');
 
    const { data, error } = await query.order('created_at', { ascending: false });
 
@@ -203,36 +179,16 @@ export async function GET(request: NextRequest) {
  }
 
 export async function POST(request: NextRequest) {
-    const authContext = await getAuthContext(request);
     const body = await request.json();
-    const { name, address, size, amenities, ownershipInfo, organizationId } = body;
+    const { name, address, size, amenities, ownershipInfo } = body;
 
     if (!name?.trim() || !address?.trim()) {
       return NextResponse.json({ message: 'Property name and address are required.' }, { status: 400 });
     }
 
-    let targetOrgId = organizationId ?? authContext.organization_id;
-
-    if (!targetOrgId && !authContext.isSuperAdmin && authContext.userId) {
-      const { data: newOrg } = await supabaseAdmin
-        .from('organizations')
-        .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'Property Manager'} Organization` })
-        .select('id')
-        .single();
-      if (newOrg) {
-        targetOrgId = newOrg.id;
-        await supabaseAdmin.from('profiles').update({ organization_id: targetOrgId }).eq('user_id', authContext.userId);
-      }
-    }
-
-    if (!targetOrgId) {
-      return NextResponse.json({ message: 'Organization context required.' }, { status: 403 });
-    }
-
     const result = await supabaseAdmin
       .from('properties')
       .insert({
-        organization_id: targetOrgId,
         name: name.trim(),
         address: address.trim(),
         size,

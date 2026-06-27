@@ -41,23 +41,8 @@ async function getAuthContext(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const authContext = await getAuthContext(request);
-    const propertyId = request.nextUrl.searchParams.get('propertyId');
-
-    if (!authContext.isSuperAdmin && !authContext.organization_id) {
-      return NextResponse.json({ tenants: [] });
-    }
-
-    let selectQuery = 'id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties!inner(name, address, organization_id))';
-    let query: any = supabaseAdmin.from('tenants').select(selectQuery);
-
-    if (!authContext.isSuperAdmin && authContext.organization_id) {
-      query = query.eq('units.properties.organization_id', authContext.organization_id);
-    } else if (propertyId) {
-      query = query.eq('units.property_id', propertyId);
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: false });
+    let selectQuery = 'id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(name, address))';
+    const { data, error } = await supabaseAdmin.from('tenants').select(selectQuery).order('created_at', { ascending: false });
 
     if (error) throw error;
 

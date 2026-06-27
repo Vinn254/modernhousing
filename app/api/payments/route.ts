@@ -41,20 +41,7 @@ async function getAuthContext(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const authContext = await getAuthContext(request);
-    const propertyId = request.nextUrl.searchParams.get('propertyId');
-
-    if (!authContext.isSuperAdmin && !authContext.organization_id) {
-      return NextResponse.json({ payments: [] });
-    }
-
-    let query: any = supabaseAdmin.from('payments').select('*, tenants!inner(full_name, email, units!inner(property_id, properties!inner(organization_id)))');
-
-    if (!authContext.isSuperAdmin && authContext.organization_id) {
-      query = query.eq('tenants.units.properties.organization_id', authContext.organization_id);
-    } else if (propertyId) {
-      query = query.eq('tenants.units.property_id', propertyId);
-    }
+    let query: any = supabaseAdmin.from('payments').select('*, tenants(full_name, email, units(property_id, properties(name)))');
 
     const { data, error } = await query.order('created_at', { ascending: false });
 
@@ -78,7 +65,7 @@ export async function GET(request: NextRequest) {
       tenant: payment.tenants?.full_name ?? payment.tenant ?? '',
       tenant_email: payment.tenants?.email ?? '',
       property: payment.tenants?.units?.properties?.name ?? '',
-      unit: payment.tenants?.units?.unit_number ?? '',
+      unit: '',
     }));
 
     return NextResponse.json({ payments });
