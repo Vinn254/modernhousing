@@ -45,7 +45,7 @@ async function getAuthContext(request: NextRequest) {
   const { data: sessionData, error: sessionError } = await supabaseAuth.auth.getSession();
 
   if (sessionError || !sessionData.session) {
-    return { isSuperAdmin: false, profile: null };
+    return { isSuperAdmin: false, profile: null, organization_id: null, userId: undefined, userEmail: undefined };
   }
 
   const { data: profile } = await supabaseAdmin
@@ -54,9 +54,33 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionData.session.user.id)
     .single();
 
+  let orgId = profile?.organization_id ?? null;
+
+  if (!orgId && profile?.role === 'project_manager') {
+    const { data: newOrg } = await supabaseAdmin
+      .from('organizations')
+      .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
+      .select('id')
+      .single();
+    orgId = newOrg?.id ?? null;
+
+    if (orgId) {
+      await supabaseAdmin
+        .from('profiles')
+        .update({ organization_id: orgId })
+        .eq('id', profile.id);
+
+      await supabaseAdmin
+        .from('properties')
+        .update({ organization_id: orgId })
+        .eq('organization_id', null);
+    }
+  }
+
   return {
     isSuperAdmin: profile?.role === 'super_admin',
-    profile: profile ?? null,
+    profile: orgId ? { ...profile, organization_id: orgId } : profile,
+    organization_id: orgId,
     userId: sessionData.session.user.id,
     userEmail: sessionData.session.user.email,
   };
@@ -156,11 +180,11 @@ export async function GET(request: NextRequest) {
 
     let agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
 
-    if (authContext.profile && !authContext.isSuperAdmin && authContext.profile.organization_id) {
+    if (authContext.profile && !authContext.isSuperAdmin && authContext.organization_id) {
       const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('organization_id', authContext.profile.organization_id);
+        .eq('organization_id', authContext.organization_id);
       const validPropertyIds = new Set((orgProps ?? []).map((p: any) => p.id));
 
       agents = agents.filter((agent) => {

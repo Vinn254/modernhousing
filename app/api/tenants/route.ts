@@ -33,10 +33,33 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionData.session.user.id)
     .single();
 
+  let orgId = profile?.organization_id ?? null;
+
+  if (!orgId && profile?.role === 'project_manager') {
+    const { data: newOrg } = await supabaseAdmin
+      .from('organizations')
+      .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
+      .select('id')
+      .single();
+    orgId = newOrg?.id ?? null;
+
+    if (orgId) {
+      await supabaseAdmin
+        .from('profiles')
+        .update({ organization_id: orgId })
+        .eq('id', profile.id);
+
+      await supabaseAdmin
+        .from('properties')
+        .update({ organization_id: orgId })
+        .eq('organization_id', null);
+    }
+  }
+
   return {
     isSuperAdmin: profile?.role === 'super_admin',
-    organization_id: profile?.organization_id ?? null,
-    profile,
+    organization_id: orgId,
+    profile: orgId ? { ...profile, organization_id: orgId } : profile,
   };
 }
 
