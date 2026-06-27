@@ -11,6 +11,21 @@ if (!supabaseUrl || !serviceRoleKey) {
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+async function getUserContext(request: NextRequest) {
+  const headers: Record<string, string> = {
+    cookie: request.headers.get('cookie') ?? '',
+  };
+  const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
+  if (authorization) headers.Authorization = authorization;
+
+  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
+    global: { headers },
+  });
+
+  const { data: sessionData } = await supabaseAuth.auth.getSession();
+  return { userId: sessionData.session?.user?.id ?? null };
+}
+
 async function getAuthContext(request: NextRequest) {
   const headers: Record<string, string> = {
     cookie: request.headers.get('cookie') ?? '',
@@ -61,6 +76,7 @@ async function getAuthContext(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const userContext = await getUserContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
     let query = supabaseAdmin
@@ -75,7 +91,14 @@ export async function GET(request: NextRequest) {
         tenants(id, full_name, email, lease_start, lease_end)
       `);
 
-    if (propertyId) {
+    if (userContext.userId && !propertyId) {
+      const { data: userProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('created_by', userContext.userId);
+      const propIds = (userProps ?? []).map((p: any) => p.id);
+      query = query.in('property_id', propIds);
+    } else if (propertyId) {
       query = query.eq('property_id', propertyId);
     }
 

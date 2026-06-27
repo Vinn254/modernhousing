@@ -10,6 +10,21 @@ if (!supabaseUrl || !serviceRoleKey) {
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+async function getUserContext(request: NextRequest) {
+  const headers: Record<string, string> = {
+    cookie: request.headers.get('cookie') ?? '',
+  };
+  const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
+  if (authorization) headers.Authorization = authorization;
+
+  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
+    global: { headers },
+  });
+
+  const { data: sessionData } = await supabaseAuth.auth.getSession();
+  return { userId: sessionData.session?.user?.id ?? null };
+}
+
 async function getAuthContext(request: NextRequest) {
   const headers: Record<string, string> = {
     cookie: request.headers.get('cookie') ?? '',
@@ -41,8 +56,46 @@ async function getAuthContext(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    let selectQuery = 'id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(name, address))';
-    const { data, error } = await supabaseAdmin.from('tenants').select(selectQuery).order('created_at', { ascending: false });
+    const userContext = await getUserContext(request);
+
+    if (userContext.userId) {
+      const { data: userProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('created_by', userContext.userId);
+      const propIds = (userProps ?? []).map((p: any) => p.id);
+
+      if (propIds.length > 0) {
+        const { data, error } = await supabaseAdmin
+          .from('tenants')
+          .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(id, name, address))')
+          .in('units.property_id', propIds)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const tenants = (data ?? []).map((tenant: any) => ({
+          id: tenant.id,
+          full_name: tenant.full_name,
+          email: tenant.email,
+          phone: tenant.phone,
+          unit: tenant.units?.unit_number ?? '',
+          property: tenant.units?.properties?.name ?? '',
+          property_id: tenant.units?.property_id ?? '',
+          address: tenant.units?.properties?.address ?? '',
+          lease_start: tenant.lease_start,
+          lease_end: tenant.lease_end,
+        }));
+
+        return NextResponse.json({ tenants });
+      }
+      return NextResponse.json({ tenants: [] });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('tenants')
+      .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(name, address))')
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
 
@@ -53,7 +106,7 @@ export async function GET(request: NextRequest) {
       phone: tenant.phone,
       unit: tenant.units?.unit_number ?? '',
       property: tenant.units?.properties?.name ?? '',
-      property_id: tenant.units?.property_id ?? '',
+      property_id: tenant.units?.properties?.id ?? '',
       address: tenant.units?.properties?.address ?? '',
       lease_start: tenant.lease_start,
       lease_end: tenant.lease_end,
