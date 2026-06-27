@@ -506,6 +506,11 @@ body {
   gap: 16px;
   margin-bottom: 16px;
 }
+@media (max-width: 768px) {
+  .property-stats {
+    grid-template-columns: 1fr;
+  }
+}
 
 .property-stat {
   position: relative;
@@ -604,8 +609,23 @@ body {
 .property-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 980px;
   background: #fff;
+}
+@media (min-width: 768px) {
+  .property-table {
+    min-width: 980px;
+  }
+}
+
+.landlord-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+@media (min-width: 768px) {
+  .landlord-table {
+    min-width: 860px;
+  }
 }
 
 .property-table th {
@@ -712,7 +732,13 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  padding: 34px;
+  padding: 24px;
+}
+@media (max-width: 768px) {
+  .property-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .property-page-title {
@@ -777,6 +803,50 @@ body {
   grid-template-columns: minmax(320px, 400px) 1fr;
   gap: 20px;
   align-items: start;
+}
+
+@media (max-width: 768px) {
+  .property-page-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .property-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .property-header-metrics {
+    grid-template-columns: repeat(3, 1fr);
+    min-width: 0;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .property-header-metrics div {
+    padding: 12px;
+  }
+
+  .property-table,
+  .landlord-table {
+    min-width: unset;
+    font-size: 12px;
+  }
+
+  .property-table th,
+  .landlord-table th {
+    padding: 10px 8px;
+  }
+
+  .property-table td,
+  .landlord-table td {
+    padding: 12px 8px;
+  }
+}
+
+@media (max-width: 900px) {
+  .property-page-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .property-form-card,
