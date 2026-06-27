@@ -48,8 +48,17 @@ export default function PropertiesPage() {
     async function fetchUserOrg() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('user_id', user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('user_id', user.id).single();
         setUserOrgId(profile?.organization_id ?? null);
+        if (!profile?.organization_id && profile?.role === 'project_manager') {
+          setError('Setting up your workspace...');
+          const { data: newOrg } = await supabase.from('organizations').insert({ name: `${user.email?.split('@')[0] ?? 'Property Manager'} Organization` }).select('id').single();
+          if (newOrg) {
+            await supabase.from('profiles').update({ organization_id: newOrg.id }).eq('user_id', user.id);
+            setUserOrgId(newOrg.id);
+            setError('');
+          }
+        }
       }
     }
     fetchUserOrg();

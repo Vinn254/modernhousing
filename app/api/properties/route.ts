@@ -12,6 +12,9 @@ if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
 type AuthContext = {
   isSuperAdmin: boolean;
   organization_id: string | null;
+  userId?: string;
+  userEmail?: string;
+  profile?: any;
 };
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
@@ -43,6 +46,9 @@ async function getAuthContext(request: NextRequest) {
     return {
       isSuperAdmin: false,
       organization_id: null,
+      userId: undefined,
+      userEmail: undefined,
+      profile: null,
     };
   }
 
@@ -55,6 +61,9 @@ async function getAuthContext(request: NextRequest) {
   return {
     isSuperAdmin: profile?.role === 'super_admin',
     organization_id: profile?.organization_id ?? null,
+    userId: sessionData.session.user.id,
+    userEmail: sessionData.session.user.email,
+    profile,
   };
 }
 
@@ -149,11 +158,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
    const authContext = await getAuthContext(request);
-
-   if (!authContext.isSuperAdmin && !authContext.organization_id) {
-     return NextResponse.json({ message: 'Organization context required.' }, { status: 403 });
-   }
-
    const body = await request.json();
    const { name, address, size, amenities, ownershipInfo, organizationId } = body;
 
@@ -161,10 +165,27 @@ export async function POST(request: NextRequest) {
      return NextResponse.json({ message: 'Property name and address are required.' }, { status: 400 });
    }
 
+   let targetOrgId = organizationId;
+   if (!targetOrgId && authContext.profile?.role === 'project_manager' && !authContext.isSuperAdmin) {
+     const { data: newOrg } = await supabaseAdmin
+       .from('organizations')
+       .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'Property Manager'} Organization` })
+       .select('id')
+       .single();
+     if (newOrg) {
+       targetOrgId = newOrg.id;
+       await supabaseAdmin.from('profiles').update({ organization_id: targetOrgId }).eq('user_id', authContext.userId ?? '');
+     }
+   }
+
+   if (!targetOrgId && !authContext.isSuperAdmin) {
+     return NextResponse.json({ message: 'Organization context required.' }, { status: 403 });
+   }
+
    const result = await supabaseAdmin
      .from('properties')
      .insert({
-       organization_id: authContext.isSuperAdmin ? organizationId : authContext.organization_id,
+       organization_id: targetOrgId,
        name: name.trim(),
        address: address.trim(),
        size,
