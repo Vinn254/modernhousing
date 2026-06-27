@@ -52,64 +52,64 @@ export default function LandlordDocumentsPage() {
 
    const formatType = (type: string) => type.replace('_', ' ');
 
-   return (
-     <div className="admin-layout-wrapper">
-       <main className="container admin-no-hero" style={{ padding: '34px 0 80px' }}>
-         <div className="card-admin-header">
-           <div>
-             <p className="heading">Tenant Documents</p>
-             <p className="subheading">Review documents submitted by tenants for verification.</p>
-           </div>
-         </div>
+return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <main className="container admin-no-hero" style={{ flex: 1, padding: '34px 0 80px' }}>
+          <div className="card-admin-header">
+            <div>
+              <p className="heading">Tenant Documents</p>
+              <p className="subheading">Review documents submitted by tenants for verification.</p>
+            </div>
+          </div>
 
-         <section className="bento-section">
-           <div className="bento">
-             <article className="card">
-               <div className="card-label"><span className="badge badge-pm">
-                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-               </span>Submitted Documents</div>
-               <h3>Document Verification</h3>
+          <section className="bento-section">
+            <div className="bento">
+              <article className="card">
+                <div className="card-label"><span className="badge badge-pm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </span>Submitted Documents</div>
+                <h3>Document Verification</h3>
 
-               {loading && <p className="landlord-muted">Loading documents...</p>}
-               {error && <p className="landlord-error">{error}</p>}
-               {!loading && documents.length === 0 && <p className="landlord-empty">No tenant documents submitted yet.</p>}
+                {loading && <p className="landlord-muted">Loading documents...</p>}
+                {error && <p className="landlord-error">{error}</p>}
+                {!loading && documents.length === 0 && <p className="landlord-empty">No tenant documents submitted yet.</p>}
 
-               {!loading && documents.length > 0 && (
-                 <div className="table-shell">
-                   <table className="landlord-table">
-                     <thead>
-                       <tr>
-                         <th>Tenant</th>
-                         <th>Document Type</th>
-                         <th>File Name</th>
-                         <th>Submitted</th>
-                       </tr>
-                     </thead>
-                     <tbody>
-                       {documents.map(doc => (
-                         <tr key={doc.id}>
-                           <td>{doc.tenant_name}</td>
-                           <td>{formatType(doc.document_type)}</td>
-                           <td>{doc.file_name || '—'}</td>
-                           <td>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : ''}</td>
-                         </tr>
-                       ))}
-                     </tbody>
-                   </table>
-                 </div>
-               )}
-             </article>
-           </div>
-         </section>
-       </main>
+                {!loading && documents.length > 0 && (
+                  <div className="table-shell">
+                    <table className="landlord-table">
+                      <thead>
+                        <tr>
+                          <th>Tenant</th>
+                          <th>Document Type</th>
+                          <th>File Name</th>
+                          <th>Submitted</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {documents.map(doc => (
+                          <tr key={doc.id}>
+                            <td>{doc.tenant_name}</td>
+                            <td>{formatType(doc.document_type)}</td>
+                            <td>{doc.file_name || '—'}</td>
+                            <td>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </article>
+            </div>
+          </section>
+        </main>
 
-       <footer>
-         <div className="footer-inner">
-           <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
-           <div className="footer-links"><a href="/">Home</a><a href="/admin">Dashboard</a></div>
-           <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
-         </div>
-       </footer>
-     </div>
-   );
+        <footer>
+          <div className="footer-inner">
+            <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
+            <div className="footer-links"><a href="/">Home</a><a href="/admin">Dashboard</a></div>
+            <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
+          </div>
+        </footer>
+      </div>
+    );
  }
