@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
    let query: any = supabaseAdmin.from('properties').select('*');
 
    if (authContext.profile && !authContext.isSuperAdmin) {
-     query = query.eq('organization_id', authContext.organization_id);
+     query = query.eq('organization_id', authContext.profile.organization_id);
    }
 
    const { data, error } = await query.order('created_at', { ascending: false });
@@ -194,6 +194,24 @@ export async function POST(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
 
+    let orgId = authContext.profile?.organization_id;
+
+    if (!orgId && !authContext.isSuperAdmin) {
+      const { data: newOrg } = await supabaseAdmin
+        .from('organizations')
+        .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'Property Manager'} Organization` })
+        .select('id')
+        .single();
+      orgId = newOrg?.id;
+
+      if (orgId && authContext.profile) {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ organization_id: orgId })
+          .eq('id', authContext.profile.id);
+      }
+    }
+
     const result = await supabaseAdmin
       .from('properties')
       .insert({
@@ -202,7 +220,7 @@ export async function POST(request: NextRequest) {
         size,
         amenities,
         ownership_info: ownershipInfo,
-        organization_id: authContext.organization_id,
+        organization_id: orgId,
       })
       .select()
       .single();
