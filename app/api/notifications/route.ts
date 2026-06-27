@@ -11,6 +11,21 @@ if (!supabaseUrl || !serviceRoleKey) {
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+async function getUserContext(request: NextRequest) {
+  const headers: Record<string, string> = {
+    cookie: request.headers.get('cookie') ?? '',
+  };
+  const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
+  if (authorization) headers.Authorization = authorization;
+
+  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
+    global: { headers },
+  });
+
+  const { data: sessionData } = await supabaseAuth.auth.getSession();
+  return { userId: sessionData.session?.user?.id ?? null };
+}
+
 async function ensureNotificationTable() {
   const { error } = await supabaseAdmin.from('notifications').select('id').limit(1);
 
@@ -147,6 +162,7 @@ async function getFallbackNotifications(propertyId?: string, tenantId?: string, 
 
 export async function GET(request: NextRequest) {
   try {
+    const userContext = await getUserContext(request);
     const recipient = request.nextUrl.searchParams.get('recipient');
     const propertyId = request.nextUrl.searchParams.get('propertyId');
     const adminEmail = request.nextUrl.searchParams.get('adminEmail');
@@ -168,6 +184,15 @@ export async function GET(request: NextRequest) {
 
     if (adminEmail) {
       query = query.eq('admin_email', adminEmail);
+    } else if (userContext.userId && (recipient === 'landlord' || recipient === 'project_manager')) {
+      const { data: userProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('created_by', userContext.userId);
+      const propIds = (userProps ?? []).map((p: any) => p.id);
+      if (propIds.length > 0) {
+        query = query.in('property_id', propIds);
+      }
     }
 
     const tenantId = request.nextUrl.searchParams.get('tenantId') ?? request.nextUrl.searchParams.get('tenant_id');
@@ -191,12 +216,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const tenantId = String(body.tenantId ?? body.tenant_id ?? '').trim();
+    const userContext = await getUserContext(request);
+
+    let tenantId = String(body.tenantId ?? body.tenant_id ?? '').trim();
     const propertyId = String(body.propertyId ?? body.property_id ?? '').trim();
     const agentId = String(body.agentId ?? body.agent_id ?? '').trim() || null;
-    const adminId = String(body.adminId ?? body.admin_id ?? '').trim() || null;
-    const adminName = String(body.adminName ?? body.admin_name ?? '').trim();
-    const adminEmail = String(body.adminEmail ?? body.admin_email ?? '').trim();
+    let adminId = String(body.adminId ?? body.admin_id ?? '').trim() || userContext.userId;
+    let adminName = String(body.adminName ?? body.admin_name ?? '').trim();
+    let adminEmail = String(body.adminEmail ?? body.admin_email ?? '').trim();
     const recipient = String(body.recipient ?? '').trim() || (tenantId || propertyId ? 'tenant' : 'project_manager');
     const type = String(body.type ?? 'overdue').trim();
     const message = String(body.message ?? '').trim();
@@ -207,7 +234,14 @@ export async function POST(request: NextRequest) {
 
     if (recipient === 'landlord' || recipient === 'project_manager') {
       if (!adminId || !adminName || !adminEmail) {
-        return badRequest('Landlord ID, name, and email are required for notifications.');
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('full_name, email')
+          .eq('user_id', userContext.userId)
+          .single();
+        if (!adminId) adminId = userContext.userId ?? '';
+        if (!adminName) adminName = profile?.full_name ?? 'Landlord';
+        if (!adminEmail) adminEmail = profile?.email ?? '';
       }
 
       await ensureNotificationTable();
