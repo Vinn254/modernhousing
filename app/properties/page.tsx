@@ -114,10 +114,12 @@ export default function PropertiesPage() {
     setError('');
     setSaving(true);
 
+    const body = editingProperty ? { ...form, id: editingProperty.id } : form;
+
     const response = await fetch('/api/properties', {
       method: editingProperty ? 'PATCH' : 'POST',
       headers: await getAuthHeaders(),
-      body: JSON.stringify(editingProperty ? { ...form, id: editingProperty.id } : { ...form, organizationId: userOrgId }),
+      body: JSON.stringify(body),
     });
 
     const result = await response.json();

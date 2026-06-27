@@ -58,6 +58,38 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionData.session.user.id)
     .single();
 
+  if (!profile) {
+    const role = sessionData.session.user.user_metadata?.role ?? 'project_manager';
+    const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
+
+    const { data: newOrg } = await supabaseAdmin
+      .from('organizations')
+      .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
+      .select('id')
+      .single();
+
+    const { data: createdProfile } = await supabaseAdmin
+      .from('profiles')
+      .insert({
+        user_id: sessionData.session.user.id,
+        full_name: fullName,
+        email: sessionData.session.user.email,
+        role,
+        organization_id: newOrg?.id ?? null,
+        status: 'active',
+      })
+      .select('id, user_id, organization_id, role, full_name, email')
+      .single();
+
+    return {
+      isSuperAdmin: createdProfile?.role === 'super_admin',
+      organization_id: createdProfile?.organization_id ?? null,
+      userId: sessionData.session.user.id,
+      userEmail: sessionData.session.user.email,
+      profile: createdProfile,
+    };
+  }
+
   return {
     isSuperAdmin: profile?.role === 'super_admin',
     organization_id: profile?.organization_id ?? null,
@@ -135,73 +167,88 @@ async function assertPropertyAccess(request: NextRequest, propertyId: string, or
 }
 
 export async function GET(request: NextRequest) {
-  const authContext = await getAuthContext(request);
-
-  if (!authContext.isSuperAdmin && !authContext.organization_id) {
-    return NextResponse.json({ properties: [] });
-  }
-
-  let query: any = supabaseAdmin.from('properties').select('*');
-
-  if (!authContext.isSuperAdmin && authContext.organization_id) {
-    query = query.eq('organization_id', authContext.organization_id);
-  }
-
-  const { data, error } = await query.order('created_at', { ascending: false });
-
-  if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ properties: await enrichProperties(data ?? []) });
-}
-
-export async function POST(request: NextRequest) {
    const authContext = await getAuthContext(request);
-   const body = await request.json();
-   const { name, address, size, amenities, ownershipInfo, organizationId } = body;
 
-   if (!name?.trim() || !address?.trim()) {
-     return NextResponse.json({ message: 'Property name and address are required.' }, { status: 400 });
-   }
+   let query: any = supabaseAdmin.from('properties').select('*');
 
-   let targetOrgId = organizationId;
-   if (!targetOrgId && authContext.profile?.role === 'project_manager' && !authContext.isSuperAdmin) {
-     const { data: newOrg } = await supabaseAdmin
-       .from('organizations')
-       .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'Property Manager'} Organization` })
-       .select('id')
-       .single();
-     if (newOrg) {
-       targetOrgId = newOrg.id;
-       await supabaseAdmin.from('profiles').update({ organization_id: targetOrgId }).eq('user_id', authContext.userId ?? '');
+   if (!authContext.isSuperAdmin) {
+     let orgId = authContext.organization_id;
+
+     if (!orgId && authContext.userId) {
+       const { data: newOrg } = await supabaseAdmin
+         .from('organizations')
+         .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'Property Manager'} Organization` })
+         .select('id')
+         .single();
+       if (newOrg) {
+         orgId = newOrg.id;
+         await supabaseAdmin.from('profiles').update({ organization_id: orgId }).eq('user_id', authContext.userId);
+       }
+     }
+
+     if (orgId) {
+       query = query.eq('organization_id', orgId);
+     } else {
+       return NextResponse.json({ properties: [] });
      }
    }
 
-   if (!targetOrgId && !authContext.isSuperAdmin) {
-     return NextResponse.json({ message: 'Organization context required.' }, { status: 403 });
+   const { data, error } = await query.order('created_at', { ascending: false });
+
+   if (error) {
+     return NextResponse.json({ message: error.message }, { status: 500 });
    }
 
-   const result = await supabaseAdmin
-     .from('properties')
-     .insert({
-       organization_id: targetOrgId,
-       name: name.trim(),
-       address: address.trim(),
-       size,
-       amenities,
-       ownership_info: ownershipInfo,
-     })
-     .select()
-     .single();
-
-   if (result.error) {
-     return NextResponse.json({ message: result.error.message }, { status: 500 });
-   }
-
-   const enriched = await enrichProperties([result.data]);
-   return NextResponse.json({ message: 'Property created.', property: enriched[0] }, { status: 201 });
+   return NextResponse.json({ properties: await enrichProperties(data ?? []) });
  }
+
+export async function POST(request: NextRequest) {
+    const authContext = await getAuthContext(request);
+    const body = await request.json();
+    const { name, address, size, amenities, ownershipInfo, organizationId } = body;
+
+    if (!name?.trim() || !address?.trim()) {
+      return NextResponse.json({ message: 'Property name and address are required.' }, { status: 400 });
+    }
+
+    let targetOrgId = organizationId ?? authContext.organization_id;
+
+    if (!targetOrgId && !authContext.isSuperAdmin && authContext.userId) {
+      const { data: newOrg } = await supabaseAdmin
+        .from('organizations')
+        .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'Property Manager'} Organization` })
+        .select('id')
+        .single();
+      if (newOrg) {
+        targetOrgId = newOrg.id;
+        await supabaseAdmin.from('profiles').update({ organization_id: targetOrgId }).eq('user_id', authContext.userId);
+      }
+    }
+
+    if (!targetOrgId) {
+      return NextResponse.json({ message: 'Organization context required.' }, { status: 403 });
+    }
+
+    const result = await supabaseAdmin
+      .from('properties')
+      .insert({
+        organization_id: targetOrgId,
+        name: name.trim(),
+        address: address.trim(),
+        size,
+        amenities,
+        ownership_info: ownershipInfo,
+      })
+      .select()
+      .single();
+
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
+
+    const enriched = await enrichProperties([result.data]);
+    return NextResponse.json({ message: 'Property created.', property: enriched[0] }, { status: 201 });
+  }
 
 export async function PATCH(request: NextRequest) {
   const body = await request.json();
