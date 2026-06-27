@@ -37,7 +37,8 @@ export default function CommunicationsPage() {
     setError('');
 
     try {
-      const response = await fetch(`/api/notifications?recipient=project_manager`, {
+      const { data: { user } } = await supabase.auth.getUser();
+      const response = await fetch(`/api/notifications?recipient=project_manager&adminEmail=${encodeURIComponent(user?.email ?? '')}`, {
         headers: await getAuthHeaders(),
       });
 
@@ -65,10 +66,20 @@ export default function CommunicationsPage() {
     setError('');
     setSending(true);
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setError('Not authenticated.');
+      setSending(false);
+      return;
+    }
+
     const response = await fetch('/api/notifications', {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify({
+        adminId: user.id,
+        adminName: user.user_metadata?.full_name || user.email,
+        adminEmail: user.email,
         recipient: 'project_manager',
         type: notificationForm.type,
         message: notificationForm.messageText,

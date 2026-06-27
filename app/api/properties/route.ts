@@ -27,21 +27,6 @@ function forbidden(message: string) {
   return NextResponse.json({ message }, { status: 403 });
 }
 
-async function getUserContext(request: NextRequest) {
-  const headers: Record<string, string> = {
-    cookie: request.headers.get('cookie') ?? '',
-  };
-  const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
-  if (authorization) headers.Authorization = authorization;
-
-  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
-    global: { headers },
-  });
-
-  const { data: sessionData } = await supabaseAuth.auth.getSession();
-  return { userId: sessionData.session?.user?.id ?? null, isSuperAdmin: false };
-}
-
 async function getAuthContext(request: NextRequest) {
   const headers: Record<string, string> = {
     cookie: request.headers.get('cookie') ?? '',
@@ -182,11 +167,12 @@ async function assertPropertyAccess(request: NextRequest, propertyId: string, or
 }
 
 export async function GET(request: NextRequest) {
-   const userContext = await getUserContext(request);
+   const authContext = await getAuthContext(request);
+
    let query: any = supabaseAdmin.from('properties').select('*');
 
-   if (userContext.userId) {
-     query = query.eq('created_by', userContext.userId);
+   if (authContext.profile && !authContext.isSuperAdmin) {
+     query = query.eq('organization_id', authContext.organization_id);
    }
 
    const { data, error } = await query.order('created_at', { ascending: false });
@@ -206,18 +192,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Property name and address are required.' }, { status: 400 });
     }
 
-    const authContext = await getUserContext(request);
-    const createdBy = authContext.userId;
+    const authContext = await getAuthContext(request);
 
     const result = await supabaseAdmin
       .from('properties')
       .insert({
-        created_by: createdBy,
         name: name.trim(),
         address: address.trim(),
         size,
         amenities,
         ownership_info: ownershipInfo,
+        organization_id: authContext.organization_id,
       })
       .select()
       .single();

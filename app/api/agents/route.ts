@@ -19,21 +19,6 @@ if (!supabaseUrl || !serviceRoleKey) {
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-async function getUserContext(request: NextRequest) {
-  const headers: Record<string, string> = {
-    cookie: request.headers.get('cookie') ?? '',
-  };
-  const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
-  if (authorization) headers.Authorization = authorization;
-
-  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
-    global: { headers },
-  });
-
-  const { data: sessionData } = await supabaseAuth.auth.getSession();
-  return { userId: sessionData.session?.user?.id ?? null };
-}
-
 interface AgentProfile {
   id: string;
   user_id: string;
@@ -157,7 +142,7 @@ async function updateAgentMetadata(userId: string, input: { fullName?: string; p
 
 export async function GET(request: NextRequest) {
   try {
-    const userContext = await getUserContext(request);
+    const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
     const [users, profilesResult] = await Promise.all([
@@ -171,12 +156,12 @@ export async function GET(request: NextRequest) {
 
     let agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
 
-    if (userContext.userId) {
-      const { data: userProps } = await supabaseAdmin
+    if (authContext.profile && !authContext.isSuperAdmin && authContext.profile.organization_id) {
+      const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('created_by', userContext.userId);
-      const validPropertyIds = new Set((userProps ?? []).map((p: any) => p.id));
+        .eq('organization_id', authContext.profile.organization_id);
+      const validPropertyIds = new Set((orgProps ?? []).map((p: any) => p.id));
 
       agents = agents.filter((agent) => {
         if (propertyId) return agent.property_id === propertyId;
