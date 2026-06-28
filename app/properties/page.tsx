@@ -492,17 +492,25 @@ export default function PropertiesPage() {
                 <thead>
                   <tr>
                     <th>Unit</th>
+                    <th>Type</th>
                     <th>Property</th>
                     <th>Rent</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {units.map((unit) => {
                     const property = properties.find(p => p.id === unit.property_id);
+                    const unitTypeLabel = unit.unit_type === 'single-room' ? 'Single Room' :
+                       unit.unit_type === 'bedsitter' ? 'Bedsitter' :
+                       unit.unit_type === 'one-bedroom' ? 'One Bedroom' :
+                       unit.unit_type === 'two-bedroom' ? 'Two Bedroom' :
+                       unit.unit_type === 'three-bedroom' ? 'Three Bedroom' : '—';
                     return (
                       <tr key={unit.id}>
                         <td className="landlord-name">{unit.unit_number}</td>
+                        <td style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unitTypeLabel}</td>
                         <td>{property?.name ?? '—'}</td>
                         <td>KSH {Number(unit.rent_amount ?? 0).toLocaleString()}</td>
                         <td>
@@ -512,9 +520,11 @@ export default function PropertiesPage() {
                         </td>
                         <td>
                           <div className="landlord-actions">
-                            <button className="action-button primary" onClick={() => handleEditUnit(unit)}>Edit</button>
-                            <button className="action-button" onClick={() => handleMarkOccupied(unit.id)}>Mark Occupied</button>
-                            <button className="action-button danger" onClick={() => handleDeleteUnit(unit.id)}>Delete</button>
+                            <button className="action-button primary" onClick={() => handleEditUnit(unit)} style={{ padding: '6px 10px', fontSize: '12px' }}>Edit</button>
+                            {unit.occupancy_status !== 'occupied' && (
+                              <button className="action-button" onClick={() => handleMarkOccupied(unit.id)} style={{ padding: '6px 10px', fontSize: '12px' }}>Mark Occupied</button>
+                            )}
+                            <button className="action-button danger" onClick={() => handleDeleteUnit(unit.id)} style={{ padding: '6px 10px', fontSize: '12px' }}>Delete</button>
                           </div>
                         </td>
                       </tr>
