@@ -123,25 +123,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { 
       tenantId, description, transactionType, amount, balanceRemaining, propertyId,
-      monthDue, dueAmount, paidAmount, penalty, balAmount, transType, transNumber, transCode, paymentDate 
+      monthDue, dueAmount, paidAmount, transType, transNumber, transCode, paymentDate 
     } = body;
 
     if (!tenantId || !transNumber) {
       return NextResponse.json({ message: 'Missing required payment fields.' }, { status: 400 });
     }
 
-    const result = await supabaseAdmin.from('payments').insert({
+    const insertData: any = {
       tenant_id: tenantId,
       property_id: propertyId ?? null,
       description: description ?? `${monthDue || ''} Payment`,
       transaction_type: transType || transactionType || 'rent',
       amount: Number(paidAmount) || Number(amount) || 0,
       balance_remaining: Number(balAmount) || Number(balanceRemaining) || 0,
-      month_due: monthDue || null,
-      due_amount: Number(dueAmount) || null,
       transaction_number: transNumber,
       paid_at: paymentDate || new Date().toISOString(),
-    });
+    };
+
+    const result = await supabaseAdmin.from('payments').insert(insertData);
 
     if (result.error) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });

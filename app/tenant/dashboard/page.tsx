@@ -76,10 +76,13 @@ export default function TenantDashboardPage() {
       </div>
 
       <section className="tenant-stats-grid">
-        <div className="card" style={{ padding: '18px 16px' }}>
-          <div className="card-label">Apartment</div>
-          <h3 style={{ margin: 0, fontSize: '18px' }}>{tenant.property_name}</h3>
-          <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '13px' }}>Unit {tenant.unit_number}</p>
+        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <img src={tenant.picture_url || '/placeholder-avatar.png'} alt="Profile" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />
+          <div>
+            <div className="card-label">Apartment</div>
+            <h3 style={{ margin: 0, fontSize: '18px' }}>{tenant.property_name}</h3>
+            <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '13px' }}>Unit {tenant.unit_number}</p>
+          </div>
         </div>
         <div className="card" style={{ padding: '18px 16px' }}>
           <div className="card-label">Next Payment</div>

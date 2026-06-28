@@ -82,18 +82,15 @@ export default function TenantDocumentsPage() {
       <section className="card" style={{ marginTop: 24 }}>
         <h3 style={{ marginBottom: 12 }}>Upload Document</h3>
         <p style={{ color: 'var(--ink-3)', marginBottom: 16, fontSize: 14 }}>
-          Required documents include: National ID card, passport photo, signed lease agreement, 
-          water account registration, and utility registration forms. These help your agent 
-          verify your tenancy and process utility billing.
+          Required documents: National ID (front & back), KRA PIN, Next of Kin ID, and Tenant Picture.
         </p>
         <form onSubmit={handleUpload} className="form-grid">
           <select value={documentType} onChange={(e) => setDocumentType(e.target.value)}>
-            <option value="id_card">National ID Card</option>
-            <option value="passport_photo">Passport Photo</option>
-            <option value="lease_agreement">Lease Agreement</option>
-            <option value="water_account">Water Account Registration</option>
-            <option value="utility_registration">Utility Registration Form</option>
-            <option value="other">Other Document</option>
+            <option value="id_front">National ID - Front</option>
+            <option value="id_back">National ID - Back</option>
+            <option value="kra_pin">KRA PIN</option>
+            <option value="kin_id">Next of Kin ID</option>
+            <option value="tenant_photo">Tenant Picture</option>
           </select>
           <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFile(e.target.files?.[0] ?? null)} required />
           <button type="submit" disabled={docLoading}>Upload Document</button>
@@ -113,7 +110,12 @@ export default function TenantDocumentsPage() {
               <tbody>
                 {documents.map(d => (
                   <tr key={d.id}>
-                    <td>{d.document_type.replace('_', ' ')}</td>
+                    <td>{d.document_type === 'id_front' ? 'National ID (Front)' : 
+                         d.document_type === 'id_back' ? 'National ID (Back)' :
+                         d.document_type === 'kra_pin' ? 'KRA PIN' :
+                         d.document_type === 'kin_id' ? 'Next of Kin ID' :
+                         d.document_type === 'tenant_photo' ? 'Tenant Picture' :
+                         d.document_type.replace('_', ' ')}</td>
                     <td>{new Date(d.created_at).toLocaleDateString()}</td>
                   </tr>
                 ))}

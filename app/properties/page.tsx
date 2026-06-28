@@ -9,6 +9,7 @@ interface Unit {
   unit_number: string;
   rent_amount: number;
   occupancy_status: string;
+  unit_type?: string;
 }
 
 interface Property {
@@ -45,7 +46,7 @@ export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [form, setForm] = useState(emptyForm);
-  const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumbers: '', rentAmount: '' });
+  const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumbers: '', rentAmount: '', unitType: '' });
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
@@ -178,6 +179,7 @@ export default function PropertiesPage() {
 
     const unitNumbers = unitForm.unitNumbers.split(',').map(u => u.trim()).filter(Boolean);
     const rentAmount = Number(unitForm.rentAmount) || 0;
+    const unitType = unitForm.unitType;
 
     for (const unitNumber of unitNumbers) {
       const response = await fetch('/api/units', {
@@ -187,6 +189,7 @@ export default function PropertiesPage() {
           propertyId: unitForm.propertyId,
           unitNumber,
           rentAmount,
+          unitType,
           occupancyStatus: 'vacant',
         }),
       });
@@ -199,7 +202,7 @@ export default function PropertiesPage() {
     }
 
     setMessage(`${unitNumbers.length} unit(s) added successfully.`);
-    setUnitForm({ propertyId: '', unitNumbers: '', rentAmount: '' });
+    setUnitForm({ propertyId: '', unitNumbers: '', rentAmount: '', unitType: '' });
     await Promise.all([loadProperties(), loadUnits()]);
   }
 
@@ -363,15 +366,23 @@ export default function PropertiesPage() {
               Add Units to Property
             </div>
             <h3>Add Units (comma separated)</h3>
-            <form onSubmit={handleAddUnits} className="form-grid">
-              <select value={unitForm.propertyId} onChange={(e) => setUnitForm(f => ({ ...f, propertyId: e.target.value }))} required>
-                <option value="">Select property</option>
-                {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <input value={unitForm.unitNumbers} onChange={(e) => setUnitForm(f => ({ ...f, unitNumbers: e.target.value }))} required placeholder="Unit numbers (A1, A2, B1, ...)" />
-              <input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" />
-              <button type="submit">Add Units</button>
-            </form>
+<form onSubmit={handleAddUnits} className="form-grid">
+            <select value={unitForm.propertyId} onChange={(e) => setUnitForm(f => ({ ...f, propertyId: e.target.value }))} required>
+              <option value="">Select property</option>
+              {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <input value={unitForm.unitNumbers} onChange={(e) => setUnitForm(f => ({ ...f, unitNumbers: e.target.value }))} required placeholder="Unit numbers (A1, A2, B1, ...)" />
+            <input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" />
+            <select onChange={(e) => setUnitForm(f => ({ ...f, unitType: e.target.value }))} required>
+              <option value="">Unit Type</option>
+              <option value="single-room">Single Room</option>
+              <option value="bedsitter">Bedsitter</option>
+              <option value="one-bedroom">One Bedroom</option>
+              <option value="two-bedroom">Two Bedroom</option>
+              <option value="three-bedroom">Three Bedroom</option>
+            </select>
+            <button type="submit">Add Units</button>
+          </form>
 
             {selectedProperty && (
               <div className="property-detail-card" style={{ marginTop: 24 }}>

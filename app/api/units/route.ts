@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { propertyId, unitNumber, rentAmount, size, agentEmail, occupancyStatus } = body;
+    const { propertyId, unitNumber, rentAmount, unitType, size, agentEmail, occupancyStatus } = body;
 
     if (!propertyId || !unitNumber) {
       return NextResponse.json({ message: 'Property ID and unit number are required.' }, { status: 400 });
@@ -186,6 +186,7 @@ export async function POST(request: NextRequest) {
       property_id: propertyId,
       unit_number: unitNumber,
       rent_amount: rentAmount ?? 0,
+      unit_type: unitType ?? 'single-room',
       size,
       agent_email: agentEmail,
       occupancy_status: occupancyStatus ?? 'vacant',
