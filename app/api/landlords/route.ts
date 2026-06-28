@@ -28,6 +28,7 @@ interface LandlordProfile {
   organization_id?: string | null;
   status: 'active' | 'inactive' | 'pending';
   created_at: string;
+  organizations?: { name?: string } | null;
 }
 
 function normalizeLandlord(user: any, profile?: LandlordProfile) {
@@ -35,7 +36,7 @@ function normalizeLandlord(user: any, profile?: LandlordProfile) {
     id: user?.id ?? profile?.user_id,
     email: profile?.email ?? user?.email ?? '',
     full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Project Manager',
-    organization: profile?.organization_id ?? '',
+    organization: profile?.organizations?.name ?? profile?.organization_id ?? '',
     phone: profile?.phone ?? null,
     status: profile?.status ?? (user?.email_confirmed_at ? 'active' : 'pending'),
     created_at: profile?.created_at ?? user?.created_at ?? '',
@@ -43,13 +44,13 @@ function normalizeLandlord(user: any, profile?: LandlordProfile) {
 }
 
 async function getProfiles() {
-  const { data, error } = await supabaseAdmin.from('profiles').select('*').eq('role', 'project_manager');
+  const { data, error } = await supabaseAdmin.from('profiles').select('*, organizations(name)').eq('role', 'project_manager');
   if (error) throw error;
   return (data ?? []) as LandlordProfile[];
 }
 
 async function getProfile(userId: string) {
-  const { data, error } = await supabaseAdmin.from('profiles').select('*').eq('user_id', userId).single();
+  const { data, error } = await supabaseAdmin.from('profiles').select('*, organizations(name)').eq('user_id', userId).single();
   if (error && error.code !== 'PGRST116') throw error;
   return (data ?? null) as LandlordProfile | null;
 }
