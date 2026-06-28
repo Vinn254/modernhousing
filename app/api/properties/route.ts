@@ -62,24 +62,24 @@ async function getAuthContext(request: NextRequest) {
 
 let orgId = profile?.organization_id ?? null;
 
-   if (!orgId) {
-     const role = profile?.role ?? sessionData.session.user.user_metadata?.role ?? 'project_manager';
-     if (role === 'project_manager') {
-       const { data: newOrg } = await supabaseAdmin
-         .from('organizations')
-         .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-         .select('id')
-         .single();
-       orgId = newOrg?.id ?? null;
+    if (!orgId) {
+      const role = profile?.role ?? sessionData.session.user.user_metadata?.role ?? 'project_manager';
+      if (role === 'project_manager') {
+        const { data: newOrg } = await supabaseAdmin
+          .from('organizations')
+          .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
+          .select('id')
+          .single();
+        orgId = newOrg?.id ?? null;
 
-       if (orgId) {
-         if (profile) {
-           await supabaseAdmin
-             .from('profiles')
-             .update({ organization_id: orgId })
-             .eq('id', profile.id);
-         } else {
-const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
+        if (orgId) {
+          if (profile) {
+            await supabaseAdmin
+              .from('profiles')
+              .update({ organization_id: orgId })
+              .eq('id', profile.id);
+          } else {
+            const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
             const { data: createdProfile } = await supabaseAdmin
               .from('profiles')
               .insert({
@@ -101,6 +101,11 @@ const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionDat
               userMetadata: sessionData.session.user.user_metadata,
             };
           }
+
+          await supabaseAdmin
+            .from('properties')
+            .update({ organization_id: orgId })
+            .eq('organization_id', null);
         }
       }
     }
