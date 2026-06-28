@@ -79,41 +79,41 @@ let orgId = profile?.organization_id ?? null;
              .update({ organization_id: orgId })
              .eq('id', profile.id);
          } else {
-           const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
-           const { data: createdProfile } = await supabaseAdmin
-             .from('profiles')
-             .insert({
-               user_id: sessionData.session.user.id,
-               full_name: fullName,
-               email: sessionData.session.user.email,
-               role: 'project_manager',
-               organization_id: orgId,
-               status: 'active',
-             })
-             .select('id, user_id, organization_id, role, full_name, email')
-             .single();
-           return {
-             isSuperAdmin: createdProfile?.role === 'super_admin',
-             organization_id: createdProfile?.organization_id ?? null,
-             userId: sessionData.session.user.id,
-             userEmail: sessionData.session.user.email,
-             profile: createdProfile,
-             userMetadata: sessionData.session.user.user_metadata,
-           };
-         }
-       }
-     }
-   }
+const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
+            const { data: createdProfile } = await supabaseAdmin
+              .from('profiles')
+              .insert({
+                user_id: sessionData.session.user.id,
+                full_name: fullName,
+                email: sessionData.session.user.email,
+                role: 'project_manager',
+                organization_id: orgId,
+                status: 'active',
+              })
+              .select('id, user_id, organization_id, role, full_name, email')
+              .single();
+            return {
+              isSuperAdmin: createdProfile?.role === 'super_admin',
+              organization_id: orgId,
+              userId: sessionData.session.user.id,
+              userEmail: sessionData.session.user.email,
+              profile: createdProfile,
+              userMetadata: sessionData.session.user.user_metadata,
+            };
+          }
+        }
+      }
+    }
 
-  return {
-    isSuperAdmin: profile?.role === 'super_admin',
-    organization_id: orgId,
-    userId: sessionData.session.user.id,
-    userEmail: sessionData.session.user.email,
-    profile: orgId ? { ...profile, organization_id: orgId } : profile,
-    userMetadata: sessionData.session.user.user_metadata,
-  };
-}
+    return {
+      isSuperAdmin: profile?.role === 'super_admin',
+      organization_id: orgId,
+      userId: sessionData.session.user.id,
+      userEmail: sessionData.session.user.email,
+      profile: orgId ? { ...profile, organization_id: orgId } : profile,
+      userMetadata: sessionData.session.user.user_metadata,
+    };
+  }
 
 async function getPropertyById(id: string) {
   const { data: property, error } = await supabaseAdmin.from('properties').select('*').eq('id', id).single();
