@@ -9,7 +9,6 @@ interface Unit {
   unit_number: string;
   rent_amount: number;
   occupancy_status: string;
-  tenant?: string;
 }
 
 interface Property {
@@ -46,7 +45,7 @@ export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [form, setForm] = useState(emptyForm);
-  const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumber: '', rentAmount: '', occupancyStatus: 'vacant' as const });
+  const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumbers: '', rentAmount: '' });
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [message, setMessage] = useState('');
@@ -166,31 +165,40 @@ export default function PropertiesPage() {
     await loadProperties();
   }
 
-  async function handleAddUnit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleAddUnits(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
     setError('');
 
-    const response = await fetch('/api/units', {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({
-        propertyId: unitForm.propertyId,
-        unitNumber: unitForm.unitNumber,
-        rentAmount: Number(unitForm.rentAmount) || 0,
-        occupancyStatus: unitForm.occupancyStatus,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      setError(result.message || 'Unable to add unit.');
+    if (!unitForm.propertyId || !unitForm.unitNumbers.trim()) {
+      setError('Property and unit numbers are required.');
       return;
     }
 
-    setMessage('Unit added successfully.');
-    setUnitForm({ propertyId: '', unitNumber: '', rentAmount: '', occupancyStatus: 'vacant' });
+    const unitNumbers = unitForm.unitNumbers.split(',').map(u => u.trim()).filter(Boolean);
+    const rentAmount = Number(unitForm.rentAmount) || 0;
+
+    for (const unitNumber of unitNumbers) {
+      const response = await fetch('/api/units', {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({
+          propertyId: unitForm.propertyId,
+          unitNumber,
+          rentAmount,
+          occupancyStatus: 'vacant',
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        setError(`Failed to add unit ${unitNumber}: ${result.message || 'Unknown error'}`);
+        return;
+      }
+    }
+
+    setMessage(`${unitNumbers.length} unit(s) added successfully.`);
+    setUnitForm({ propertyId: '', unitNumbers: '', rentAmount: '' });
     await Promise.all([loadProperties(), loadUnits()]);
   }
 
@@ -199,6 +207,11 @@ export default function PropertiesPage() {
   const totalTenants = properties.reduce((sum, property) => sum + Number(property.tenant_count ?? 0), 0);
   const rentRoll = properties.reduce((sum, property) => sum + Number(property.rent_roll ?? 0), 0);
   const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
+
+  // Get units for selected property
+  const selectedPropertyUnits = selectedProperty 
+    ? units.filter(u => u.property_id === selectedProperty.id) 
+    : [];
 
   return (
     <main className="container property-page-main">
@@ -291,32 +304,42 @@ export default function PropertiesPage() {
               <span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
               </span>
-              Add Unit
+              Add Units to Property
             </div>
-            <h3>Add Unit to Property</h3>
-            <form onSubmit={handleAddUnit} className="form-grid">
+            <h3>Add Units (comma separated)</h3>
+            <form onSubmit={handleAddUnits} className="form-grid">
               <select value={unitForm.propertyId} onChange={(e) => setUnitForm(f => ({ ...f, propertyId: e.target.value }))} required>
                 <option value="">Select property</option>
                 {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <input value={unitForm.unitNumber} onChange={(e) => setUnitForm(f => ({ ...f, unitNumber: e.target.value }))} required placeholder="Unit number (e.g., A1, B2)" />
+              <input value={unitForm.unitNumbers} onChange={(e) => setUnitForm(f => ({ ...f, unitNumbers: e.target.value }))} required placeholder="Unit numbers (A1, A2, B1, ...)" />
               <input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" />
-              <select value={unitForm.occupancyStatus} onChange={(e) => setUnitForm(f => ({ ...f, occupancyStatus: e.target.value as any }))}>
-                <option value="vacant">Vacant</option>
-                <option value="occupied">Occupied</option>
-              </select>
-              <button type="submit">Add Unit</button>
+              <button type="submit">Add Units</button>
             </form>
 
             {selectedProperty && (
-              <div className="property-detail-card">
+              <div className="property-detail-card" style={{ marginTop: 24 }}>
                 <div className="history-title">
-                  <span>Selected Property</span>
+                  <span>Selected Property Units</span>
                   <strong>{selectedProperty.name}</strong>
                 </div>
                 <p>{selectedProperty.address}</p>
-                <div className="detail-grid">
-                  <div className="detail-card"><span>Units</span><strong>{selectedProperty.unit_count ?? 0}</strong></div>
+                {selectedPropertyUnits.length === 0 ? (
+                  <p style={{ color: 'var(--ink-3)', marginTop: 8 }}>No units added to this property yet.</p>
+                ) : (
+                  <div style={{ marginTop: 12 }}>
+                    {selectedPropertyUnits.map((unit) => (
+                      <div key={unit.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                        <span>{unit.unit_number}</span>
+                        <span style={{ color: unit.occupancy_status === 'occupied' ? 'var(--accent)' : 'var(--ink-3)' }}>
+                          {unit.occupancy_status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="detail-grid" style={{ marginTop: 12 }}>
+                  <div className="detail-card"><span>Total Units</span><strong>{selectedProperty.unit_count ?? 0}</strong></div>
                   <div className="detail-card"><span>Tenants</span><strong>{selectedProperty.tenant_count ?? 0}</strong></div>
                 </div>
               </div>
@@ -355,8 +378,8 @@ export default function PropertiesPage() {
                       const occupancy = unitCount > 0 ? Math.round((occupiedCount / unitCount) * 100) : 0;
                       return (
                         <tr key={property.id}>
-                          <td className="landlord-name">
-                            {property.name}
+                          <td className="landlord-name" style={{ cursor: 'pointer' }}>
+                            <span onClick={() => setSelectedProperty(property)} style={{ textDecoration: 'underline' }}>{property.name}</span>
                             <small>{property.size || 'No size recorded'}</small>
                           </td>
                           <td>{property.address}</td>
@@ -371,7 +394,7 @@ export default function PropertiesPage() {
                           <td className="landlord-name">KSH {Number(property.rent_roll ?? 0).toLocaleString()}</td>
                           <td>
                             <div className="landlord-actions">
-                              <button className="action-button" onClick={() => setSelectedProperty(property)}>View</button>
+                              <button className="action-button" onClick={() => setSelectedProperty(property)}>View Units</button>
                               <button className="action-button primary" onClick={() => handleEdit(property)}>Edit</button>
                               <button className="action-button danger" onClick={() => handleRemove(property.id)}>Remove</button>
                             </div>
@@ -399,28 +422,28 @@ export default function PropertiesPage() {
           ) : (
             <div className="table-shell">
               <table className="landlord-table">
-<thead>
-                    <tr>
-                      <th>Unit</th>
-                      <th>Property</th>
-                      <th>Rent</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {units.map((unit) => {
-                      const property = properties.find(p => p.id === unit.property_id);
-                      return (
-                        <tr key={unit.id}>
-                          <td className="landlord-name">{unit.unit_number}</td>
-                          <td>{property?.name ?? '—'}</td>
-                          <td>KSH {Number(unit.rent_amount ?? 0).toLocaleString()}</td>
-<td>
-                            <span className={`status-pill ${unit.occupancy_status === 'occupied' ? 'status-active' : 'status-pending'}`}>
-                              {unit.occupancy_status}
-                            </span>
-                          </td>
-                        </tr>
+                <thead>
+                  <tr>
+                    <th>Unit</th>
+                    <th>Property</th>
+                    <th>Rent</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {units.map((unit) => {
+                    const property = properties.find(p => p.id === unit.property_id);
+                    return (
+                      <tr key={unit.id}>
+                        <td className="landlord-name">{unit.unit_number}</td>
+                        <td>{property?.name ?? '—'}</td>
+                        <td>KSH {Number(unit.rent_amount ?? 0).toLocaleString()}</td>
+                        <td>
+                          <span className={`status-pill ${unit.occupancy_status === 'occupied' ? 'status-active' : 'status-pending'}`}>
+                            {unit.occupancy_status}
+                          </span>
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>

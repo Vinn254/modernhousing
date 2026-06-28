@@ -150,32 +150,27 @@ export async function POST(request: NextRequest) {
      }
    }
 
+   // If propertyId provided but no unitId, create a new unit
    if (propertyId && !finalUnitId) {
-     const unitName = String(unitId || '').trim();
-     if (unitName) {
-       const { data: existingUnit } = await supabaseAdmin
-         .from('units')
-         .select('id')
-         .eq('property_id', propertyId)
-         .eq('unit_number', unitName)
-         .single();
+     const unitResult = await supabaseAdmin.from('units').insert({
+       property_id: propertyId,
+       unit_number: 'Unit',
+       rent_amount: 0,
+       occupancy_status: 'occupied',
+     }).select('id').single();
 
-       if (existingUnit) {
-         finalUnitId = existingUnit.id;
-       } else {
-         const unitResult = await supabaseAdmin.from('units').insert({
-           property_id: propertyId,
-           unit_number: unitName,
-           rent_amount: 0,
-           occupancy_status: 'occupied',
-         }).select('id').single();
-
-         if (unitResult.error) {
-           return NextResponse.json({ message: `Unable to create unit: ${unitResult.error.message}` }, { status: 500 });
-         }
-         finalUnitId = unitResult.data.id;
-       }
+     if (unitResult.error) {
+       return NextResponse.json({ message: `Unable to create unit: ${unitResult.error.message}` }, { status: 500 });
      }
+     finalUnitId = unitResult.data.id;
+   }
+
+   // Update unit status to occupied when tenant is assigned to existing unit
+   if (unitId && !propertyId) {
+     await supabaseAdmin
+       .from('units')
+       .update({ occupancy_status: 'occupied' })
+       .eq('id', unitId);
    }
 
    const result = await supabaseAdmin.from('tenants').insert({
