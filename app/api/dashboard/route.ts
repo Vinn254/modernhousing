@@ -40,7 +40,7 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionData.session.user.id)
     .single();
 
-let orgId = profile?.organization_id ?? null;
+let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
 
    if (!orgId) {
      const role = profile?.role ?? sessionData.session.user.user_metadata?.role;

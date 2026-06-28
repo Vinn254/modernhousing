@@ -33,7 +33,7 @@ const { data: profile } = await supabaseAdmin
       .eq('user_id', sessionData.session.user.id)
       .single();
 
-    let orgId = profile?.organization_id ?? null;
+    let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
     // Allow reassignment
     let profileData = profile;
 
