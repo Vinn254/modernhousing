@@ -96,7 +96,7 @@ async function findOrCreateOrganization(name: string): Promise<string> {
     return created.id;
   }
 
-async function updateLandlordMetadata(userId: string, input: { fullName?: string; status?: LandlordProfile['status']; password?: string }) {
+async function updateLandlordMetadata(userId: string, input: { fullName?: string; status?: LandlordProfile['status']; password?: string; organizationId?: string | null }) {
   const users = await getAllAdminUsers();
   const user = users.find((item) => item.id === userId);
   if (!user) throw new Error('Landlord not found.');
@@ -109,6 +109,10 @@ async function updateLandlordMetadata(userId: string, input: { fullName?: string
       status: input.status ?? user.user_metadata?.status ?? 'active',
     },
   };
+
+  if (input.organizationId) {
+    body.user_metadata.organization_id = input.organizationId;
+  }
 
   if (input.password) {
     body.password = input.password;
@@ -186,6 +190,9 @@ export async function POST(request: NextRequest) {
 
     const organizationId = await findOrCreateOrganization(organization);
     const profile = await upsertProfile(user.id, fullName, email, organizationId, status, phone);
+
+    // Update user metadata with organization_id
+    await updateLandlordMetadata(user.id, { fullName, status, organizationId });
 
     return NextResponse.json({
       landlord: {
