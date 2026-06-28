@@ -104,27 +104,34 @@ export default function TenantPaymentsPage() {
         </article>
       )}
 
-      <section className="card" style={{ marginTop: 24 }}>
-        <div className="card-label">Payment Records</div>
-        <h3 style={{ marginBottom: 16 }}>All Payments</h3>
-        {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : (
+      {loading ? <p className="landlord-muted" style={{ marginTop: 24 }}>Loading payments...</p> : null}
+
+      {!loading && payments.length > 0 && (
+        <section className="card" style={{ marginTop: 24 }}>
+          <div className="card-label">Payment Records</div>
+          <h3 style={{ marginBottom: 16 }}>All Payments</h3>
           <div className="table-shell">
             <table className="landlord-table">
-              <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Balance</th></tr></thead>
+              <thead><tr><th>Date</th><th>Month Due</th><th>Paid</th><th>Balance</th><th>Type</th></tr></thead>
               <tbody>
                 {payments.map(p => (
                   <tr key={p.id}>
                     <td>{p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}</td>
-                    <td>{p.transaction_type.replace('_', ' ')}</td>
+                    <td>{(p as any).month_due || p.description}</td>
                     <td>{formatCurrency(p.amount)}</td>
                     <td style={{ color: p.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(p.balance_remaining)}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{(p as any).transaction_type || 'rent'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </section>
+        </section>
+      )}
+
+      {!loading && payments.length === 0 && !message && (
+        <p className="landlord-empty" style={{ marginTop: 24 }}>No payments recorded yet.</p>
+      )}
     </main>
   );
 }

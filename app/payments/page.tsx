@@ -24,6 +24,10 @@ interface Payment {
   status: string;
   next_payment_date: string;
   created_at: string;
+  month_due?: string;
+  due_amount?: number;
+  penalty_fee?: number;
+  transaction_number?: string;
 }
 
 async function getAuthHeaders() {
@@ -194,7 +198,7 @@ export default function PaymentsPage() {
       {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
       {error && <p style={{ color: '#dc2626', fontWeight: 700, marginBottom: 16 }}>{error}</p>}
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+      <section className="payments-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
         <div className="card">
           <div className="card-label">Manual Payment Entry</div>
           <h3 style={{ marginBottom: 16 }}>Record Direct Payment</h3>
