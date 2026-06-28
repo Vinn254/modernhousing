@@ -8,8 +8,12 @@ interface Payment {
   amount: number;
   balance_remaining: number;
   created_at: string;
+  paid_at?: string;
   transaction_type: string;
   description: string;
+  month_due?: string;
+  due_amount?: number;
+  transaction_number?: string;
 }
 
 export default function TenantPaymentsPage() {
@@ -108,22 +112,24 @@ export default function TenantPaymentsPage() {
         <section className="card" style={{ marginTop: 24 }}>
           <div className="card-label">Payment Records</div>
           <h3 style={{ marginBottom: 16 }}>All Payments</h3>
-          <div className="table-shell">
-            <table className="landlord-table">
-              <thead><tr><th>Date</th><th>Month Due</th><th>Paid</th><th>Balance</th><th>Type</th></tr></thead>
-              <tbody>
-                {payments.map(p => (
-                  <tr key={p.id}>
-                    <td>{p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}</td>
-                    <td>{(p as any).month_due || p.description}</td>
-                    <td>{formatCurrency(p.amount)}</td>
-                    <td style={{ color: p.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(p.balance_remaining)}</td>
-                    <td style={{ textTransform: 'capitalize' }}>{(p as any).transaction_type || 'rent'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+<div className="table-shell">
+             <table className="landlord-table">
+               <thead><tr><th>Date</th><th>Month Due</th><th>Due</th><th>Paid</th><th>Balance</th><th>Type</th><th>Trans #</th></tr></thead>
+               <tbody>
+                 {payments.map(p => (
+                   <tr key={p.id}>
+                     <td>{p.paid_at ? new Date(p.paid_at).toLocaleDateString() : (p.created_at ? new Date(p.created_at).toLocaleDateString() : '')}</td>
+                     <td>{p.month_due || p.description}</td>
+                     <td>{formatCurrency(p.due_amount ?? p.amount)}</td>
+                     <td>{formatCurrency(p.amount)}</td>
+                     <td style={{ color: p.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(p.balance_remaining)}</td>
+                     <td style={{ textTransform: 'capitalize' }}>{p.transaction_type || 'rent'}</td>
+                     <td style={{ fontSize: '12px' }}>{p.transaction_number || '—'}</td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           </div>
         </section>
       )}
 
