@@ -29,6 +29,8 @@ export default function AgentTenantsPage() {
   const [agentLeaseEnd, setAgentLeaseEnd] = useState('');
   const [agentDeposit, setAgentDeposit] = useState('');
   const [agentLoading, setAgentLoading] = useState(false);
+  const [unitForm, setUnitForm] = useState({ unitNumber: '', rentAmount: '', unitType: '' });
+  const [unitLoading, setUnitLoading] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -120,6 +122,36 @@ export default function AgentTenantsPage() {
     setNotifLoading(null);
   }
 
+  async function handleAddUnit(event: React.FormEvent) {
+    event.preventDefault();
+    setUnitLoading(true);
+    setError('');
+
+    const storedPropertyId = localStorage.getItem('agentPropertyId');
+    const response = await fetch('/api/units', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        propertyId: storedPropertyId,
+        unitNumber: unitForm.unitNumber,
+        rentAmount: Number(unitForm.rentAmount) || 0,
+        unitType: unitForm.unitType,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to add unit.');
+      setUnitLoading(false);
+      return;
+    }
+
+    setUnitForm({ unitNumber: '', rentAmount: '', unitType: '' });
+    loadData();
+    setUnitLoading(false);
+  }
+
   return (
     <main className="container admin-no-hero" style={{ padding: '34px 0 80px' }}>
       <div className="card-admin-header">
@@ -148,6 +180,24 @@ export default function AgentTenantsPage() {
               <button type="submit" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Tenant'}</button>
             </form>
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
+          </article>
+
+          <article className="card">
+            <div className="card-label">Create New Unit</div>
+            <h3>Add Unit</h3>
+            <form onSubmit={handleAddUnit} className="form-grid">
+              <input value={unitForm.unitNumber} onChange={(e) => setUnitForm(f => ({ ...f, unitNumber: e.target.value }))} required placeholder="Unit number (e.g., A1)" />
+              <input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" />
+              <select value={unitForm.unitType} onChange={(e) => setUnitForm(f => ({ ...f, unitType: e.target.value }))}>
+                <option value="">Unit Type (optional)</option>
+                <option value="single-room">Single Room</option>
+                <option value="bedsitter">Bedsitter</option>
+                <option value="one-bedroom">One Bedroom</option>
+                <option value="two-bedroom">Two Bedroom</option>
+                <option value="three-bedroom">Three Bedroom</option>
+              </select>
+              <button type="submit" disabled={unitLoading}>{unitLoading ? 'Adding…' : 'Add Unit'}</button>
+            </form>
           </article>
 
           <article className="card">
