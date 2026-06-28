@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
       return badRequest('Email, password, full name, and organization are required.');
     }
 
-    const existingUser = await getUserByEmail(email);
+const existingUser = await getUserByEmail(email);
     let user = existingUser;
 
     if (user) {
@@ -183,7 +183,6 @@ export async function POST(request: NextRequest) {
     } else {
       const created = await createAdminUser({ email, password, fullName, role: 'project_manager' });
       user = created.user;
-      user = await updateLandlordMetadata(user.id, { fullName, status });
     }
 
     if (!user) throw new Error('Unable to create landlord.');
@@ -191,10 +190,10 @@ export async function POST(request: NextRequest) {
     const organizationId = await findOrCreateOrganization(organization);
     const profile = await upsertProfile(user.id, fullName, email, organizationId, status, phone);
 
-    // Update user metadata with organization_id
+    // Update user metadata with organization_id for auth context
     await updateLandlordMetadata(user.id, { fullName, status, organizationId });
 
-    return NextResponse.json({
+return NextResponse.json({
       landlord: {
         id: user?.id ?? profile?.user_id,
         email: profile?.email ?? user?.email ?? '',
@@ -224,8 +223,8 @@ export async function PATCH(request: NextRequest) {
       return badRequest('Landlord ID and full name are required.');
     }
 
-    const user = await updateLandlordMetadata(userId, { fullName, status, password: password || undefined });
     const organizationId = organization ? await findOrCreateOrganization(organization) : null;
+    const user = await updateLandlordMetadata(userId, { fullName, status, organizationId, password: password || undefined });
     const profile = await upsertProfile(userId, fullName, user.email, organizationId, status ?? 'active', phone ?? undefined);
 
     return NextResponse.json({
