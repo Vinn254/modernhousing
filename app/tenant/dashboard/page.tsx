@@ -75,7 +75,7 @@ export default function TenantDashboardPage() {
         <p className="subheading">Your apartment, payments, notices, and support requests in one place.</p>
       </div>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 18, marginBottom: 24 }}>
+      <section className="tenant-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 18, marginBottom: 24 }}>
         <div className="card">
           <div className="card-label">Apartment</div>
           <h3 style={{ margin: 0 }}>{tenant.property_name}</h3>
@@ -98,7 +98,7 @@ export default function TenantDashboardPage() {
         </div>
       </section>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+      <section className="tenant-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
         <div className="card">
           <div className="card-label">Personal Details</div>
           <h3 style={{ marginBottom: 16 }}>My Profile</h3>

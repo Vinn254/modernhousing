@@ -1248,6 +1248,35 @@ body {
   font-weight: 800;
 }
 
+.tenant-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.tenant-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 768px) {
+  .tenant-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .tenant-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tenant-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .renewal-pill.safe,
 .status-active {
   background: rgba(16,185,129,0.12);

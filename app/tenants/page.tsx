@@ -121,7 +121,7 @@ export default function TenantsPage() {
       {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
       {error && <p style={{ color: '#dc2626', fontWeight: 700, marginBottom: 16 }}>{error}</p>}
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 20, alignItems: 'start' }}>
+      <section className="tenant-page-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 20, alignItems: 'start' }}>
         <div className="card">
           <div className="card-label">Tenant Setup</div>
           <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
@@ -147,7 +147,7 @@ export default function TenantsPage() {
           {loading ? <p style={{ color: 'var(--ink-3)' }}>Loading tenants…</p> : tenants.length === 0 ? (
             <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="table-shell">
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--line)' }}>
