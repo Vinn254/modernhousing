@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
         .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'Property Manager'} Organization` })
         .select('id')
         .single();
-      orgId = newOrg?.id;
+      orgId = newOrg?.id ?? null;
 
       if (orgId) {
         if (authContext.profile) {
@@ -240,23 +240,32 @@ export async function POST(request: NextRequest) {
             .eq('id', authContext.profile.id);
         } else {
           const fullName = authContext.userMetadata?.full_name ?? authContext.userEmail ?? 'User';
-          await supabaseAdmin
-            .from('profiles')
-            .insert({
-              user_id: authContext.userId,
-              full_name: fullName,
-              email: authContext.userEmail,
-              role: 'project_manager',
-              organization_id: orgId,
-              status: 'active',
-            });
+          const role = authContext.userMetadata?.role ?? 'project_manager';
+          if (role === 'project_manager') {
+            await supabaseAdmin
+              .from('profiles')
+              .insert({
+                user_id: authContext.userId,
+                full_name: fullName,
+                email: authContext.userEmail,
+                role: 'project_manager',
+                organization_id: orgId,
+                status: 'active',
+              });
+          }
         }
 
-        await supabaseAdmin
-          .from('properties')
-          .update({ organization_id: orgId })
-          .eq('organization_id', null);
+        if (authContext.userMetadata?.role === 'project_manager' || !authContext.profile) {
+          await supabaseAdmin
+            .from('properties')
+            .update({ organization_id: orgId })
+            .eq('organization_id', null);
+        }
       }
+    }
+
+    if (!orgId) {
+      return NextResponse.json({ message: 'Unable to create property - no organization assigned.' }, { status: 403 });
     }
 
     const result = await supabaseAdmin
