@@ -23,7 +23,17 @@ export async function POST(request: NextRequest) {
 
     const existingUser = usersData?.users.find((user) => user.email === email);
     if (existingUser) {
-      return NextResponse.json({ message: 'Super admin already exists.' }, { status: 200 });
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: fullName, role: 'super_admin' },
+      });
+
+      if (updateError) {
+        return NextResponse.json({ message: updateError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ message: 'Super admin updated.', userId: existingUser.id }, { status: 200 });
     }
 
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
