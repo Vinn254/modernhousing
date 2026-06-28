@@ -98,25 +98,32 @@ export async function GET(request: NextRequest) {
       `);
 
     if (!authContext.isSuperAdmin) {
-      if (!authContext.organizationId) {
+      const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
+
+      // For agents without organization: use property_id from user_metadata
+      if (!authContext.organizationId && userMetadata?.property_id) {
+        if (propertyId && userMetadata.property_id !== propertyId) {
+          return NextResponse.json({ units: [] });
+        }
+        query = query.eq('property_id', userMetadata.property_id);
+      } else if (!authContext.organizationId) {
         return NextResponse.json({ units: [] });
-      }
-
-      // Get properties in this organization
-      const { data: orgProps } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('organization_id', authContext.organizationId);
-      const propIds = (orgProps ?? []).map((p: any) => p.id);
-
-      if (propIds.length === 0) {
-        return NextResponse.json({ units: [] });
-      }
-
-      if (propertyId) {
-        query = query.eq('property_id', propertyId);
       } else {
-        query = query.in('property_id', propIds);
+        const { data: orgProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('organization_id', authContext.organizationId);
+        const propIds = (orgProps ?? []).map((p: any) => p.id);
+
+        if (propIds.length === 0) {
+          return NextResponse.json({ units: [] });
+        }
+
+        if (propertyId) {
+          query = query.eq('property_id', propertyId);
+        } else {
+          query = query.in('property_id', propIds);
+        }
       }
     } else if (propertyId) {
       query = query.eq('property_id', propertyId);
@@ -158,17 +165,25 @@ export async function POST(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
+    const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
 
-    if (!authContext.isSuperAdmin && authContext.organizationId) {
-      const { data: prop } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('id', propertyId)
-        .eq('organization_id', authContext.organizationId)
-        .maybeSingle();
+    if (!authContext.isSuperAdmin) {
+      // For agents: check if property matches their assigned property
+      if (!authContext.organizationId && userMetadata?.property_id && userMetadata.property_id !== propertyId) {
+        return NextResponse.json({ message: 'You can only add units to your assigned property.' }, { status: 403 });
+      }
 
-      if (!prop) {
-        return NextResponse.json({ message: 'You can only add units to properties in your own workspace.' }, { status: 403 });
+      if (authContext.organizationId) {
+        const { data: prop } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('id', propertyId)
+          .eq('organization_id', authContext.organizationId)
+          .maybeSingle();
+
+        if (!prop) {
+          return NextResponse.json({ message: 'You can only add units to properties in your own workspace.' }, { status: 403 });
+        }
       }
     }
 
@@ -205,19 +220,31 @@ export async function PATCH(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin) {
-      if (!authContext.organizationId) {
-        return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
-      }
-      const { data: unitData } = await supabaseAdmin
-        .from('units')
-        .select('property_id, properties!inner(organization_id)')
-        .eq('id', id)
-        .eq('properties.organization_id', authContext.organizationId)
-        .maybeSingle();
+    const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
 
-      if (!unitData) {
-        return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
+    if (!authContext.isSuperAdmin) {
+      if (authContext.organizationId) {
+        const { data: unitData } = await supabaseAdmin
+          .from('units')
+          .select('property_id, properties!inner(organization_id)')
+          .eq('id', id)
+          .eq('properties.organization_id', authContext.organizationId)
+          .maybeSingle();
+
+        if (!unitData) {
+          return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
+        }
+      } else if (userMetadata?.property_id) {
+        const { data: unitData } = await supabaseAdmin
+          .from('units')
+          .select('property_id')
+          .eq('id', id)
+          .eq('property_id', userMetadata.property_id)
+          .maybeSingle();
+
+        if (!unitData) {
+          return NextResponse.json({ message: 'You can only manage units in your assigned property.' }, { status: 403 });
+        }
       }
     }
 
@@ -251,19 +278,31 @@ export async function DELETE(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin) {
-      if (!authContext.organizationId) {
-        return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
-      }
-      const { data: unitProp } = await supabaseAdmin
-        .from('units')
-        .select('property_id, properties!inner(organization_id)')
-        .eq('id', id)
-        .eq('properties.organization_id', authContext.organizationId)
-        .maybeSingle();
+    const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
 
-      if (!unitProp) {
-        return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
+    if (!authContext.isSuperAdmin) {
+      if (authContext.organizationId) {
+        const { data: unitProp } = await supabaseAdmin
+          .from('units')
+          .select('property_id, properties!inner(organization_id)')
+          .eq('id', id)
+          .eq('properties.organization_id', authContext.organizationId)
+          .maybeSingle();
+
+        if (!unitProp) {
+          return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
+        }
+      } else if (userMetadata?.property_id) {
+        const { data: unitProp } = await supabaseAdmin
+          .from('units')
+          .select('property_id')
+          .eq('id', id)
+          .eq('property_id', userMetadata.property_id)
+          .maybeSingle();
+
+        if (!unitProp) {
+          return NextResponse.json({ message: 'You can only manage units in your assigned property.' }, { status: 403 });
+        }
       }
     }
 
