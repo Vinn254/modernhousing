@@ -58,6 +58,22 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionData.session.user.id)
     .single();
 
+  // Fallback: query by email if user_id lookup fails
+  if (!profile && sessionData.session.user.email) {
+    const { data: profileByEmail } = await supabaseAdmin
+      .from('profiles')
+      .select('id, user_id, organization_id, role, full_name, email')
+      .eq('email', sessionData.session.user.email)
+      .single();
+    return {
+      isSuperAdmin: profileByEmail?.role === 'super_admin',
+      userId: sessionData.session.user.id,
+      userEmail: sessionData.session.user.email,
+      profile: profileByEmail,
+      userMetadata: sessionData.session.user.user_metadata,
+    };
+  }
+
   return {
     isSuperAdmin: profile?.role === 'super_admin',
     userId: sessionData.session.user.id,
@@ -148,9 +164,9 @@ export async function GET(request: NextRequest) {
         } else {
           return NextResponse.json({ properties: [] });
         }
-      } else if (authContext.profile?.user_id) {
+      } else if (authContext.profile?.user_id || authContext.userId) {
         // Project managers see properties they created
-        query = query.eq('user_id', authContext.profile.user_id);
+        query = query.eq('user_id', authContext.profile?.user_id ?? authContext.userId);
       } else {
         return NextResponse.json({ properties: [] });
       }
@@ -175,11 +191,12 @@ export async function POST(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
 
-    if (!authContext.isSuperAdmin && !authContext.profile?.user_id) {
+    // Use session user_id if profile doesn't exist yet
+    const userId = authContext.isSuperAdmin ? null : (authContext.profile?.user_id ?? authContext.userId);
+
+    if (!authContext.isSuperAdmin && !userId) {
       return NextResponse.json({ message: 'Unable to create property - please log in.' }, { status: 403 });
     }
-
-    const userId = authContext.isSuperAdmin ? null : authContext.profile?.user_id;
 
     const result = await supabaseAdmin
       .from('properties')
@@ -190,7 +207,6 @@ export async function POST(request: NextRequest) {
         amenities,
         ownership_info: ownershipInfo,
         user_id: userId,
-        organization_id: authContext.profile?.organization_id,
       })
       .select()
       .single();

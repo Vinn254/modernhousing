@@ -48,12 +48,14 @@ async function getAuthContext(request: NextRequest) {
     return {
       isSuperAdmin: profileByEmail?.role === 'super_admin',
       profile: profileByEmail,
+      userId: sessionData.session.user.id,
     };
   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
     profile,
+    userId: sessionData.session.user.id,
   };
 }
 
@@ -75,7 +77,8 @@ export async function GET(request: NextRequest) {
       `);
 
     if (!authContext.isSuperAdmin) {
-      if (!authContext.profile?.user_id) {
+      const userId = authContext.profile?.user_id ?? authContext.userId;
+      if (!userId) {
         return NextResponse.json({ units: [] });
       }
 
@@ -83,7 +86,7 @@ export async function GET(request: NextRequest) {
       const { data: userProps } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('user_id', authContext.profile.user_id);
+        .eq('user_id', userId);
       const propIds = (userProps ?? []).map((p: any) => p.id);
 
       if (propIds.length === 0) {
@@ -135,14 +138,15 @@ export async function POST(request: NextRequest) {
 
       const authContext = await getAuthContext(request);
       if (!authContext.isSuperAdmin) {
-        if (!authContext.profile?.user_id) {
+        const userId = authContext.profile?.user_id ?? authContext.userId;
+        if (!userId) {
           return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
         }
         const { data: prop } = await supabaseAdmin
           .from('properties')
           .select('id')
           .eq('id', propertyId)
-          .eq('user_id', authContext.profile.user_id)
+          .eq('user_id', userId)
           .maybeSingle();
 
         if (!prop) {
@@ -180,14 +184,15 @@ export async function PATCH(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin) {
-      if (!authContext.profile?.user_id) {
+      const userId = authContext.profile?.user_id ?? authContext.userId;
+      if (!userId) {
         return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
       }
       const { data: unitProp } = await supabaseAdmin
         .from('units')
         .select('property_id, properties!inner(user_id)')
         .eq('id', id)
-        .eq('properties.user_id', authContext.profile.user_id)
+        .eq('properties.user_id', userId)
         .maybeSingle();
 
       if (!unitProp) {
@@ -212,7 +217,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to update unit.' }, { status: 500 });
   }
-  }
+}
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -224,14 +229,15 @@ export async function DELETE(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin) {
-      if (!authContext.profile?.user_id) {
+      const userId = authContext.profile?.user_id ?? authContext.userId;
+      if (!userId) {
         return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
       }
       const { data: unitProp } = await supabaseAdmin
         .from('units')
         .select('property_id, properties!inner(user_id)')
         .eq('id', id)
-        .eq('properties.user_id', authContext.profile.user_id)
+        .eq('properties.user_id', userId)
         .maybeSingle();
 
       if (!unitProp) {

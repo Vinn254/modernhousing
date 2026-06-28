@@ -174,7 +174,8 @@ export async function GET(request: NextRequest) {
     let agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
 
     if (!authContext.isSuperAdmin) {
-      if (!authContext.profile?.user_id) {
+      const userId = authContext.profile?.user_id ?? authContext.userId;
+      if (!userId) {
         return NextResponse.json({ agents: [] });
       }
 
@@ -182,7 +183,7 @@ export async function GET(request: NextRequest) {
       const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('user_id', authContext.profile.user_id);
+        .eq('user_id', userId);
       const validPropertyIds = new Set((orgProps ?? []).map((p: any) => p.id));
 
       agents = agents.filter((agent) => {
@@ -218,18 +219,19 @@ export async function POST(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin && authContext.profile?.user_id && propertyId) {
+    const userId = authContext.profile?.user_id ?? authContext.userId;
+    if (!authContext.isSuperAdmin && userId && propertyId) {
       const { data: prop } = await supabaseAdmin
         .from('properties')
         .select('id, user_id')
         .eq('id', propertyId)
-        .eq('user_id', authContext.profile.user_id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (!prop) {
         return NextResponse.json({ message: 'You can only assign agents to properties in your own landlord workspace.' }, { status: 403 });
       }
-    } else if (!authContext.isSuperAdmin && !authContext.profile?.user_id && propertyId) {
+    } else if (!authContext.isSuperAdmin && !userId && propertyId) {
       return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
     }
 
@@ -277,12 +279,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin && authContext.profile?.user_id && propertyId) {
+    const currentUserId = authContext.profile?.user_id ?? authContext.userId;
+    if (!authContext.isSuperAdmin && currentUserId && propertyId) {
       const { data: prop } = await supabaseAdmin
         .from('properties')
         .select('id')
         .eq('id', propertyId)
-        .eq('user_id', authContext.profile.user_id)
+        .eq('user_id', currentUserId)
         .maybeSingle();
 
       if (!prop) {
@@ -323,7 +326,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin && authContext.profile?.user_id) {
+    const currentUserId = authContext.profile?.user_id ?? authContext.userId;
+    if (!authContext.isSuperAdmin && currentUserId) {
       const { data: agentProfile } = await supabaseAdmin
         .from('profiles')
         .select('user_id')
@@ -340,7 +344,7 @@ export async function DELETE(request: NextRequest) {
             .from('properties')
             .select('id')
             .eq('id', agentPropertyId)
-            .eq('user_id', authContext.profile.user_id)
+            .eq('user_id', currentUserId)
             .maybeSingle();
 
           if (!prop) {

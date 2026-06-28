@@ -51,6 +51,7 @@ async function getAuthContext(request: NextRequest) {
       isSuperAdmin: profileByEmail?.role === 'super_admin',
       organization_id: profileByEmail?.organization_id ?? null,
       profile: profileByEmail,
+      userId: sessionData.session.user.id,
     };
   }
 
@@ -58,6 +59,7 @@ async function getAuthContext(request: NextRequest) {
     isSuperAdmin: profile?.role === 'super_admin',
     organization_id: profile?.organization_id ?? null,
     profile,
+    userId: sessionData.session.user.id,
   };
 }
 
@@ -88,8 +90,9 @@ export async function GET(request: NextRequest) {
     let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
 
     if (!authContext.isSuperAdmin) {
-      if (authContext.profile?.user_id) {
-        propertiesQuery = propertiesQuery.eq('user_id', authContext.profile.user_id);
+      const userId = authContext.profile?.user_id ?? authContext.userId;
+      if (userId) {
+        propertiesQuery = propertiesQuery.eq('user_id', userId);
         const orgProps = await propertiesQuery;
         const propIds = (orgProps.data ?? []).map((p: any) => p.id);
 
@@ -172,11 +175,12 @@ export async function GET(request: NextRequest) {
     const financialPayments = paymentList.filter((payment: any) => !nonPaymentTypes.includes(payment.transaction_type));
 
     let agentList = (await getAllAdminUsers().catch(() => []))?.filter((user: any) => user.user_metadata?.role === 'agent') ?? [];
-    if (!authContext.isSuperAdmin && authContext.profile?.user_id) {
+    const currentUserId = authContext.profile?.user_id ?? authContext.userId;
+    if (!authContext.isSuperAdmin && currentUserId) {
       const { data: orgPropsForAgents } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('user_id', authContext.profile.user_id);
+        .eq('user_id', currentUserId);
       const validAgentPropIds = new Set((orgPropsForAgents ?? []).map((p: any) => p.id));
       agentList = agentList.filter((user) => {
         if (propertyId) return user.user_metadata?.property_id === propertyId;

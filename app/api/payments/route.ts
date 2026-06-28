@@ -43,12 +43,14 @@ async function getAuthContext(request: NextRequest) {
     return {
       isSuperAdmin: profileByEmail?.role === 'super_admin',
       profile: profileByEmail,
+      userId: sessionData.session.user.id,
     };
   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
     profile,
+    userId: sessionData.session.user.id,
   };
 }
 
@@ -56,7 +58,8 @@ export async function GET(request: NextRequest) {
    try {
       const authContext = await getAuthContext(request);
 
-      if (!authContext.isSuperAdmin && !authContext.profile?.user_id) {
+      const userId = authContext.profile?.user_id ?? authContext.userId;
+      if (!authContext.isSuperAdmin && !userId) {
         return NextResponse.json({ payments: [] });
       }
 
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
       const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('user_id', authContext.profile?.user_id ?? '');
+        .eq('user_id', userId ?? '');
       const propIds = (orgProps ?? []).map((p: any) => p.id);
 
       if (propIds.length > 0) {
