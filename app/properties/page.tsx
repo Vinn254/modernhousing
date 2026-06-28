@@ -3,6 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
+interface Unit {
+  id: string;
+  property_id: string;
+  unit_number: string;
+  rent_amount: number;
+  occupancy_status: string;
+  tenant?: string;
+}
+
 interface Property {
   id: string;
   name: string;
@@ -35,7 +44,9 @@ async function getAuthHeaders() {
 export default function PropertiesPage() {
   const formRef = useRef<HTMLDivElement>(null);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [form, setForm] = useState(emptyForm);
+  const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumber: '', rentAmount: '', occupancyStatus: 'vacant' as const });
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [message, setMessage] = useState('');
@@ -62,8 +73,16 @@ export default function PropertiesPage() {
     setLoading(false);
   }
 
+  async function loadUnits() {
+    try {
+      const response = await fetch('/api/units', { headers: await getAuthHeaders() });
+      const result = await response.json();
+      if (response.ok) setUnits(result.units ?? []);
+    } catch (e) {}
+  }
+
   useEffect(() => {
-    loadProperties();
+    Promise.all([loadProperties(), loadUnits()]);
   }, []);
 
   useEffect(() => {
@@ -145,6 +164,34 @@ export default function PropertiesPage() {
     setMessage('Property removed.');
     if (selectedProperty?.id === propertyId) setSelectedProperty(null);
     await loadProperties();
+  }
+
+  async function handleAddUnit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+
+    const response = await fetch('/api/units', {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        propertyId: unitForm.propertyId,
+        unitNumber: unitForm.unitNumber,
+        rentAmount: Number(unitForm.rentAmount) || 0,
+        occupancyStatus: unitForm.occupancyStatus,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setError(result.message || 'Unable to add unit.');
+      return;
+    }
+
+    setMessage('Unit added successfully.');
+    setUnitForm({ propertyId: '', unitNumber: '', rentAmount: '', occupancyStatus: 'vacant' });
+    await Promise.all([loadProperties(), loadUnits()]);
   }
 
   const totalUnits = properties.reduce((sum, property) => sum + Number(property.unit_count ?? 0), 0);
@@ -240,6 +287,27 @@ export default function PropertiesPage() {
               </div>
             </form>
 
+            <div className="card-label" style={{ marginTop: 32 }}>
+              <span className="badge badge-pm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              </span>
+              Add Unit
+            </div>
+            <h3>Add Unit to Property</h3>
+            <form onSubmit={handleAddUnit} className="form-grid">
+              <select value={unitForm.propertyId} onChange={(e) => setUnitForm(f => ({ ...f, propertyId: e.target.value }))} required>
+                <option value="">Select property</option>
+                {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <input value={unitForm.unitNumber} onChange={(e) => setUnitForm(f => ({ ...f, unitNumber: e.target.value }))} required placeholder="Unit number (e.g., A1, B2)" />
+              <input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" />
+              <select value={unitForm.occupancyStatus} onChange={(e) => setUnitForm(f => ({ ...f, occupancyStatus: e.target.value as any }))}>
+                <option value="vacant">Vacant</option>
+                <option value="occupied">Occupied</option>
+              </select>
+              <button type="submit">Add Unit</button>
+            </form>
+
             {selectedProperty && (
               <div className="property-detail-card">
                 <div className="history-title">
@@ -316,6 +384,49 @@ export default function PropertiesPage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="card property-list-card" style={{ marginTop: 24 }}>
+          <div className="landlord-panel-header property-list-header">
+            <div>
+              <span className="landlord-kicker">All Units</span>
+              <h2>Unit Records</h2>
+            </div>
+          </div>
+
+          {units.length === 0 ? (
+            <p className="landlord-muted">No units added. Add units above after creating properties.</p>
+          ) : (
+            <div className="table-shell">
+              <table className="landlord-table">
+<thead>
+                    <tr>
+                      <th>Unit</th>
+                      <th>Property</th>
+                      <th>Rent</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {units.map((unit) => {
+                      const property = properties.find(p => p.id === unit.property_id);
+                      return (
+                        <tr key={unit.id}>
+                          <td className="landlord-name">{unit.unit_number}</td>
+                          <td>{property?.name ?? '—'}</td>
+                          <td>KSH {Number(unit.rent_amount ?? 0).toLocaleString()}</td>
+<td>
+                            <span className={`status-pill ${unit.occupancy_status === 'occupied' ? 'status-active' : 'status-pending'}`}>
+                              {unit.occupancy_status}
+                            </span>
+                          </td>
+                        </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </section>
     </main>

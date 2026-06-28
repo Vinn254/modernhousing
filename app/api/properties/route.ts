@@ -24,29 +24,67 @@ function forbidden(message: string) {
   return NextResponse.json({ message }, { status: 403 });
 }
 
+function decodeJWT(token: string): any | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let payload = parts[1];
+    payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4) payload += '=';
+    try {
+      return JSON.parse(atob(payload));
+    } catch {
+      return JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
+    }
+  } catch {
+    return null;
+  }
+}
+
 async function getAuthContext(request: NextRequest): Promise<AuthContext> {
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
 
   let sessionUser: any = null;
 
-  // Method 1: Try Bearer token first (for API calls from frontend)
+  // Method 1: Try Bearer token auth with JWT decoding
   if (authorization?.startsWith('Bearer ')) {
+    const token = authorization.split(' ')[1];
+    const decoded = decodeJWT(token);
+    if (decoded?.sub) {
+      sessionUser = {
+        id: decoded.sub,
+        email: decoded.email,
+        user_metadata: decoded.user_metadata || {},
+      };
+    }
+  }
+
+  // Method 2: Try cookie-based session via getUser
+  if (!sessionUser && cookie) {
     try {
-      const token = authorization.split(' ')[1];
-      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
-      const { data: { user } } = await supabaseAuth.auth.getUser(token);
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { cookie } },
+      });
+      const { data: { user } } = await supabaseAuth.auth.getUser();
       sessionUser = user;
     } catch (e) {}
   }
 
-  // Method 2: Try cookie-based session
+  // Method 3: Try session from cookie
   if (!sessionUser && cookie) {
     try {
-      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { cookie } },
+      });
       const { data: { session } } = await supabaseAuth.auth.getSession();
       sessionUser = session?.user;
     } catch (e) {}
+  }
+
+  // Debug logging
+  if (!sessionUser) {
+    console.log('Auth context - no session found. Cookie:', cookie ? 'present' : 'missing', 'Auth:', authorization ? 'present' : 'missing');
   }
 
   if (!sessionUser) {
@@ -60,14 +98,16 @@ async function getAuthContext(request: NextRequest): Promise<AuthContext> {
     };
   }
 
-  // Get profile with organization_id
+  // Merge user_metadata from JWT decoded data
+  const userMetadata = sessionUser.user_metadata || {};
+
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionUser.id)
     .single();
 
-  let orgId = profile?.organization_id ?? null;
+  let orgId = profile?.organization_id ?? userMetadata.organization_id ?? null;
 
   // Fallback: query by email if user_id lookup fails
   if (!orgId && sessionUser.email) {
@@ -80,12 +120,12 @@ async function getAuthContext(request: NextRequest): Promise<AuthContext> {
   }
 
   return {
-    isSuperAdmin: profile?.role === 'super_admin',
+    isSuperAdmin: profile?.role === 'super_admin' || userMetadata.role === 'super_admin',
     userId: sessionUser.id,
     userEmail: sessionUser.email,
     organizationId: orgId,
     profile,
-    userMetadata: sessionUser.user_metadata,
+    userMetadata,
   };
 }
 
@@ -203,6 +243,13 @@ export async function POST(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
+
+    // Debug: log auth context for property creation
+    console.log('Property POST authContext:', { 
+      isSuperAdmin: authContext.isSuperAdmin, 
+      userId: authContext.userId, 
+      organizationId: authContext.organizationId 
+    });
 
     if (!authContext.isSuperAdmin) {
       let orgId = authContext.organizationId;

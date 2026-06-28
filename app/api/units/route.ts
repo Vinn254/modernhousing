@@ -1,39 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import {
-  badRequest,
-  requestError,
-} from '../../../lib/supabaseAdmin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-if (!supabaseUrl || !serviceRoleKey) {
+if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
   throw new Error('Missing Supabase server environment variables');
 }
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+function decodeJWT(token: string): any | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let payload = parts[1];
+    payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4) payload += '=';
+    try {
+      return JSON.parse(atob(payload));
+    } catch {
+      return JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
+    }
+  } catch {
+    return null;
+  }
+}
+
 async function getAuthContext(request: NextRequest) {
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
 
-  const headers: Record<string, string> = {};
-  if (cookie) headers.cookie = cookie;
-  if (authorization) headers.Authorization = authorization;
-
-  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
-    global: { headers },
-  });
-
   let sessionUser: any = null;
-  const { data: sessionData } = await supabaseAuth.auth.getSession();
-  sessionUser = sessionData?.session?.user;
 
-  if (!sessionUser && authorization?.startsWith('Bearer ')) {
+  // Method 1: Try Bearer token auth with JWT decoding
+  if (authorization?.startsWith('Bearer ')) {
+    const token = authorization.split(' ')[1];
+    const decoded = decodeJWT(token);
+    if (decoded?.sub) {
+      sessionUser = {
+        id: decoded.sub,
+        email: decoded.email,
+        user_metadata: decoded.user_metadata || {},
+      };
+    }
+  }
+
+  // Method 2: Try cookie-based session
+  if (!sessionUser && cookie) {
     try {
-      const token = authorization.split(' ')[1];
-      const { data: { user } } = await supabaseAuth.auth.getUser(token);
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { cookie } },
+      });
+      const { data: { user } } = await supabaseAuth.auth.getUser();
       sessionUser = user;
     } catch (e) {}
   }
@@ -42,13 +62,15 @@ async function getAuthContext(request: NextRequest) {
     return { isSuperAdmin: false, profile: null, organizationId: null };
   }
 
+  const userMetadata = sessionUser.user_metadata || {};
+
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionUser.id)
     .single();
 
-  let orgId = profile?.organization_id ?? null;
+  let orgId = profile?.organization_id ?? userMetadata.organization_id ?? null;
 
   // Fallback: query by email
   if (!orgId && sessionUser.email) {
@@ -61,7 +83,7 @@ async function getAuthContext(request: NextRequest) {
   }
 
   return {
-    isSuperAdmin: profile?.role === 'super_admin',
+    isSuperAdmin: profile?.role === 'super_admin' || userMetadata.role === 'super_admin',
     profile,
     organizationId: orgId,
   };
@@ -112,7 +134,7 @@ export async function GET(request: NextRequest) {
     const { data: units, error } = await query.order('unit_number', { ascending: true });
 
     if (error) {
-      return requestError(error);
+      return NextResponse.json({ message: error.message }, { status: 500 });
     }
 
     const processedUnits = (units ?? []).map((unit: any) => ({
@@ -140,7 +162,7 @@ export async function POST(request: NextRequest) {
     const { propertyId, unitNumber, rentAmount, size, agentEmail, occupancyStatus } = body;
 
     if (!propertyId || !unitNumber) {
-      return badRequest('Property ID and unit number are required.');
+      return NextResponse.json({ message: 'Property ID and unit number are required.' }, { status: 400 });
     }
 
     const authContext = await getAuthContext(request);
@@ -170,7 +192,7 @@ export async function POST(request: NextRequest) {
     }).select().single();
 
     if (result.error) {
-      return requestError(result.error);
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
 
     return NextResponse.json({ unit: result.data, message: 'Unit created.' }, { status: 201 });
@@ -185,7 +207,7 @@ export async function PATCH(request: NextRequest) {
     const { id, unitNumber, rentAmount, size, agentEmail, occupancyStatus } = body;
 
     if (!id) {
-      return badRequest('Unit ID is required.');
+      return NextResponse.json({ message: 'Unit ID is required.' }, { status: 400 });
     }
 
     const authContext = await getAuthContext(request);
@@ -215,7 +237,7 @@ export async function PATCH(request: NextRequest) {
     const result = await supabaseAdmin.from('units').update(updates).eq('id', id).select().single();
 
     if (result.error) {
-      return requestError(result.error);
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
 
     return NextResponse.json({ unit: result.data, message: 'Unit updated.' });
@@ -229,7 +251,7 @@ export async function DELETE(request: NextRequest) {
     const id = request.nextUrl.searchParams.get('id');
 
     if (!id) {
-      return badRequest('Unit ID is required.');
+      return NextResponse.json({ message: 'Unit ID is required.' }, { status: 400 });
     }
 
     const authContext = await getAuthContext(request);
@@ -252,7 +274,7 @@ export async function DELETE(request: NextRequest) {
     const result = await supabaseAdmin.from('units').delete().eq('id', id);
 
     if (result.error) {
-      return requestError(result.error);
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
 
     return NextResponse.json({ message: 'Unit deleted.' });

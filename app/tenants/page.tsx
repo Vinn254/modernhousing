@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 interface Tenant {
   id: string;
@@ -14,6 +15,13 @@ interface Tenant {
   lease_end: string;
   deposit_amount: number;
   created_at?: string;
+}
+
+async function getAuthHeaders() {
+  const { data } = await supabase.auth.getSession();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+  return headers;
 }
 
 export default function TenantsPage() {
@@ -32,7 +40,9 @@ export default function TenantsPage() {
   const [loading, setLoading] = useState(true);
 
   async function loadTenants() {
-    const response = await fetch('/api/tenants');
+    const response = await fetch('/api/tenants', {
+      headers: { 'Content-Type': 'application/json' },
+    });
     const result = await response.json();
     if (!response.ok) {
       setError(result.message ?? 'Unable to load tenants.');
@@ -60,7 +70,7 @@ export default function TenantsPage() {
 
     const response = await fetch('/api/tenants', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await getAuthHeaders(),
       body: JSON.stringify({ fullName, email, phone, propertyId, unitId, leaseStart, leaseEnd, depositAmount: Number(depositAmount) }),
     });
 
@@ -86,7 +96,10 @@ export default function TenantsPage() {
   async function handleRemove(tenantId: string) {
     if (!confirm('Mark this tenant as relocated and remove the active record?')) return;
 
-    const response = await fetch(`/api/tenants?id=${encodeURIComponent(tenantId)}`, { method: 'DELETE' });
+    const response = await fetch(`/api/tenants?id=${encodeURIComponent(tenantId)}`, { 
+      method: 'DELETE',
+      headers: await getAuthHeaders(),
+    });
     const result = await response.json();
 
     if (!response.ok) {

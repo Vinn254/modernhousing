@@ -25,6 +25,13 @@ interface Tenant {
   deposit_amount?: number;
 }
 
+async function getAuthHeaders() {
+  const { data } = await supabase.auth.getSession();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+  return headers;
+}
+
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -43,13 +50,6 @@ export default function TenantsPage() {
   });
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
-
-  async function getAuthHeaders() {
-    const { data } = await supabase.auth.getSession();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
-    return headers;
-  }
 
   async function loadData() {
     setLoading(true);
@@ -89,6 +89,10 @@ export default function TenantsPage() {
     setMessage('');
     setError('');
 
+    // Derive propertyId from selected unit
+    const selectedUnit = units.find(u => u.id === form.unitId);
+    const propertyId = selectedUnit?.property_id;
+
     const url = editingTenant ? `/api/tenants?id=${editingTenant.id}` : '/api/tenants';
     const method = editingTenant ? 'PATCH' : 'POST';
 
@@ -101,7 +105,7 @@ export default function TenantsPage() {
           leaseStart: form.leaseStart,
           leaseEnd: form.leaseEnd,
         }
-      : { ...form, depositAmount: Number(form.depositAmount) || 0 };
+      : { ...form, propertyId, depositAmount: Number(form.depositAmount) || 0 };
 
     const response = await fetch(url, {
       method,

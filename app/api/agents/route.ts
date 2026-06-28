@@ -10,6 +10,7 @@ import {
 } from '../../../lib/supabaseAdmin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 if (!supabaseUrl || !serviceRoleKey) {
@@ -30,28 +31,42 @@ interface AgentProfile {
   created_at: string;
 }
 
+function decodeJWT(token: string): any | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let payload = parts[1];
+    payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4) payload += '=';
+    try {
+      return JSON.parse(atob(payload));
+    } catch {
+      return JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
+    }
+  } catch {
+    return null;
+  }
+}
+
 async function getAuthContext(request: NextRequest) {
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
 
   let sessionUser: any = null;
 
-  // Method 1: Try Bearer token first
   if (authorization?.startsWith('Bearer ')) {
-    try {
-      const token = authorization.split(' ')[1];
-      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '');
-      const { data: { user } } = await supabaseAuth.auth.getUser(token);
-      sessionUser = user;
-    } catch (e) {}
+    const token = authorization.split(' ')[1];
+    const decoded = decodeJWT(token);
+    if (decoded?.sub) {
+      sessionUser = { id: decoded.sub, email: decoded.email, user_metadata: decoded.user_metadata || {} };
+    }
   }
 
-  // Method 2: Try cookie-based session
   if (!sessionUser && cookie) {
     try {
-      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '');
-      const { data: { session } } = await supabaseAuth.auth.getSession();
-      sessionUser = session?.user;
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey!, { global: { headers: { cookie } } });
+      const { data: { user } } = await supabaseAuth.auth.getUser();
+      sessionUser = user;
     } catch (e) {}
   }
 
@@ -59,13 +74,15 @@ async function getAuthContext(request: NextRequest) {
     return { isSuperAdmin: false, profile: null, userId: undefined, organizationId: null };
   }
 
+  const userMetadata = sessionUser.user_metadata || {};
+
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionUser.id)
     .single();
 
-  let orgId = profile?.organization_id ?? null;
+  let orgId = profile?.organization_id ?? userMetadata.organization_id ?? null;
 
   // Fallback: query by email
   if (!orgId && sessionUser.email) {
@@ -78,7 +95,7 @@ async function getAuthContext(request: NextRequest) {
   }
 
   return {
-    isSuperAdmin: profile?.role === 'super_admin',
+    isSuperAdmin: profile?.role === 'super_admin' || userMetadata.role === 'super_admin',
     profile,
     userId: sessionUser.id,
     organizationId: orgId,
@@ -177,7 +194,6 @@ export async function GET(request: NextRequest) {
 
     const profiles = (profilesResult.data ?? []) as AgentProfile[];
 
-    // Filter agents by organization
     let agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
 
     if (!authContext.isSuperAdmin) {

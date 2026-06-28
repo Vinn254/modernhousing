@@ -2,13 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-if (!supabaseUrl || !serviceRoleKey) {
+if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
   throw new Error('Missing Supabase server environment variables');
 }
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+function decodeJWT(token: string): any | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let payload = parts[1];
+    payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4) payload += '=';
+    try {
+      return JSON.parse(atob(payload));
+    } catch {
+      return JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
+    }
+  } catch {
+    return null;
+  }
+}
 
 async function getAuthContext(request: NextRequest) {
   const cookie = request.headers.get('cookie') ?? '';
@@ -16,22 +34,19 @@ async function getAuthContext(request: NextRequest) {
 
   let sessionUser: any = null;
 
-  // Method 1: Try Bearer token first
   if (authorization?.startsWith('Bearer ')) {
-    try {
-      const token = authorization.split(' ')[1];
-      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '');
-      const { data: { user } } = await supabaseAuth.auth.getUser(token);
-      sessionUser = user;
-    } catch (e) {}
+    const token = authorization.split(' ')[1];
+    const decoded = decodeJWT(token);
+    if (decoded?.sub) {
+      sessionUser = { id: decoded.sub, email: decoded.email, user_metadata: decoded.user_metadata || {} };
+    }
   }
 
-  // Method 2: Try cookie-based session
   if (!sessionUser && cookie) {
     try {
-      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '');
-      const { data: { session } } = await supabaseAuth.auth.getSession();
-      sessionUser = session?.user;
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { cookie } } });
+      const { data: { user } } = await supabaseAuth.auth.getUser();
+      sessionUser = user;
     } catch (e) {}
   }
 
@@ -39,26 +54,20 @@ async function getAuthContext(request: NextRequest) {
     return { isSuperAdmin: false, userId: undefined, organizationId: null };
   }
 
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('id, user_id, organization_id, role, full_name, email')
-    .eq('user_id', sessionUser.id)
-    .single();
+  const userMetadata = sessionUser.user_metadata || {};
+  let orgId = userMetadata.organization_id ?? null;
 
-  let orgId = profile?.organization_id ?? null;
-
-  // Fallback: query by email
   if (!orgId && sessionUser.email) {
     const { data: profileByEmail } = await supabaseAdmin
       .from('profiles')
-      .select('id, user_id, organization_id, role, full_name, email')
+      .select('organization_id')
       .eq('email', sessionUser.email)
       .single();
     orgId = profileByEmail?.organization_id ?? null;
   }
 
   return {
-    isSuperAdmin: profile?.role === 'super_admin',
+    isSuperAdmin: userMetadata.role === 'super_admin',
     userId: sessionUser.id,
     organizationId: orgId,
   };
@@ -72,7 +81,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ tenants: [] });
       }
 
-      // Get properties in this organization
       const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')
