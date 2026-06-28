@@ -106,10 +106,6 @@ export async function GET(request: NextRequest) {
           ...payment,
           tenant: payment.tenants?.full_name ?? '',
           tenant_email: payment.tenants?.email ?? '',
-          month_due: payment.month_due,
-          due_amount: payment.due_amount,
-          penalty_fee: payment.penalty_fee,
-          transaction_number: payment.transaction_number,
         }));
         return NextResponse.json({ payments });
       }
@@ -118,6 +114,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ payments: [], message: error.message ?? 'Unable to load payments.' }, { status: 500 });
     }
   }
+}
 
 export async function POST(request: NextRequest) {
     const body = await request.json();
@@ -163,27 +160,6 @@ export async function POST(request: NextRequest) {
         status: 'sent',
         created_at: new Date().toISOString(),
       }).select();
-    }
-
-    return NextResponse.json({ message: 'Payment recorded.' }, { status: 201 });
-  }
-
-    const result = await supabaseAdmin.from('payments').insert({
-      tenant_id: tenantId,
-      property_id: propertyId ?? null,
-      description: description ?? `${monthDue || ''} Payment`,
-      transaction_type: transType || transactionType || 'rent',
-      amount: Number(paidAmount) || Number(amount) || 0,
-      balance_remaining: Number(balAmount) || Number(balanceRemaining) || 0,
-      penalty_fee: Number(penalty) || 0,
-      month_due: monthDue || null,
-      transaction_number: transNumber,
-      transaction_code: transCode || null,
-      paid_at: paymentDate || new Date().toISOString(),
-    });
-
-    if (result.error) {
-      return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
 
     return NextResponse.json({ message: 'Payment recorded.' }, { status: 201 });
