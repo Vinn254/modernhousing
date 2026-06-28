@@ -143,6 +143,7 @@ export async function GET(request: NextRequest) {
       unit_number: unit.unit_number,
       rent_amount: Number(unit.rent_amount ?? 0),
       occupancy_status: unit.occupancy_status ?? 'vacant',
+      unit_type: unit.unit_type ?? null,
       created_at: unit.created_at,
       tenant: unit.tenants?.full_name ?? null,
       tenant_email: unit.tenants?.email ?? null,
@@ -207,11 +208,11 @@ const insertData: any = {
 export async function PATCH(request: NextRequest) {
   try {
     const id = request.nextUrl.searchParams.get('id');
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { unitNumber, rentAmount, size, agentEmail, occupancyStatus, unitType } = body || {};
 
     if (!id) {
-      return NextResponse.json({ message: 'Unit ID is required.' }, { status: 400 });
+      return NextResponse.json({ message: 'Unit ID is required.', receivedId: id }, { status: 400 });
     }
 
     const authContext = await getAuthContext(request);

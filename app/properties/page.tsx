@@ -78,8 +78,15 @@ export default function PropertiesPage() {
     try {
       const response = await fetch('/api/units', { headers: await getAuthHeaders() });
       const result = await response.json();
-      if (response.ok) setUnits(result.units ?? []);
-    } catch (e) {}
+      if (response.ok) {
+        setUnits(result.units ?? []);
+      } else {
+        console.error('Failed to load units:', result.message);
+        setError(result.message || 'Failed to load units.');
+      }
+    } catch (e) {
+      setError('Failed to load units.');
+    }
   }
 
   useEffect(() => {
