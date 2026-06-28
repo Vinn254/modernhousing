@@ -11,46 +11,36 @@ if (!supabaseUrl || !serviceRoleKey) {
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 async function getAuthContext(request: NextRequest) {
-  const headers: Record<string, string> = {
-    cookie: request.headers.get('cookie') ?? '',
-  };
+  const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
+
+  const headers: Record<string, string> = {};
+  if (cookie) headers.cookie = cookie;
   if (authorization) headers.Authorization = authorization;
 
   const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
     global: { headers },
   });
 
-  const { data: sessionData, error: sessionError } = await supabaseAuth.auth.getSession();
+  let sessionUser: any = null;
+  const { data: sessionData } = await supabaseAuth.auth.getSession();
+  sessionUser = sessionData?.session?.user;
 
-  if (sessionError || !sessionData.session) {
-    return { isSuperAdmin: false, organization_id: null, profile: null };
+  if (!sessionUser && authorization?.startsWith('Bearer ')) {
+    try {
+      const token = authorization.split(' ')[1];
+      const { data: { user } } = await supabaseAuth.auth.getUser(token);
+      sessionUser = user;
+    } catch (e) {}
   }
 
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('id, user_id, organization_id, role, full_name, email')
-    .eq('user_id', sessionData.session.user.id)
-    .single();
-
-  // Fallback: query by email if user_id lookup fails
-  if (!profile && sessionData.session.user.email) {
-    const { data: profileByEmail } = await supabaseAdmin
-      .from('profiles')
-      .select('id, user_id, organization_id, role, full_name, email')
-      .eq('email', sessionData.session.user.email)
-      .single();
-    return {
-      isSuperAdmin: profileByEmail?.role === 'super_admin',
-      profile: profileByEmail,
-      userId: sessionData.session.user.id,
-    };
+  if (!sessionUser) {
+    return { isSuperAdmin: false, userId: undefined };
   }
 
   return {
-    isSuperAdmin: profile?.role === 'super_admin',
-    profile,
-    userId: sessionData.session.user.id,
+    isSuperAdmin: sessionUser.user_metadata?.role === 'super_admin',
+    userId: sessionUser.id,
   };
 }
 
@@ -58,7 +48,7 @@ export async function GET(request: NextRequest) {
    try {
       const authContext = await getAuthContext(request);
 
-      const userId = authContext.profile?.user_id ?? authContext.userId;
+      const userId = authContext.userId;
       if (!authContext.isSuperAdmin && !userId) {
         return NextResponse.json({ payments: [] });
       }

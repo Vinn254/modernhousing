@@ -18,7 +18,6 @@ type AuthContext = {
 };
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-const supabaseAnon = createClient(supabaseUrl, supabaseAnonKey);
 
 function unauthorized(message: string) {
   return NextResponse.json({ message }, { status: 401 });
@@ -32,23 +31,29 @@ async function getAuthContext(request: NextRequest) {
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
 
-  // Try to get session from cookie first, then from authorization header
+  // Create client with cookie or authorization header
+  const headers: Record<string, string> = {};
+  if (cookie) headers.cookie = cookie;
+  if (authorization) headers.Authorization = authorization;
+
+  const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers },
+  });
+
+  // Try to get session
   let sessionUser: any = null;
 
-  // Method 1: Cookie-based session
-  if (cookie) {
-    const { data: cookieSession } = await supabaseAnon.auth.getSession();
-    sessionUser = cookieSession.session?.user;
-  }
+  const { data: sessionData } = await supabaseAuth.auth.getSession();
+  sessionUser = sessionData.session?.user;
 
-  // Method 2: Token-based session
+  // If no session, try Bearer token
   if (!sessionUser && authorization?.startsWith('Bearer ')) {
     try {
       const token = authorization.split(' ')[1];
-      const { data: { user } } = await supabaseAnon.auth.getUser(token);
+      const { data: { user } } = await supabaseAuth.auth.getUser(token);
       sessionUser = user;
     } catch (e) {
-      // ignore token errors
+      // ignore
     }
   }
 
@@ -174,9 +179,9 @@ export async function GET(request: NextRequest) {
         } else {
           return NextResponse.json({ properties: [] });
         }
-      } else if (authContext.profile?.user_id || authContext.userId) {
+      } else if (authContext.userId) {
         // Project managers see properties they created
-        query = query.eq('user_id', authContext.profile?.user_id ?? authContext.userId);
+        query = query.eq('user_id', authContext.userId);
       } else {
         return NextResponse.json({ properties: [] });
       }
@@ -205,7 +210,6 @@ export async function POST(request: NextRequest) {
     const userId = authContext.isSuperAdmin ? null : authContext.userId;
 
     if (!authContext.isSuperAdmin && !userId) {
-      console.log('Auth context:', JSON.stringify({ isSuperAdmin: authContext.isSuperAdmin, userId: authContext.userId }));
       return NextResponse.json({ message: 'Unable to create property - please log in.' }, { status: 403 });
     }
 
@@ -242,8 +246,7 @@ export async function PATCH(request: NextRequest) {
     const { name, address, size, amenities, ownershipInfo } = body;
 
     const authContext = await getAuthContext(request);
-    const profileUserId = authContext.profile?.user_id ?? authContext.userId;
-    const property = await assertPropertyAccess(propertyId, profileUserId, authContext.isSuperAdmin);
+    const property = await assertPropertyAccess(propertyId, authContext.userId, authContext.isSuperAdmin);
     if (!property) {
       return NextResponse.json({ message: 'You can only manage properties in your own landlord workspace.' }, { status: 403 });
     }
@@ -280,8 +283,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    const profileUserId = authContext.profile?.user_id ?? authContext.userId;
-    const property = await assertPropertyAccess(propertyId, profileUserId, authContext.isSuperAdmin);
+    const property = await assertPropertyAccess(propertyId, authContext.userId, authContext.isSuperAdmin);
     if (!property) {
       return NextResponse.json({ message: 'You can only manage properties in your own landlord workspace.' }, { status: 403 });
     }

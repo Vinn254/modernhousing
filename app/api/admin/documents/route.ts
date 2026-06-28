@@ -12,10 +12,12 @@ const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 export async function GET(request: NextRequest) {
   try {
-    const headers: Record<string, string> = {
-      cookie: request.headers.get('cookie') ?? '',
-      Authorization: request.headers.get('authorization') ?? '',
-    };
+    const cookie = request.headers.get('cookie') ?? '';
+    const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
+
+    const headers: Record<string, string> = {};
+    if (cookie) headers.cookie = cookie;
+    if (authorization) headers.Authorization = authorization;
 
     const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
       global: { headers },
@@ -23,26 +25,23 @@ export async function GET(request: NextRequest) {
 
     const { data: { session } } = await supabaseAuth.auth.getSession();
     if (!session?.user?.id) {
-      return NextResponse.json({ documents: [], message: 'Not authorized.' }, { status: 401 });
-    }
-
-    // Get profile with user info
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('id, user_id, organization_id, role')
-      .eq('user_id', session.user.id)
-      .single();
-
-    // Fallback: query by email if user_id lookup fails
-    if (!profile && session.user.email) {
-      const { data: profileByEmail } = await supabaseAdmin
-        .from('profiles')
-        .select('id, user_id, organization_id, role')
-        .eq('email', session.user.email)
-        .single();
-      if (!profileByEmail) {
-        return NextResponse.json({ documents: [] });
+      // Try token fallback
+      if (authorization?.startsWith('Bearer ')) {
+        try {
+          const token = authorization.split(' ')[1];
+          const { data: { user } } = await supabaseAuth.auth.getUser(token);
+          if (user) {
+            // Continue with user
+          } else {
+            return NextResponse.json({ documents: [], message: 'Not authorized.' }, { status: 401 });
+          }
+        } catch {
+          return NextResponse.json({ documents: [], message: 'Not authorized.' }, { status: 401 });
+        }
+      } else {
+        return NextResponse.json({ documents: [], message: 'Not authorized.' }, { status: 401 });
       }
+      return NextResponse.json({ documents: [] });
     }
 
     // Get properties owned by this user
