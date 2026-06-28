@@ -18,6 +18,7 @@ type AuthContext = {
 };
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+const supabaseAnon = createClient(supabaseUrl, supabaseAnonKey);
 
 function unauthorized(message: string) {
   return NextResponse.json({ message }, { status: 401 });
@@ -28,21 +29,30 @@ function forbidden(message: string) {
 }
 
 async function getAuthContext(request: NextRequest) {
-  const headers: Record<string, string> = {
-    cookie: request.headers.get('cookie') ?? '',
-  };
+  const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
-  if (authorization) headers.Authorization = authorization;
 
-  const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers,
-    },
-  });
+  // Try to get session from cookie first, then from authorization header
+  let sessionUser: any = null;
 
-  const { data: sessionData, error: sessionError } = await supabaseAuth.auth.getSession();
+  // Method 1: Cookie-based session
+  if (cookie) {
+    const { data: cookieSession } = await supabaseAnon.auth.getSession();
+    sessionUser = cookieSession.session?.user;
+  }
 
-  if (sessionError || !sessionData.session) {
+  // Method 2: Token-based session
+  if (!sessionUser && authorization?.startsWith('Bearer ')) {
+    try {
+      const token = authorization.split(' ')[1];
+      const { data: { user } } = await supabaseAnon.auth.getUser(token);
+      sessionUser = user;
+    } catch (e) {
+      // ignore token errors
+    }
+  }
+
+  if (!sessionUser) {
     return {
       isSuperAdmin: false,
       userId: undefined,
@@ -55,31 +65,31 @@ async function getAuthContext(request: NextRequest) {
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
-    .eq('user_id', sessionData.session.user.id)
+    .eq('user_id', sessionUser.id)
     .single();
 
   // Fallback: query by email if user_id lookup fails
-  if (!profile && sessionData.session.user.email) {
+  if (!profile && sessionUser.email) {
     const { data: profileByEmail } = await supabaseAdmin
       .from('profiles')
       .select('id, user_id, organization_id, role, full_name, email')
-      .eq('email', sessionData.session.user.email)
+      .eq('email', sessionUser.email)
       .single();
     return {
       isSuperAdmin: profileByEmail?.role === 'super_admin',
-      userId: sessionData.session.user.id,
-      userEmail: sessionData.session.user.email,
+      userId: sessionUser.id,
+      userEmail: sessionUser.email,
       profile: profileByEmail,
-      userMetadata: sessionData.session.user.user_metadata,
+      userMetadata: sessionUser.user_metadata,
     };
   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
-    userId: sessionData.session.user.id,
-    userEmail: sessionData.session.user.email,
+    userId: sessionUser.id,
+    userEmail: sessionUser.email,
     profile,
-    userMetadata: sessionData.session.user.user_metadata,
+    userMetadata: sessionUser.user_metadata,
   };
 }
 
@@ -139,11 +149,11 @@ async function enrichProperties(rows: any[]) {
   });
 }
 
-async function assertPropertyAccess(propertyId: string, profile: any, isSuperAdmin: boolean) {
+async function assertPropertyAccess(propertyId: string, profileUserId: string | undefined | null, isSuperAdmin: boolean) {
   const property = await getPropertyById(propertyId);
   if (!property) return null;
 
-  if (!isSuperAdmin && property.user_id !== profile?.user_id) {
+  if (!isSuperAdmin && property.user_id !== profileUserId) {
     return forbidden('You can only manage properties in your own landlord workspace.');
   }
 
@@ -191,10 +201,11 @@ export async function POST(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
 
-    // Use session user_id if profile doesn't exist yet
-    const userId = authContext.isSuperAdmin ? null : (authContext.profile?.user_id ?? authContext.userId);
+    // Use session user_id - must exist for non-super-admin users
+    const userId = authContext.isSuperAdmin ? null : authContext.userId;
 
     if (!authContext.isSuperAdmin && !userId) {
+      console.log('Auth context:', JSON.stringify({ isSuperAdmin: authContext.isSuperAdmin, userId: authContext.userId }));
       return NextResponse.json({ message: 'Unable to create property - please log in.' }, { status: 403 });
     }
 
@@ -231,7 +242,8 @@ export async function PATCH(request: NextRequest) {
     const { name, address, size, amenities, ownershipInfo } = body;
 
     const authContext = await getAuthContext(request);
-    const property = await assertPropertyAccess(propertyId, authContext.profile, authContext.isSuperAdmin);
+    const profileUserId = authContext.profile?.user_id ?? authContext.userId;
+    const property = await assertPropertyAccess(propertyId, profileUserId, authContext.isSuperAdmin);
     if (!property) {
       return NextResponse.json({ message: 'You can only manage properties in your own landlord workspace.' }, { status: 403 });
     }
@@ -268,7 +280,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    const property = await assertPropertyAccess(propertyId, authContext.profile, authContext.isSuperAdmin);
+    const profileUserId = authContext.profile?.user_id ?? authContext.userId;
+    const property = await assertPropertyAccess(propertyId, profileUserId, authContext.isSuperAdmin);
     if (!property) {
       return NextResponse.json({ message: 'You can only manage properties in your own landlord workspace.' }, { status: 403 });
     }
