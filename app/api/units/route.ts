@@ -66,26 +66,17 @@ async function getAuthContext(request: NextRequest) {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('id, user_id, organization_id, role, full_name, email')
+    .select('id, user_id, organization_id, role, full_name, email, user_metadata')
     .eq('user_id', sessionUser.id)
     .single();
 
   let orgId = profile?.organization_id ?? userMetadata.organization_id ?? null;
 
-  // Fallback: query by email
-  if (!orgId && sessionUser.email) {
-    const { data: profileByEmail } = await supabaseAdmin
-      .from('profiles')
-      .select('id, user_id, organization_id, role, full_name, email')
-      .eq('email', sessionUser.email)
-      .single();
-    orgId = profileByEmail?.organization_id ?? null;
-  }
-
   return {
     isSuperAdmin: profile?.role === 'super_admin' || userMetadata.role === 'super_admin',
     profile,
     organizationId: orgId,
+    sessionUser,
   };
 }
 
@@ -168,13 +159,52 @@ export async function POST(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
 
+    if (!authContext.isSuperAdmin && authContext.organizationId) {
+      const { data: prop } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('id', propertyId)
+        .eq('organization_id', authContext.organizationId)
+        .maybeSingle();
+
+      if (!prop) {
+        return NextResponse.json({ message: 'You can only add units to properties in your own workspace.' }, { status: 403 });
+      }
+    }
+
+    const insertData: any = {
+      property_id: propertyId,
+      unit_number: unitNumber,
+      rent_amount: rentAmount ?? 0,
+      size,
+      agent_email: agentEmail,
+      occupancy_status: occupancyStatus ?? 'vacant',
+    };
+    if (unitType) insertData.unit_type = unitType;
+
+    const result = await supabaseAdmin.from('units').insert(insertData).select().single();
+
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ unit: result.data, message: 'Unit created.' }, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message ?? 'Unable to create unit.' }, { status: 500 });
+  }
+}
+
+    const authContext = await getAuthContext(request);
+
     if (!authContext.isSuperAdmin) {
-      if (!authContext.organizationId && !authContext.profile?.user_metadata?.property_id) {
+      const propertyIdFromUser = userMetadata?.property_id || authContext.profile?.user_metadata?.property_id;
+
+      if (!authContext.organizationId && !propertyIdFromUser) {
         return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
       }
 
       // For agents: check if property matches their assigned property
-      if (authContext.profile?.user_metadata?.property_id && authContext.profile.user_metadata.property_id !== propertyId) {
+      if (propertyIdFromUser && propertyIdFromUser !== propertyId) {
         return NextResponse.json({ message: 'You can only add units to your assigned property.' }, { status: 403 });
       }
 
