@@ -173,21 +173,63 @@ export async function POST(request: NextRequest) {
         .eq('id', unitId);
     }
 
-   const result = await supabaseAdmin.from('tenants').insert({
-     full_name: fullName,
-     email,
-     phone,
-     unit_id: finalUnitId,
-     lease_start: leaseStart,
-     lease_end: leaseEnd,
-     deposit_amount: depositAmount,
-   });
+const result = await supabaseAdmin.from('tenants').insert({
+      full_name: fullName,
+      email,
+      phone,
+      unit_id: finalUnitId,
+      lease_start: leaseStart,
+      lease_end: leaseEnd,
+      deposit_amount: depositAmount,
+    });
 
-   if (result.error) {
-     return NextResponse.json({ message: result.error.message }, { status: 500 });
-   }
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
 
-   return NextResponse.json({ message: 'Tenant created.', unitId: finalUnitId }, { status: 201 });
+    const tenantId = result.data?.[0]?.id;
+
+    // Generate tenant agreement
+    if (tenantId && finalUnitId) {
+      const { data: unitData } = await supabaseAdmin.from('units').select('*, properties!inner(name, address)').eq('id', finalUnitId).single();
+      const agreementContent = `TENANCY AGREEMENT
+
+Tenant: ${fullName}
+Email: ${email}
+Unit: ${unitData?.unit_number ?? ''} - ${unitData?.properties?.name ?? ''}
+Address: ${unitData?.properties?.address ?? ''}
+
+Lease Period: ${leaseStart} to ${leaseEnd}
+Deposit: KSH ${depositAmount ?? 0}
+
+Terms and Conditions:
+1. Tenant agrees to pay rent on or before the 5th of each month.
+2. Tenant is responsible for care of the premises and utilities.
+3. Deposit is refundable upon vacating in good condition.
+4. Notice period of 30 days required before lease expiry.
+5. No subletting without written consent.
+
+Please acknowledge this agreement by clicking "Accept" in your tenant portal.`;
+
+      await supabaseAdmin.from('tenant_agreements').insert({
+        tenant_id: tenantId,
+        content: agreementContent,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      });
+
+      // Send notification to tenant
+      await supabaseAdmin.from('notifications').insert({
+        recipient: 'tenant',
+        tenant_id: tenantId,
+        type: 'lease_agreement',
+        message: 'Your tenancy agreement is ready. Please review and accept the terms.',
+        status: 'sent',
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    return NextResponse.json({ message: 'Tenant created.', unitId: finalUnitId }, { status: 201 });
   }
 
 export async function PATCH(request: NextRequest) {

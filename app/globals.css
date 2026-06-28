@@ -1644,7 +1644,8 @@ body {
   }
 
   .landlord-stats,
-  .property-stats {
+  .property-stats,
+  .payments-form-grid {
     grid-template-columns: 1fr;
   }
 

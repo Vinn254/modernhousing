@@ -48,6 +48,7 @@ export default function PropertiesPage() {
   const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumbers: '', rentAmount: '' });
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -200,6 +201,61 @@ export default function PropertiesPage() {
     setMessage(`${unitNumbers.length} unit(s) added successfully.`);
     setUnitForm({ propertyId: '', unitNumbers: '', rentAmount: '' });
     await Promise.all([loadProperties(), loadUnits()]);
+  }
+
+  async function handleEditUnit(unit: Unit) {
+    const newRent = prompt('New rent amount (KSH):', String(unit.rent_amount ?? ''));
+    if (newRent === null) return;
+
+    const response = await fetch(`/api/units?id=${unit.id}`, {
+      method: 'PATCH',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ rentAmount: Number(newRent) || unit.rent_amount }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to update unit.');
+      return;
+    }
+
+    setMessage('Unit updated.');
+    await loadUnits();
+  }
+
+  async function handleMarkOccupied(unitId: string) {
+    const response = await fetch(`/api/units?id=${unitId}`, {
+      method: 'PATCH',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ occupancyStatus: 'occupied' }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to update unit status.');
+      return;
+    }
+
+    setMessage('Unit marked as occupied.');
+    await loadUnits();
+  }
+
+  async function handleDeleteUnit(unitId: string) {
+    if (!confirm('Delete this unit?')) return;
+
+    const response = await fetch(`/api/units?id=${unitId}`, {
+      method: 'DELETE',
+      headers: await getAuthHeaders(),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to delete unit.');
+      return;
+    }
+
+    setMessage('Unit deleted.');
+    await loadUnits();
   }
 
   const totalUnits = properties.reduce((sum, property) => sum + Number(property.unit_count ?? 0), 0);
@@ -442,6 +498,13 @@ export default function PropertiesPage() {
                           <span className={`status-pill ${unit.occupancy_status === 'occupied' ? 'status-active' : 'status-pending'}`}>
                             {unit.occupancy_status}
                           </span>
+                        </td>
+                        <td>
+                          <div className="landlord-actions">
+                            <button className="action-button primary" onClick={() => handleEditUnit(unit)}>Edit</button>
+                            <button className="action-button" onClick={() => handleMarkOccupied(unit.id)}>Mark Occupied</button>
+                            <button className="action-button danger" onClick={() => handleDeleteUnit(unit.id)}>Delete</button>
+                          </div>
                         </td>
                       </tr>
                     );
