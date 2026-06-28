@@ -67,7 +67,11 @@ export async function GET(request: NextRequest) {
   try {
     const authContext = await getAuthContext(request);
 
-    if (authContext.profile && !authContext.isSuperAdmin && authContext.organization_id) {
+    if (authContext.profile && !authContext.isSuperAdmin) {
+      if (!authContext.organization_id) {
+        return NextResponse.json({ tenants: [] });
+      }
+
       const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')
@@ -90,7 +94,7 @@ export async function GET(request: NextRequest) {
           phone: tenant.phone,
           unit: tenant.units?.unit_number ?? '',
           property: tenant.units?.properties?.name ?? '',
-          property_id: tenant.units?.property_id ?? '',
+          property_id: tenant.units?.properties?.id ?? '',
           address: tenant.units?.properties?.address ?? '',
           lease_start: tenant.lease_start,
           lease_end: tenant.lease_end,
@@ -121,7 +125,7 @@ export async function GET(request: NextRequest) {
       lease_end: tenant.lease_end,
     }));
 
-    return NextResponse.json({ tenants });
+return NextResponse.json({ tenants });
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to load tenants.' }, { status: 500 });
   }
@@ -183,42 +187,98 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const body = await request.json();
-  const { id, fullName, email, phone, leaseStart, leaseEnd, status } = body;
+  try {
+    const body = await request.json();
+    const { id, fullName, email, phone, leaseStart, leaseEnd, status } = body;
 
-  if (!id) {
-    return NextResponse.json({ message: 'Tenant ID is required.' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ message: 'Tenant ID is required.' }, { status: 400 });
+    }
+
+    const authContext = await getAuthContext(request);
+    if (!authContext.isSuperAdmin && authContext.organization_id) {
+      const { data: orgProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('organization_id', authContext.organization_id);
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
+
+      if (propIds.length > 0) {
+        const { data: tenantUnit } = await supabaseAdmin
+          .from('tenants')
+          .select('unit_id, units!inner(property_id)')
+          .eq('id', id)
+          .in('units.property_id', propIds)
+          .maybeSingle();
+
+        if (!tenantUnit) {
+          return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+        }
+      } else {
+        return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+      }
+    }
+
+    const updates: Record<string, any> = {};
+    if (fullName) updates.full_name = fullName;
+    if (email) updates.email = email;
+    if (phone !== undefined) updates.phone = phone;
+    if (leaseStart) updates.lease_start = leaseStart;
+    if (leaseEnd) updates.lease_end = leaseEnd;
+    if (status) updates.status = status;
+
+    const result = await supabaseAdmin.from('tenants').update(updates).eq('id', id).select().single();
+
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Tenant updated.', tenant: result.data });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message ?? 'Unable to update tenant.' }, { status: 500 });
   }
-
-  const updates: Record<string, any> = {};
-  if (fullName) updates.full_name = fullName;
-  if (email) updates.email = email;
-  if (phone !== undefined) updates.phone = phone;
-  if (leaseStart) updates.lease_start = leaseStart;
-  if (leaseEnd) updates.lease_end = leaseEnd;
-  if (status) updates.status = status;
-
-  const result = await supabaseAdmin.from('tenants').update(updates).eq('id', id).select().single();
-
-  if (result.error) {
-    return NextResponse.json({ message: result.error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ message: 'Tenant updated.', tenant: result.data });
 }
 
 export async function DELETE(request: NextRequest) {
-  const id = request.nextUrl.searchParams.get('id');
+  try {
+    const id = request.nextUrl.searchParams.get('id');
 
-  if (!id) {
-    return NextResponse.json({ message: 'Tenant ID is required.' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ message: 'Tenant ID is required.' }, { status: 400 });
+    }
+
+    const authContext = await getAuthContext(request);
+    if (!authContext.isSuperAdmin && authContext.organization_id) {
+      const { data: orgProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('organization_id', authContext.organization_id);
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
+
+      if (propIds.length > 0) {
+        const { data: tenantUnit } = await supabaseAdmin
+          .from('tenants')
+          .select('unit_id, units!inner(property_id)')
+          .eq('id', id)
+          .in('units.property_id', propIds)
+          .maybeSingle();
+
+        if (!tenantUnit) {
+          return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+        }
+      } else {
+        return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+      }
+    }
+
+    const result = await supabaseAdmin.from('tenants').delete().eq('id', id);
+
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Tenant removed.' });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message ?? 'Unable to remove tenant.' }, { status: 500 });
   }
-
-  const result = await supabaseAdmin.from('tenants').delete().eq('id', id);
-
-  if (result.error) {
-    return NextResponse.json({ message: result.error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ message: 'Tenant removed.' });
 }

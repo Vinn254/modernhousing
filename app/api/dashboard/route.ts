@@ -17,50 +17,114 @@ function toNumber(value: unknown) {
   return Number.isNaN(numeric) ? 0 : numeric;
 }
 
+async function getAuthContext(request: NextRequest) {
+  const headers: Record<string, string> = {
+    cookie: request.headers.get('cookie') ?? '',
+  };
+  const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
+  if (authorization) headers.Authorization = authorization;
+
+  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
+    global: { headers },
+  });
+
+  const { data: sessionData, error: sessionError } = await supabaseAuth.auth.getSession();
+
+  if (sessionError || !sessionData.session) {
+    return { isSuperAdmin: false, organization_id: null, profile: null };
+  }
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, user_id, organization_id, role, full_name, email')
+    .eq('user_id', sessionData.session.user.id)
+    .single();
+
+  let orgId = profile?.organization_id ?? null;
+
+  if (!orgId && profile?.role === 'project_manager') {
+    const { data: newOrg } = await supabaseAdmin
+      .from('organizations')
+      .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
+      .select('id')
+      .single();
+    orgId = newOrg?.id ?? null;
+
+    if (orgId) {
+      await supabaseAdmin
+        .from('profiles')
+        .update({ organization_id: orgId })
+        .eq('id', profile.id);
+
+      await supabaseAdmin
+        .from('properties')
+        .update({ organization_id: orgId })
+        .eq('organization_id', null);
+    }
+  }
+
+  return {
+    isSuperAdmin: profile?.role === 'super_admin',
+    organization_id: orgId,
+    profile: orgId ? { ...profile, organization_id: orgId } : profile,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
+    const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
-    let propertiesResult: any;
-    let tenantsResult: any;
-    let paymentsResult: any;
+    let propertiesQuery: any = supabaseAdmin.from('properties').select('id');
+    let tenantsQuery: any = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
+    let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
+
+    if (!authContext.isSuperAdmin) {
+      if (authContext.organization_id) {
+        propertiesQuery = propertiesQuery.eq('organization_id', authContext.organization_id);
+        const orgProps = await propertiesQuery;
+        const propIds = (orgProps.data ?? []).map((p: any) => p.id);
+
+        if (propIds.length > 0) {
+          const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+          const unitIds = (orgUnits ?? []).map((u: any) => u.id);
+          tenantsQuery = tenantsQuery.in('unit_id', unitIds);
+          paymentsQuery = paymentsQuery.in('tenant_id', (await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)).data?.map((t: any) => t.id) ?? []);
+        } else {
+          tenantsQuery = tenantsQuery.eq('id', 'none');
+          paymentsQuery = paymentsQuery.eq('id', 'none');
+        }
+      } else {
+        propertiesQuery = propertiesQuery.eq('id', 'none');
+        tenantsQuery = tenantsQuery.eq('id', 'none');
+        paymentsQuery = paymentsQuery.eq('id', 'none');
+      }
+    }
+
     let users: any[];
-
-    try {
-      propertiesResult = await supabaseAdmin.from('properties').select('id');
-    } catch {
-      propertiesResult = { data: [], error: null };
-    }
-
-    try {
-      tenantsResult = await supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
-    } catch {
-      tenantsResult = { data: [], error: null };
-    }
-
-    try {
-      paymentsResult = await supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
-    } catch {
-      paymentsResult = { data: [], error: null };
-    }
-
     try {
       users = await getAllAdminUsers();
     } catch {
       users = [];
     }
 
-    if (propertiesResult.error) throw propertiesResult.error;
-    if (tenantsResult.error) throw tenantsResult.error;
-    if (paymentsResult.error) throw paymentsResult.error;
+    const [{ data: propertiesData, error: propertiesError }, { data: tenantsData, error: tenantsError }, { data: paymentsData, error: paymentsError }] = await Promise.all([
+      propertiesQuery,
+      tenantsQuery,
+      paymentsQuery,
+    ]);
 
-    const allTenants = tenantsResult.data ?? [];
+    if (propertiesError) throw propertiesError;
+    if (tenantsError) throw tenantsError;
+    if (paymentsError) throw paymentsError;
+
+    const allTenants = tenantsData ?? [];
     const tenantList = allTenants;
 
     const propertyTenantIds = new Set<string>();
-    if (propertyId) {
+    if (propertyId && !authContext.isSuperAdmin && authContext.organization_id) {
       try {
-        const { data: units } = await supabaseAdmin.from('units').select('id, property_id').eq('property_id', propertyId);
+        const { data: units } = await supabaseAdmin.from('units').select('id, property_id').eq('property_id', propertyId).eq('organization_id', authContext.organization_id);
         const unitIds = new Set((units ?? []).map((unit: any) => unit.id));
         allTenants.forEach((tenant: any) => {
           if (unitIds.has(tenant.unit_id)) propertyTenantIds.add(tenant.id);
@@ -68,15 +132,25 @@ export async function GET(request: NextRequest) {
       } catch {
         // continue without property-specific filtering
       }
+    } else if (propertyId && authContext.isSuperAdmin) {
+      try {
+        const { data: units } = await supabaseAdmin.from('units').select('id, property_id').eq('property_id', propertyId);
+        const unitIds = new Set((units ?? []).map((unit: any) => unit.id));
+        allTenants.forEach((tenant: any) => {
+          if (unitIds.has(tenant.unit_id)) propertyTenantIds.add(tenant.id);
+        });
+      } catch {
+        // continue
+      }
     }
 
     const filteredTenantList = propertyId ? allTenants.filter((tenant: any) => propertyTenantIds.has(tenant.id)) : allTenants;
     const filteredTenantIdSet = new Set(filteredTenantList.map((tenant: any) => tenant.id));
-    const paymentList = propertyId ? (paymentsResult.data ?? []).filter((payment: any) => filteredTenantIdSet.has(payment.tenant_id)) : (paymentsResult.data ?? []);
+    const paymentList = propertyId ? (paymentsData ?? []).filter((payment: any) => filteredTenantIdSet.has(payment.tenant_id)) : (paymentsData ?? []);
     const financialPayments = paymentList.filter((payment: any) => !nonPaymentTypes.includes(payment.transaction_type));
     const agents = users.filter((user: any) => user.user_metadata?.role === 'agent' && (!propertyId || user.user_metadata?.property_id === propertyId));
 
-    const propertyCount = propertyId ? 1 : (propertiesResult.data?.length ?? 0);
+    const propertyCount = propertyId ? 1 : (propertiesData?.length ?? 0);
     const totalPayments = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0);
     const totalBalance = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.balance_remaining), 0);
 

@@ -100,7 +100,11 @@ export async function GET(request: NextRequest) {
         tenants(id, full_name, email, lease_start, lease_end)
       `);
 
-    if (authContext.profile && !authContext.isSuperAdmin && authContext.organization_id) {
+    if (authContext.profile && !authContext.isSuperAdmin) {
+      if (!authContext.organization_id) {
+        return NextResponse.json({ units: [] });
+      }
+
       const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')
@@ -145,6 +149,20 @@ export async function POST(request: NextRequest) {
         return badRequest('Property ID and unit number are required.');
       }
 
+      const authContext = await getAuthContext(request);
+      if (!authContext.isSuperAdmin && authContext.organization_id) {
+        const { data: prop } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('id', propertyId)
+          .eq('organization_id', authContext.organization_id)
+          .maybeSingle();
+
+        if (!prop) {
+          return NextResponse.json({ message: 'You can only add units to properties in your own landlord workspace.' }, { status: 403 });
+        }
+      }
+
       const result = await supabaseAdmin.from('units').insert({
         property_id: propertyId,
         unit_number: unitNumber,
@@ -173,6 +191,20 @@ export async function PATCH(request: NextRequest) {
       return badRequest('Unit ID is required.');
     }
 
+    const authContext = await getAuthContext(request);
+    if (!authContext.isSuperAdmin && authContext.organization_id) {
+      const { data: unitProp } = await supabaseAdmin
+        .from('units')
+        .select('property_id, properties!inner(organization_id)')
+        .eq('id', id)
+        .eq('properties.organization_id', authContext.organization_id)
+        .maybeSingle();
+
+      if (!unitProp) {
+        return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
+      }
+    }
+
     const updates: Record<string, any> = {};
     if (unitNumber !== undefined) updates.unit_number = unitNumber;
     if (rentAmount !== undefined) updates.rent_amount = rentAmount;
@@ -198,6 +230,20 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) {
       return badRequest('Unit ID is required.');
+    }
+
+    const authContext = await getAuthContext(request);
+    if (!authContext.isSuperAdmin && authContext.organization_id) {
+      const { data: unitProp } = await supabaseAdmin
+        .from('units')
+        .select('property_id, properties!inner(organization_id)')
+        .eq('id', id)
+        .eq('properties.organization_id', authContext.organization_id)
+        .maybeSingle();
+
+      if (!unitProp) {
+        return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
+      }
     }
 
     const result = await supabaseAdmin.from('units').delete().eq('id', id);

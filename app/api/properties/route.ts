@@ -251,47 +251,67 @@ export async function POST(request: NextRequest) {
   }
 
 export async function PATCH(request: NextRequest) {
-  const body = await request.json();
-  const propertyId = body.id;
+  try {
+    const body = await request.json();
+    const propertyId = body.id;
 
-  if (!propertyId) {
-    return NextResponse.json({ message: 'Property id is required.' }, { status: 400 });
+    if (!propertyId) {
+      return NextResponse.json({ message: 'Property id is required.' }, { status: 400 });
+    }
+
+    const { name, address, size, amenities, ownershipInfo } = body;
+
+    const authContext = await getAuthContext(request);
+    const property = await assertPropertyAccess(request, propertyId, authContext.organization_id, authContext.isSuperAdmin);
+    if (!property) {
+      return NextResponse.json({ message: 'You can only manage properties in your own landlord workspace.' }, { status: 403 });
+    }
+
+    const result = await supabaseAdmin
+      .from('properties')
+      .update({
+        name: name?.trim() ?? undefined,
+        address: address?.trim() ?? undefined,
+        size,
+        amenities,
+        ownership_info: ownershipInfo,
+      })
+      .eq('id', propertyId)
+      .select()
+      .single();
+
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
+
+    const enriched = await enrichProperties([result.data]);
+    return NextResponse.json({ message: 'Property updated.', property: enriched[0] });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message ?? 'Unable to update property.' }, { status: 500 });
   }
-
-  const { name, address, size, amenities, ownershipInfo } = body;
-
-  const result = await supabaseAdmin
-    .from('properties')
-    .update({
-      name: name?.trim() ?? undefined,
-      address: address?.trim() ?? undefined,
-      size,
-      amenities,
-      ownership_info: ownershipInfo,
-    })
-    .eq('id', propertyId)
-    .select()
-    .single();
-
-  if (result.error) {
-    return NextResponse.json({ message: result.error.message }, { status: 500 });
-  }
-
-  const enriched = await enrichProperties([result.data]);
-  return NextResponse.json({ message: 'Property updated.', property: enriched[0] });
 }
 
 export async function DELETE(request: NextRequest) {
-  const propertyId = request.nextUrl.searchParams.get('id');
-  if (!propertyId) {
-    return NextResponse.json({ message: 'Property id is required.' }, { status: 400 });
+  try {
+    const propertyId = request.nextUrl.searchParams.get('id');
+    if (!propertyId) {
+      return NextResponse.json({ message: 'Property id is required.' }, { status: 400 });
+    }
+
+    const authContext = await getAuthContext(request);
+    const property = await assertPropertyAccess(request, propertyId, authContext.organization_id, authContext.isSuperAdmin);
+    if (!property) {
+      return NextResponse.json({ message: 'You can only manage properties in your own landlord workspace.' }, { status: 403 });
+    }
+
+    const { error } = await supabaseAdmin.from('properties').delete().eq('id', propertyId);
+
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Property removed.' });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message ?? 'Unable to delete property.' }, { status: 500 });
   }
-
-  const { error } = await supabaseAdmin.from('properties').delete().eq('id', propertyId);
-
-  if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ message: 'Property removed.' });
 }

@@ -67,7 +67,11 @@ export async function GET(request: NextRequest) {
   try {
     const authContext = await getAuthContext(request);
 
-    if (authContext.profile && !authContext.isSuperAdmin && authContext.organization_id) {
+    if (authContext.profile && !authContext.isSuperAdmin) {
+      if (!authContext.organization_id) {
+        return NextResponse.json({ payments: [] });
+      }
+
       const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')

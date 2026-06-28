@@ -180,7 +180,11 @@ export async function GET(request: NextRequest) {
 
     let agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
 
-    if (authContext.profile && !authContext.isSuperAdmin && authContext.organization_id) {
+    if (authContext.profile && !authContext.isSuperAdmin) {
+      if (!authContext.organization_id) {
+        return NextResponse.json({ agents: [] });
+      }
+
       const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')
@@ -220,6 +224,20 @@ export async function POST(request: NextRequest) {
       return badRequest('Assign the agent to one property.');
     }
 
+    const authContext = await getAuthContext(request);
+    if (!authContext.isSuperAdmin && authContext.organization_id) {
+      const { data: prop } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('id', propertyId)
+        .eq('organization_id', authContext.organization_id)
+        .maybeSingle();
+
+      if (!prop) {
+        return NextResponse.json({ message: 'You can only assign agents to properties in your own landlord workspace.' }, { status: 403 });
+      }
+    }
+
     const existingUser = await getUserByEmail(email);
     let user = existingUser;
 
@@ -256,6 +274,20 @@ export async function PATCH(request: NextRequest) {
       return badRequest('Agent ID is required.');
     }
 
+    const authContext = await getAuthContext(request);
+    if (!authContext.isSuperAdmin && authContext.organization_id && propertyId) {
+      const { data: prop } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('id', propertyId)
+        .eq('organization_id', authContext.organization_id)
+        .maybeSingle();
+
+      if (!prop) {
+        return NextResponse.json({ message: 'You can only assign agents to properties in your own landlord workspace.' }, { status: 403 });
+      }
+    }
+
     if (!propertyId || !propertyName) {
       return badRequest('Assign the agent to one property.');
     }
@@ -288,9 +320,37 @@ export async function DELETE(request: NextRequest) {
       return badRequest('Agent ID is required.');
     }
 
-  const user = await updateAgentMetadata(userId, { status: 'inactive' });
-  if (!user) throw new Error('Agent not found.');
-  await supabaseAdmin.from('profiles').update({ status: 'inactive' }).eq('user_id', userId);
+    const authContext = await getAuthContext(request);
+    if (!authContext.isSuperAdmin && authContext.organization_id) {
+      const { data: agentProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (agentProfile) {
+        const users = await getAllAdminUsers();
+        const agent = users.find((item) => item.id === userId);
+        const agentPropertyId = agent?.user_metadata?.property_id;
+
+        if (agentPropertyId) {
+          const { data: prop } = await supabaseAdmin
+            .from('properties')
+            .select('id')
+            .eq('id', agentPropertyId)
+            .eq('organization_id', authContext.organization_id)
+            .maybeSingle();
+
+          if (!prop) {
+            return NextResponse.json({ message: 'You can only manage agents assigned to your own landlord workspace.' }, { status: 403 });
+          }
+        }
+      }
+    }
+
+    const user = await updateAgentMetadata(userId, { status: 'inactive' });
+    if (!user) throw new Error('Agent not found.');
+    await supabaseAdmin.from('profiles').update({ status: 'inactive' }).eq('user_id', userId);
 
     return NextResponse.json({ agent: normalizeAgent(user) });
   } catch (error: any) {
