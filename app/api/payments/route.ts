@@ -27,7 +27,7 @@ async function getAuthContext(request: NextRequest) {
     return { isSuperAdmin: false, organization_id: null, profile: null };
   }
 
-let { data: profile } = await supabaseAdmin
+  const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionData.session.user.id)
@@ -40,93 +40,61 @@ let { data: profile } = await supabaseAdmin
       .select('id, user_id, organization_id, role, full_name, email')
       .eq('email', sessionData.session.user.email)
       .single();
-    profile = profileByEmail;
-  }
-
-  let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
-  // Allow reassignment
-  let profileData = profile;
-
-  if (!orgId && profile?.role === 'project_manager') {
-    const { data: newOrg } = await supabaseAdmin
-      .from('organizations')
-      .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-      .select('id')
-      .single();
-    orgId = newOrg?.id ?? null;
-    if (orgId && profileData) {
-      await supabaseAdmin.from('profiles').update({ organization_id: orgId }).eq('id', profileData.id);
-      profileData = { ...profileData, organization_id: orgId };
-    }
+    return {
+      isSuperAdmin: profileByEmail?.role === 'super_admin',
+      profile: profileByEmail,
+    };
   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
-    organization_id: orgId,
-    profile: profileData,
+    profile,
   };
 }
 
 export async function GET(request: NextRequest) {
    try {
-     const authContext = await getAuthContext(request);
+      const authContext = await getAuthContext(request);
 
-     if (!authContext.isSuperAdmin) {
-       if (!authContext.organization_id) {
-         return NextResponse.json({ payments: [] });
-       }
+      if (!authContext.isSuperAdmin && !authContext.profile?.user_id) {
+        return NextResponse.json({ payments: [] });
+      }
 
-       const { data: orgProps } = await supabaseAdmin
-         .from('properties')
-         .select('id')
-         .eq('organization_id', authContext.organization_id);
-       const propIds = (orgProps ?? []).map((p: any) => p.id);
+      // Get properties for this PM
+      const { data: orgProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('user_id', authContext.profile?.user_id ?? '');
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
 
-       if (propIds.length > 0) {
-         const { data: orgTenants } = await supabaseAdmin
-           .from('tenants')
-           .select('id')
-           .in('unit_id', (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map(u => u.id) ?? []);
-         const tenantIds = (orgTenants ?? []).map((t: any) => t.id);
+      if (propIds.length > 0) {
+        const { data: orgTenants } = await supabaseAdmin
+          .from('tenants')
+          .select('id')
+          .in('unit_id', (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map(u => u.id) ?? []);
+        const tenantIds = (orgTenants ?? []).map((t: any) => t.id);
 
-         const { data, error } = await supabaseAdmin
-           .from('payments')
-           .select('*, tenants(full_name, email, units(property_id))')
-           .in('tenant_id', tenantIds)
-           .order('created_at', { ascending: false });
+        const { data, error } = await supabaseAdmin
+          .from('payments')
+          .select('*, tenants(full_name, email, units(property_id))')
+          .in('tenant_id', tenantIds)
+          .order('created_at', { ascending: false });
 
-         if (error) throw error;
-         const payments = (data ?? []).map((payment: any) => ({
-           ...payment,
-           tenant: payment.tenants?.full_name ?? payment.tenant ?? '',
-           tenant_email: payment.tenants?.email ?? '',
-           property: '',
-           unit: '',
-         }));
-         return NextResponse.json({ payments });
-       }
-       return NextResponse.json({ payments: [] });
-     }
-
-     let query: any = supabaseAdmin.from('payments').select('*, tenants(full_name, email, units(property_id, properties(name)))');
-
-     const { data, error } = await query.order('created_at', { ascending: false });
-
-     if (error) throw error;
-
-     const payments = (data ?? []).map((payment: any) => ({
-       ...payment,
-       tenant: payment.tenants?.full_name ?? payment.tenant ?? '',
-       tenant_email: payment.tenants?.email ?? '',
-       property: payment.tenants?.units?.properties?.name ?? '',
-       unit: '',
-     }));
-
-     return NextResponse.json({ payments });
-   } catch (error: any) {
-     return NextResponse.json({ payments: [], message: error.message ?? 'Unable to load payments.' }, { status: 500 });
-   }
- }
+        if (error) throw error;
+        const payments = (data ?? []).map((payment: any) => ({
+          ...payment,
+          tenant: payment.tenants?.full_name ?? payment.tenant ?? '',
+          tenant_email: payment.tenants?.email ?? '',
+          property: '',
+          unit: '',
+        }));
+        return NextResponse.json({ payments });
+      }
+      return NextResponse.json({ payments: [] });
+    } catch (error: any) {
+      return NextResponse.json({ payments: [], message: error.message ?? 'Unable to load payments.' }, { status: 500 });
+    }
+  }
 
 export async function POST(request: NextRequest) {
     const body = await request.json();

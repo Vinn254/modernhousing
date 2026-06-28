@@ -24,10 +24,10 @@ async function getAuthContext(request: NextRequest) {
   const { data: sessionData, error: sessionError } = await supabaseAuth.auth.getSession();
 
   if (sessionError || !sessionData.session) {
-    return { isSuperAdmin: false, organization_id: null, profile: null };
+    return { isSuperAdmin: false, profile: null };
   }
 
-let { data: profile } = await supabaseAdmin
+  const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionData.session.user.id)
@@ -40,144 +40,94 @@ let { data: profile } = await supabaseAdmin
       .select('id, user_id, organization_id, role, full_name, email')
       .eq('email', sessionData.session.user.email)
       .single();
-    profile = profileByEmail;
+    return {
+      isSuperAdmin: profileByEmail?.role === 'super_admin',
+      profile: profileByEmail,
+    };
   }
-
-  let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
-
-   if (!orgId && (profile?.role === 'project_manager' || sessionData.session.user.user_metadata?.role === 'project_manager')) {
-     const { data: newOrg } = await supabaseAdmin
-       .from('organizations')
-       .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-       .select('id')
-       .single();
-     orgId = newOrg?.id ?? null;
-
-     if (orgId) {
-       if (profile) {
-         await supabaseAdmin
-           .from('profiles')
-           .update({ organization_id: orgId })
-           .eq('id', profile.id);
-       } else {
-         const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
-         const { data: createdProfile } = await supabaseAdmin
-           .from('profiles')
-           .insert({
-             user_id: sessionData.session.user.id,
-             full_name: fullName,
-             email: sessionData.session.user.email,
-             role: 'project_manager',
-             organization_id: orgId,
-             status: 'active',
-           })
-           .select('id, user_id, organization_id, role, full_name, email')
-           .single();
-         profile = createdProfile;
-       }
-
-       await supabaseAdmin
-         .from('properties')
-         .update({ organization_id: orgId })
-         .eq('organization_id', null);
-     }
-   }
-
-   if (!profile) {
-     const role = sessionData.session.user.user_metadata?.role ?? 'project_manager';
-     const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
-     const { data: createdProfile } = await supabaseAdmin
-       .from('profiles')
-       .insert({
-         user_id: sessionData.session.user.id,
-         full_name: fullName,
-         email: sessionData.session.user.email,
-         role,
-         organization_id: orgId,
-         status: 'active',
-       })
-       .select('id, user_id, organization_id, role, full_name, email')
-       .single();
-     profile = createdProfile;
-   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
-    organization_id: orgId,
-    profile: orgId ? { ...profile, organization_id: orgId } : profile,
+    profile,
   };
 }
 
 export async function GET(request: NextRequest) {
    try {
-     const authContext = await getAuthContext(request);
+      const authContext = await getAuthContext(request);
 
-     if (!authContext.isSuperAdmin) {
-       if (!authContext.organization_id) {
-         return NextResponse.json({ tenants: [] });
-       }
+      if (!authContext.isSuperAdmin) {
+        if (!authContext.profile?.user_id) {
+          return NextResponse.json({ tenants: [] });
+        }
 
-       const { data: orgProps } = await supabaseAdmin
-         .from('properties')
-         .select('id')
-         .eq('organization_id', authContext.organization_id);
-       const propIds = (orgProps ?? []).map((p: any) => p.id);
+        // Get properties owned by this user
+        const { data: userProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('user_id', authContext.profile.user_id);
+        const propIds = (userProps ?? []).map((p: any) => p.id);
 
-       if (propIds.length > 0) {
-         const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
-         const unitIds = (orgUnits ?? []).map((u: any) => u.id);
+        if (propIds.length === 0) {
+          return NextResponse.json({ tenants: [] });
+        }
 
-         const { data, error } = await supabaseAdmin
-           .from('tenants')
-           .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(id, name, address))')
-           .in('unit_id', unitIds)
-           .order('created_at', { ascending: false });
+        const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+        const unitIds = (orgUnits ?? []).map((u: any) => u.id);
 
-         if (error) throw error;
+        if (unitIds.length === 0) {
+          return NextResponse.json({ tenants: [] });
+        }
 
-         const tenants = (data ?? []).map((tenant: any) => ({
-           id: tenant.id,
-           full_name: tenant.full_name,
-           email: tenant.email,
-           phone: tenant.phone,
-           unit: tenant.units?.unit_number ?? '',
-           property: tenant.units?.properties?.name ?? '',
-           property_id: tenant.units?.properties?.id ?? '',
-           address: tenant.units?.properties?.address ?? '',
-           lease_start: tenant.lease_start,
-           lease_end: tenant.lease_end,
-         }));
+        const { data, error } = await supabaseAdmin
+          .from('tenants')
+          .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(id, name, address))')
+          .in('unit_id', unitIds)
+          .order('created_at', { ascending: false });
 
-         return NextResponse.json({ tenants });
-       }
-       return NextResponse.json({ tenants: [] });
-     }
+        if (error) throw error;
 
-     const { data, error } = await supabaseAdmin
-       .from('tenants')
-       .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(name, address))')
-       .order('created_at', { ascending: false });
+        const tenants = (data ?? []).map((tenant: any) => ({
+          id: tenant.id,
+          full_name: tenant.full_name,
+          email: tenant.email,
+          phone: tenant.phone,
+          unit: tenant.units?.unit_number ?? '',
+          property: tenant.units?.properties?.name ?? '',
+          property_id: tenant.units?.properties?.id ?? '',
+          address: tenant.units?.properties?.address ?? '',
+          lease_start: tenant.lease_start,
+          lease_end: tenant.lease_end,
+        }));
 
-     if (error) throw error;
+        return NextResponse.json({ tenants });
+      }
 
-     const tenants = (data ?? []).map((tenant: any) => ({
-       id: tenant.id,
-       full_name: tenant.full_name,
-       email: tenant.email,
-       phone: tenant.phone,
-       unit: tenant.units?.unit_number ?? '',
-       property: tenant.units?.properties?.name ?? '',
-       property_id: tenant.units?.properties?.id ?? '',
-       address: tenant.units?.properties?.address ?? '',
-       lease_start: tenant.lease_start,
-       lease_end: tenant.lease_end,
-     }));
+      const { data, error } = await supabaseAdmin
+        .from('tenants')
+        .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(name, address))')
+        .order('created_at', { ascending: false });
 
-return NextResponse.json({ tenants });
+      if (error) throw error;
+
+      const tenants = (data ?? []).map((tenant: any) => ({
+        id: tenant.id,
+        full_name: tenant.full_name,
+        email: tenant.email,
+        phone: tenant.phone,
+        unit: tenant.units?.unit_number ?? '',
+        property: tenant.units?.properties?.name ?? '',
+        property_id: tenant.units?.properties?.id ?? '',
+        address: tenant.units?.properties?.address ?? '',
+        lease_start: tenant.lease_start,
+        lease_end: tenant.lease_end,
+      }));
+
+    return NextResponse.json({ tenants });
    } catch (error: any) {
      return NextResponse.json({ message: error.message ?? 'Unable to load tenants.' }, { status: 500 });
    }
- }
+  }
 
 export async function POST(request: NextRequest) {
    const body = await request.json();
@@ -191,14 +141,14 @@ export async function POST(request: NextRequest) {
    let finalUnitId = unitId;
 
    if (!authContext.isSuperAdmin && propertyId) {
-     if (!authContext.organization_id) {
+     if (!authContext.profile?.user_id) {
        return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
      }
      const { data: prop } = await supabaseAdmin
        .from('properties')
        .select('id')
        .eq('id', propertyId)
-       .eq('organization_id', authContext.organization_id)
+       .eq('user_id', authContext.profile.user_id)
        .maybeSingle();
      if (!prop) {
        return NextResponse.json({ message: 'You can only add tenants to properties in your own landlord workspace.' }, { status: 403 });
@@ -248,7 +198,7 @@ export async function POST(request: NextRequest) {
    }
 
    return NextResponse.json({ message: 'Tenant created.', unitId: finalUnitId }, { status: 201 });
- }
+  }
 
 export async function PATCH(request: NextRequest) {
    try {
@@ -261,14 +211,14 @@ export async function PATCH(request: NextRequest) {
 
      const authContext = await getAuthContext(request);
      if (!authContext.isSuperAdmin) {
-       if (!authContext.organization_id) {
+       if (!authContext.profile?.user_id) {
          return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
        }
 
        const { data: orgProps } = await supabaseAdmin
          .from('properties')
          .select('id')
-         .eq('organization_id', authContext.organization_id);
+         .eq('user_id', authContext.profile.user_id);
        const propIds = (orgProps ?? []).map((p: any) => p.id);
 
        if (propIds.length > 0) {
@@ -307,7 +257,7 @@ export async function PATCH(request: NextRequest) {
    } catch (error: any) {
      return NextResponse.json({ message: error.message ?? 'Unable to update tenant.' }, { status: 500 });
    }
- }
+  }
 
 export async function DELETE(request: NextRequest) {
    try {
@@ -319,14 +269,14 @@ export async function DELETE(request: NextRequest) {
 
      const authContext = await getAuthContext(request);
      if (!authContext.isSuperAdmin) {
-       if (!authContext.organization_id) {
+       if (!authContext.profile?.user_id) {
          return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
        }
 
        const { data: orgProps } = await supabaseAdmin
          .from('properties')
          .select('id')
-         .eq('organization_id', authContext.organization_id);
+         .eq('user_id', authContext.profile.user_id);
        const propIds = (orgProps ?? []).map((p: any) => p.id);
 
        if (propIds.length > 0) {
@@ -357,4 +307,4 @@ export async function DELETE(request: NextRequest) {
    } catch (error: any) {
      return NextResponse.json({ message: error.message ?? 'Unable to remove tenant.' }, { status: 500 });
    }
- }
+  }

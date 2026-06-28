@@ -11,7 +11,6 @@ if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
 
 type AuthContext = {
   isSuperAdmin: boolean;
-  organization_id: string | null;
   userId?: string;
   userEmail?: string;
   profile?: any;
@@ -46,7 +45,6 @@ async function getAuthContext(request: NextRequest) {
   if (sessionError || !sessionData.session) {
     return {
       isSuperAdmin: false,
-      organization_id: null,
       userId: undefined,
       userEmail: undefined,
       profile: null,
@@ -54,77 +52,20 @@ async function getAuthContext(request: NextRequest) {
     };
   }
 
-  let { data: profile } = await supabaseAdmin
+  const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionData.session.user.id)
     .single();
 
-  // Fallback: query by email if user_id lookup fails
-  if (!profile && sessionData.session.user.email) {
-    const { data: profileByEmail } = await supabaseAdmin
-      .from('profiles')
-      .select('id, user_id, organization_id, role, full_name, email')
-      .eq('email', sessionData.session.user.email)
-      .single();
-    profile = profileByEmail;
-  }
-
-  let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
-
-    // If no org and user is project_manager, create org
-    if (!orgId) {
-      const role = profile?.role ?? sessionData.session.user.user_metadata?.role ?? 'project_manager';
-      if (role === 'project_manager') {
-        const { data: newOrg } = await supabaseAdmin
-          .from('organizations')
-          .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-          .select('id')
-          .single();
-        orgId = newOrg?.id ?? null;
-
-        if (orgId) {
-          // Update or create profile with org
-          if (profile) {
-            await supabaseAdmin
-              .from('profiles')
-              .update({ organization_id: orgId })
-              .eq('id', profile.id);
-          } else {
-            const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
-            const { data: createdProfile } = await supabaseAdmin
-              .from('profiles')
-              .insert({
-                user_id: sessionData.session.user.id,
-                full_name: fullName,
-                email: sessionData.session.user.email,
-                role: 'project_manager',
-                organization_id: orgId,
-                status: 'active',
-              })
-              .select('id, user_id, organization_id, role, full_name, email')
-              .single();
-            profile = createdProfile;
-          }
-
-          // Assign any orphaned properties to this org
-          await supabaseAdmin
-            .from('properties')
-            .update({ organization_id: orgId })
-            .eq('organization_id', null);
-        }
-      }
-    }
-
-    return {
-      isSuperAdmin: profile?.role === 'super_admin',
-      organization_id: orgId,
-      userId: sessionData.session.user.id,
-      userEmail: sessionData.session.user.email,
-      profile: orgId ? { ...profile, organization_id: orgId } as any : profile,
-      userMetadata: sessionData.session.user.user_metadata,
-    };
-  }
+  return {
+    isSuperAdmin: profile?.role === 'super_admin',
+    userId: sessionData.session.user.id,
+    userEmail: sessionData.session.user.email,
+    profile,
+    userMetadata: sessionData.session.user.user_metadata,
+  };
+}
 
 async function getPropertyById(id: string) {
   const { data: property, error } = await supabaseAdmin.from('properties').select('*').eq('id', id).single();
@@ -182,11 +123,11 @@ async function enrichProperties(rows: any[]) {
   });
 }
 
-async function assertPropertyAccess(request: NextRequest, propertyId: string, organizationId: string | null, isSuperAdmin: boolean) {
+async function assertPropertyAccess(propertyId: string, profile: any, isSuperAdmin: boolean) {
   const property = await getPropertyById(propertyId);
   if (!property) return null;
 
-  if (!isSuperAdmin && property.organization_id !== organizationId) {
+  if (!isSuperAdmin && property.user_id !== profile?.user_id) {
     return forbidden('You can only manage properties in your own landlord workspace.');
   }
 
@@ -207,8 +148,9 @@ export async function GET(request: NextRequest) {
         } else {
           return NextResponse.json({ properties: [] });
         }
-      } else if (authContext.organization_id) {
-        query = query.eq('organization_id', authContext.organization_id);
+      } else if (authContext.profile?.user_id) {
+        // Project managers see properties they created
+        query = query.eq('user_id', authContext.profile.user_id);
       } else {
         return NextResponse.json({ properties: [] });
       }
@@ -233,51 +175,11 @@ export async function POST(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
 
-    let orgId = authContext.organization_id;
-
-    if (!orgId && !authContext.isSuperAdmin) {
-      const { data: newOrg } = await supabaseAdmin
-        .from('organizations')
-        .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'Property Manager'} Organization` })
-        .select('id')
-        .single();
-      orgId = newOrg?.id ?? null;
-
-      if (orgId) {
-        if (authContext.profile) {
-          await supabaseAdmin
-            .from('profiles')
-            .update({ organization_id: orgId })
-            .eq('id', authContext.profile.id);
-        } else {
-          const fullName = authContext.userMetadata?.full_name ?? authContext.userEmail ?? 'User';
-          const role = authContext.userMetadata?.role ?? 'project_manager';
-          if (role === 'project_manager') {
-            await supabaseAdmin
-              .from('profiles')
-              .insert({
-                user_id: authContext.userId,
-                full_name: fullName,
-                email: authContext.userEmail,
-                role: 'project_manager',
-                organization_id: orgId,
-                status: 'active',
-              });
-          }
-        }
-
-        if (authContext.userMetadata?.role === 'project_manager' || !authContext.profile) {
-          await supabaseAdmin
-            .from('properties')
-            .update({ organization_id: orgId })
-            .eq('organization_id', null);
-        }
-      }
+    if (!authContext.isSuperAdmin && !authContext.profile?.user_id) {
+      return NextResponse.json({ message: 'Unable to create property - please log in.' }, { status: 403 });
     }
 
-    if (!orgId) {
-      return NextResponse.json({ message: 'Unable to create property - no organization assigned.' }, { status: 403 });
-    }
+    const userId = authContext.isSuperAdmin ? null : authContext.profile?.user_id;
 
     const result = await supabaseAdmin
       .from('properties')
@@ -287,7 +189,8 @@ export async function POST(request: NextRequest) {
         size,
         amenities,
         ownership_info: ownershipInfo,
-        organization_id: orgId,
+        user_id: userId,
+        organization_id: authContext.profile?.organization_id,
       })
       .select()
       .single();
@@ -312,7 +215,7 @@ export async function PATCH(request: NextRequest) {
     const { name, address, size, amenities, ownershipInfo } = body;
 
     const authContext = await getAuthContext(request);
-    const property = await assertPropertyAccess(request, propertyId, authContext.organization_id, authContext.isSuperAdmin);
+    const property = await assertPropertyAccess(propertyId, authContext.profile, authContext.isSuperAdmin);
     if (!property) {
       return NextResponse.json({ message: 'You can only manage properties in your own landlord workspace.' }, { status: 403 });
     }
@@ -349,7 +252,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    const property = await assertPropertyAccess(request, propertyId, authContext.organization_id, authContext.isSuperAdmin);
+    const property = await assertPropertyAccess(propertyId, authContext.profile, authContext.isSuperAdmin);
     if (!property) {
       return NextResponse.json({ message: 'You can only manage properties in your own landlord workspace.' }, { status: 403 });
     }

@@ -26,67 +26,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ documents: [], message: 'Not authorized.' }, { status: 401 });
     }
 
-    // Get or create profile with organization
-let { data: profile } = await supabaseAdmin
+    // Get profile with user info
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id, user_id, organization_id, role')
       .eq('user_id', session.user.id)
       .single();
 
-     // Fallback: query by email if user_id lookup fails
-     if (!profile && session.user.email) {
-       const { data: profileByEmail } = await supabaseAdmin
-         .from('profiles')
-         .select('id, user_id, organization_id, role')
-         .eq('email', session.user.email)
-         .single();
-       profile = profileByEmail;
-     }
-
-     let orgId = profile?.organization_id ?? session.user?.user_metadata?.organization_id ?? null;
-
-    if (!orgId && session.user.user_metadata?.role !== 'super_admin') {
-      // Create organization for project_manager users without org
-      const { data: newOrg } = await supabaseAdmin
-        .from('organizations')
-        .insert({ name: `${session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-        .select('id')
+    // Fallback: query by email if user_id lookup fails
+    if (!profile && session.user.email) {
+      const { data: profileByEmail } = await supabaseAdmin
+        .from('profiles')
+        .select('id, user_id, organization_id, role')
+        .eq('email', session.user.email)
         .single();
-
-      orgId = newOrg?.id ?? null;
-
-      if (profile) {
-        await supabaseAdmin
-          .from('profiles')
-          .update({ organization_id: orgId })
-          .eq('id', profile.id);
-        profile = { ...profile, organization_id: orgId };
-      } else {
-        const createdProfile = await supabaseAdmin
-          .from('profiles')
-          .insert({
-            user_id: session.user.id,
-            full_name: session.user.user_metadata?.full_name ?? session.user.email,
-            email: session.user.email,
-            role: 'project_manager',
-            organization_id: orgId,
-            status: 'active',
-          })
-          .select('id, user_id, organization_id, role')
-          .single();
-        profile = createdProfile.data;
+      if (!profileByEmail) {
+        return NextResponse.json({ documents: [] });
       }
     }
 
-    if (!orgId) {
-      return NextResponse.json({ documents: [] });
-    }
-
-    // Get all properties for this organization
+    // Get properties owned by this user
     const { data: orgProps } = await supabaseAdmin
       .from('properties')
       .select('id')
-      .eq('organization_id', orgId);
+      .eq('user_id', session.user.id);
     const propIds = new Set((orgProps ?? []).map((p: any) => p.id));
 
     // Get documents with tenant info

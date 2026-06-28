@@ -34,7 +34,7 @@ async function getAuthContext(request: NextRequest) {
     return { isSuperAdmin: false, organization_id: null, profile: null };
   }
 
-let { data: profile } = await supabaseAdmin
+  const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionData.session.user.id)
@@ -47,54 +47,35 @@ let { data: profile } = await supabaseAdmin
       .select('id, user_id, organization_id, role, full_name, email')
       .eq('email', sessionData.session.user.email)
       .single();
-    profile = profileByEmail;
+    return {
+      isSuperAdmin: profileByEmail?.role === 'super_admin',
+      organization_id: profileByEmail?.organization_id ?? null,
+      profile: profileByEmail,
+    };
   }
-
-  let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
-
-   if (!orgId) {
-     const role = profile?.role ?? sessionData.session.user.user_metadata?.role;
-     if (role === 'project_manager') {
-       const { data: newOrg } = await supabaseAdmin
-         .from('organizations')
-         .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-         .select('id')
-         .single();
-       orgId = newOrg?.id ?? null;
-
-       if (orgId) {
-         if (profile) {
-           await supabaseAdmin
-             .from('profiles')
-             .update({ organization_id: orgId })
-             .eq('id', profile.id);
-         } else {
-           const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
-           await supabaseAdmin
-             .from('profiles')
-             .insert({
-               user_id: sessionData.session.user.id,
-               full_name: fullName,
-               email: sessionData.session.user.email,
-               role: 'project_manager',
-               organization_id: orgId,
-               status: 'active',
-             });
-         }
-
-         await supabaseAdmin
-           .from('properties')
-           .update({ organization_id: orgId })
-           .eq('organization_id', null);
-       }
-     }
-   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
-    organization_id: orgId,
-    profile: orgId ? { ...profile, organization_id: orgId } : profile,
+    organization_id: profile?.organization_id ?? null,
+    profile,
   };
+}
+
+async function getPropertyTenantUnits(userId: string) {
+  const { data: userProps } = await supabaseAdmin
+    .from('properties')
+    .select('id')
+    .eq('user_id', userId);
+  const propIds = (userProps ?? []).map((p: any) => p.id);
+
+  if (propIds.length === 0) return [];
+
+  const { data: units } = await supabaseAdmin
+    .from('units')
+    .select('id')
+    .in('property_id', propIds);
+
+  return (units ?? []).map((u: any) => u.id);
 }
 
 export async function GET(request: NextRequest) {
@@ -107,14 +88,24 @@ export async function GET(request: NextRequest) {
     let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
 
     if (!authContext.isSuperAdmin) {
-      if (authContext.organization_id) {
-        propertiesQuery = propertiesQuery.eq('organization_id', authContext.organization_id);
+      if (authContext.profile?.user_id) {
+        propertiesQuery = propertiesQuery.eq('user_id', authContext.profile.user_id);
         const orgProps = await propertiesQuery;
         const propIds = (orgProps.data ?? []).map((p: any) => p.id);
 
-        if (propIds.length > 0) {
-          const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
-          const unitIds = (orgUnits ?? []).map((u: any) => u.id);
+        if (propIds.length === 0) {
+          return NextResponse.json({
+            properties: 0,
+            agents: 0,
+            tenants: 0,
+            total_payments: 0,
+            total_balance: 0,
+            tenants_with_analytics: [],
+          });
+        }
+
+        const unitIds = (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map((u: any) => u.id) ?? [];
+        if (unitIds.length > 0) {
           tenantsQuery = tenantsQuery.in('unit_id', unitIds);
           paymentsQuery = paymentsQuery.in('tenant_id', (await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)).data?.map((t: any) => t.id) ?? []);
         } else {
@@ -139,13 +130,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let users: any[];
-    try {
-      users = await getAllAdminUsers();
-    } catch {
-      users = [];
-    }
-
     const [{ data: propertiesData, error: propertiesError }, { data: tenantsData, error: tenantsError }, { data: paymentsData, error: paymentsError }] = await Promise.all([
       propertiesQuery,
       tenantsQuery,
@@ -160,7 +144,7 @@ export async function GET(request: NextRequest) {
     const tenantList = allTenants;
 
     const propertyTenantIds = new Set<string>();
-    if (propertyId && !authContext.isSuperAdmin && authContext.organization_id) {
+    if (propertyId && !authContext.isSuperAdmin && authContext.profile?.user_id) {
       try {
         const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', propertyId);
         const unitIds = new Set((units ?? []).map((unit: any) => unit.id));
@@ -187,12 +171,12 @@ export async function GET(request: NextRequest) {
     const paymentList = propertyId ? (paymentsData ?? []).filter((payment: any) => filteredTenantIdSet.has(payment.tenant_id)) : (paymentsData ?? []);
     const financialPayments = paymentList.filter((payment: any) => !nonPaymentTypes.includes(payment.transaction_type));
 
-    let agentList = users.filter((user: any) => user.user_metadata?.role === 'agent');
-    if (!authContext.isSuperAdmin && authContext.organization_id) {
+    let agentList = (await getAllAdminUsers().catch(() => []))?.filter((user: any) => user.user_metadata?.role === 'agent') ?? [];
+    if (!authContext.isSuperAdmin && authContext.profile?.user_id) {
       const { data: orgPropsForAgents } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('organization_id', authContext.organization_id);
+        .eq('user_id', authContext.profile.user_id);
       const validAgentPropIds = new Set((orgPropsForAgents ?? []).map((p: any) => p.id));
       agentList = agentList.filter((user) => {
         if (propertyId) return user.user_metadata?.property_id === propertyId;
