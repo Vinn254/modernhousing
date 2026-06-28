@@ -169,12 +169,14 @@ export default function TenantsPage() {
           </div>
         </div>
 
-        <section className="bento-section">
+<section className="bento-section">
           <div className="bento">
-            <article className="card">
-              <div ref={formRef} className="card-label"><span className="badge badge-pm">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-              </span>{editingTenant ? 'Edit Tenant' : 'Add Tenant'}</div>
+            <article className="card" style={{ gridColumn: 'span 12' }}>
+              <div className="card-label">
+                <span className="badge badge-pm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13 a4 0 0 1 0 7.75"/></svg>
+                </span>{editingTenant ? 'Edit Tenant' : 'Add Tenant'}
+              </div>
               <h3>{editingTenant ? 'Update Tenant Details' : 'Register New Tenant'}</h3>
               <form onSubmit={handleSubmit} className="form-grid">
                 <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} required placeholder="Full name" />
@@ -184,7 +186,7 @@ export default function TenantsPage() {
                   <select value={form.unitId} onChange={e => setForm(f => ({ ...f, unitId: e.target.value }))} required>
                     <option value="">Select unit</option>
                     {units.filter(u => u.occupancy_status === 'vacant').map(u => (
-                      <option key={u.id} value={u.id}>{u.unit_number} - {properties.find(p => p.id === u.property_id)?.name ?? '—'}</option>
+                      <option key={u.id} value={u.id}>{u.unit_number} - {properties.find(p => p.id === (u as any).property_id)?.name ?? '—'}</option>
                     ))}
                   </select>
                 )}
@@ -198,10 +200,12 @@ export default function TenantsPage() {
               {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
             </article>
 
-            <article className="card">
-              <div className="card-label"><span className="badge badge-agent">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-              </span>All Tenants</div>
+            <article className="card" style={{ gridColumn: 'span 12' }}>
+              <div className="card-label">
+                <span className="badge badge-agent">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                </span>All Tenants
+              </div>
               <h3 style={{ marginBottom: 16 }}>Tenant Records</h3>
 
               {loading && <p className="landlord-muted">Loading tenants...</p>}
@@ -209,7 +213,7 @@ export default function TenantsPage() {
 
               {!loading && tenants.length > 0 && (
                 <div className="table-shell">
-                  <table className="landlord-table">
+                  <table className="landlord-table" style={{ minWidth: '100%', fontSize: '13px' }}>
                     <thead>
                       <tr>
                         <th>Name</th>

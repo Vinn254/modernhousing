@@ -181,7 +181,7 @@ export default function CommunicationsPage() {
 
         <section className="bento-section">
           <div className="bento">
-            <article className="card">
+            <article className="card" style={{ gridColumn: 'span 12' }}>
               <div className="card-label"><span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
               </span>Send Notification</div>
@@ -211,7 +211,7 @@ export default function CommunicationsPage() {
               {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
             </article>
 
-            <article className="card">
+            <article className="card" style={{ gridColumn: 'span 12' }}>
               <div className="card-label"><span className="badge badge-agent">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
               </span>Overdue Tenants</div>
@@ -248,10 +248,10 @@ export default function CommunicationsPage() {
             </article>
           </div>
 
-          <article className="card" style={{ marginTop: 24 }}>
-            <div className="card-label"><span className="badge badge-agent">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
-            </span>Message History</div>
+<article className="card" style={{ gridColumn: 'span 12', marginTop: 24 }}>
+              <div className="card-label"><span className="badge badge-agent">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
+              </span>Message History</div>
             <h3>Sent Communications</h3>
 
             {loading && <p className="landlord-muted">Loading communications...</p>}

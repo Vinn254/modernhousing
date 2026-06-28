@@ -1049,8 +1049,13 @@ body {
 .landlord-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 860px;
   background: #fff;
+}
+
+@media (min-width: 768px) {
+  .landlord-table {
+    min-width: 860px;
+  }
 }
 
 .landlord-table th {
@@ -1070,6 +1075,10 @@ body {
   color: var(--ink-2);
   font-size: 14px;
   border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
 .landlord-table tr:last-child td {
