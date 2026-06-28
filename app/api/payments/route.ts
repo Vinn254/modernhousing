@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     description: description ?? `${monthDue || ''} Payment`,
     transaction_type: transType || transactionType || 'rent',
     amount: Number(paidAmount) || Number(amount) || 0,
-    balance_remaining: Number(balAmount) || Number(balanceRemaining) || 0,
+    balance_remaining: Number(balanceRemaining) || 0,
     transaction_number: transNumber,
     paid_at: paymentDate || new Date().toISOString(),
   };
