@@ -15,6 +15,7 @@ type AuthContext = {
   userId?: string;
   userEmail?: string;
   profile?: any;
+  userMetadata?: any;
 };
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
@@ -88,14 +89,15 @@ async function getAuthContext(request: NextRequest) {
         })
         .select('id, user_id, organization_id, role, full_name, email')
         .single();
-      return {
-        isSuperAdmin: createdProfile?.role === 'super_admin',
-        organization_id: createdProfile?.organization_id ?? null,
-        userId: sessionData.session.user.id,
-        userEmail: sessionData.session.user.email,
-        profile: createdProfile,
-      };
-    }
+return {
+         isSuperAdmin: createdProfile?.role === 'super_admin',
+         organization_id: createdProfile?.organization_id ?? null,
+         userId: sessionData.session.user.id,
+         userEmail: sessionData.session.user.email,
+         profile: createdProfile,
+         userMetadata: sessionData.session.user.user_metadata,
+       };
+     }
   }
 
   return {
@@ -104,6 +106,7 @@ async function getAuthContext(request: NextRequest) {
     userId: sessionData.session.user.id,
     userEmail: sessionData.session.user.email,
     profile: orgId ? { ...profile, organization_id: orgId } : profile,
+    userMetadata: sessionData.session.user.user_metadata,
   };
 }
 
@@ -177,20 +180,25 @@ async function assertPropertyAccess(request: NextRequest, propertyId: string, or
 export async function GET(request: NextRequest) {
     const authContext = await getAuthContext(request);
 
+    let query: any = supabaseAdmin.from('properties').select('*');
+
     if (!authContext.isSuperAdmin) {
-      if (authContext.organization_id) {
-        const { data, error } = await supabaseAdmin.from('properties').select('*').eq('organization_id', authContext.organization_id).order('created_at', { ascending: false });
-
-        if (error) {
-          return NextResponse.json({ message: error.message }, { status: 500 });
+      // Check if user is an agent and should only see their assigned property
+      if (authContext.profile?.role === 'agent' || authContext.userMetadata?.role === 'agent') {
+        const agentPropertyId = authContext.userMetadata?.property_id;
+        if (agentPropertyId) {
+          query = query.eq('id', agentPropertyId);
+        } else {
+          return NextResponse.json({ properties: [] });
         }
-
-        return NextResponse.json({ properties: await enrichProperties(data ?? []) });
+      } else if (authContext.organization_id) {
+        query = query.eq('organization_id', authContext.organization_id);
+      } else {
+        return NextResponse.json({ properties: [] });
       }
-      return NextResponse.json({ properties: [] });
     }
 
-    const { data, error } = await supabaseAdmin.from('properties').select('*').order('created_at', { ascending: false });
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       return NextResponse.json({ message: error.message }, { status: 500 });
