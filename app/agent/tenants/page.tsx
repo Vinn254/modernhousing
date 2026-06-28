@@ -51,9 +51,10 @@ export default function AgentTenantsPage() {
 
     try {
       const storedPropertyId = localStorage.getItem('agentPropertyId');
+      const headers = await getAuthHeaders();
       const [tenantsResponse, unitsResponse] = await Promise.all([
-        fetch(`/api/tenants?propertyId=${storedPropertyId}`),
-        fetch(`/api/units?propertyId=${storedPropertyId}`),
+        fetch(`/api/tenants?propertyId=${storedPropertyId}`, { headers }),
+        fetch(`/api/units?propertyId=${storedPropertyId}`, { headers }),
       ]);
 
       const tenantsResult = await tenantsResponse.json();
@@ -159,7 +160,7 @@ export default function AgentTenantsPage() {
               <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" />
               <select value={form.unitNumber} onChange={e => setForm(f => ({ ...f, unitNumber: e.target.value }))} required>
                 <option value="">Select unit</option>
-                {units.map(u => (
+                {units.filter(u => u.occupancy_status === 'vacant').map(u => (
                   <option key={u.id} value={u.unit_number}>{u.unit_number} ({u.unit_type || 'unit'})</option>
                 ))}
               </select>
