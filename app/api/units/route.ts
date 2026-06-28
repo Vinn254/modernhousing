@@ -100,17 +100,14 @@ export async function GET(request: NextRequest) {
     if (!authContext.isSuperAdmin) {
       const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
 
-      // For agents without organization: use property_id from user_metadata
-      if (!authContext.organizationId && userMetadata?.property_id) {
-        if (propertyId && userMetadata.property_id !== propertyId) {
+      // For agents without organization: use property_id from user_metadata or query param
+      if (!authContext.organizationId) {
+        const effectivePropertyId = userMetadata?.property_id || propertyId;
+        if (effectivePropertyId) {
+          query = query.eq('property_id', effectivePropertyId);
+        } else {
           return NextResponse.json({ units: [] });
         }
-        query = query.eq('property_id', userMetadata.property_id);
-      } else if (!authContext.organizationId && !propertyId) {
-        return NextResponse.json({ units: [] });
-      } else if (!authContext.organizationId) {
-        // Allow access with propertyId only
-        query = query.eq('property_id', propertyId);
       } else {
         const { data: orgProps } = await supabaseAdmin
           .from('properties')
