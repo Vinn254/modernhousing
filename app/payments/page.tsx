@@ -47,6 +47,17 @@ export default function PaymentsPage() {
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [mpesaAmount, setMpesaAmount] = useState('');
   const [processing, setProcessing] = useState(false);
+  
+  const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 10));
+  const [manualMonth, setManualMonth] = useState('');
+  const [manualDueAmount, setManualDueAmount] = useState('');
+  const [manualPaidAmount, setManualPaidAmount] = useState('');
+  const [manualPenalty, setManualPenalty] = useState('0');
+  const [manualBalAmount, setManualBalAmount] = useState('');
+  const [manualTransType, setManualTransType] = useState('direct');
+  const [manualTransNumber, setManualTransNumber] = useState('');
+  const [manualTransCode, setManualTransCode] = useState('');
+  const [manualPaymentDate, setManualPaymentDate] = useState(new Date().toISOString().slice(0, 10));
 
   async function loadPayments() {
     const response = await fetch('/api/payments', { headers: await getAuthHeaders() });
@@ -125,6 +136,52 @@ export default function PaymentsPage() {
     setMpesaAmount('');
   }
 
+  async function handleManualPayment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+
+    const response = await fetch('/api/payments', {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        tenantId,
+        description: `${manualMonth || 'Rent'} payment`,
+        transactionType: manualTransType,
+        amount: Number(manualPaidAmount),
+        balanceRemaining: Number(manualBalAmount),
+        monthDue: manualMonth,
+        dueAmount: Number(manualDueAmount),
+        paidAmount: Number(manualPaidAmount),
+        penalty: Number(manualPenalty),
+        balAmount: Number(manualBalAmount),
+        transType: manualTransType,
+        transNumber: manualTransNumber,
+        transCode: manualTransCode,
+        paymentDate: manualPaymentDate
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setError(result.message || 'Unable to record payment.');
+      return;
+    }
+
+    setMessage('Payment recorded successfully.');
+    setTenantId('');
+    setManualMonth('');
+    setManualDueAmount('');
+    setManualPaidAmount('');
+    setManualPenalty('0');
+    setManualBalAmount('');
+    setManualTransType('direct');
+    setManualTransNumber('');
+    setManualTransCode('');
+    await loadPayments();
+  }
+
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
   return (
@@ -137,24 +194,30 @@ export default function PaymentsPage() {
       {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
       {error && <p style={{ color: '#dc2626', fontWeight: 700, marginBottom: 16 }}>{error}</p>}
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 20, alignItems: 'start' }}>
+      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
         <div className="card">
-          <div className="card-label">Payment Entry</div>
-          <h3 style={{ marginBottom: 16 }}>Record Payment</h3>
-          <form onSubmit={handleCreate} className="form-grid">
+          <div className="card-label">Manual Payment Entry</div>
+          <h3 style={{ marginBottom: 16 }}>Record Direct Payment</h3>
+          <form onSubmit={handleManualPayment} className="form-grid">
             <select value={tenantId} onChange={(event) => setTenantId(event.target.value)} required>
               <option value="">Select tenant</option>
               {tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} — {tenant.property} · Unit {tenant.unit}</option>)}
             </select>
-            <input value={description} onChange={(event) => setDescription(event.target.value)} required placeholder="Description" />
-            <select value={transactionType} onChange={(event) => setTransactionType(event.target.value)}>
-              <option value="rent">Rent</option>
-              <option value="overdue">Overdue</option>
-              <option value="other">Other</option>
+            <input type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} required />
+            <input value={manualMonth} onChange={(event) => setManualMonth(event.target.value)} placeholder="Month Due (e.g., January 2024)" />
+            <input type="number" step="0.01" value={manualDueAmount} onChange={(event) => setManualDueAmount(event.target.value)} placeholder="Due Amount" />
+            <input type="number" step="0.01" value={manualPaidAmount} onChange={(event) => setManualPaidAmount(event.target.value)} required placeholder="Amount Paid" />
+            <input type="number" step="0.01" value={manualPenalty} onChange={(event) => setManualPenalty(event.target.value)} placeholder="Penalty Fee" />
+            <input type="number" step="0.01" value={manualBalAmount} onChange={(event) => setManualBalAmount(event.target.value)} placeholder="Balance" />
+            <select value={manualTransType} onChange={(event) => setManualTransType(event.target.value)}>
+              <option value="direct">Direct Payment</option>
+              <option value="bank">Bank Transfer</option>
+              <option value="cash">Cash</option>
             </select>
-            <input type="number" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} required placeholder="Amount" />
-            <input type="number" step="0.01" value={balanceRemaining} onChange={(event) => setBalanceRemaining(event.target.value)} required placeholder="Balance remaining" />
-            <button type="submit" style={{ gridColumn: 'span 2' }}>Record Payment</button>
+            <input value={manualTransNumber} onChange={(event) => setManualTransNumber(event.target.value)} required placeholder="Transaction Number" />
+            <input value={manualTransCode} onChange={(event) => setManualTransCode(event.target.value)} placeholder="Transaction Code (MPESA code)" />
+            <input type="date" value={manualPaymentDate} onChange={(event) => setManualPaymentDate(event.target.value)} placeholder="Payment Date" />
+            <button type="submit">Record Payment</button>
           </form>
           {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
         </div>
@@ -181,10 +244,13 @@ export default function PaymentsPage() {
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--line)' }}>
                     <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Tenant</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Description</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Amount</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Month Due</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Due</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Paid</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Penalty</th>
                     <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Balance</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Status</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Type</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Trans #</th>
                     <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Date</th>
                   </tr>
                 </thead>
@@ -193,14 +259,14 @@ export default function PaymentsPage() {
                     <tr key={payment.id} style={{ borderBottom: '1px solid var(--line-soft)' }}>
                       <td style={{ padding: '14px 12px' }}>
                         <strong>{payment.tenant}</strong>
-                        <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · Unit {payment.unit}</div>
                       </td>
-                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{payment.description}</td>
+                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{(payment as any).month_due || payment.description}</td>
+                      <td style={{ padding: '14px 12px', fontWeight: 600 }}>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
                       <td style={{ padding: '14px 12px', fontWeight: 700 }}>{formatCurrency(payment.amount)}</td>
+                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{formatCurrency((payment as any).penalty_fee || 0)}</td>
                       <td style={{ padding: '14px 12px', fontWeight: 700, color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(payment.balance_remaining)}</td>
-                      <td style={{ padding: '14px 12px' }}>
-                        <span style={{ display: 'inline-block', padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: payment.status === 'paid' ? 'rgba(16,185,129,0.12)' : payment.status === 'overdue' ? 'rgba(220,38,38,0.1)' : 'rgba(245,158,11,0.12)', color: payment.status === 'paid' ? 'var(--accent)' : payment.status === 'overdue' ? '#dc2626' : 'var(--amber)' }}>{payment.status}</span>
-                      </td>
+                      <td style={{ padding: '14px 12px', textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
+                      <td style={{ padding: '14px 12px', fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
                       <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—'}</td>
                     </tr>
                   ))}

@@ -106,6 +106,10 @@ export async function GET(request: NextRequest) {
           ...payment,
           tenant: payment.tenants?.full_name ?? '',
           tenant_email: payment.tenants?.email ?? '',
+          month_due: payment.month_due,
+          due_amount: payment.due_amount,
+          penalty_fee: payment.penalty_fee,
+          transaction_number: payment.transaction_number,
         }));
         return NextResponse.json({ payments });
       }
@@ -117,20 +121,27 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     const body = await request.json();
-    const { tenantId, description, transactionType, amount, balanceRemaining, propertyId } = body;
+    const { 
+      tenantId, description, transactionType, amount, balanceRemaining, propertyId,
+      monthDue, dueAmount, paidAmount, penalty, balAmount, transType, transNumber, transCode, paymentDate 
+    } = body;
 
-    if (!tenantId || !description || !transactionType || amount == null || balanceRemaining == null) {
+    if (!tenantId || !transNumber) {
       return NextResponse.json({ message: 'Missing required payment fields.' }, { status: 400 });
     }
 
     const result = await supabaseAdmin.from('payments').insert({
       tenant_id: tenantId,
       property_id: propertyId ?? null,
-      description,
-      transaction_type: transactionType,
-      amount,
-      balance_remaining: balanceRemaining,
-      paid_at: new Date().toISOString(),
+      description: description ?? `${monthDue || ''} Payment`,
+      transaction_type: transType || transactionType || 'rent',
+      amount: Number(paidAmount) || Number(amount) || 0,
+      balance_remaining: Number(balAmount) || Number(balanceRemaining) || 0,
+      penalty_fee: Number(penalty) || 0,
+      month_due: monthDue || null,
+      transaction_number: transNumber,
+      transaction_code: transCode || null,
+      paid_at: paymentDate || new Date().toISOString(),
     });
 
     if (result.error) {
