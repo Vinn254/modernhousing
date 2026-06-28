@@ -14,6 +14,8 @@ export default function AgentTenantsPage() {
   const [units, setUnits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [agentPropertyId, setAgentPropertyId] = useState<string | null>(null);
+  const [notifLoading, setNotifLoading] = useState<string | null>(null);
   const [agentTenantName, setAgentTenantName] = useState('');
   const [agentTenantEmail, setAgentTenantEmail] = useState('');
   const [agentTenantPhone, setAgentTenantPhone] = useState('');
@@ -28,6 +30,8 @@ export default function AgentTenantsPage() {
   async function loadData() {
     setLoading(true);
     setError('');
+    const storedPropertyId = localStorage.getItem('agentPropertyId');
+    setAgentPropertyId(storedPropertyId);
 
     try {
       const storedPropertyId = localStorage.getItem('agentPropertyId');
@@ -80,11 +84,35 @@ export default function AgentTenantsPage() {
       return;
     }
 
-    setAgentTenantName(''); setAgentTenantEmail(''); setAgentTenantPhone('');
-    setAgentTenantUnit(''); setAgentLeaseStart(''); setAgentLeaseEnd(''); setAgentDeposit('');
-    loadData();
-    setAgentLoading(false);
-  }
+setAgentTenantName(''); setAgentTenantEmail(''); setAgentTenantPhone('');
+       setAgentTenantUnit(''); setAgentLeaseStart(''); setAgentLeaseEnd(''); setAgentDeposit('');
+       loadData();
+       setAgentLoading(false);
+     }
+
+     async function handleSendOverdueNotification(tenantId: string, tenantName: string) {
+       setNotifLoading(tenantId);
+       setError('');
+
+       const response = await fetch('/api/notifications', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           tenantId,
+           propertyId: agentPropertyId,
+           recipient: 'tenant',
+           type: 'overdue',
+           message: `Overdue payment reminder for ${tenantName}`,
+         }),
+       });
+
+       const result = await response.json();
+
+       if (!response.ok) {
+         setError(result.message ?? 'Unable to send notification.');
+       }
+       setNotifLoading(null);
+     }
 
   async function handleAddUnit(event: React.FormEvent) {
     event.preventDefault();
@@ -172,30 +200,40 @@ export default function AgentTenantsPage() {
             {loading && <p className="landlord-muted">Loading tenants...</p>}
             {!loading && tenants.length === 0 && <p className="landlord-empty">No tenants added yet.</p>}
             {!loading && tenants.length > 0 && (
-              <div className="table-shell">
-                <table className="landlord-table" style={{ minWidth: '100%', fontSize: '13px' }}>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Unit</th>
-                      <th>Lease Start</th>
-                      <th>Lease End</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tenants.map(tenant => (
-                      <tr key={tenant.id}>
-                        <td className="landlord-name">{tenant.full_name}</td>
-                        <td>{tenant.email}</td>
-                        <td>{tenant.unit}</td>
-                        <td>{tenant.lease_start}</td>
-                        <td>{tenant.lease_end}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+<div className="table-shell">
+                 <table className="landlord-table" style={{ minWidth: '100%', fontSize: '13px' }}>
+                   <thead>
+                     <tr>
+                       <th>Name</th>
+                       <th>Email</th>
+                       <th>Unit</th>
+                       <th>Lease Start</th>
+                       <th>Lease End</th>
+                       <th>Action</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {tenants.map(tenant => (
+                       <tr key={tenant.id}>
+                         <td className="landlord-name">{tenant.full_name}</td>
+                         <td>{tenant.email}</td>
+                         <td>{tenant.unit}</td>
+                         <td>{tenant.lease_start}</td>
+                         <td>{tenant.lease_end}</td>
+                         <td>
+                           <button
+                             onClick={() => handleSendOverdueNotification(tenant.id, tenant.full_name)}
+                             disabled={notifLoading === tenant.id}
+                             style={{ padding: '4px 8px', fontSize: '12px' }}
+                           >
+                             {notifLoading === tenant.id ? 'Sending…' : 'Send Overdue'}
+                           </button>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
             )}
           </article>
         </div>
