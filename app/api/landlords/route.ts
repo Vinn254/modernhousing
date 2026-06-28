@@ -28,7 +28,6 @@ interface LandlordProfile {
   organization_id?: string | null;
   status: 'active' | 'inactive' | 'pending';
   created_at: string;
-  organizations?: { name?: string } | null;
 }
 
 function normalizeLandlord(user: any, profile?: LandlordProfile) {
@@ -36,7 +35,7 @@ function normalizeLandlord(user: any, profile?: LandlordProfile) {
     id: user?.id ?? profile?.user_id,
     email: profile?.email ?? user?.email ?? '',
     full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Project Manager',
-    organization: profile?.organizations?.name ?? profile?.organization_id ?? '',
+    organization: '',
     phone: profile?.phone ?? null,
     status: profile?.status ?? (user?.email_confirmed_at ? 'active' : 'pending'),
     created_at: profile?.created_at ?? user?.created_at ?? '',
@@ -44,13 +43,13 @@ function normalizeLandlord(user: any, profile?: LandlordProfile) {
 }
 
 async function getProfiles() {
-  const { data, error } = await supabaseAdmin.from('profiles').select('*, organizations(name)').eq('role', 'project_manager');
+  const { data, error } = await supabaseAdmin.from('profiles').select('*').eq('role', 'project_manager');
   if (error) throw error;
   return (data ?? []) as LandlordProfile[];
 }
 
 async function getProfile(userId: string) {
-  const { data, error } = await supabaseAdmin.from('profiles').select('*, organizations(name)').eq('user_id', userId).single();
+  const { data, error } = await supabaseAdmin.from('profiles').select('*').eq('user_id', userId).single();
   if (error && error.code !== 'PGRST116') throw error;
   return (data ?? null) as LandlordProfile | null;
 }
@@ -132,8 +131,24 @@ export async function GET() {
     });
     profiles.forEach((profile) => landlordIds.add(profile.user_id));
 
+    // Fetch organization names for all profiles with org_ids
+    const orgIds = [...new Set(profiles.map(p => p.organization_id).filter(Boolean))] as string[];
+    const orgMap = new Map<string, string>();
+    if (orgIds.length > 0) {
+      const { data: orgs } = await supabaseAdmin.from('organizations').select('id, name').in('id', orgIds);
+      orgs?.forEach((org: any) => orgMap.set(org.id, org.name));
+    }
+
     const landlords = Array.from(landlordIds)
-      .map((id) => normalizeLandlord(users.find((user) => user.id === id), profileByUserId.get(id)))
+      .map((id) => {
+        const profile = profileByUserId.get(id);
+        const normalized = normalizeLandlord(users.find((user) => user.id === id), profile);
+        // Replace organization_id with actual name
+        if (profile?.organization_id && orgMap.has(profile.organization_id)) {
+          normalized.organization = orgMap.get(profile.organization_id) ?? normalized.organization;
+        }
+        return normalized;
+      })
       .filter((landlord) => landlord.id);
 
     return NextResponse.json({ landlords });
@@ -172,7 +187,17 @@ export async function POST(request: NextRequest) {
     const organizationId = await findOrCreateOrganization(organization);
     const profile = await upsertProfile(user.id, fullName, email, organizationId, status, phone);
 
-    return NextResponse.json({ landlord: normalizeLandlord(user, profile) }, { status: existingUser ? 200 : 201 });
+    return NextResponse.json({
+      landlord: {
+        id: user?.id ?? profile?.user_id,
+        email: profile?.email ?? user?.email ?? '',
+        full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Project Manager',
+        organization: organization,
+        phone: profile?.phone ?? null,
+        status: profile?.status ?? (user?.email_confirmed_at ? 'active' : 'pending'),
+        created_at: profile?.created_at ?? user?.created_at ?? '',
+      }
+    }, { status: existingUser ? 200 : 201 });
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to save landlord.' }, { status: 500 });
   }
@@ -196,7 +221,17 @@ export async function PATCH(request: NextRequest) {
     const organizationId = organization ? await findOrCreateOrganization(organization) : null;
     const profile = await upsertProfile(userId, fullName, user.email, organizationId, status ?? 'active', phone ?? undefined);
 
-    return NextResponse.json({ landlord: normalizeLandlord(user, profile) });
+    return NextResponse.json({
+      landlord: {
+        id: user?.id ?? profile?.user_id,
+        email: profile?.email ?? user?.email ?? '',
+        full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Project Manager',
+        organization: organization ?? '',
+        phone: profile?.phone ?? null,
+        status: profile?.status ?? (user?.email_confirmed_at ? 'active' : 'pending'),
+        created_at: profile?.created_at ?? user?.created_at ?? '',
+      }
+    });
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to update landlord.' }, { status: 500 });
   }
