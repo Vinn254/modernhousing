@@ -1269,21 +1269,17 @@ body {
 
 @media (max-width: 900px) {
   .tenant-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-}
-
-@media (max-width: 520px) {
-  .tenant-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    grid-template-columns: 1fr;
   }
 
   .tenant-detail-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
   }
+
+  .dashboard-section-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
 }
 
 .renewal-pill.safe,
@@ -1653,6 +1649,14 @@ body {
   .property-stats,
   .payments-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .bento {
+    grid-template-columns: 1fr;
+  }
+
+  .bento .card {
+    grid-column: 1;
   }
 
   .landlord-panel-header,
