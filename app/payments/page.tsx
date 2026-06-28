@@ -44,6 +44,9 @@ export default function PaymentsPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [mpesaPhone, setMpesaPhone] = useState('');
+  const [mpesaAmount, setMpesaAmount] = useState('');
+  const [processing, setProcessing] = useState(false);
 
   async function loadPayments() {
     const response = await fetch('/api/payments', { headers: await getAuthHeaders() });
@@ -94,6 +97,34 @@ export default function PaymentsPage() {
     await loadPayments();
   }
 
+  async function handleStkPush(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setProcessing(true);
+    
+    const response = await fetch('/api/mpesa/stk-push', {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        phone: mpesaPhone,
+        amount: Number(mpesaAmount),
+        accountReference: 'SPRINGFIELD',
+        transactionDesc: 'Rent Payment'
+      }),
+    });
+
+    const result = await response.json();
+    setProcessing(false);
+
+    if (!response.ok) {
+      setError(result.message ?? 'STK push failed');
+      return;
+    }
+
+    setMessage('M-Pesa prompt sent successfully.');
+    setMpesaPhone('');
+    setMpesaAmount('');
+  }
+
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
   return (
@@ -125,6 +156,18 @@ export default function PaymentsPage() {
             <input type="number" step="0.01" value={balanceRemaining} onChange={(event) => setBalanceRemaining(event.target.value)} required placeholder="Balance remaining" />
             <button type="submit" style={{ gridColumn: 'span 2' }}>Record Payment</button>
           </form>
+          {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
+        </div>
+
+        <div className="card">
+          <div className="card-label">M-Pesa Payment</div>
+          <h3 style={{ marginBottom: 16 }}>Send STK Prompt</h3>
+          <form onSubmit={handleStkPush} className="form-grid">
+            <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="Tenant Phone (07XX XXX XXX)" />
+            <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
+            <button type="submit" disabled={processing}>{processing ? 'Sending…' : 'Send Prompt'}</button>
+          </form>
+          {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
         </div>
 
         <div className="card">

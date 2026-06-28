@@ -16,6 +16,11 @@ export default function TenantPaymentsPage() {
   const [user, setUser] = useState<any>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mpesaPhone, setMpesaPhone] = useState('');
+  const [mpesaAmount, setMpesaAmount] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
@@ -39,6 +44,38 @@ export default function TenantPaymentsPage() {
     });
   }, []);
 
+  async function handleStkPush(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+
+    setProcessing(true);
+    const response = await fetch('/api/mpesa/stk-push', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        phone: mpesaPhone,
+        amount: Number(mpesaAmount),
+        accountReference: 'SPRINGFIELD',
+        transactionDesc: 'Rent Payment'
+      }),
+    });
+
+    const result = await response.json();
+    setProcessing(false);
+
+    if (!response.ok) {
+      setError(result.message ?? 'Payment failed');
+      return;
+    }
+
+    setMessage('M-Pesa prompt sent. Complete payment on your phone.');
+    setMpesaPhone('');
+    setMpesaAmount('');
+  }
+
   if (loading) {
     return (
       <main className="container page-layout">
@@ -53,7 +90,23 @@ export default function TenantPaymentsPage() {
         <div><p className="heading">Payment History</p><p className="subheading">View all your rent and utility payments.</p></div>
       </div>
 
+      {user && (
+        <article className="card" style={{ marginTop: 24, maxWidth: '480px' }}>
+          <div className="card-label">Make Payment</div>
+          <h3>Pay Rent via M-Pesa</h3>
+          <form onSubmit={handleStkPush} className="form-grid">
+            <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)" />
+            <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
+            <button type="submit" disabled={processing}>{processing ? 'Processing…' : 'Pay Now'}</button>
+          </form>
+          {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
+          {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
+        </article>
+      )}
+
       <section className="card" style={{ marginTop: 24 }}>
+        <div className="card-label">Payment Records</div>
+        <h3 style={{ marginBottom: 16 }}>All Payments</h3>
         {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : (
           <div className="table-shell">
             <table className="landlord-table">
