@@ -31,14 +31,15 @@ create table properties (
 );
 
 create table units (
-  id uuid primary key default uuid_generate_v4(),
-  property_id uuid references properties(id) on delete cascade,
-  unit_number text not null,
-  size text,
-  rent_amount numeric(12,2) not null default 0,
-  occupancy_status text not null default 'vacant' check (occupancy_status in ('vacant', 'occupied')),
-  agent_email text,
-  created_at timestamp with time zone default now()
+   id uuid primary key default uuid_generate_v4(),
+   property_id uuid references properties(id) on delete cascade,
+   unit_number text not null,
+   size text,
+   rent_amount numeric(12,2) not null default 0,
+   occupancy_status text not null default 'vacant' check (occupancy_status in ('vacant', 'occupied')),
+   agent_email text,
+   unit_type text check (unit_type in ('single_room', 'bedsitter', 'one_bedroom', 'two_bedroom', 'three_bedroom')),
+   created_at timestamp with time zone default now()
 );
 
 create table tenants (
@@ -54,13 +55,27 @@ create table tenants (
 );
 
 create table payments (
+   id uuid primary key default uuid_generate_v4(),
+   tenant_id uuid references tenants(id) on delete cascade,
+   description text not null,
+   transaction_type text not null,
+   amount numeric(12,2) not null default 0,
+   balance_remaining numeric(12,2) not null default 0,
+   paid_at timestamp with time zone,
+   month_due text,
+   due_amount numeric(12,2),
+   penalty_fee numeric(12,2) default 0,
+   transaction_number text,
+   transaction_code text,
+   created_at timestamp with time zone default now()
+);
+
+create table tenant_agreements (
   id uuid primary key default uuid_generate_v4(),
   tenant_id uuid references tenants(id) on delete cascade,
-  description text not null,
-  transaction_type text not null,
-  amount numeric(12,2) not null default 0,
-  balance_remaining numeric(12,2) not null default 0,
-  paid_at timestamp with time zone,
+  content text,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'declined')),
+  accepted_at timestamp with time zone,
   created_at timestamp with time zone default now()
 );
 

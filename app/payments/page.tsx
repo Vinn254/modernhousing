@@ -196,13 +196,12 @@ export default function PaymentsPage() {
         <div className="card">
           <div className="card-label">Manual Payment Entry</div>
           <h3 style={{ marginBottom: 16 }}>Record Direct Payment</h3>
-          <p style={{ color: 'var(--ink-3)', fontSize: '13px', marginBottom: 12 }}>Payment Date defaults to today.</p>
           <form onSubmit={handleManualPayment} className="form-grid">
             <select value={tenantId} onChange={(event) => setTenantId(event.target.value)} required>
               <option value="">Select tenant</option>
               {tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} — {tenant.property} · Unit {tenant.unit}</option>)}
             </select>
-            <input type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} required />
+            <input type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} required placeholder="Payment Date" />
             <input value={manualMonth} onChange={(event) => setManualMonth(event.target.value)} placeholder="Month Due (e.g., January 2024)" />
             <input type="number" step="0.01" value={manualDueAmount} onChange={(event) => setManualDueAmount(event.target.value)} placeholder="Due Amount" />
             <input type="number" step="0.01" value={manualPaidAmount} onChange={(event) => setManualPaidAmount(event.target.value)} required placeholder="Amount Paid" />
