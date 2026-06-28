@@ -18,37 +18,42 @@ export default function LandlordDocumentsPage() {
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState('');
 
-   async function getAuthHeaders() {
-     const { data } = await supabase.auth.getSession();
-     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-     if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
-     return headers;
-   }
+async function getAuthHeaders() {
+      const { data } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+      return headers;
+    }
 
-   async function loadDocuments() {
-     setLoading(true);
-     setError('');
+    async function loadDocuments() {
+      setLoading(true);
+      setError('');
 
-     try {
-       const { data: { user } } = await supabase.auth.getUser();
-       const response = await fetch(`/api/admin/documents?adminEmail=${encodeURIComponent(user?.email ?? '')}`, {
-         headers: await getAuthHeaders(),
-       });
-       const result = await response.json();
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.email) {
+          setError('No user session found.');
+          setLoading(false);
+          return;
+        }
+        const response = await fetch(`/api/admin/documents?adminEmail=${encodeURIComponent(user.email)}`, {
+          headers: await getAuthHeaders(),
+        });
+        const result = await response.json();
 
-       if (!response.ok) throw new Error(result.message ?? 'Failed to load documents');
+        if (!response.ok) throw new Error(result.message ?? 'Failed to load documents');
 
-       setDocuments(result.documents ?? []);
-     } catch (err: any) {
-       setError(err.message);
-     } finally {
-       setLoading(false);
-     }
-   }
+        setDocuments(result.documents ?? []);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-   useEffect(() => {
-     loadDocuments();
-   }, []);
+    useEffect(() => {
+      loadDocuments();
+    }, []);
 
    const formatType = (type: string) => type.replace('_', ' ');
 
