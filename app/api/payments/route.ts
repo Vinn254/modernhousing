@@ -75,92 +75,90 @@ async function getAuthContext(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-   try {
-      const authContext = await getAuthContext(request);
+  try {
+    const authContext = await getAuthContext(request);
 
-      if (!authContext.isSuperAdmin && !authContext.organizationId) {
-        return NextResponse.json({ payments: [] });
-      }
-
-      const { data: orgProps } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('organization_id', authContext.organizationId ?? '');
-      const propIds = (orgProps ?? []).map((p: any) => p.id);
-
-      if (propIds.length > 0) {
-        const { data: orgTenants } = await supabaseAdmin
-          .from('tenants')
-          .select('id')
-          .in('unit_id', (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map(u => u.id) ?? []);
-        const tenantIds = (orgTenants ?? []).map((t: any) => t.id);
-
-        const { data, error } = await supabaseAdmin
-          .from('payments')
-          .select('*, tenants(full_name, email, units(property_id))')
-          .in('tenant_id', tenantIds)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        const payments = (data ?? []).map((payment: any) => ({
-          ...payment,
-          tenant: payment.tenants?.full_name ?? '',
-          tenant_email: payment.tenants?.email ?? '',
-        }));
-        return NextResponse.json({ payments });
-      }
+    if (!authContext.isSuperAdmin && !authContext.organizationId) {
       return NextResponse.json({ payments: [] });
-    } catch (error: any) {
-      return NextResponse.json({ payments: [], message: error.message ?? 'Unable to load payments.' }, { status: 500 });
     }
+
+    const { data: orgProps } = await supabaseAdmin
+      .from('properties')
+      .select('id')
+      .eq('organization_id', authContext.organizationId ?? '');
+    const propIds = (orgProps ?? []).map((p: any) => p.id);
+
+    if (propIds.length > 0) {
+      const { data: orgTenants } = await supabaseAdmin
+        .from('tenants')
+        .select('id')
+        .in('unit_id', (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map(u => u.id) ?? []);
+      const tenantIds = (orgTenants ?? []).map((t: any) => t.id);
+
+      const { data, error } = await supabaseAdmin
+        .from('payments')
+        .select('*, tenants(full_name, email, units(property_id))')
+        .in('tenant_id', tenantIds)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      const payments = (data ?? []).map((payment: any) => ({
+        ...payment,
+        tenant: payment.tenants?.full_name ?? '',
+        tenant_email: payment.tenants?.email ?? '',
+      }));
+      return NextResponse.json({ payments });
+    }
+    return NextResponse.json({ payments: [] });
+  } catch (error: any) {
+    return NextResponse.json({ payments: [], message: error.message ?? 'Unable to load payments.' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
-    const body = await request.json();
-    const { 
-      tenantId, description, transactionType, amount, balanceRemaining, propertyId,
-      monthDue, dueAmount, paidAmount, transType, transNumber, transCode, paymentDate 
-    } = body;
+  const body = await request.json();
+  const {
+    tenantId, description, transactionType, amount, balanceRemaining, propertyId,
+    monthDue, dueAmount, paidAmount, transType, transNumber, transCode, paymentDate
+  } = body;
 
-    if (!tenantId || !transNumber) {
-      return NextResponse.json({ message: 'Missing required payment fields.' }, { status: 400 });
-    }
-
-    const insertData: any = {
-      tenant_id: tenantId,
-      property_id: propertyId ?? null,
-      description: description ?? `${monthDue || ''} Payment`,
-      transaction_type: transType || transactionType || 'rent',
-      amount: Number(paidAmount) || Number(amount) || 0,
-      balance_remaining: Number(balAmount) || Number(balanceRemaining) || 0,
-      transaction_number: transNumber,
-      paid_at: paymentDate || new Date().toISOString(),
-    };
-
-    const result = await supabaseAdmin.from('payments').insert(insertData);
-
-    if (result.error) {
-      return NextResponse.json({ message: result.error.message }, { status: 500 });
-    }
-
-    // Send notification to tenant
-    const { data: tenant } = await supabaseAdmin
-      .from('tenants')
-      .select('email, full_name')
-      .eq('id', tenantId)
-      .single();
-
-    if (tenant?.email) {
-      await supabaseAdmin.from('notifications').insert({
-        recipient: 'tenant',
-        tenant_id: tenantId,
-        type: 'payment_recorded',
-        message: `Payment of KSH ${Number(paidAmount) || Number(amount)} recorded for ${monthDue || 'rent'}.`,
-        status: 'sent',
-        created_at: new Date().toISOString(),
-      }).select();
-    }
-
-    return NextResponse.json({ message: 'Payment recorded.' }, { status: 201 });
+  if (!tenantId || !transNumber) {
+    return NextResponse.json({ message: 'Missing required payment fields.' }, { status: 400 });
   }
+
+  const insertData: any = {
+    tenant_id: tenantId,
+    property_id: propertyId ?? null,
+    description: description ?? `${monthDue || ''} Payment`,
+    transaction_type: transType || transactionType || 'rent',
+    amount: Number(paidAmount) || Number(amount) || 0,
+    balance_remaining: Number(balAmount) || Number(balanceRemaining) || 0,
+    transaction_number: transNumber,
+    paid_at: paymentDate || new Date().toISOString(),
+  };
+
+  const result = await supabaseAdmin.from('payments').insert(insertData);
+
+  if (result.error) {
+    return NextResponse.json({ message: result.error.message }, { status: 500 });
+  }
+
+  const { data: tenant } = await supabaseAdmin
+    .from('tenants')
+    .select('email, full_name')
+    .eq('id', tenantId)
+    .single();
+
+  if (tenant?.email) {
+    await supabaseAdmin.from('notifications').insert({
+      recipient: 'tenant',
+      tenant_id: tenantId,
+      type: 'payment_recorded',
+      message: `Payment of KSH ${Number(paidAmount) || Number(amount)} recorded for ${monthDue || 'rent'}.`,
+      status: 'sent',
+      created_at: new Date().toISOString(),
+    }).select();
+  }
+
+  return NextResponse.json({ message: 'Payment recorded.' }, { status: 201 });
+}
