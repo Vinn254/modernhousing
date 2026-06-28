@@ -3,6 +3,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 
+interface Tenant {
+  id: string;
+  full_name: string;
+  email: string;
+  lease_end: string;
+  unit?: string;
+  property?: string;
+}
+
 interface Notification {
   id: string;
   admin_id: string;
@@ -16,12 +25,14 @@ interface Notification {
 
 export default function CommunicationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [notificationForm, setNotificationForm] = useState({
     type: 'announcement',
     messageText: '',
+    tenantId: '',
   });
   const [sending, setSending] = useState(false);
 
@@ -56,8 +67,16 @@ export default function CommunicationsPage() {
     }
   }
 
+  async function loadTenants() {
+    try {
+      const response = await fetch('/api/tenants', { headers: await getAuthHeaders() });
+      const result = await response.json();
+      if (response.ok) setTenants(result.tenants ?? []);
+    } catch (e) {}
+  }
+
   useEffect(() => {
-    loadNotifications();
+    Promise.all([loadNotifications(), loadTenants()]);
   }, []);
 
   async function handleSendNotification(event: React.FormEvent<HTMLFormElement>) {
@@ -73,29 +92,65 @@ export default function CommunicationsPage() {
       return;
     }
 
-    const response = await fetch('/api/notifications', {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({
-        adminId: user.id,
-        adminName: user.user_metadata?.full_name || user.email,
-        adminEmail: user.email,
-        recipient: 'project_manager',
-        type: notificationForm.type,
-        message: notificationForm.messageText,
-      }),
-    });
+    const { data: { session } } = await supabase.auth.getSession();
+    const authHeaders = {
+      ...(await getAuthHeaders()),
+      Authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
+    };
 
-    const result = await response.json();
-    setSending(false);
+    // If tenant selected, send to tenant
+    if (notificationForm.tenantId) {
+      const tenant = tenants.find(t => t.id === notificationForm.tenantId);
+      const unit = tenant?.unit || '';
 
-    if (!response.ok) {
-      setError(result.message ?? 'Failed to send notification.');
-      return;
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          tenantId: notificationForm.tenantId,
+          recipient: 'tenant',
+          type: notificationForm.type,
+          message: notificationForm.messageText,
+          adminEmail: user.email,
+        }),
+      });
+
+      const result = await response.json();
+      setSending(false);
+
+      if (!response.ok) {
+        setError(result.message ?? 'Failed to send notification.');
+        return;
+      }
+
+      setMessage('Tenant notification sent successfully.');
+    } else {
+      // Send to all landlords
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          adminId: user.id,
+          adminName: user.user_metadata?.full_name || user.email,
+          adminEmail: user.email,
+          recipient: 'project_manager',
+          type: notificationForm.type,
+          message: notificationForm.messageText,
+        }),
+      });
+
+      const result = await response.json();
+      setSending(false);
+
+      if (!response.ok) {
+        setError(result.message ?? 'Failed to send notification.');
+        return;
+      }
+
+      setMessage('Notification sent successfully.');
     }
 
-    setMessage('Notification sent successfully.');
-    setNotificationForm({ type: 'announcement', messageText: '' });
+    setNotificationForm({ type: 'announcement', messageText: '', tenantId: '' });
     await loadNotifications();
   }
 
@@ -103,7 +158,16 @@ export default function CommunicationsPage() {
     { value: 'announcement', label: 'Announcement' },
     { value: 'reminder', label: 'Reminder' },
     { value: 'overdue', label: 'Overdue Alert' },
+    { value: 'lease_expired', label: 'Lease Expired' },
+    { value: 'lease_ending', label: 'Lease Ending' },
   ];
+
+  // Get overdue tenants (lease ended or ending within 7 days)
+  const today = new Date().toISOString().slice(0, 10);
+  const nextWeek = new Date();
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  const nextWeekStr = nextWeek.toISOString().slice(0, 10);
+  const overdueTenants = tenants.filter(t => t.lease_end <= nextWeekStr);
 
   return (
     <>
@@ -121,10 +185,18 @@ export default function CommunicationsPage() {
               <div className="card-label"><span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
               </span>Send Notification</div>
-              <h3>Create Announcement</h3>
+              <h3>Create Announcement or Send to Tenant</h3>
               <form onSubmit={handleSendNotification} className="form-grid">
-                <select value={notificationForm.type} onChange={e => setNotificationForm(f => ({ ...f, type: e.target.value }))}>
+                <select value={notificationForm.type} onChange={e => setNotificationForm(f => ({ ...f, type: e.target.value }))} required>
                   {notificationTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+                <select value={notificationForm.tenantId} onChange={e => setNotificationForm(f => ({ ...f, tenantId: e.target.value }))}>
+                  <option value="">All tenants (broadcast)</option>
+                  {overdueTenants.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.full_name} - {t.unit} ({t.lease_end ? `Lease ends ${t.lease_end}` : ''})
+                    </option>
+                  ))}
                 </select>
                 <textarea
                   value={notificationForm.messageText}
@@ -142,37 +214,31 @@ export default function CommunicationsPage() {
             <article className="card">
               <div className="card-label"><span className="badge badge-agent">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
-              </span>Message History</div>
-              <h3>Sent Communications</h3>
+              </span>Overdue Tenants</div>
+              <h3>Tenants Needing Attention</h3>
 
-              {loading && <p className="landlord-muted">Loading communications...</p>}
-
-              {!loading && notifications.length === 0 && (
-                <p className="landlord-empty">No communications sent yet.</p>
-              )}
-
-              {!loading && notifications.length > 0 && (
+              {overdueTenants.length === 0 ? (
+                <p className="landlord-muted">No tenants with leases ending soon.</p>
+              ) : (
                 <div className="table-shell">
                   <table className="landlord-table">
                     <thead>
                       <tr>
-                        <th>Type</th>
-                        <th>Message</th>
+                        <th>Tenant</th>
+                        <th>Lease End</th>
                         <th>Status</th>
-                        <th>Date</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {notifications.map(n => (
-                        <tr key={n.id}>
-                          <td>{n.type}</td>
-                          <td>{n.message}</td>
+                      {overdueTenants.map(t => (
+                        <tr key={t.id}>
+                          <td className="landlord-name">{t.full_name}</td>
+                          <td>{t.lease_end}</td>
                           <td>
-                            <span className={`renewal-pill ${n.status === 'sent' ? 'status-active' : 'status-pending'}`}>
-                              {n.status}
+                            <span className={`status-pill ${t.lease_end < today ? 'status-active' : 'status-pending'}`}>
+                              {t.lease_end < today ? 'Overdue' : 'Ending Soon'}
                             </span>
                           </td>
-                          <td>{n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -181,6 +247,48 @@ export default function CommunicationsPage() {
               )}
             </article>
           </div>
+
+          <article className="card" style={{ marginTop: 24 }}>
+            <div className="card-label"><span className="badge badge-agent">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
+            </span>Message History</div>
+            <h3>Sent Communications</h3>
+
+            {loading && <p className="landlord-muted">Loading communications...</p>}
+
+            {!loading && notifications.length === 0 && (
+              <p className="landlord-empty">No communications sent yet.</p>
+            )}
+
+            {!loading && notifications.length > 0 && (
+              <div className="table-shell">
+                <table className="landlord-table">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Message</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notifications.map(n => (
+                      <tr key={n.id}>
+                        <td>{n.type}</td>
+                        <td>{n.message}</td>
+                        <td>
+                          <span className={`renewal-pill ${n.status === 'sent' ? 'status-active' : 'status-pending'}`}>
+                            {n.status}
+                          </span>
+                        </td>
+                        <td>{n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </article>
         </section>
       </main>
 
