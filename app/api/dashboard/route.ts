@@ -21,33 +21,54 @@ async function getAuthContext(request: NextRequest) {
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
 
-  const headers: Record<string, string> = {};
-  if (cookie) headers.cookie = cookie;
-  if (authorization) headers.Authorization = authorization;
-
-  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
-    global: { headers },
-  });
-
   let sessionUser: any = null;
-  const { data: sessionData } = await supabaseAuth.auth.getSession();
-  sessionUser = sessionData?.session?.user;
 
-  if (!sessionUser && authorization?.startsWith('Bearer ')) {
+  // Method 1: Try Bearer token first (for API calls from frontend)
+  if (authorization?.startsWith('Bearer ')) {
     try {
       const token = authorization.split(' ')[1];
+      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '');
       const { data: { user } } = await supabaseAuth.auth.getUser(token);
       sessionUser = user;
     } catch (e) {}
   }
 
+  // Method 2: Try cookie-based session
+  if (!sessionUser && cookie) {
+    try {
+      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '');
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      sessionUser = session?.user;
+    } catch (e) {}
+  }
+
   if (!sessionUser) {
-    return { isSuperAdmin: false, userId: undefined };
+    return { isSuperAdmin: false, userId: undefined, organizationId: null, profile: null };
+  }
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, user_id, organization_id, role, full_name, email')
+    .eq('user_id', sessionUser.id)
+    .single();
+
+  let orgId = profile?.organization_id ?? null;
+
+  // Fallback: query by email
+  if (!orgId && sessionUser.email) {
+    const { data: profileByEmail } = await supabaseAdmin
+      .from('profiles')
+      .select('id, user_id, organization_id, role, full_name, email')
+      .eq('email', sessionUser.email)
+      .single();
+    orgId = profileByEmail?.organization_id ?? null;
   }
 
   return {
-    isSuperAdmin: sessionUser.user_metadata?.role === 'super_admin',
+    isSuperAdmin: profile?.role === 'super_admin',
     userId: sessionUser.id,
+    organizationId: orgId,
+    profile,
   };
 }
 
@@ -60,47 +81,27 @@ export async function GET(request: NextRequest) {
     let tenantsQuery: any = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
     let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
 
-    if (!authContext.isSuperAdmin) {
-      if (authContext.userId) {
-        propertiesQuery = propertiesQuery.eq('user_id', authContext.userId);
-        const orgProps = await propertiesQuery;
-        const propIds = (orgProps.data ?? []).map((p: any) => p.id);
+    if (!authContext.isSuperAdmin && authContext.organizationId) {
+      propertiesQuery = propertiesQuery.eq('organization_id', authContext.organizationId);
+      const orgProps = await propertiesQuery;
+      const propIds = (orgProps.data ?? []).map((p: any) => p.id);
 
-        if (propIds.length === 0) {
-          return NextResponse.json({
-            properties: 0,
-            agents: 0,
-            tenants: 0,
-            total_payments: 0,
-            total_balance: 0,
-            tenants_with_analytics: [],
-          });
-        }
-
+      if (propIds.length > 0) {
         const unitIds = (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map((u: any) => u.id) ?? [];
         if (unitIds.length > 0) {
           tenantsQuery = tenantsQuery.in('unit_id', unitIds);
           paymentsQuery = paymentsQuery.in('tenant_id', (await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)).data?.map((t: any) => t.id) ?? []);
-        } else {
-          return NextResponse.json({
-            properties: 0,
-            agents: 0,
-            tenants: 0,
-            total_payments: 0,
-            total_balance: 0,
-            tenants_with_analytics: [],
-          });
         }
-      } else {
-        return NextResponse.json({
-          properties: 0,
-          agents: 0,
-          tenants: 0,
-          total_payments: 0,
-          total_balance: 0,
-          tenants_with_analytics: [],
-        });
       }
+    } else if (!authContext.isSuperAdmin && !authContext.organizationId) {
+      return NextResponse.json({
+        properties: 0,
+        agents: 0,
+        tenants: 0,
+        total_payments: 0,
+        total_balance: 0,
+        tenants_with_analytics: [],
+      });
     }
 
     const [{ data: propertiesData, error: propertiesError }, { data: tenantsData, error: tenantsError }, { data: paymentsData, error: paymentsError }] = await Promise.all([
@@ -116,17 +117,9 @@ export async function GET(request: NextRequest) {
     const allTenants = tenantsData ?? [];
 
     const propertyTenantIds = new Set<string>();
-    if (propertyId && !authContext.isSuperAdmin && authContext.userId) {
+    if (propertyId) {
       try {
         const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', propertyId);
-        const unitIds = new Set((units ?? []).map((unit: any) => unit.id));
-        allTenants.forEach((tenant: any) => {
-          if (unitIds.has(tenant.unit_id)) propertyTenantIds.add(tenant.id);
-        });
-      } catch {}
-    } else if (propertyId && authContext.isSuperAdmin) {
-      try {
-        const { data: units } = await supabaseAdmin.from('units').select('id, property_id').eq('property_id', propertyId);
         const unitIds = new Set((units ?? []).map((unit: any) => unit.id));
         allTenants.forEach((tenant: any) => {
           if (unitIds.has(tenant.unit_id)) propertyTenantIds.add(tenant.id);
@@ -140,11 +133,11 @@ export async function GET(request: NextRequest) {
     const financialPayments = paymentList.filter((payment: any) => !nonPaymentTypes.includes(payment.transaction_type));
 
     let agentList = (await getAllAdminUsers().catch(() => []))?.filter((user: any) => user.user_metadata?.role === 'agent') ?? [];
-    if (!authContext.isSuperAdmin && authContext.userId) {
+    if (!authContext.isSuperAdmin && authContext.organizationId) {
       const { data: orgPropsForAgents } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('user_id', authContext.userId);
+        .eq('organization_id', authContext.organizationId);
       const validAgentPropIds = new Set((orgPropsForAgents ?? []).map((p: any) => p.id));
       agentList = agentList.filter((user) => {
         if (propertyId) return user.user_metadata?.property_id === propertyId;

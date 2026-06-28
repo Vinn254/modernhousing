@@ -39,7 +39,7 @@ async function getAuthContext(request: NextRequest) {
   }
 
   if (!sessionUser) {
-    return { isSuperAdmin: false, profile: null, userId: undefined };
+    return { isSuperAdmin: false, profile: null, organizationId: null };
   }
 
   const { data: profile } = await supabaseAdmin
@@ -48,23 +48,22 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionUser.id)
     .single();
 
-  if (!profile && sessionUser.email) {
+  let orgId = profile?.organization_id ?? null;
+
+  // Fallback: query by email
+  if (!orgId && sessionUser.email) {
     const { data: profileByEmail } = await supabaseAdmin
       .from('profiles')
       .select('id, user_id, organization_id, role, full_name, email')
       .eq('email', sessionUser.email)
       .single();
-    return {
-      isSuperAdmin: profileByEmail?.role === 'super_admin',
-      profile: profileByEmail,
-      userId: sessionUser.id,
-    };
+    orgId = profileByEmail?.organization_id ?? null;
   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
     profile,
-    userId: sessionUser.id,
+    organizationId: orgId,
   };
 }
 
@@ -86,15 +85,16 @@ export async function GET(request: NextRequest) {
       `);
 
     if (!authContext.isSuperAdmin) {
-      if (!authContext.userId) {
+      if (!authContext.organizationId) {
         return NextResponse.json({ units: [] });
       }
 
-      const { data: userProps } = await supabaseAdmin
+      // Get properties in this organization
+      const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('user_id', authContext.userId);
-      const propIds = (userProps ?? []).map((p: any) => p.id);
+        .eq('organization_id', authContext.organizationId);
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
 
       if (propIds.length === 0) {
         return NextResponse.json({ units: [] });
@@ -135,49 +135,49 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-    try {
-      const body = await request.json();
-      const { propertyId, unitNumber, rentAmount, size, agentEmail, occupancyStatus } = body;
+  try {
+    const body = await request.json();
+    const { propertyId, unitNumber, rentAmount, size, agentEmail, occupancyStatus } = body;
 
-      if (!propertyId || !unitNumber) {
-        return badRequest('Property ID and unit number are required.');
-      }
-
-      const authContext = await getAuthContext(request);
-      if (!authContext.isSuperAdmin) {
-        if (!authContext.userId) {
-          return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
-        }
-        const { data: prop } = await supabaseAdmin
-          .from('properties')
-          .select('id')
-          .eq('id', propertyId)
-          .eq('user_id', authContext.userId)
-          .maybeSingle();
-
-        if (!prop) {
-          return NextResponse.json({ message: 'You can only add units to properties in your own landlord workspace.' }, { status: 403 });
-        }
-      }
-
-      const result = await supabaseAdmin.from('units').insert({
-        property_id: propertyId,
-        unit_number: unitNumber,
-        rent_amount: rentAmount ?? 0,
-        size,
-        agent_email: agentEmail,
-        occupancy_status: occupancyStatus ?? 'vacant',
-      }).select().single();
-
-      if (result.error) {
-        return requestError(result.error);
-      }
-
-      return NextResponse.json({ unit: result.data, message: 'Unit created.' }, { status: 201 });
-    } catch (error: any) {
-      return NextResponse.json({ message: error.message ?? 'Unable to create unit.' }, { status: 500 });
+    if (!propertyId || !unitNumber) {
+      return badRequest('Property ID and unit number are required.');
     }
+
+    const authContext = await getAuthContext(request);
+    if (!authContext.isSuperAdmin) {
+      if (!authContext.organizationId) {
+        return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
+      }
+      const { data: prop } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('id', propertyId)
+        .eq('organization_id', authContext.organizationId)
+        .maybeSingle();
+
+      if (!prop) {
+        return NextResponse.json({ message: 'You can only add units to properties in your own landlord workspace.' }, { status: 403 });
+      }
+    }
+
+    const result = await supabaseAdmin.from('units').insert({
+      property_id: propertyId,
+      unit_number: unitNumber,
+      rent_amount: rentAmount ?? 0,
+      size,
+      agent_email: agentEmail,
+      occupancy_status: occupancyStatus ?? 'vacant',
+    }).select().single();
+
+    if (result.error) {
+      return requestError(result.error);
+    }
+
+    return NextResponse.json({ unit: result.data, message: 'Unit created.' }, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message ?? 'Unable to create unit.' }, { status: 500 });
   }
+}
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -190,14 +190,14 @@ export async function PATCH(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin) {
-      if (!authContext.userId) {
+      if (!authContext.organizationId) {
         return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
       }
       const { data: unitProp } = await supabaseAdmin
         .from('units')
-        .select('property_id, properties!inner(user_id)')
+        .select('property_id, properties!inner(organization_id)')
         .eq('id', id)
-        .eq('properties.user_id', authContext.userId)
+        .eq('properties.organization_id', authContext.organizationId)
         .maybeSingle();
 
       if (!unitProp) {
@@ -234,14 +234,14 @@ export async function DELETE(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin) {
-      if (!authContext.userId) {
+      if (!authContext.organizationId) {
         return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
       }
       const { data: unitProp } = await supabaseAdmin
         .from('units')
-        .select('property_id, properties!inner(user_id)')
+        .select('property_id, properties!inner(organization_id)')
         .eq('id', id)
-        .eq('properties.user_id', authContext.userId)
+        .eq('properties.organization_id', authContext.organizationId)
         .maybeSingle();
 
       if (!unitProp) {

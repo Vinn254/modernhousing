@@ -26,17 +26,11 @@ const emptyForm = {
 };
 
 async function getAuthHeaders() {
-    const { data } = await supabase.auth.getSession();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
-
-    // Include cookies for server-side session verification
-    if (typeof document !== 'undefined') {
-      headers.cookie = document.cookie;
-    }
-
-    return headers;
-  }
+  const { data } = await supabase.auth.getSession();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+  return headers;
+}
 
 export default function PropertiesPage() {
   const formRef = useRef<HTMLDivElement>(null);

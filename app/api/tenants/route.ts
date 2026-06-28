@@ -14,28 +14,29 @@ async function getAuthContext(request: NextRequest) {
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
 
-  const headers: Record<string, string> = {};
-  if (cookie) headers.cookie = cookie;
-  if (authorization) headers.Authorization = authorization;
-
-  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
-    global: { headers },
-  });
-
   let sessionUser: any = null;
-  const { data: sessionData } = await supabaseAuth.auth.getSession();
-  sessionUser = sessionData?.session?.user;
 
-  if (!sessionUser && authorization?.startsWith('Bearer ')) {
+  // Method 1: Try Bearer token first
+  if (authorization?.startsWith('Bearer ')) {
     try {
       const token = authorization.split(' ')[1];
+      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '');
       const { data: { user } } = await supabaseAuth.auth.getUser(token);
       sessionUser = user;
     } catch (e) {}
   }
 
+  // Method 2: Try cookie-based session
+  if (!sessionUser && cookie) {
+    try {
+      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '');
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      sessionUser = session?.user;
+    } catch (e) {}
+  }
+
   if (!sessionUser) {
-    return { isSuperAdmin: false, profile: null, userId: undefined };
+    return { isSuperAdmin: false, userId: undefined, organizationId: null };
   }
 
   const { data: profile } = await supabaseAdmin
@@ -44,23 +45,22 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionUser.id)
     .single();
 
-  if (!profile && sessionUser.email) {
+  let orgId = profile?.organization_id ?? null;
+
+  // Fallback: query by email
+  if (!orgId && sessionUser.email) {
     const { data: profileByEmail } = await supabaseAdmin
       .from('profiles')
       .select('id, user_id, organization_id, role, full_name, email')
       .eq('email', sessionUser.email)
       .single();
-    return {
-      isSuperAdmin: profileByEmail?.role === 'super_admin',
-      profile: profileByEmail,
-      userId: sessionUser.id,
-    };
+    orgId = profileByEmail?.organization_id ?? null;
   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
-    profile,
     userId: sessionUser.id,
+    organizationId: orgId,
   };
 }
 
@@ -68,76 +68,51 @@ export async function GET(request: NextRequest) {
    try {
       const authContext = await getAuthContext(request);
 
-      if (!authContext.isSuperAdmin && !authContext.userId) {
+      if (!authContext.isSuperAdmin && !authContext.organizationId) {
         return NextResponse.json({ tenants: [] });
       }
 
-      if (!authContext.isSuperAdmin && authContext.userId) {
-        const { data: userProps } = await supabaseAdmin
-          .from('properties')
-          .select('id')
-          .eq('user_id', authContext.userId);
-        const propIds = (userProps ?? []).map((p: any) => p.id);
+      // Get properties in this organization
+      const { data: orgProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('organization_id', authContext.organizationId ?? '');
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
 
-        if (propIds.length === 0) {
-          return NextResponse.json({ tenants: [] });
-        }
-
+      if (propIds.length > 0) {
         const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
         const unitIds = (orgUnits ?? []).map((u: any) => u.id);
 
-        if (unitIds.length === 0) {
-          return NextResponse.json({ tenants: [] });
+        if (unitIds.length > 0) {
+          const { data, error } = await supabaseAdmin
+            .from('tenants')
+            .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(id, name, address))')
+            .in('unit_id', unitIds)
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+
+          const tenants = (data ?? []).map((tenant: any) => ({
+            id: tenant.id,
+            full_name: tenant.full_name,
+            email: tenant.email,
+            phone: tenant.phone,
+            unit: tenant.units?.unit_number ?? '',
+            property: tenant.units?.properties?.name ?? '',
+            property_id: tenant.units?.properties?.id ?? '',
+            address: tenant.units?.properties?.address ?? '',
+            lease_start: tenant.lease_start,
+            lease_end: tenant.lease_end,
+          }));
+
+          return NextResponse.json({ tenants });
         }
-
-        const { data, error } = await supabaseAdmin
-          .from('tenants')
-          .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(id, name, address))')
-          .in('unit_id', unitIds)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        const tenants = (data ?? []).map((tenant: any) => ({
-          id: tenant.id,
-          full_name: tenant.full_name,
-          email: tenant.email,
-          phone: tenant.phone,
-          unit: tenant.units?.unit_number ?? '',
-          property: tenant.units?.properties?.name ?? '',
-          property_id: tenant.units?.properties?.id ?? '',
-          address: tenant.units?.properties?.address ?? '',
-          lease_start: tenant.lease_start,
-          lease_end: tenant.lease_end,
-        }));
-
-        return NextResponse.json({ tenants });
+        return NextResponse.json({ tenants: [] });
       }
-
-      const { data, error } = await supabaseAdmin
-        .from('tenants')
-        .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(name, address))')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const tenants = (data ?? []).map((tenant: any) => ({
-        id: tenant.id,
-        full_name: tenant.full_name,
-        email: tenant.email,
-        phone: tenant.phone,
-        unit: tenant.units?.unit_number ?? '',
-        property: tenant.units?.properties?.name ?? '',
-        property_id: tenant.units?.properties?.id ?? '',
-        address: tenant.units?.properties?.address ?? '',
-        lease_start: tenant.lease_start,
-        lease_end: tenant.lease_end,
-      }));
-
-    return NextResponse.json({ tenants });
-   } catch (error: any) {
-     return NextResponse.json({ message: error.message ?? 'Unable to load tenants.' }, { status: 500 });
-   }
+      return NextResponse.json({ tenants: [] });
+    } catch (error: any) {
+      return NextResponse.json({ message: error.message ?? 'Unable to load tenants.' }, { status: 500 });
+    }
   }
 
 export async function POST(request: NextRequest) {
@@ -152,21 +127,22 @@ export async function POST(request: NextRequest) {
    let finalUnitId = unitId;
 
    if (!authContext.isSuperAdmin && propertyId) {
-     if (!authContext.userId) {
+     if (!authContext.organizationId) {
        return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
      }
      const { data: prop } = await supabaseAdmin
        .from('properties')
        .select('id')
        .eq('id', propertyId)
-       .eq('user_id', authContext.userId)
+       .eq('organization_id', authContext.organizationId)
        .maybeSingle();
+
      if (!prop) {
        return NextResponse.json({ message: 'You can only add tenants to properties in your own landlord workspace.' }, { status: 403 });
      }
    }
 
-   if (propertyId) {
+   if (propertyId && !finalUnitId) {
      const unitName = String(unitId || '').trim();
      if (unitName) {
        const { data: existingUnit } = await supabaseAdmin
@@ -222,14 +198,14 @@ export async function PATCH(request: NextRequest) {
 
      const authContext = await getAuthContext(request);
      if (!authContext.isSuperAdmin) {
-       if (!authContext.userId) {
+       if (!authContext.organizationId) {
          return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
        }
 
        const { data: orgProps } = await supabaseAdmin
          .from('properties')
          .select('id')
-         .eq('user_id', authContext.userId);
+         .eq('organization_id', authContext.organizationId);
        const propIds = (orgProps ?? []).map((p: any) => p.id);
 
        if (propIds.length > 0) {
@@ -280,14 +256,14 @@ export async function DELETE(request: NextRequest) {
 
      const authContext = await getAuthContext(request);
      if (!authContext.isSuperAdmin) {
-       if (!authContext.userId) {
+       if (!authContext.organizationId) {
          return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
        }
 
        const { data: orgProps } = await supabaseAdmin
          .from('properties')
          .select('id')
-         .eq('user_id', authContext.userId);
+         .eq('organization_id', authContext.organizationId);
        const propIds = (orgProps ?? []).map((p: any) => p.id);
 
        if (propIds.length > 0) {

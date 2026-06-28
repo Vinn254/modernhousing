@@ -20,14 +20,14 @@ create table profiles (
 );
 
 create table properties (
-  id uuid primary key default uuid_generate_v4(),
-  organization_id uuid references organizations(id) on delete cascade,
-  name text not null,
-  address text not null,
-  size text,
-  amenities text,
-  ownership_info text,
-  created_at timestamp with time zone default now()
+   id uuid primary key default uuid_generate_v4(),
+   organization_id uuid references organizations(id) on delete cascade,
+   name text not null,
+   address text not null,
+   size text,
+   amenities text,
+   ownership_info text,
+   created_at timestamp with time zone default now()
 );
 
 create table units (

@@ -34,28 +34,29 @@ async function getAuthContext(request: NextRequest) {
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
 
-  const headers: Record<string, string> = {};
-  if (cookie) headers.cookie = cookie;
-  if (authorization) headers.Authorization = authorization;
-
-  const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
-    global: { headers },
-  });
-
   let sessionUser: any = null;
-  const { data: sessionData } = await supabaseAuth.auth.getSession();
-  sessionUser = sessionData?.session?.user;
 
-  if (!sessionUser && authorization?.startsWith('Bearer ')) {
+  // Method 1: Try Bearer token first
+  if (authorization?.startsWith('Bearer ')) {
     try {
       const token = authorization.split(' ')[1];
+      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '');
       const { data: { user } } = await supabaseAuth.auth.getUser(token);
       sessionUser = user;
     } catch (e) {}
   }
 
+  // Method 2: Try cookie-based session
+  if (!sessionUser && cookie) {
+    try {
+      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '');
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      sessionUser = session?.user;
+    } catch (e) {}
+  }
+
   if (!sessionUser) {
-    return { isSuperAdmin: false, profile: null, userId: undefined };
+    return { isSuperAdmin: false, profile: null, userId: undefined, organizationId: null };
   }
 
   const { data: profile } = await supabaseAdmin
@@ -64,23 +65,23 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionUser.id)
     .single();
 
-  if (!profile && sessionUser.email) {
+  let orgId = profile?.organization_id ?? null;
+
+  // Fallback: query by email
+  if (!orgId && sessionUser.email) {
     const { data: profileByEmail } = await supabaseAdmin
       .from('profiles')
       .select('id, user_id, organization_id, role, full_name, email')
       .eq('email', sessionUser.email)
       .single();
-    return {
-      isSuperAdmin: profileByEmail?.role === 'super_admin',
-      profile: profileByEmail,
-      userId: sessionUser.id,
-    };
+    orgId = profileByEmail?.organization_id ?? null;
   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
     profile,
     userId: sessionUser.id,
+    organizationId: orgId,
   };
 }
 
@@ -176,24 +177,25 @@ export async function GET(request: NextRequest) {
 
     const profiles = (profilesResult.data ?? []) as AgentProfile[];
 
+    // Filter agents by organization
     let agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
 
     if (!authContext.isSuperAdmin) {
-      if (!authContext.userId) {
+      if (!authContext.organizationId) {
         return NextResponse.json({ agents: [] });
       }
 
       const { data: orgProps } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('user_id', authContext.userId);
+        .eq('organization_id', authContext.organizationId);
       const validPropertyIds = new Set((orgProps ?? []).map((p: any) => p.id));
 
       agents = agents.filter((agent) => {
         if (propertyId) return agent.property_id === propertyId;
         return agent.property_id && validPropertyIds.has(agent.property_id);
       });
-    } else if (propertyId) {
+    } else if (propertyId && authContext.isSuperAdmin) {
       agents = agents.filter((agent) => agent.property_id === propertyId);
     }
 
@@ -222,19 +224,17 @@ export async function POST(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin && authContext.userId && propertyId) {
+    if (!authContext.isSuperAdmin && authContext.organizationId && propertyId) {
       const { data: prop } = await supabaseAdmin
         .from('properties')
-        .select('id, user_id')
+        .select('id, organization_id')
         .eq('id', propertyId)
-        .eq('user_id', authContext.userId)
+        .eq('organization_id', authContext.organizationId)
         .maybeSingle();
 
       if (!prop) {
         return NextResponse.json({ message: 'You can only assign agents to properties in your own landlord workspace.' }, { status: 403 });
       }
-    } else if (!authContext.isSuperAdmin && !authContext.userId && propertyId) {
-      return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
     }
 
     const existingUser = await getUserByEmail(email);
@@ -252,13 +252,7 @@ export async function POST(request: NextRequest) {
       throw new Error('Unable to create agent.');
     }
 
-    // Get organization_id from the property
-    let agentOrgId: string | null = null;
-    if (propertyId) {
-      const { data: prop } = await supabaseAdmin.from('properties').select('organization_id').eq('id', propertyId).single();
-      agentOrgId = prop?.organization_id ?? null;
-    }
-
+    const agentOrgId = authContext.organizationId;
     const profile = await upsertAgentProfile(user.id, fullName, email, phone, agentOrgId);
 
     return NextResponse.json({ agent: normalizeAgent(user, profile) }, { status: existingUser ? 200 : 201 });
@@ -281,13 +275,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    const currentUserId = authContext.userId;
-    if (!authContext.isSuperAdmin && currentUserId && propertyId) {
+    if (!authContext.isSuperAdmin && authContext.organizationId && propertyId) {
       const { data: prop } = await supabaseAdmin
         .from('properties')
         .select('id')
         .eq('id', propertyId)
-        .eq('user_id', currentUserId)
+        .eq('organization_id', authContext.organizationId)
         .maybeSingle();
 
       if (!prop) {
@@ -328,7 +321,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin && authContext.userId) {
+    if (!authContext.isSuperAdmin) {
       const { data: agentProfile } = await supabaseAdmin
         .from('profiles')
         .select('user_id')
@@ -340,12 +333,12 @@ export async function DELETE(request: NextRequest) {
         const agent = users.find((item) => item.id === userId);
         const agentPropertyId = agent?.user_metadata?.property_id;
 
-        if (agentPropertyId) {
+        if (agentPropertyId && authContext.organizationId) {
           const { data: prop } = await supabaseAdmin
             .from('properties')
             .select('id')
             .eq('id', agentPropertyId)
-            .eq('user_id', authContext.userId)
+            .eq('organization_id', authContext.organizationId)
             .maybeSingle();
 
           if (!prop) {
