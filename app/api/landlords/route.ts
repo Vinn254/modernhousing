@@ -77,6 +77,25 @@ async function upsertProfile(userId: string, fullName: string, email: string, or
     return data as LandlordProfile;
   }
 
+async function findOrCreateOrganization(name: string): Promise<string> {
+    const { data: existing } = await supabaseAdmin
+      .from('organizations')
+      .select('id')
+      .eq('name', name)
+      .maybeSingle();
+
+    if (existing?.id) return existing.id;
+
+    const { data: created, error } = await supabaseAdmin
+      .from('organizations')
+      .insert({ name, details: `Created for ${name}` })
+      .select('id')
+      .single();
+
+    if (error || !created?.id) throw new Error('Unable to create organization.');
+    return created.id;
+  }
+
 async function updateLandlordMetadata(userId: string, input: { fullName?: string; status?: LandlordProfile['status']; password?: string }) {
   const users = await getAllAdminUsers();
   const user = users.find((item) => item.id === userId);
@@ -149,7 +168,8 @@ export async function POST(request: NextRequest) {
 
     if (!user) throw new Error('Unable to create landlord.');
 
-    const profile = await upsertProfile(user.id, fullName, email, null, status, phone);
+    const organizationId = await findOrCreateOrganization(organization);
+    const profile = await upsertProfile(user.id, fullName, email, organizationId, status, phone);
 
     return NextResponse.json({ landlord: normalizeLandlord(user, profile) }, { status: existingUser ? 200 : 201 });
   } catch (error: any) {
@@ -165,13 +185,15 @@ export async function PATCH(request: NextRequest) {
     const status = body.status as LandlordProfile['status'] | undefined;
     const password = body.password ? String(body.password) : '';
     const phone = body.phone ? String(body.phone).trim() : undefined;
+    const organization = body.organization ? String(body.organization).trim() : undefined;
 
     if (!userId || !fullName) {
       return badRequest('Landlord ID and full name are required.');
     }
 
     const user = await updateLandlordMetadata(userId, { fullName, status, password: password || undefined });
-    const profile = await upsertProfile(userId, fullName, user.email, null, status ?? 'active', phone ?? undefined);
+    const organizationId = organization ? await findOrCreateOrganization(organization) : null;
+    const profile = await upsertProfile(userId, fullName, user.email, organizationId, status ?? 'active', phone ?? undefined);
 
     return NextResponse.json({ landlord: normalizeLandlord(user, profile) });
   } catch (error: any) {

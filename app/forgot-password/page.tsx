@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+const SUPER_ADMIN_EMAIL = 'vin.oumaotieno@gmail.com';
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,6 +15,12 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError('');
     setMessage('');
+
+    if (email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+      setError('Password reset is not available for the super admin account. Please contact support.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/auth/forgot-password', {

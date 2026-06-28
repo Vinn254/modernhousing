@@ -11,7 +11,7 @@ const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 async function createSuperAdmin() {
   const email = 'vin.oumaotieno@gmail.com';
-  const password = 'Vin@2020';
+  const password = '123456789';
   const fullName = 'Super Admin';
 
   const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
