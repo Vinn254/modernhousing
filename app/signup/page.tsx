@@ -47,6 +47,14 @@ export default function SignupPage() {
       return;
     }
 
+    // Auto sign in after successful registration
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError) {
+      setError(signInError.message ?? 'Account created. Please sign in.');
+      setLoading(false);
+      return;
+    }
+
     router.push('/admin');
   }
 

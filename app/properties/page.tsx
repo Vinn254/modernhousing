@@ -42,57 +42,6 @@ export default function PropertiesPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [userOrgId, setUserOrgId] = useState<string | null>(null);
-  const [orgReady, setOrgReady] = useState(false);
-
-  useEffect(() => {
-    async function fetchUserOrg() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setOrgReady(true);
-          return;
-        }
-        const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('user_id', user.id).single();
-        setUserOrgId(profile?.organization_id ?? null);
-        
-        // If no org, create one
-        if (!profile?.organization_id) {
-          setError('Setting up your workspace...');
-          const orgName = user.email?.split('@')[0] ?? 'Property Manager';
-          
-          // First create organization
-          const { data: newOrg, error: orgError } = await supabase.from('organizations').insert({ name: `${orgName} Organization` }).select('id').single();
-          if (orgError) {
-            setError(`Failed to create workspace: ${orgError.message}`);
-            setOrgReady(true);
-            return;
-          }
-          
-          // Then update or create profile
-          if (profile) {
-            await supabase.from('profiles').update({ organization_id: newOrg.id }).eq('user_id', user.id);
-          } else {
-            await supabase.from('profiles').insert({
-              user_id: user.id,
-              full_name: user.user_metadata?.full_name ?? user.email,
-              email: user.email,
-              role: 'project_manager',
-              organization_id: newOrg.id,
-              status: 'active',
-            });
-          }
-          setUserOrgId(newOrg.id);
-          setError('');
-        }
-        setOrgReady(true);
-      } catch (err: any) {
-        setError(err.message ?? 'Failed to setup workspace');
-        setOrgReady(true);
-      }
-    }
-    fetchUserOrg();
-  }, []);
 
   async function loadProperties() {
     setLoading(true);
@@ -114,8 +63,8 @@ export default function PropertiesPage() {
   }
 
   useEffect(() => {
-    if (orgReady) loadProperties();
-  }, [orgReady]);
+    loadProperties();
+  }, []);
 
   useEffect(() => {
     if (!selectedProperty) return;

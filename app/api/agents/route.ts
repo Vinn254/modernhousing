@@ -228,7 +228,6 @@ export async function POST(request: NextRequest) {
     const phone = body.phone ? String(body.phone).trim() : undefined;
     const propertyId = String(body.propertyId ?? body.property_id ?? '').trim();
     const propertyName = String(body.propertyName ?? body.property_name ?? '').trim();
-    const landlordId = String(body.landlordId ?? body.landlord_id ?? '').trim();
 
     if (!email || !password || !fullName) {
       return badRequest('Email, password, and full name are required.');
@@ -242,7 +241,7 @@ export async function POST(request: NextRequest) {
     if (!authContext.isSuperAdmin && authContext.organization_id && propertyId) {
       const { data: prop } = await supabaseAdmin
         .from('properties')
-        .select('id')
+        .select('id, organization_id')
         .eq('id', propertyId)
         .eq('organization_id', authContext.organization_id)
         .maybeSingle();
@@ -258,18 +257,25 @@ export async function POST(request: NextRequest) {
     let user = existingUser;
 
     if (user) {
-      user = await updateAgentMetadata(user.id, { fullName, propertyId, propertyName, status: 'active', landlordId });
+      user = await updateAgentMetadata(user.id, { fullName, propertyId, propertyName, status: 'active' });
     } else {
       const created = await createAdminUser({ email, password, fullName, role: 'agent', phone });
       user = created.user;
-      user = await updateAgentMetadata(user.id, { fullName, propertyId, propertyName, status: 'active', landlordId });
+      user = await updateAgentMetadata(user.id, { fullName, propertyId, propertyName, status: 'active' });
     }
 
     if (!user) {
       throw new Error('Unable to create agent.');
     }
 
-    const profile = await upsertAgentProfile(user.id, fullName, email, phone);
+    // Get organization_id from the property
+    let agentOrgId: string | null = null;
+    if (propertyId) {
+      const { data: prop } = await supabaseAdmin.from('properties').select('organization_id').eq('id', propertyId).single();
+      agentOrgId = prop?.organization_id ?? null;
+    }
+
+    const profile = await upsertAgentProfile(user.id, fullName, email, phone, agentOrgId);
 
     return NextResponse.json({ agent: normalizeAgent(user, profile) }, { status: existingUser ? 200 : 201 });
   } catch (error: any) {
