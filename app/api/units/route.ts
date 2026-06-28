@@ -206,7 +206,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const id = request.nextUrl.searchParams.get('id');
     const body = await request.json();
-    const { unitNumber, rentAmount, size, agentEmail, occupancyStatus } = body;
+    const { unitNumber, rentAmount, size, agentEmail, occupancyStatus, unitType } = body || {};
 
     if (!id) {
       return NextResponse.json({ message: 'Unit ID is required.' }, { status: 400 });
@@ -217,14 +217,14 @@ export async function PATCH(request: NextRequest) {
       if (!authContext.organizationId) {
         return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
       }
-      const { data: unitProp } = await supabaseAdmin
+      const { data: unitData } = await supabaseAdmin
         .from('units')
         .select('property_id, properties!inner(organization_id)')
         .eq('id', id)
         .eq('properties.organization_id', authContext.organizationId)
         .maybeSingle();
 
-      if (!unitProp) {
+      if (!unitData) {
         return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
       }
     }
@@ -235,6 +235,7 @@ export async function PATCH(request: NextRequest) {
     if (size !== undefined) updates.size = size;
     if (agentEmail !== undefined) updates.agent_email = agentEmail;
     if (occupancyStatus !== undefined) updates.occupancy_status = occupancyStatus;
+    if (unitType !== undefined) updates.unit_type = unitType;
 
     const result = await supabaseAdmin.from('units').update(updates).eq('id', id).select().single();
 
@@ -244,6 +245,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ unit: result.data, message: 'Unit updated.' });
   } catch (error: any) {
+    console.error('PATCH /api/units error:', error);
     return NextResponse.json({ message: error.message ?? 'Unable to update unit.' }, { status: 500 });
   }
 }
