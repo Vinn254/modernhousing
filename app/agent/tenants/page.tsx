@@ -5,19 +5,18 @@ import { supabase } from '../../../lib/supabaseClient';
 
 interface Property { id: string; name: string; address: string; }
 interface Tenant {
-  id: string; full_name: string; email: string; unit: string; property: string;
+  id: string; full_name: string; email: string; unit: string; property: string; unit_id?: string;
   lease_start: string; lease_end: string;
 }
 
 export default function AgentTenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [agentTenantName, setAgentTenantName] = useState('');
   const [agentTenantEmail, setAgentTenantEmail] = useState('');
   const [agentTenantPhone, setAgentTenantPhone] = useState('');
-  const [selectedPropertyId, setSelectedPropertyId] = useState('');
   const [agentTenantUnit, setAgentTenantUnit] = useState('');
   const [agentLeaseStart, setAgentLeaseStart] = useState('');
   const [agentLeaseEnd, setAgentLeaseEnd] = useState('');
@@ -26,23 +25,25 @@ export default function AgentTenantsPage() {
 
   async function loadData() {
     setLoading(true);
+    setError('');
+
     try {
-      const [propertiesResponse, tenantsResponse] = await Promise.all([
-        fetch('/api/properties'),
-        fetch('/api/tenants'),
-      ]);
-      const propertiesResult = await propertiesResponse.json();
-      const tenantsResult = await tenantsResponse.json();
-      if (propertiesResponse.ok) setProperties(propertiesResult.properties ?? []);
-
       const storedPropertyId = localStorage.getItem('agentPropertyId');
-      if (storedPropertyId && tenantsResult.tenants) {
-        setTenants(tenantsResult.tenants.filter((t: any) => t.property_id === storedPropertyId));
-      } else {
-        setTenants(tenantsResult.tenants ?? []);
-      }
+      const [tenantsResponse, unitsResponse] = await Promise.all([
+        fetch('/api/tenants'),
+        fetch('/api/units'),
+      ]);
+      const tenantsResult = await tenantsResponse.json();
+      const unitsResult = await unitsResponse.json();
 
-      if (storedPropertyId) setSelectedPropertyId(storedPropertyId);
+      if (tenantsResponse.ok) {
+        if (storedPropertyId) {
+          setTenants(tenantsResult.tenants.filter((t: any) => (t.property_id || t.units?.property_id) === storedPropertyId));
+        } else {
+          setTenants(tenantsResult.tenants ?? []);
+        }
+      }
+      if (unitsResponse.ok) setUnits(unitsResult.units ?? []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -50,20 +51,21 @@ export default function AgentTenantsPage() {
     }
   }
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   async function handleAddTenant(event: React.FormEvent) {
     event.preventDefault();
     setAgentLoading(true);
+
+    const selectedUnit = units.find(u => u.unit_number === agentTenantUnit);
+    const storedPropertyId = localStorage.getItem('agentPropertyId');
 
     const response = await fetch('/api/tenants', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         fullName: agentTenantName, email: agentTenantEmail, phone: agentTenantPhone,
-        unitId: agentTenantUnit, propertyId: selectedPropertyId,
+        unitId: selectedUnit?.id || agentTenantUnit, propertyId: storedPropertyId,
         leaseStart: agentLeaseStart, leaseEnd: agentLeaseEnd,
         depositAmount: Number(agentDeposit),
       }),
@@ -98,11 +100,12 @@ export default function AgentTenantsPage() {
               <input value={agentTenantName} onChange={(event) => setAgentTenantName(event.target.value)} required placeholder="Tenant name" />
               <input type="email" value={agentTenantEmail} onChange={(event) => setAgentTenantEmail(event.target.value)} required placeholder="Tenant email" />
               <input value={agentTenantPhone} onChange={(event) => setAgentTenantPhone(event.target.value)} placeholder="Phone" />
-              <select value={selectedPropertyId} onChange={(event) => setSelectedPropertyId(event.target.value)} required>
-                <option value="">Select property</option>
-                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              <select value={agentTenantUnit} onChange={(event) => setAgentTenantUnit(event.target.value)} required>
+                <option value="">Select unit</option>
+                {units.filter(u => u.occupancy_status === 'vacant').map(u => (
+                  <option key={u.id} value={u.unit_number}>{u.unit_number}</option>
+                ))}
               </select>
-              <input value={agentTenantUnit} onChange={(event) => setAgentTenantUnit(event.target.value)} required placeholder="Unit name / number" />
               <input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required />
               <input type="date" value={agentLeaseEnd} onChange={(event) => setAgentLeaseEnd(event.target.value)} required />
               <input type="number" value={agentDeposit} onChange={(event) => setAgentDeposit(event.target.value)} placeholder="Deposit" />
@@ -118,15 +121,24 @@ export default function AgentTenantsPage() {
             {!loading && tenants.length === 0 && <p className="landlord-empty">No tenants added yet.</p>}
             {!loading && tenants.length > 0 && (
               <div className="table-shell">
-                <table className="landlord-table">
-                  <thead><tr><th>Name</th><th>Property</th><th>Unit</th><th>Lease</th></tr></thead>
+                <table className="landlord-table" style={{ minWidth: '100%', fontSize: '13px' }}>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Unit</th>
+                      <th>Lease Start</th>
+                      <th>Lease End</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {tenants.map(tenant => (
                       <tr key={tenant.id}>
                         <td className="landlord-name">{tenant.full_name}</td>
-                        <td>{tenant.property}</td>
+                        <td>{tenant.email}</td>
                         <td>{tenant.unit}</td>
-                        <td>{tenant.lease_start} → {tenant.lease_end}</td>
+                        <td>{tenant.lease_start}</td>
+                        <td>{tenant.lease_end}</td>
                       </tr>
                     ))}
                   </tbody>
