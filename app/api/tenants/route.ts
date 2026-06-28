@@ -165,13 +165,13 @@ export async function POST(request: NextRequest) {
      finalUnitId = unitResult.data.id;
    }
 
-   // Update unit status to occupied when tenant is assigned to existing unit
-   if (unitId && !propertyId) {
-     await supabaseAdmin
-       .from('units')
-       .update({ occupancy_status: 'occupied' })
-       .eq('id', unitId);
-   }
+// Update unit status to occupied when tenant is assigned to existing unit
+    if (unitId) {
+      await supabaseAdmin
+        .from('units')
+        .update({ occupancy_status: 'occupied' })
+        .eq('id', unitId);
+    }
 
    const result = await supabaseAdmin.from('tenants').insert({
      full_name: fullName,
