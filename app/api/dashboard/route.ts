@@ -148,7 +148,21 @@ export async function GET(request: NextRequest) {
     const filteredTenantIdSet = new Set(filteredTenantList.map((tenant: any) => tenant.id));
     const paymentList = propertyId ? (paymentsData ?? []).filter((payment: any) => filteredTenantIdSet.has(payment.tenant_id)) : (paymentsData ?? []);
     const financialPayments = paymentList.filter((payment: any) => !nonPaymentTypes.includes(payment.transaction_type));
-    const agents = users.filter((user: any) => user.user_metadata?.role === 'agent' && (!propertyId || user.user_metadata?.property_id === propertyId));
+
+    let agentList = users.filter((user: any) => user.user_metadata?.role === 'agent');
+    if (!authContext.isSuperAdmin && authContext.organization_id) {
+      const { data: orgPropsForAgents } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('organization_id', authContext.organization_id);
+      const validAgentPropIds = new Set((orgPropsForAgents ?? []).map((p: any) => p.id));
+      agentList = agentList.filter((user) => {
+        if (propertyId) return user.user_metadata?.property_id === propertyId;
+        return user.user_metadata?.property_id && validAgentPropIds.has(user.user_metadata?.property_id);
+      });
+    } else if (propertyId && authContext.isSuperAdmin) {
+      agentList = agentList.filter((user) => user.user_metadata?.property_id === propertyId);
+    }
 
     const propertyCount = propertyId ? 1 : (propertiesData?.length ?? 0);
     const totalPayments = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0);
@@ -180,7 +194,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       properties: propertyCount,
-      agents: agents.length,
+      agents: agentList.length,
       tenants: filteredTenantList.length,
       total_payments: totalPayments,
       total_balance: totalBalance,
