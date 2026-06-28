@@ -59,46 +59,50 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionData.session.user.id)
     .single();
 
-  let orgId = profile?.organization_id ?? null;
+let orgId = profile?.organization_id ?? null;
 
-  if (!orgId) {
-    const role = sessionData.session.user.user_metadata?.role ?? 'project_manager';
-    const { data: newOrg } = await supabaseAdmin
-      .from('organizations')
-      .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-      .select('id')
-      .single();
-    orgId = newOrg?.id ?? null;
+   if (!orgId) {
+     const role = profile?.role ?? sessionData.session.user.user_metadata?.role ?? 'project_manager';
+     if (role === 'project_manager') {
+       const { data: newOrg } = await supabaseAdmin
+         .from('organizations')
+         .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
+         .select('id')
+         .single();
+       orgId = newOrg?.id ?? null;
 
-    if (profile && orgId) {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ organization_id: orgId })
-        .eq('id', profile.id);
-    } else if (!profile) {
-      const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
-      const { data: createdProfile } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          user_id: sessionData.session.user.id,
-          full_name: fullName,
-          email: sessionData.session.user.email,
-          role,
-          organization_id: orgId,
-          status: 'active',
-        })
-        .select('id, user_id, organization_id, role, full_name, email')
-        .single();
-return {
-         isSuperAdmin: createdProfile?.role === 'super_admin',
-         organization_id: createdProfile?.organization_id ?? null,
-         userId: sessionData.session.user.id,
-         userEmail: sessionData.session.user.email,
-         profile: createdProfile,
-         userMetadata: sessionData.session.user.user_metadata,
-       };
+       if (orgId) {
+         if (profile) {
+           await supabaseAdmin
+             .from('profiles')
+             .update({ organization_id: orgId })
+             .eq('id', profile.id);
+         } else {
+           const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
+           const { data: createdProfile } = await supabaseAdmin
+             .from('profiles')
+             .insert({
+               user_id: sessionData.session.user.id,
+               full_name: fullName,
+               email: sessionData.session.user.email,
+               role: 'project_manager',
+               organization_id: orgId,
+               status: 'active',
+             })
+             .select('id, user_id, organization_id, role, full_name, email')
+             .single();
+           return {
+             isSuperAdmin: createdProfile?.role === 'super_admin',
+             organization_id: createdProfile?.organization_id ?? null,
+             userId: sessionData.session.user.id,
+             userEmail: sessionData.session.user.email,
+             profile: createdProfile,
+             userMetadata: sessionData.session.user.user_metadata,
+           };
+         }
+       }
      }
-  }
+   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
@@ -227,17 +231,31 @@ export async function POST(request: NextRequest) {
         .single();
       orgId = newOrg?.id;
 
-      if (orgId && authContext.profile) {
-        await supabaseAdmin
-          .from('profiles')
-          .update({ organization_id: orgId })
-          .eq('id', authContext.profile.id);
-      }
+      if (orgId) {
+        if (authContext.profile) {
+          await supabaseAdmin
+            .from('profiles')
+            .update({ organization_id: orgId })
+            .eq('id', authContext.profile.id);
+        } else {
+          const fullName = authContext.userMetadata?.full_name ?? authContext.userEmail ?? 'User';
+          await supabaseAdmin
+            .from('profiles')
+            .insert({
+              user_id: authContext.userId,
+              full_name: fullName,
+              email: authContext.userEmail,
+              role: 'project_manager',
+              organization_id: orgId,
+              status: 'active',
+            });
+        }
 
-      await supabaseAdmin
-        .from('properties')
-        .update({ organization_id: orgId })
-        .eq('organization_id', null);
+        await supabaseAdmin
+          .from('properties')
+          .update({ organization_id: orgId })
+          .eq('organization_id', null);
+      }
     }
 
     const result = await supabaseAdmin
