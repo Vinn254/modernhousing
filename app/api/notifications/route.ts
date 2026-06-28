@@ -188,6 +188,47 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const id = request.nextUrl.searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ message: 'Notification ID is required.' }, { status: 400 });
+    }
+
+    const result = await supabaseAdmin.from('notifications').delete().eq('id', id);
+
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Notification deleted.' });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message ?? 'Unable to delete notification.' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const id = request.nextUrl.searchParams.get('id');
+    const body = await request.json();
+    const { status } = body;
+
+    if (!id) {
+      return NextResponse.json({ message: 'Notification ID is required.' }, { status: 400 });
+    }
+
+    const result = await supabaseAdmin.from('notifications').update({ status }).eq('id', id);
+
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: 'Notification updated.' });
+  } catch (error: any) {
+    return NextResponse.json({ message: error.message ?? 'Unable to update notification.' }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

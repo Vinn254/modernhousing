@@ -33,6 +33,14 @@ export default function AgentNotificationsPage() {
 
   useEffect(() => { loadData(); }, []);
 
+  async function handleDeleteNotification(notificationId: string) {
+    const response = await fetch(`/api/notifications?id=${notificationId}`, { method: 'DELETE' });
+    const result = await response.json();
+    if (response.ok) {
+      setNotifications(notifications.filter(n => n.id !== notificationId));
+    }
+  }
+
   return (
     <main className="container admin-no-hero" style={{ padding: '34px 0 80px' }}>
       <div className="card-admin-header">
@@ -49,7 +57,7 @@ export default function AgentNotificationsPage() {
             {!loading && notifications.length > 0 && (
               <div className="table-shell">
                 <table className="landlord-table">
-                  <thead><tr><th>Tenant</th><th>Message</th><th>Status</th><th>Date</th></tr></thead>
+                  <thead><tr><th>Tenant</th><th>Message</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
                   <tbody>
                     {notifications.map(notification => (
                       <tr key={notification.id}>
@@ -57,6 +65,7 @@ export default function AgentNotificationsPage() {
                         <td>{notification.message}</td>
                         <td><span className={`status-pill ${notification.status === 'sent' ? 'status-active' : 'status-pending'}`}>{notification.status}</span></td>
                         <td>{notification.created_at ? new Date(notification.created_at).toLocaleDateString() : ''}</td>
+                        <td><button className="action-button danger" onClick={() => handleDeleteNotification(notification.id)} style={{ padding: '4px 8px', fontSize: '12px' }}>Delete</button></td>
                       </tr>
                     ))}
                   </tbody>

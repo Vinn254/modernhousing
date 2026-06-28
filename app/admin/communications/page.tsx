@@ -154,6 +154,14 @@ export default function CommunicationsPage() {
     await loadNotifications();
   }
 
+  async function handleDeleteNotification(notificationId: string) {
+    const response = await fetch(`/api/notifications?id=${notificationId}`, { method: 'DELETE' });
+    const result = await response.json();
+    if (response.ok) {
+      setNotifications(notifications.filter(n => n.id !== notificationId));
+    }
+  }
+
   const notificationTypes = [
     { value: 'announcement', label: 'Announcement' },
     { value: 'reminder', label: 'Reminder' },
@@ -260,34 +268,36 @@ export default function CommunicationsPage() {
               <p className="landlord-empty">No communications sent yet.</p>
             )}
 
-            {!loading && notifications.length > 0 && (
-              <div className="table-shell">
-                <table className="landlord-table">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Message</th>
-                      <th>Status</th>
-                      <th>Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {notifications.map(n => (
-                      <tr key={n.id}>
-                        <td>{n.type}</td>
-                        <td>{n.message}</td>
-                        <td>
-                          <span className={`renewal-pill ${n.status === 'sent' ? 'status-active' : 'status-pending'}`}>
-                            {n.status}
-                          </span>
-                        </td>
-                        <td>{n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+{!loading && notifications.length > 0 && (
+               <div className="table-shell">
+                 <table className="landlord-table">
+                   <thead>
+                     <tr>
+                       <th>Type</th>
+                       <th>Message</th>
+                       <th>Status</th>
+                       <th>Date</th>
+                       <th>Actions</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {notifications.map(n => (
+                       <tr key={n.id}>
+                         <td>{n.type}</td>
+                         <td>{n.message}</td>
+                         <td>
+                           <span className={`renewal-pill ${n.status === 'sent' ? 'status-active' : 'status-pending'}`}>
+                             {n.status}
+                           </span>
+                         </td>
+                         <td>{n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</td>
+                         <td><button className="action-button danger" onClick={() => handleDeleteNotification(n.id)} style={{ padding: '4px 8px', fontSize: '12px' }}>Delete</button></td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             )}
           </article>
         </section>
       </main>
