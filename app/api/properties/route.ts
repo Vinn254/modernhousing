@@ -54,7 +54,7 @@ async function getAuthContext(request: NextRequest) {
     };
   }
 
-  const { data: profile } = await supabaseAdmin
+  let { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionData.session.user.id)
@@ -62,6 +62,7 @@ async function getAuthContext(request: NextRequest) {
 
 let orgId = profile?.organization_id ?? null;
 
+    // If no org and user is project_manager, create org
     if (!orgId) {
       const role = profile?.role ?? sessionData.session.user.user_metadata?.role ?? 'project_manager';
       if (role === 'project_manager') {
@@ -73,6 +74,7 @@ let orgId = profile?.organization_id ?? null;
         orgId = newOrg?.id ?? null;
 
         if (orgId) {
+          // Update or create profile with org
           if (profile) {
             await supabaseAdmin
               .from('profiles')
@@ -92,16 +94,10 @@ let orgId = profile?.organization_id ?? null;
               })
               .select('id, user_id, organization_id, role, full_name, email')
               .single();
-            return {
-              isSuperAdmin: createdProfile?.role === 'super_admin',
-              organization_id: orgId,
-              userId: sessionData.session.user.id,
-              userEmail: sessionData.session.user.email,
-              profile: createdProfile,
-              userMetadata: sessionData.session.user.user_metadata,
-            };
+            profile = createdProfile;
           }
 
+          // Assign any orphaned properties to this org
           await supabaseAdmin
             .from('properties')
             .update({ organization_id: orgId })
@@ -115,7 +111,7 @@ let orgId = profile?.organization_id ?? null;
       organization_id: orgId,
       userId: sessionData.session.user.id,
       userEmail: sessionData.session.user.email,
-      profile: orgId ? { ...profile, organization_id: orgId } : profile,
+      profile: orgId ? { ...profile, organization_id: orgId } as any : profile,
       userMetadata: sessionData.session.user.user_metadata,
     };
   }
