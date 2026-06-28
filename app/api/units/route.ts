@@ -194,56 +194,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-    const authContext = await getAuthContext(request);
-
-    if (!authContext.isSuperAdmin) {
-      const propertyIdFromUser = userMetadata?.property_id || authContext.profile?.user_metadata?.property_id;
-
-      if (!authContext.organizationId && !propertyIdFromUser) {
-        return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
-      }
-
-      // For agents: check if property matches their assigned property
-      if (propertyIdFromUser && propertyIdFromUser !== propertyId) {
-        return NextResponse.json({ message: 'You can only add units to your assigned property.' }, { status: 403 });
-      }
-
-      if (authContext.organizationId) {
-        const { data: prop } = await supabaseAdmin
-          .from('properties')
-          .select('id')
-          .eq('id', propertyId)
-          .eq('organization_id', authContext.organizationId)
-          .maybeSingle();
-
-        if (!prop) {
-          return NextResponse.json({ message: 'You can only add units to properties in your own landlord workspace.' }, { status: 403 });
-        }
-      }
-    }
-
-    const insertData: any = {
-      property_id: propertyId,
-      unit_number: unitNumber,
-      rent_amount: rentAmount ?? 0,
-      size,
-      agent_email: agentEmail,
-      occupancy_status: occupancyStatus ?? 'vacant',
-    };
-    if (unitType) insertData.unit_type = unitType;
-
-    const result = await supabaseAdmin.from('units').insert(insertData).select().single();
-
-    if (result.error) {
-      return NextResponse.json({ message: result.error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ unit: result.data, message: 'Unit created.' }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ message: error.message ?? 'Unable to create unit.' }, { status: 500 });
-  }
-}
-
 export async function PATCH(request: NextRequest) {
   try {
     const id = request.nextUrl.searchParams.get('id');
