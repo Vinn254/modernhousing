@@ -128,13 +128,15 @@ export async function POST(request: NextRequest) {
 
   const insertData: any = {
     tenant_id: tenantId,
-    property_id: propertyId ?? null,
     description: description ?? `${monthDue || ''} Payment`,
     transaction_type: transType || transactionType || 'rent',
     amount: Number(paidAmount) || Number(amount) || 0,
     balance_remaining: Number(balanceRemaining) || 0,
     transaction_number: transNumber,
     paid_at: paymentDate || new Date().toISOString(),
+    month_due: monthDue ?? null,
+    due_amount: Number(dueAmount) || null,
+    transaction_code: transCode ?? null,
   };
 
   const result = await supabaseAdmin.from('payments').insert(insertData);

@@ -204,8 +204,9 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const id = request.nextUrl.searchParams.get('id');
     const body = await request.json();
-    const { id, unitNumber, rentAmount, size, agentEmail, occupancyStatus } = body;
+    const { unitNumber, rentAmount, size, agentEmail, occupancyStatus } = body;
 
     if (!id) {
       return NextResponse.json({ message: 'Unit ID is required.' }, { status: 400 });
