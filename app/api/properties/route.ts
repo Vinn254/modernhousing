@@ -175,26 +175,26 @@ async function assertPropertyAccess(request: NextRequest, propertyId: string, or
 }
 
 export async function GET(request: NextRequest) {
-   const authContext = await getAuthContext(request);
+    const authContext = await getAuthContext(request);
 
-   let query: any = supabaseAdmin.from('properties').select('*');
+    let query: any = supabaseAdmin.from('properties').select('*');
 
-   if (authContext.profile && !authContext.isSuperAdmin) {
-     if (authContext.organization_id) {
-       query = query.eq('organization_id', authContext.organization_id);
-     } else {
-       query = query.eq('id', 'none');
-     }
-   }
+    if (!authContext.isSuperAdmin) {
+      if (authContext.organization_id) {
+        query = query.eq('organization_id', authContext.organization_id);
+      } else {
+        query = query.eq('id', 'none');
+      }
+    }
 
-   const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query.order('created_at', { ascending: false });
 
-   if (error) {
-     return NextResponse.json({ message: error.message }, { status: 500 });
-   }
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
 
-   return NextResponse.json({ properties: await enrichProperties(data ?? []) });
- }
+    return NextResponse.json({ properties: await enrichProperties(data ?? []) });
+  }
 
 export async function POST(request: NextRequest) {
     const body = await request.json();

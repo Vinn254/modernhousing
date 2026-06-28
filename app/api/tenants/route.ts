@@ -27,34 +27,69 @@ async function getAuthContext(request: NextRequest) {
     return { isSuperAdmin: false, organization_id: null, profile: null };
   }
 
-  const { data: profile } = await supabaseAdmin
+  let { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionData.session.user.id)
     .single();
 
-  let orgId = profile?.organization_id ?? null;
+let orgId = profile?.organization_id ?? null;
 
-  if (!orgId && profile?.role === 'project_manager') {
-    const { data: newOrg } = await supabaseAdmin
-      .from('organizations')
-      .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-      .select('id')
-      .single();
-    orgId = newOrg?.id ?? null;
+   if (!orgId && (profile?.role === 'project_manager' || sessionData.session.user.user_metadata?.role === 'project_manager')) {
+     const { data: newOrg } = await supabaseAdmin
+       .from('organizations')
+       .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
+       .select('id')
+       .single();
+     orgId = newOrg?.id ?? null;
 
-    if (orgId) {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ organization_id: orgId })
-        .eq('id', profile.id);
+     if (orgId) {
+       if (profile) {
+         await supabaseAdmin
+           .from('profiles')
+           .update({ organization_id: orgId })
+           .eq('id', profile.id);
+       } else {
+         const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
+         const { data: createdProfile } = await supabaseAdmin
+           .from('profiles')
+           .insert({
+             user_id: sessionData.session.user.id,
+             full_name: fullName,
+             email: sessionData.session.user.email,
+             role: 'project_manager',
+             organization_id: orgId,
+             status: 'active',
+           })
+           .select('id, user_id, organization_id, role, full_name, email')
+           .single();
+         profile = createdProfile;
+       }
 
-      await supabaseAdmin
-        .from('properties')
-        .update({ organization_id: orgId })
-        .eq('organization_id', null);
-    }
-  }
+       await supabaseAdmin
+         .from('properties')
+         .update({ organization_id: orgId })
+         .eq('organization_id', null);
+     }
+   }
+
+   if (!profile) {
+     const role = sessionData.session.user.user_metadata?.role ?? 'project_manager';
+     const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
+     const { data: createdProfile } = await supabaseAdmin
+       .from('profiles')
+       .insert({
+         user_id: sessionData.session.user.id,
+         full_name: fullName,
+         email: sessionData.session.user.email,
+         role,
+         organization_id: orgId,
+         status: 'active',
+       })
+       .select('id, user_id, organization_id, role, full_name, email')
+       .single();
+     profile = createdProfile;
+   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
@@ -64,221 +99,252 @@ async function getAuthContext(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    const authContext = await getAuthContext(request);
+   try {
+     const authContext = await getAuthContext(request);
 
-    if (authContext.profile && !authContext.isSuperAdmin) {
-      if (!authContext.organization_id) {
-        return NextResponse.json({ tenants: [] });
-      }
+     if (!authContext.isSuperAdmin) {
+       if (!authContext.organization_id) {
+         return NextResponse.json({ tenants: [] });
+       }
 
-      const { data: orgProps } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('organization_id', authContext.organization_id);
-      const propIds = (orgProps ?? []).map((p: any) => p.id);
+       const { data: orgProps } = await supabaseAdmin
+         .from('properties')
+         .select('id')
+         .eq('organization_id', authContext.organization_id);
+       const propIds = (orgProps ?? []).map((p: any) => p.id);
 
-      if (propIds.length > 0) {
-        const { data, error } = await supabaseAdmin
-          .from('tenants')
-          .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(id, name, address))')
-          .in('units.property_id', propIds)
-          .order('created_at', { ascending: false });
+       if (propIds.length > 0) {
+         const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+         const unitIds = (orgUnits ?? []).map((u: any) => u.id);
 
-        if (error) throw error;
+         const { data, error } = await supabaseAdmin
+           .from('tenants')
+           .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(id, name, address))')
+           .in('unit_id', unitIds)
+           .order('created_at', { ascending: false });
 
-        const tenants = (data ?? []).map((tenant: any) => ({
-          id: tenant.id,
-          full_name: tenant.full_name,
-          email: tenant.email,
-          phone: tenant.phone,
-          unit: tenant.units?.unit_number ?? '',
-          property: tenant.units?.properties?.name ?? '',
-          property_id: tenant.units?.properties?.id ?? '',
-          address: tenant.units?.properties?.address ?? '',
-          lease_start: tenant.lease_start,
-          lease_end: tenant.lease_end,
-        }));
+         if (error) throw error;
 
-        return NextResponse.json({ tenants });
-      }
-      return NextResponse.json({ tenants: [] });
-    }
+         const tenants = (data ?? []).map((tenant: any) => ({
+           id: tenant.id,
+           full_name: tenant.full_name,
+           email: tenant.email,
+           phone: tenant.phone,
+           unit: tenant.units?.unit_number ?? '',
+           property: tenant.units?.properties?.name ?? '',
+           property_id: tenant.units?.properties?.id ?? '',
+           address: tenant.units?.properties?.address ?? '',
+           lease_start: tenant.lease_start,
+           lease_end: tenant.lease_end,
+         }));
 
-    const { data, error } = await supabaseAdmin
-      .from('tenants')
-      .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(name, address))')
-      .order('created_at', { ascending: false });
+         return NextResponse.json({ tenants });
+       }
+       return NextResponse.json({ tenants: [] });
+     }
 
-    if (error) throw error;
+     const { data, error } = await supabaseAdmin
+       .from('tenants')
+       .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(name, address))')
+       .order('created_at', { ascending: false });
 
-    const tenants = (data ?? []).map((tenant: any) => ({
-      id: tenant.id,
-      full_name: tenant.full_name,
-      email: tenant.email,
-      phone: tenant.phone,
-      unit: tenant.units?.unit_number ?? '',
-      property: tenant.units?.properties?.name ?? '',
-      property_id: tenant.units?.properties?.id ?? '',
-      address: tenant.units?.properties?.address ?? '',
-      lease_start: tenant.lease_start,
-      lease_end: tenant.lease_end,
-    }));
+     if (error) throw error;
+
+     const tenants = (data ?? []).map((tenant: any) => ({
+       id: tenant.id,
+       full_name: tenant.full_name,
+       email: tenant.email,
+       phone: tenant.phone,
+       unit: tenant.units?.unit_number ?? '',
+       property: tenant.units?.properties?.name ?? '',
+       property_id: tenant.units?.properties?.id ?? '',
+       address: tenant.units?.properties?.address ?? '',
+       lease_start: tenant.lease_start,
+       lease_end: tenant.lease_end,
+     }));
 
 return NextResponse.json({ tenants });
-  } catch (error: any) {
-    return NextResponse.json({ message: error.message ?? 'Unable to load tenants.' }, { status: 500 });
-  }
-}
+   } catch (error: any) {
+     return NextResponse.json({ message: error.message ?? 'Unable to load tenants.' }, { status: 500 });
+   }
+ }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { fullName, email, phone, unitId, propertyId, leaseStart, leaseEnd, depositAmount } = body;
+   const body = await request.json();
+   const { fullName, email, phone, unitId, propertyId, leaseStart, leaseEnd, depositAmount } = body;
 
-  if (!fullName || !email || !leaseStart || !leaseEnd) {
-    return NextResponse.json({ message: 'Missing required tenant fields.' }, { status: 400 });
-  }
+   if (!fullName || !email || !leaseStart || !leaseEnd) {
+     return NextResponse.json({ message: 'Missing required tenant fields.' }, { status: 400 });
+   }
 
-  let finalUnitId = unitId;
+   const authContext = await getAuthContext(request);
+   let finalUnitId = unitId;
 
-  if (propertyId) {
-    const unitName = String(unitId || '').trim();
-    if (unitName) {
-      const { data: existingUnit } = await supabaseAdmin
-        .from('units')
-        .select('id')
-        .eq('property_id', propertyId)
-        .eq('unit_number', unitName)
-        .single();
+   if (!authContext.isSuperAdmin && propertyId) {
+     if (!authContext.organization_id) {
+       return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
+     }
+     const { data: prop } = await supabaseAdmin
+       .from('properties')
+       .select('id')
+       .eq('id', propertyId)
+       .eq('organization_id', authContext.organization_id)
+       .maybeSingle();
+     if (!prop) {
+       return NextResponse.json({ message: 'You can only add tenants to properties in your own landlord workspace.' }, { status: 403 });
+     }
+   }
 
-      if (existingUnit) {
-        finalUnitId = existingUnit.id;
-      } else {
-        const unitResult = await supabaseAdmin.from('units').insert({
-          property_id: propertyId,
-          unit_number: unitName,
-          rent_amount: 0,
-          occupancy_status: 'occupied',
-        }).select('id').single();
+   if (propertyId) {
+     const unitName = String(unitId || '').trim();
+     if (unitName) {
+       const { data: existingUnit } = await supabaseAdmin
+         .from('units')
+         .select('id')
+         .eq('property_id', propertyId)
+         .eq('unit_number', unitName)
+         .single();
 
-        if (unitResult.error) {
-          return NextResponse.json({ message: `Unable to create unit: ${unitResult.error.message}` }, { status: 500 });
-        }
-        finalUnitId = unitResult.data.id;
-      }
-    }
-  }
+       if (existingUnit) {
+         finalUnitId = existingUnit.id;
+       } else {
+         const unitResult = await supabaseAdmin.from('units').insert({
+           property_id: propertyId,
+           unit_number: unitName,
+           rent_amount: 0,
+           occupancy_status: 'occupied',
+         }).select('id').single();
 
-  const result = await supabaseAdmin.from('tenants').insert({
-    full_name: fullName,
-    email,
-    phone,
-    unit_id: finalUnitId,
-    lease_start: leaseStart,
-    lease_end: leaseEnd,
-    deposit_amount: depositAmount,
-  });
+         if (unitResult.error) {
+           return NextResponse.json({ message: `Unable to create unit: ${unitResult.error.message}` }, { status: 500 });
+         }
+         finalUnitId = unitResult.data.id;
+       }
+     }
+   }
 
-  if (result.error) {
-    return NextResponse.json({ message: result.error.message }, { status: 500 });
-  }
+   const result = await supabaseAdmin.from('tenants').insert({
+     full_name: fullName,
+     email,
+     phone,
+     unit_id: finalUnitId,
+     lease_start: leaseStart,
+     lease_end: leaseEnd,
+     deposit_amount: depositAmount,
+   });
 
-  return NextResponse.json({ message: 'Tenant created.', unitId: finalUnitId }, { status: 201 });
-}
+   if (result.error) {
+     return NextResponse.json({ message: result.error.message }, { status: 500 });
+   }
+
+   return NextResponse.json({ message: 'Tenant created.', unitId: finalUnitId }, { status: 201 });
+ }
 
 export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { id, fullName, email, phone, leaseStart, leaseEnd, status } = body;
+   try {
+     const body = await request.json();
+     const { id, fullName, email, phone, leaseStart, leaseEnd, status } = body;
 
-    if (!id) {
-      return NextResponse.json({ message: 'Tenant ID is required.' }, { status: 400 });
-    }
+     if (!id) {
+       return NextResponse.json({ message: 'Tenant ID is required.' }, { status: 400 });
+     }
 
-    const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin && authContext.organization_id) {
-      const { data: orgProps } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('organization_id', authContext.organization_id);
-      const propIds = (orgProps ?? []).map((p: any) => p.id);
+     const authContext = await getAuthContext(request);
+     if (!authContext.isSuperAdmin) {
+       if (!authContext.organization_id) {
+         return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+       }
 
-      if (propIds.length > 0) {
-        const { data: tenantUnit } = await supabaseAdmin
-          .from('tenants')
-          .select('unit_id, units!inner(property_id)')
-          .eq('id', id)
-          .in('units.property_id', propIds)
-          .maybeSingle();
+       const { data: orgProps } = await supabaseAdmin
+         .from('properties')
+         .select('id')
+         .eq('organization_id', authContext.organization_id);
+       const propIds = (orgProps ?? []).map((p: any) => p.id);
 
-        if (!tenantUnit) {
-          return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
-        }
-      } else {
-        return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
-      }
-    }
+       if (propIds.length > 0) {
+         const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+         const unitIds = (orgUnits ?? []).map((u: any) => u.id);
+         const { data: tenantUnit } = await supabaseAdmin
+           .from('tenants')
+           .select('unit_id, units!inner(property_id)')
+           .eq('id', id)
+           .in('unit_id', unitIds)
+           .maybeSingle();
 
-    const updates: Record<string, any> = {};
-    if (fullName) updates.full_name = fullName;
-    if (email) updates.email = email;
-    if (phone !== undefined) updates.phone = phone;
-    if (leaseStart) updates.lease_start = leaseStart;
-    if (leaseEnd) updates.lease_end = leaseEnd;
-    if (status) updates.status = status;
+         if (!tenantUnit) {
+           return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+         }
+       } else {
+         return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+       }
+     }
 
-    const result = await supabaseAdmin.from('tenants').update(updates).eq('id', id).select().single();
+     const updates: Record<string, any> = {};
+     if (fullName) updates.full_name = fullName;
+     if (email) updates.email = email;
+     if (phone !== undefined) updates.phone = phone;
+     if (leaseStart) updates.lease_start = leaseStart;
+     if (leaseEnd) updates.lease_end = leaseEnd;
+     if (status) updates.status = status;
 
-    if (result.error) {
-      return NextResponse.json({ message: result.error.message }, { status: 500 });
-    }
+     const result = await supabaseAdmin.from('tenants').update(updates).eq('id', id).select().single();
 
-    return NextResponse.json({ message: 'Tenant updated.', tenant: result.data });
-  } catch (error: any) {
-    return NextResponse.json({ message: error.message ?? 'Unable to update tenant.' }, { status: 500 });
-  }
-}
+     if (result.error) {
+       return NextResponse.json({ message: result.error.message }, { status: 500 });
+     }
+
+     return NextResponse.json({ message: 'Tenant updated.', tenant: result.data });
+   } catch (error: any) {
+     return NextResponse.json({ message: error.message ?? 'Unable to update tenant.' }, { status: 500 });
+   }
+ }
 
 export async function DELETE(request: NextRequest) {
-  try {
-    const id = request.nextUrl.searchParams.get('id');
+   try {
+     const id = request.nextUrl.searchParams.get('id');
 
-    if (!id) {
-      return NextResponse.json({ message: 'Tenant ID is required.' }, { status: 400 });
-    }
+     if (!id) {
+       return NextResponse.json({ message: 'Tenant ID is required.' }, { status: 400 });
+     }
 
-    const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin && authContext.organization_id) {
-      const { data: orgProps } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('organization_id', authContext.organization_id);
-      const propIds = (orgProps ?? []).map((p: any) => p.id);
+     const authContext = await getAuthContext(request);
+     if (!authContext.isSuperAdmin) {
+       if (!authContext.organization_id) {
+         return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+       }
 
-      if (propIds.length > 0) {
-        const { data: tenantUnit } = await supabaseAdmin
-          .from('tenants')
-          .select('unit_id, units!inner(property_id)')
-          .eq('id', id)
-          .in('units.property_id', propIds)
-          .maybeSingle();
+       const { data: orgProps } = await supabaseAdmin
+         .from('properties')
+         .select('id')
+         .eq('organization_id', authContext.organization_id);
+       const propIds = (orgProps ?? []).map((p: any) => p.id);
 
-        if (!tenantUnit) {
-          return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
-        }
-      } else {
-        return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
-      }
-    }
+       if (propIds.length > 0) {
+         const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+         const unitIds = (orgUnits ?? []).map((u: any) => u.id);
+         const { data: tenantUnit } = await supabaseAdmin
+           .from('tenants')
+           .select('unit_id, units!inner(property_id)')
+           .eq('id', id)
+           .in('unit_id', unitIds)
+           .maybeSingle();
 
-    const result = await supabaseAdmin.from('tenants').delete().eq('id', id);
+         if (!tenantUnit) {
+           return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+         }
+       } else {
+         return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+       }
+     }
 
-    if (result.error) {
-      return NextResponse.json({ message: result.error.message }, { status: 500 });
-    }
+     const result = await supabaseAdmin.from('tenants').delete().eq('id', id);
 
-    return NextResponse.json({ message: 'Tenant removed.' });
-  } catch (error: any) {
-    return NextResponse.json({ message: error.message ?? 'Unable to remove tenant.' }, { status: 500 });
-  }
-}
+     if (result.error) {
+       return NextResponse.json({ message: result.error.message }, { status: 500 });
+     }
+
+     return NextResponse.json({ message: 'Tenant removed.' });
+   } catch (error: any) {
+     return NextResponse.json({ message: error.message ?? 'Unable to remove tenant.' }, { status: 500 });
+   }
+ }

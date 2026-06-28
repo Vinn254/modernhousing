@@ -35,46 +35,63 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionData.session.user.id)
     .single();
 
-  let orgId = profile?.organization_id ?? null;
+let orgId = profile?.organization_id ?? null;
 
-  if (!orgId && profile?.role === 'project_manager') {
-    const { data: newOrg } = await supabaseAdmin
-      .from('organizations')
-      .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-      .select('id')
-      .single();
-    orgId = newOrg?.id ?? null;
+   if (!orgId && (profile?.role === 'project_manager' || sessionData.session.user.user_metadata?.role === 'project_manager')) {
+     const { data: newOrg } = await supabaseAdmin
+       .from('organizations')
+       .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
+       .select('id')
+       .single();
+     orgId = newOrg?.id ?? null;
 
-    if (orgId) {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ organization_id: orgId })
-        .eq('id', profile.id);
+     if (orgId) {
+       if (profile) {
+         await supabaseAdmin
+           .from('profiles')
+           .update({ organization_id: orgId })
+           .eq('id', profile.id);
+       } else {
+         const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
+         const { data: createdProfile } = await supabaseAdmin
+           .from('profiles')
+           .insert({
+             user_id: sessionData.session.user.id,
+             full_name: fullName,
+             email: sessionData.session.user.email,
+             role: 'project_manager',
+             organization_id: orgId,
+             status: 'active',
+           })
+           .select('*')
+           .single();
+         profile = createdProfile;
+       }
 
-      await supabaseAdmin
-        .from('properties')
-        .update({ organization_id: orgId })
-        .eq('organization_id', null);
-    }
-  }
+       await supabaseAdmin
+         .from('properties')
+         .update({ organization_id: orgId })
+         .eq('organization_id', null);
+     }
+   }
 
-  if (!profile) {
-    const role = sessionData.session.user.user_metadata?.role ?? 'project_manager';
-    const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
-    const { data: createdProfile } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: sessionData.session.user.id,
-        full_name: fullName,
-        email: sessionData.session.user.email,
-        role,
-        organization_id: orgId,
-        status: 'active',
-      })
-      .select('*')
-      .single();
-    profile = createdProfile;
-  }
+   if (!profile) {
+     const role = sessionData.session.user.user_metadata?.role ?? 'project_manager';
+     const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
+     const { data: createdProfile } = await supabaseAdmin
+       .from('profiles')
+       .insert({
+         user_id: sessionData.session.user.id,
+         full_name: fullName,
+         email: sessionData.session.user.email,
+         role,
+         organization_id: orgId,
+         status: 'active',
+       })
+       .select('*')
+       .single();
+     profile = createdProfile;
+   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
@@ -100,20 +117,20 @@ export async function GET(request: NextRequest) {
         tenants(id, full_name, email, lease_start, lease_end)
       `);
 
-    if (authContext.profile && !authContext.isSuperAdmin) {
-      if (!authContext.organization_id) {
-        return NextResponse.json({ units: [] });
-      }
+if (!authContext.isSuperAdmin) {
+       if (!authContext.organization_id) {
+         return NextResponse.json({ units: [] });
+       }
 
-      const { data: orgProps } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('organization_id', authContext.organization_id);
-      const propIds = (orgProps ?? []).map((p: any) => p.id);
-      query = query.in('property_id', propIds);
-    } else if (propertyId) {
-      query = query.eq('property_id', propertyId);
-    }
+       const { data: orgProps } = await supabaseAdmin
+         .from('properties')
+         .select('id')
+         .eq('organization_id', authContext.organization_id);
+       const propIds = (orgProps ?? []).map((p: any) => p.id);
+       query = query.in('property_id', propIds);
+     } else if (propertyId) {
+       query = query.eq('property_id', propertyId);
+     }
 
     const { data: units, error } = await query.order('unit_number', { ascending: true });
 
@@ -150,7 +167,10 @@ export async function POST(request: NextRequest) {
       }
 
       const authContext = await getAuthContext(request);
-      if (!authContext.isSuperAdmin && authContext.organization_id) {
+      if (!authContext.isSuperAdmin) {
+        if (!authContext.organization_id) {
+          return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
+        }
         const { data: prop } = await supabaseAdmin
           .from('properties')
           .select('id')
@@ -192,7 +212,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin && authContext.organization_id) {
+    if (!authContext.isSuperAdmin) {
+      if (!authContext.organization_id) {
+        return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
+      }
       const { data: unitProp } = await supabaseAdmin
         .from('units')
         .select('property_id, properties!inner(organization_id)')
@@ -222,7 +245,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to update unit.' }, { status: 500 });
   }
-}
+ }
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -233,7 +256,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin && authContext.organization_id) {
+    if (!authContext.isSuperAdmin) {
+      if (!authContext.organization_id) {
+        return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
+      }
       const { data: unitProp } = await supabaseAdmin
         .from('units')
         .select('property_id, properties!inner(organization_id)')
@@ -256,4 +282,4 @@ export async function DELETE(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to delete unit.' }, { status: 500 });
   }
-}
+ }

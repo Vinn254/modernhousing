@@ -40,28 +40,45 @@ async function getAuthContext(request: NextRequest) {
     .eq('user_id', sessionData.session.user.id)
     .single();
 
-  let orgId = profile?.organization_id ?? null;
+let orgId = profile?.organization_id ?? null;
 
-  if (!orgId && profile?.role === 'project_manager') {
-    const { data: newOrg } = await supabaseAdmin
-      .from('organizations')
-      .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-      .select('id')
-      .single();
-    orgId = newOrg?.id ?? null;
+   if (!orgId) {
+     const role = profile?.role ?? sessionData.session.user.user_metadata?.role;
+     if (role === 'project_manager') {
+       const { data: newOrg } = await supabaseAdmin
+         .from('organizations')
+         .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
+         .select('id')
+         .single();
+       orgId = newOrg?.id ?? null;
 
-    if (orgId) {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ organization_id: orgId })
-        .eq('id', profile.id);
+       if (orgId) {
+         if (profile) {
+           await supabaseAdmin
+             .from('profiles')
+             .update({ organization_id: orgId })
+             .eq('id', profile.id);
+         } else {
+           const fullName = sessionData.session.user.user_metadata?.full_name ?? sessionData.session.user.email ?? 'User';
+           await supabaseAdmin
+             .from('profiles')
+             .insert({
+               user_id: sessionData.session.user.id,
+               full_name: fullName,
+               email: sessionData.session.user.email,
+               role: 'project_manager',
+               organization_id: orgId,
+               status: 'active',
+             });
+         }
 
-      await supabaseAdmin
-        .from('properties')
-        .update({ organization_id: orgId })
-        .eq('organization_id', null);
-    }
-  }
+         await supabaseAdmin
+           .from('properties')
+           .update({ organization_id: orgId })
+           .eq('organization_id', null);
+       }
+     }
+   }
 
   return {
     isSuperAdmin: profile?.role === 'super_admin',
@@ -124,7 +141,7 @@ export async function GET(request: NextRequest) {
     const propertyTenantIds = new Set<string>();
     if (propertyId && !authContext.isSuperAdmin && authContext.organization_id) {
       try {
-        const { data: units } = await supabaseAdmin.from('units').select('id, property_id').eq('property_id', propertyId).eq('organization_id', authContext.organization_id);
+        const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', propertyId);
         const unitIds = new Set((units ?? []).map((unit: any) => unit.id));
         allTenants.forEach((tenant: any) => {
           if (unitIds.has(tenant.unit_id)) propertyTenantIds.add(tenant.id);
