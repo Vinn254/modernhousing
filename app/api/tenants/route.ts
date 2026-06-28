@@ -74,12 +74,13 @@ async function getAuthContext(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-   try {
+    try {
       const authContext = await getAuthContext(request);
       const propertyId = request.nextUrl.searchParams.get('propertyId');
 
       if (propertyId) {
-        const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', propertyId);
+        const { data: units, error: unitsError } = await supabaseAdmin.from('units').select('id').eq('property_id', propertyId);
+        if (unitsError) throw unitsError;
         const unitIds = (units ?? []).map((u: any) => u.id);
 
         if (unitIds.length > 0) {
@@ -109,7 +110,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ tenants: [] });
       }
 
-      if (!authContext.isSuperAdmin && !authContext.organizationId) {
+      // If no propertyId and no auth, require authentication
+      if (!authContext.isSuperAdmin && !authContext.organizationId && !authContext.userId) {
         return NextResponse.json({ tenants: [] });
       }
 

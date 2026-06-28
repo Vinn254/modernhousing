@@ -106,8 +106,11 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ units: [] });
         }
         query = query.eq('property_id', userMetadata.property_id);
-      } else if (!authContext.organizationId) {
+      } else if (!authContext.organizationId && !propertyId) {
         return NextResponse.json({ units: [] });
+      } else if (!authContext.organizationId) {
+        // Allow access with propertyId only
+        query = query.eq('property_id', propertyId);
       } else {
         const { data: orgProps } = await supabaseAdmin
           .from('properties')
@@ -127,6 +130,9 @@ export async function GET(request: NextRequest) {
       }
     } else if (propertyId) {
       query = query.eq('property_id', propertyId);
+    } else {
+      // Super admin without propertyId gets all units - could be limited
+      query = query.limit(50);
     }
 
     const { data: units, error } = await query.order('unit_number', { ascending: true });
