@@ -196,13 +196,13 @@ export default function PaymentsPage() {
         <div className="card">
           <div className="card-label">Manual Payment Entry</div>
           <h3 style={{ marginBottom: 16 }}>Record Direct Payment</h3>
-          <p style={{ color: 'var(--ink-3)', fontSize: '13px', marginBottom: 12 }}>Payment Date is auto-set to today for manual entries.</p>
+          <p style={{ color: 'var(--ink-3)', fontSize: '13px', marginBottom: 12 }}>Payment Date defaults to today.</p>
           <form onSubmit={handleManualPayment} className="form-grid">
             <select value={tenantId} onChange={(event) => setTenantId(event.target.value)} required>
               <option value="">Select tenant</option>
               {tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} — {tenant.property} · Unit {tenant.unit}</option>)}
             </select>
-            <input type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} required placeholder="Payment Date" />
+            <input type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} required />
             <input value={manualMonth} onChange={(event) => setManualMonth(event.target.value)} placeholder="Month Due (e.g., January 2024)" />
             <input type="number" step="0.01" value={manualDueAmount} onChange={(event) => setManualDueAmount(event.target.value)} placeholder="Due Amount" />
             <input type="number" step="0.01" value={manualPaidAmount} onChange={(event) => setManualPaidAmount(event.target.value)} required placeholder="Amount Paid" />
@@ -214,7 +214,7 @@ export default function PaymentsPage() {
             </select>
             <input value={manualTransNumber} onChange={(event) => setManualTransNumber(event.target.value)} required placeholder="Transaction Number" />
             <input value={manualTransCode} onChange={(event) => setManualTransCode(event.target.value)} placeholder="Transaction Code (MPESA code)" />
-            <button type="submit">Record Payment</button>
+            <button type="submit" style={{ gridColumn: 'span 2' }}>Record Payment</button>
           </form>
           {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
         </div>
@@ -225,54 +225,50 @@ export default function PaymentsPage() {
           <form onSubmit={handleStkPush} className="form-grid">
             <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="Tenant Phone (07XX XXX XXX)" />
             <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
-            <button type="submit" disabled={processing}>{processing ? 'Sending…' : 'Send Prompt'}</button>
+            <button type="submit" disabled={processing} style={{ gridColumn: 'span 2' }}>{processing ? 'Sending…' : 'Send Prompt'}</button>
           </form>
           {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
         </div>
-
-        <div className="card">
-          <div className="card-label">Transactions</div>
-          <h3 style={{ marginBottom: 16 }}>Payment History</h3>
-          {loading ? <p style={{ color: 'var(--ink-3)' }}>Loading payments…</p> : payments.length === 0 ? (
-            <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--line)' }}>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Tenant</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Month Due</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Due</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Paid</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Penalty</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Balance</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Type</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Trans #</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.map((payment) => (
-                    <tr key={payment.id} style={{ borderBottom: '1px solid var(--line-soft)' }}>
-                      <td style={{ padding: '14px 12px' }}>
-                        <strong>{payment.tenant}</strong>
-                      </td>
-                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{(payment as any).month_due || payment.description}</td>
-                      <td style={{ padding: '14px 12px', fontWeight: 600 }}>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
-                      <td style={{ padding: '14px 12px', fontWeight: 700 }}>{formatCurrency(payment.amount)}</td>
-                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{formatCurrency((payment as any).penalty_fee || 0)}</td>
-                      <td style={{ padding: '14px 12px', fontWeight: 700, color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(payment.balance_remaining)}</td>
-                      <td style={{ padding: '14px 12px', textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
-                      <td style={{ padding: '14px 12px', fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
-                      <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       </section>
+
+      <article className="card" style={{ marginTop: 24 }}>
+        <div className="card-label">Transactions</div>
+        <h3 style={{ marginBottom: 16 }}>Payment History</h3>
+        {loading ? <p style={{ color: 'var(--ink-3)' }}>Loading payments…</p> : payments.length === 0 ? (
+          <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p>
+        ) : (
+          <div className="table-shell">
+            <table className="landlord-table">
+              <thead>
+                <tr>
+                  <th>Tenant</th>
+                  <th>Month Due</th>
+                  <th>Due</th>
+                  <th>Paid</th>
+                  <th>Balance</th>
+                  <th>Type</th>
+                  <th>Trans #</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td className="landlord-name">{payment.tenant}</td>
+                    <td>{(payment as any).month_due || payment.description}</td>
+                    <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
+                    <td>{formatCurrency(payment.amount)}</td>
+                    <td style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(payment.balance_remaining)}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
+                    <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
+                    <td>{payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </article>
     </main>
   );
 }
