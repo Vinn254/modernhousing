@@ -21,8 +21,6 @@ export default function TenantPaymentsPage() {
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [defaultAmount, setDefaultAmount] = useState(0);
-  const [defaultMonth, setDefaultMonth] = useState('');
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
@@ -37,43 +35,6 @@ export default function TenantPaymentsPage() {
     setLoading(false);
   }
 
-  async function loadTenantInfo(userId: string) {
-    const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`/api/tenants`, {
-      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
-    });
-    const result = await response.json();
-    if (response.ok) {
-      const myTenant = result.tenants?.find((t: any) => t.id === userId || t.email === user?.email);
-      if (myTenant?.lease_end) {
-        const nextMonth = new Date(myTenant.lease_end);
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        setDefaultAmount(myTenant.rent_amount || 0);
-        setDefaultMonth(nextMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
-      }
-    }
-  }
-
-  async function loadTenantInfo() {
-    const { data: { session } } = await supabase.auth.getSession();
-    const response = await fetch(`/api/tenants`, {
-      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
-    });
-    const result = await response.json();
-    if (response.ok && result.tenants) {
-      const myTenant = result.tenants.find((t: any) => t.email === user?.email);
-      if (myTenant) {
-        const lastPayment = payments[0];
-        if (lastPayment?.created_at) {
-          const nextMonth = new Date(lastPayment.created_at);
-          nextMonth.setMonth(nextMonth.getMonth() + 1);
-          setDefaultMonth(nextMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
-          setDefaultAmount(myTenant.rent_amount || lastPayment.amount);
-        }
-      }
-    }
-  }
-
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
@@ -82,10 +43,6 @@ export default function TenantPaymentsPage() {
       }
     });
   }, []);
-
-  useEffect(() => {
-    if (user && payments.length > 0) loadTenantInfo();
-  }, [user, payments]);
 
   async function handleStkPush(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -147,9 +104,7 @@ export default function TenantPaymentsPage() {
         </article>
       )}
 
-      {loading ? <p className="landlord-muted" style={{ marginTop: 24 }}>Loading payments...</p> : null}
-
-      {!loading && payments.length > 0 && (
+      {payments.length > 0 && (
         <section className="card" style={{ marginTop: 24 }}>
           <div className="card-label">Payment Records</div>
           <h3 style={{ marginBottom: 16 }}>All Payments</h3>
@@ -172,7 +127,7 @@ export default function TenantPaymentsPage() {
         </section>
       )}
 
-      {!loading && payments.length === 0 && !message && (
+      {payments.length === 0 && !message && (
         <p className="landlord-empty" style={{ marginTop: 24 }}>No payments recorded yet.</p>
       )}
     </main>
