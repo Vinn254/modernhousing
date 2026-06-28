@@ -25,31 +25,25 @@ async function getAuthHeaders() {
       return headers;
     }
 
-    async function loadDocuments() {
-      setLoading(true);
-      setError('');
+async function loadDocuments() {
+       setLoading(true);
+       setError('');
 
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user?.email) {
-          setError('No user session found.');
-          setLoading(false);
-          return;
-        }
-        const response = await fetch(`/api/admin/documents?adminEmail=${encodeURIComponent(user.email)}`, {
-          headers: await getAuthHeaders(),
-        });
-        const result = await response.json();
+       try {
+         const response = await fetch('/api/admin/documents', {
+           headers: await getAuthHeaders(),
+         });
+         const result = await response.json();
 
-        if (!response.ok) throw new Error(result.message ?? 'Failed to load documents');
+         if (!response.ok) throw new Error(result.message ?? 'Failed to load documents');
 
-        setDocuments(result.documents ?? []);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
+         setDocuments(result.documents ?? []);
+       } catch (err: any) {
+         setError(err.message);
+       } finally {
+         setLoading(false);
+       }
+     }
 
     useEffect(() => {
       loadDocuments();

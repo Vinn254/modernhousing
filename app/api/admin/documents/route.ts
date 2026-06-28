@@ -33,7 +33,9 @@ export async function GET(request: NextRequest) {
       .eq('user_id', session.user.id)
       .single();
 
-    if (!profile?.organization_id && session.user.user_metadata?.role !== 'super_admin') {
+    let orgId = profile?.organization_id ?? session.user?.user_metadata?.organization_id ?? null;
+
+    if (!orgId && session.user.user_metadata?.role !== 'super_admin') {
       // Create organization for project_manager users without org
       const { data: newOrg } = await supabaseAdmin
         .from('organizations')
@@ -41,12 +43,14 @@ export async function GET(request: NextRequest) {
         .select('id')
         .single();
 
+      orgId = newOrg?.id ?? null;
+
       if (profile) {
         await supabaseAdmin
           .from('profiles')
-          .update({ organization_id: newOrg?.id ?? null })
+          .update({ organization_id: orgId })
           .eq('id', profile.id);
-        profile = { ...profile, organization_id: newOrg?.id ?? null };
+        profile = { ...profile, organization_id: orgId };
       } else {
         const createdProfile = await supabaseAdmin
           .from('profiles')
@@ -55,7 +59,7 @@ export async function GET(request: NextRequest) {
             full_name: session.user.user_metadata?.full_name ?? session.user.email,
             email: session.user.email,
             role: 'project_manager',
-            organization_id: newOrg?.id ?? null,
+            organization_id: orgId,
             status: 'active',
           })
           .select('id, user_id, organization_id, role')
@@ -64,7 +68,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (!profile?.organization_id) {
+    if (!orgId) {
       return NextResponse.json({ documents: [] });
     }
 
@@ -72,7 +76,7 @@ export async function GET(request: NextRequest) {
     const { data: orgProps } = await supabaseAdmin
       .from('properties')
       .select('id')
-      .eq('organization_id', profile.organization_id);
+      .eq('organization_id', orgId);
     const propIds = new Set((orgProps ?? []).map((p: any) => p.id));
 
     // Get documents with tenant info
