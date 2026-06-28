@@ -137,6 +137,44 @@ export async function POST(request: NextRequest) {
       transaction_type: transType || transactionType || 'rent',
       amount: Number(paidAmount) || Number(amount) || 0,
       balance_remaining: Number(balAmount) || Number(balanceRemaining) || 0,
+      month_due: monthDue || null,
+      due_amount: Number(dueAmount) || null,
+      transaction_number: transNumber,
+      paid_at: paymentDate || new Date().toISOString(),
+    });
+
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
+
+    // Send notification to tenant
+    const { data: tenant } = await supabaseAdmin
+      .from('tenants')
+      .select('email, full_name')
+      .eq('id', tenantId)
+      .single();
+
+    if (tenant?.email) {
+      await supabaseAdmin.from('notifications').insert({
+        recipient: 'tenant',
+        tenant_id: tenantId,
+        type: 'payment_recorded',
+        message: `Payment of KSH ${Number(paidAmount) || Number(amount)} recorded for ${monthDue || 'rent'}.`,
+        status: 'sent',
+        created_at: new Date().toISOString(),
+      }).select();
+    }
+
+    return NextResponse.json({ message: 'Payment recorded.' }, { status: 201 });
+  }
+
+    const result = await supabaseAdmin.from('payments').insert({
+      tenant_id: tenantId,
+      property_id: propertyId ?? null,
+      description: description ?? `${monthDue || ''} Payment`,
+      transaction_type: transType || transactionType || 'rent',
+      amount: Number(paidAmount) || Number(amount) || 0,
+      balance_remaining: Number(balAmount) || Number(balanceRemaining) || 0,
       penalty_fee: Number(penalty) || 0,
       month_due: monthDue || null,
       transaction_number: transNumber,

@@ -56,12 +56,10 @@ export default function PaymentsPage() {
   const [manualMonth, setManualMonth] = useState('');
   const [manualDueAmount, setManualDueAmount] = useState('');
   const [manualPaidAmount, setManualPaidAmount] = useState('');
-  const [manualPenalty, setManualPenalty] = useState('0');
   const [manualBalAmount, setManualBalAmount] = useState('');
-  const [manualTransType, setManualTransType] = useState('direct');
+  const [manualTransType, setManualTransType] = useState('rent');
   const [manualTransNumber, setManualTransNumber] = useState('');
   const [manualTransCode, setManualTransCode] = useState('');
-  const [manualPaymentDate, setManualPaymentDate] = useState(new Date().toISOString().slice(0, 10));
 
   async function loadPayments() {
     const response = await fetch('/api/payments', { headers: await getAuthHeaders() });
@@ -157,12 +155,9 @@ export default function PaymentsPage() {
         monthDue: manualMonth,
         dueAmount: Number(manualDueAmount),
         paidAmount: Number(manualPaidAmount),
-        penalty: Number(manualPenalty),
-        balAmount: Number(manualBalAmount),
-        transType: manualTransType,
         transNumber: manualTransNumber,
         transCode: manualTransCode,
-        paymentDate: manualPaymentDate
+        paymentDate: manualDate
       }),
     });
 
@@ -178,9 +173,8 @@ export default function PaymentsPage() {
     setManualMonth('');
     setManualDueAmount('');
     setManualPaidAmount('');
-    setManualPenalty('0');
     setManualBalAmount('');
-    setManualTransType('direct');
+    setManualTransType('rent');
     setManualTransNumber('');
     setManualTransCode('');
     await loadPayments();
@@ -202,25 +196,24 @@ export default function PaymentsPage() {
         <div className="card">
           <div className="card-label">Manual Payment Entry</div>
           <h3 style={{ marginBottom: 16 }}>Record Direct Payment</h3>
+          <p style={{ color: 'var(--ink-3)', fontSize: '13px', marginBottom: 12 }}>Payment Date is auto-set to today for manual entries.</p>
           <form onSubmit={handleManualPayment} className="form-grid">
             <select value={tenantId} onChange={(event) => setTenantId(event.target.value)} required>
               <option value="">Select tenant</option>
               {tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} — {tenant.property} · Unit {tenant.unit}</option>)}
             </select>
-            <input type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} required />
+            <input type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} required placeholder="Payment Date" />
             <input value={manualMonth} onChange={(event) => setManualMonth(event.target.value)} placeholder="Month Due (e.g., January 2024)" />
             <input type="number" step="0.01" value={manualDueAmount} onChange={(event) => setManualDueAmount(event.target.value)} placeholder="Due Amount" />
             <input type="number" step="0.01" value={manualPaidAmount} onChange={(event) => setManualPaidAmount(event.target.value)} required placeholder="Amount Paid" />
-            <input type="number" step="0.01" value={manualPenalty} onChange={(event) => setManualPenalty(event.target.value)} placeholder="Penalty Fee" />
             <input type="number" step="0.01" value={manualBalAmount} onChange={(event) => setManualBalAmount(event.target.value)} placeholder="Balance" />
             <select value={manualTransType} onChange={(event) => setManualTransType(event.target.value)}>
-              <option value="direct">Direct Payment</option>
-              <option value="bank">Bank Transfer</option>
-              <option value="cash">Cash</option>
+              <option value="rent">Rent</option>
+              <option value="overdue">Overdue</option>
+              <option value="other">Other</option>
             </select>
             <input value={manualTransNumber} onChange={(event) => setManualTransNumber(event.target.value)} required placeholder="Transaction Number" />
             <input value={manualTransCode} onChange={(event) => setManualTransCode(event.target.value)} placeholder="Transaction Code (MPESA code)" />
-            <input type="date" value={manualPaymentDate} onChange={(event) => setManualPaymentDate(event.target.value)} placeholder="Payment Date" />
             <button type="submit">Record Payment</button>
           </form>
           {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
