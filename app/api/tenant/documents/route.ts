@@ -87,6 +87,11 @@ export async function POST(request: NextRequest) {
 
     if (docError && !isMissingTableError(docError, 'tenant_documents')) throw docError;
 
+    if (documentType === 'tenant_photo' && docData) {
+      const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData.path);
+      await supabaseAdmin.from('tenants').update({ picture_url: publicUrl.publicUrl }).eq('id', tenantId as string);
+    }
+
     return NextResponse.json({ message: 'Document uploaded.', document: docData ?? { path: storageData.path } });
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to upload document.' }, { status: 500 });

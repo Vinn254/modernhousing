@@ -17,6 +17,9 @@ export default function TenantDashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [data, setData] = useState<TenantDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [pictureMessage, setPictureMessage] = useState('');
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
@@ -33,6 +36,34 @@ export default function TenantDashboardPage() {
 
     setData(result);
     setLoading(false);
+  }
+
+  async function handlePictureUpload(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!profilePicture || !user?.id) return;
+
+    setUploadingPicture(true);
+    setPictureMessage('');
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const formData = new FormData();
+    formData.append('file', profilePicture);
+    formData.append('documentType', 'tenant_photo');
+    if (session?.user?.user_metadata?.tenant_id) {
+      formData.append('tenantId', session.user.user_metadata.tenant_id);
+    }
+
+    const response = await fetch('/api/tenant/documents', { method: 'POST', body: formData });
+    const result = await response.json();
+
+    if (response.ok) {
+      setPictureMessage('Profile picture uploaded.');
+      setProfilePicture(null);
+      loadDashboard(user);
+    } else {
+      setPictureMessage(result.message ?? 'Upload failed.');
+    }
+    setUploadingPicture(false);
   }
 
   useEffect(() => {
@@ -101,29 +132,37 @@ export default function TenantDashboardPage() {
         </div>
       </section>
 
-      <section className="tenant-detail-grid">
-        <div className="card">
-          <div className="card-label">Personal Details</div>
-          <h3 style={{ marginBottom: 16 }}>My Profile</h3>
-          <div style={{ display: 'grid', gap: 12 }}>
-            <div><strong>Name:</strong> {tenant.full_name}</div>
-            <div><strong>Email:</strong> {tenant.email}</div>
-            <div><strong>Phone:</strong> {tenant.phone || '—'}</div>
-            <div><strong>Lease:</strong> {tenant.lease_start} → {tenant.lease_end}</div>
-          </div>
-        </div>
+<section className="tenant-detail-grid">
+         <div className="card">
+           <div className="card-label">Personal Details</div>
+           <h3 style={{ marginBottom: 16 }}>My Profile</h3>
+           <div style={{ display: 'grid', gap: 12 }}>
+             <div><strong>Name:</strong> {tenant.full_name}</div>
+             <div><strong>Email:</strong> {tenant.email}</div>
+             <div><strong>Phone:</strong> {tenant.phone || '—'}</div>
+             <div><strong>Lease:</strong> {tenant.lease_start} → {tenant.lease_end}</div>
+           </div>
+           <form onSubmit={handlePictureUpload} style={{ marginTop: 16 }}>
+             <label style={{ fontSize: '12px', color: 'var(--ink-3)', marginBottom: 6, display: 'block' }}>Upload Profile Picture</label>
+             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+               <input type="file" accept="image/*" onChange={(e) => setProfilePicture(e.target.files?.[0] ?? null)} />
+               <button type="submit" disabled={!profilePicture || uploadingPicture} style={{ padding: '6px 12px' }}>{uploadingPicture ? 'Uploading…' : 'Upload'}</button>
+             </div>
+             {pictureMessage && <p style={{ fontSize: '12px', marginTop: 8, color: pictureMessage.includes('failed') ? '#dc2626' : 'var(--accent)' }}>{pictureMessage}</p>}
+           </form>
+         </div>
 
-        <div className="card">
-          <div className="card-label">Quick Links</div>
-          <h3 style={{ marginBottom: 16 }}>Navigate to:</h3>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <a href="/tenant/payments" className="btn btn-ghost">View Payments</a>
-            <a href="/tenant/documents" className="btn btn-ghost">Upload Documents</a>
-            <a href="/tenant/complaints" className="btn btn-ghost">Raise Complaint</a>
-            <a href="/tenant/notifications" className="btn btn-ghost">View Notifications</a>
-          </div>
-        </div>
-      </section>
-    </main>
-  );
-}
+         <div className="card">
+           <div className="card-label">Quick Links</div>
+           <h3 style={{ marginBottom: 16 }}>Navigate to:</h3>
+           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+             <a href="/tenant/payments" className="btn btn-ghost">View Payments</a>
+             <a href="/tenant/documents" className="btn btn-ghost">Upload Documents</a>
+             <a href="/tenant/complaints" className="btn btn-ghost">Raise Complaint</a>
+             <a href="/tenant/notifications" className="btn btn-ghost">View Notifications</a>
+           </div>
+         </div>
+       </section>
+     </main>
+   );
+ }

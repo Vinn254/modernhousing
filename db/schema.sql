@@ -43,14 +43,24 @@ create table units (
 );
 
 create table tenants (
+   id uuid primary key default uuid_generate_v4(),
+   unit_id uuid references units(id) on delete cascade,
+   full_name text not null,
+   email text not null,
+   phone text,
+   lease_start date not null,
+   lease_end date not null,
+   deposit_amount numeric(12,2) not null default 0,
+   picture_url text,
+   created_at timestamp with time zone default now()
+);
+
+create table tenant_documents (
   id uuid primary key default uuid_generate_v4(),
-  unit_id uuid references units(id) on delete cascade,
-  full_name text not null,
-  email text not null,
-  phone text,
-  lease_start date not null,
-  lease_end date not null,
-  deposit_amount numeric(12,2) not null default 0,
+  tenant_id uuid references tenants(id) on delete cascade,
+  document_type text not null,
+  file_path text,
+  file_name text,
   created_at timestamp with time zone default now()
 );
 
