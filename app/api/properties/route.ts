@@ -50,6 +50,7 @@ async function getAuthContext(request: NextRequest) {
       userId: undefined,
       userEmail: undefined,
       profile: null,
+      userMetadata: null,
     };
   }
 
