@@ -75,30 +75,30 @@ export default function TenantDashboardPage() {
         <p className="subheading">Your apartment, payments, notices, and support requests in one place.</p>
       </div>
 
-      <section className="tenant-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 18, marginBottom: 24 }}>
-        <div className="card">
+      <section className="tenant-stats-grid">
+        <div className="card" style={{ padding: '18px 16px' }}>
           <div className="card-label">Apartment</div>
-          <h3 style={{ margin: 0 }}>{tenant.property_name}</h3>
-          <p style={{ color: 'var(--ink-3)' }}>Unit {tenant.unit_number}</p>
+          <h3 style={{ margin: 0, fontSize: '18px' }}>{tenant.property_name}</h3>
+          <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '13px' }}>Unit {tenant.unit_number}</p>
         </div>
-        <div className="card">
+        <div className="card" style={{ padding: '18px 16px' }}>
           <div className="card-label">Next Payment</div>
-          <h3 style={{ margin: 0 }}>{tenant.next_payment_date || 'Pending'}</h3>
-          <p style={{ color: 'var(--ink-3)' }}>Calculated every 30 days</p>
+          <h3 style={{ margin: 0, fontSize: '18px' }}>{tenant.next_payment_date || 'Pending'}</h3>
+          <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '12px' }}>Every 30 days</p>
         </div>
-        <div className="card">
+        <div className="card" style={{ padding: '18px 16px' }}>
           <div className="card-label">Payments</div>
-          <h3 style={{ margin: 0 }}>{data.payments.length}</h3>
-          <p style={{ color: 'var(--ink-3)' }}>Transactions</p>
+          <h3 style={{ margin: 0, fontSize: '18px' }}>{data.payments.length}</h3>
+          <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '12px' }}>Transactions</p>
         </div>
-        <div className="card">
+        <div className="card" style={{ padding: '18px 16px' }}>
           <div className="card-label">Notifications</div>
-          <h3 style={{ margin: 0 }}>{data.notifications.length}</h3>
-          <p style={{ color: 'var(--ink-3)' }}>Notices from agent</p>
+          <h3 style={{ margin: 0, fontSize: '18px' }}>{data.notifications.length}</h3>
+          <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '12px' }}>Notices</p>
         </div>
       </section>
 
-      <section className="tenant-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+      <section className="tenant-detail-grid">
         <div className="card">
           <div className="card-label">Personal Details</div>
           <h3 style={{ marginBottom: 16 }}>My Profile</h3>

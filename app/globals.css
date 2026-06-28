@@ -1250,8 +1250,8 @@ body {
 
 .tenant-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
   margin-bottom: 24px;
 }
 
@@ -1261,19 +1261,22 @@ body {
   gap: 18px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .tenant-stats-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 }
 
 @media (max-width: 520px) {
   .tenant-stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
 
   .tenant-detail-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 
