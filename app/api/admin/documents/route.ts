@@ -27,13 +27,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Get or create profile with organization
-    let { data: profile } = await supabaseAdmin
+let { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id, user_id, organization_id, role')
       .eq('user_id', session.user.id)
       .single();
 
-    let orgId = profile?.organization_id ?? session.user?.user_metadata?.organization_id ?? null;
+     // Fallback: query by email if user_id lookup fails
+     if (!profile && session.user.email) {
+       const { data: profileByEmail } = await supabaseAdmin
+         .from('profiles')
+         .select('id, user_id, organization_id, role')
+         .eq('email', session.user.email)
+         .single();
+       profile = profileByEmail;
+     }
+
+     let orgId = profile?.organization_id ?? session.user?.user_metadata?.organization_id ?? null;
 
     if (!orgId && session.user.user_metadata?.role !== 'super_admin') {
       // Create organization for project_manager users without org

@@ -34,13 +34,23 @@ async function getAuthContext(request: NextRequest) {
     return { isSuperAdmin: false, organization_id: null, profile: null };
   }
 
-  const { data: profile } = await supabaseAdmin
+let { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionData.session.user.id)
     .single();
 
-let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
+  // Fallback: query by email if user_id lookup fails
+  if (!profile && sessionData.session.user.email) {
+    const { data: profileByEmail } = await supabaseAdmin
+      .from('profiles')
+      .select('id, user_id, organization_id, role, full_name, email')
+      .eq('email', sessionData.session.user.email)
+      .single();
+    profile = profileByEmail;
+  }
+
+  let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
 
    if (!orgId) {
      const role = profile?.role ?? sessionData.session.user.user_metadata?.role;

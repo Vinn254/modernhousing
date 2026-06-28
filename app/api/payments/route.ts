@@ -27,35 +27,45 @@ async function getAuthContext(request: NextRequest) {
     return { isSuperAdmin: false, organization_id: null, profile: null };
   }
 
-const { data: profile } = await supabaseAdmin
+let { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, user_id, organization_id, role, full_name, email')
+    .eq('user_id', sessionData.session.user.id)
+    .single();
+
+  // Fallback: query by email if user_id lookup fails
+  if (!profile && sessionData.session.user.email) {
+    const { data: profileByEmail } = await supabaseAdmin
       .from('profiles')
       .select('id, user_id, organization_id, role, full_name, email')
-      .eq('user_id', sessionData.session.user.id)
+      .eq('email', sessionData.session.user.email)
       .single();
-
-    let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
-    // Allow reassignment
-    let profileData = profile;
-
-    if (!orgId && profile?.role === 'project_manager') {
-      const { data: newOrg } = await supabaseAdmin
-        .from('organizations')
-        .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-        .select('id')
-        .single();
-      orgId = newOrg?.id ?? null;
-      if (orgId && profileData) {
-        await supabaseAdmin.from('profiles').update({ organization_id: orgId }).eq('id', profileData.id);
-        profileData = { ...profileData, organization_id: orgId };
-      }
-    }
-
-    return {
-      isSuperAdmin: profile?.role === 'super_admin',
-      organization_id: orgId,
-      profile: profileData,
-    };
+    profile = profileByEmail;
   }
+
+  let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
+  // Allow reassignment
+  let profileData = profile;
+
+  if (!orgId && profile?.role === 'project_manager') {
+    const { data: newOrg } = await supabaseAdmin
+      .from('organizations')
+      .insert({ name: `${sessionData.session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
+      .select('id')
+      .single();
+    orgId = newOrg?.id ?? null;
+    if (orgId && profileData) {
+      await supabaseAdmin.from('profiles').update({ organization_id: orgId }).eq('id', profileData.id);
+      profileData = { ...profileData, organization_id: orgId };
+    }
+  }
+
+  return {
+    isSuperAdmin: profile?.role === 'super_admin',
+    organization_id: orgId,
+    profile: profileData,
+  };
+}
 
 export async function GET(request: NextRequest) {
    try {

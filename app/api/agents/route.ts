@@ -48,13 +48,23 @@ async function getAuthContext(request: NextRequest) {
     return { isSuperAdmin: false, profile: null, organization_id: null, userId: undefined, userEmail: undefined };
   }
 
-  const { data: profile } = await supabaseAdmin
+let { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionData.session.user.id)
     .single();
 
-let orgId = profile?.organization_id ?? null;
+  // Fallback: query by email if user_id lookup fails
+  if (!profile && sessionData.session.user.email) {
+    const { data: profileByEmail } = await supabaseAdmin
+      .from('profiles')
+      .select('id, user_id, organization_id, role, full_name, email')
+      .eq('email', sessionData.session.user.email)
+      .single();
+    profile = profileByEmail;
+  }
+
+  let orgId = profile?.organization_id ?? sessionData.session.user?.user_metadata?.organization_id ?? null;
 
    if (!orgId && (profile?.role === 'project_manager' || sessionData.session.user.user_metadata?.role === 'project_manager')) {
      const { data: newOrg } = await supabaseAdmin
