@@ -192,9 +192,9 @@ export default function CommunicationsPage() {
                 </select>
                 <select value={notificationForm.tenantId} onChange={e => setNotificationForm(f => ({ ...f, tenantId: e.target.value }))}>
                   <option value="">All tenants (broadcast)</option>
-                  {overdueTenants.map(t => (
+                  {tenants.map(t => (
                     <option key={t.id} value={t.id}>
-                      {t.full_name} - {t.unit} ({t.lease_end ? `Lease ends ${t.lease_end}` : ''})
+                      {t.full_name} - {t.unit} ({t.property})
                     </option>
                   ))}
                 </select>
