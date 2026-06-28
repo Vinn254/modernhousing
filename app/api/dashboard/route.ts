@@ -108,13 +108,24 @@ export async function GET(request: NextRequest) {
           tenantsQuery = tenantsQuery.in('unit_id', unitIds);
           paymentsQuery = paymentsQuery.in('tenant_id', (await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)).data?.map((t: any) => t.id) ?? []);
         } else {
-          tenantsQuery = tenantsQuery.eq('id', 'none');
-          paymentsQuery = paymentsQuery.eq('id', 'none');
+          return NextResponse.json({
+            properties: 0,
+            agents: 0,
+            tenants: 0,
+            total_payments: 0,
+            total_balance: 0,
+            tenants_with_analytics: [],
+          });
         }
       } else {
-        propertiesQuery = propertiesQuery.eq('id', 'none');
-        tenantsQuery = tenantsQuery.eq('id', 'none');
-        paymentsQuery = paymentsQuery.eq('id', 'none');
+        return NextResponse.json({
+          properties: 0,
+          agents: 0,
+          tenants: 0,
+          total_payments: 0,
+          total_balance: 0,
+          tenants_with_analytics: [],
+        });
       }
     }
 
