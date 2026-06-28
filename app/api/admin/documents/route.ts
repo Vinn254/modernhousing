@@ -26,55 +26,44 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ documents: [], message: 'Not authorized.' }, { status: 401 });
     }
 
-    let { data: profile, error: profileError } = await supabaseAdmin
+    // Get or create profile with organization
+    let { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id, user_id, organization_id, role')
       .eq('user_id', session.user.id)
       .single();
 
-    if (profileError && profileError.code !== 'PGRST116') {
-      return NextResponse.json({ documents: [], message: profileError.message }, { status: 500 });
-    }
-
-    // Create profile if it doesn't exist
-    if (!profile) {
+    if (!profile?.organization_id && session.user.user_metadata?.role !== 'super_admin') {
+      // Create organization for project_manager users without org
       const { data: newOrg } = await supabaseAdmin
         .from('organizations')
         .insert({ name: `${session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
         .select('id')
         .single();
-      const createdProfile = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          user_id: session.user.id,
-          full_name: session.user.user_metadata?.full_name ?? session.user.email,
-          email: session.user.email,
-          role: session.user.user_metadata?.role ?? 'project_manager',
-          organization_id: newOrg?.id ?? null,
-          status: 'active',
-        })
-        .select('id, user_id, organization_id, role')
-        .single();
-      profile = createdProfile.data;
-    }
 
-    // If profile has no organization_id, create org and update
-    if (!profile?.organization_id && profile?.role === 'project_manager') {
-      const { data: newOrg } = await supabaseAdmin
-        .from('organizations')
-        .insert({ name: `${session.user.email?.split('@')[0] ?? 'Property Manager'} Organization` })
-        .select('id')
-        .single();
-      if (newOrg) {
+      if (profile) {
         await supabaseAdmin
           .from('profiles')
-          .update({ organization_id: newOrg.id })
+          .update({ organization_id: newOrg?.id ?? null })
           .eq('id', profile.id);
-        profile = { ...profile, organization_id: newOrg.id };
+        profile = { ...profile, organization_id: newOrg?.id ?? null };
+      } else {
+        const createdProfile = await supabaseAdmin
+          .from('profiles')
+          .insert({
+            user_id: session.user.id,
+            full_name: session.user.user_metadata?.full_name ?? session.user.email,
+            email: session.user.email,
+            role: 'project_manager',
+            organization_id: newOrg?.id ?? null,
+            status: 'active',
+          })
+          .select('id, user_id, organization_id, role')
+          .single();
+        profile = createdProfile.data;
       }
     }
 
-    // Return empty if no profile or org
     if (!profile?.organization_id) {
       return NextResponse.json({ documents: [] });
     }

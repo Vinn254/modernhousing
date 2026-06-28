@@ -26,10 +26,9 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
 
-    // Direct sign in after sign up to ensure session exists
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
+    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
 
-    if (signUpError || !signUpData.user) {
+    if (signUpError || !data.user) {
       setError(signUpError?.message ?? 'Unable to create account.');
       setLoading(false);
       return;
@@ -38,7 +37,7 @@ export default function SignupPage() {
     const response = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: signUpData.user.id, organizationName, managerName, email, plan: selectedPlan }),
+      body: JSON.stringify({ userId: data.user.id, organizationName, managerName, email, plan: selectedPlan }),
     });
 
     const result = await response.json();
@@ -48,25 +47,8 @@ export default function SignupPage() {
       return;
     }
 
-    // Ensure we have a session before redirecting
-    let session = signUpData.session;
-    if (!session) {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) {
-        setError(signInError.message ?? 'Account created. Please sign in manually.');
-        setLoading(false);
-        return;
-      }
-      session = signInData.session;
-    }
-
-    if (!session) {
-      setError('Account created but session not established. Please sign in manually.');
-      setLoading(false);
-      return;
-    }
-
-    router.push('/admin');
+    // Registration successful - redirect to login
+    router.push('/login?message=Registration successful. Please sign in.');
   }
 
   return (
