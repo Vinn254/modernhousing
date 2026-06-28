@@ -211,8 +211,7 @@ export default function AgentTenantsPage() {
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Email</th>
-                      <th>Unit</th>
+                      <th>Email / Unit</th>
                       <th>Lease Start</th>
                       <th>Lease End</th>
                     </tr>
@@ -221,8 +220,7 @@ export default function AgentTenantsPage() {
                     {tenants.map(tenant => (
                       <tr key={tenant.id}>
                         <td className="landlord-name">{tenant.full_name}</td>
-                        <td>{tenant.email}</td>
-                        <td>{tenant.unit}</td>
+                        <td>{tenant.email} · Unit {tenant.unit}</td>
                         <td>{tenant.lease_start}</td>
                         <td>{tenant.lease_end}</td>
                       </tr>
