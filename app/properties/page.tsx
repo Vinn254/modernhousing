@@ -373,14 +373,14 @@ export default function PropertiesPage() {
             </select>
             <input value={unitForm.unitNumbers} onChange={(e) => setUnitForm(f => ({ ...f, unitNumbers: e.target.value }))} required placeholder="Unit numbers (A1, A2, B1, ...)" />
             <input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" />
-            <select onChange={(e) => setUnitForm(f => ({ ...f, unitType: e.target.value }))} required>
-              <option value="">Unit Type</option>
-              <option value="single-room">Single Room</option>
-              <option value="bedsitter">Bedsitter</option>
-              <option value="one-bedroom">One Bedroom</option>
-              <option value="two-bedroom">Two Bedroom</option>
-              <option value="three-bedroom">Three Bedroom</option>
-            </select>
+<select onChange={(e) => setUnitForm(f => ({ ...f, unitType: e.target.value }))}>
+               <option value="">Unit Type (optional)</option>
+               <option value="single-room">Single Room</option>
+               <option value="bedsitter">Bedsitter</option>
+               <option value="one-bedroom">One Bedroom</option>
+               <option value="two-bedroom">Two Bedroom</option>
+               <option value="three-bedroom">Three Bedroom</option>
+             </select>
             <button type="submit">Add Units</button>
           </form>
 

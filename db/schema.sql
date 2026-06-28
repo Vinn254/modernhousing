@@ -38,7 +38,7 @@ create table units (
    rent_amount numeric(12,2) not null default 0,
    occupancy_status text not null default 'vacant' check (occupancy_status in ('vacant', 'occupied')),
    agent_email text,
-   unit_type text check (unit_type in ('single_room', 'bedsitter', 'one_bedroom', 'two_bedroom', 'three_bedroom')),
+   unit_type text check (unit_type in ('single-room', 'bedsitter', 'one-bedroom', 'two-bedroom', 'three-bedroom') or unit_type is null),
    created_at timestamp with time zone default now()
 );
 

@@ -182,15 +182,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const result = await supabaseAdmin.from('units').insert({
+const insertData: any = {
       property_id: propertyId,
       unit_number: unitNumber,
       rent_amount: rentAmount ?? 0,
-      unit_type: unitType ?? 'single-room',
       size,
       agent_email: agentEmail,
       occupancy_status: occupancyStatus ?? 'vacant',
-    }).select().single();
+    };
+    if (unitType) insertData.unit_type = unitType;
+
+    const result = await supabaseAdmin.from('units').insert(insertData).select().single();
 
     if (result.error) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });
