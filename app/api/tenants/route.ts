@@ -181,13 +181,13 @@ const result = await supabaseAdmin.from('tenants').insert({
       lease_start: leaseStart,
       lease_end: leaseEnd,
       deposit_amount: depositAmount,
-    });
+    }).select('id').single();
 
     if (result.error) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
 
-    const tenantId = result.data?.[0]?.id;
+    const tenantId = result.data?.id;
 
     // Generate tenant agreement
     if (tenantId && finalUnitId) {
