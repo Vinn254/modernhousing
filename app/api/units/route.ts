@@ -167,23 +167,32 @@ export async function POST(request: NextRequest) {
     }
 
     const authContext = await getAuthContext(request);
+
     if (!authContext.isSuperAdmin) {
-      if (!authContext.organizationId) {
+      if (!authContext.organizationId && !authContext.profile?.user_metadata?.property_id) {
         return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
       }
-      const { data: prop } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('id', propertyId)
-        .eq('organization_id', authContext.organizationId)
-        .maybeSingle();
 
-      if (!prop) {
-        return NextResponse.json({ message: 'You can only add units to properties in your own landlord workspace.' }, { status: 403 });
+      // For agents: check if property matches their assigned property
+      if (authContext.profile?.user_metadata?.property_id && authContext.profile.user_metadata.property_id !== propertyId) {
+        return NextResponse.json({ message: 'You can only add units to your assigned property.' }, { status: 403 });
+      }
+
+      if (authContext.organizationId) {
+        const { data: prop } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('id', propertyId)
+          .eq('organization_id', authContext.organizationId)
+          .maybeSingle();
+
+        if (!prop) {
+          return NextResponse.json({ message: 'You can only add units to properties in your own landlord workspace.' }, { status: 403 });
+        }
       }
     }
 
-const insertData: any = {
+    const insertData: any = {
       property_id: propertyId,
       unit_number: unitNumber,
       rent_amount: rentAmount ?? 0,

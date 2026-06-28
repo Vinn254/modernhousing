@@ -76,6 +76,38 @@ async function getAuthContext(request: NextRequest) {
 export async function GET(request: NextRequest) {
    try {
       const authContext = await getAuthContext(request);
+      const propertyId = request.nextUrl.searchParams.get('propertyId');
+
+      if (propertyId) {
+        const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', propertyId);
+        const unitIds = (units ?? []).map((u: any) => u.id);
+
+        if (unitIds.length > 0) {
+          const { data, error } = await supabaseAdmin
+            .from('tenants')
+            .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(id, name, address))')
+            .in('unit_id', unitIds)
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+
+          const tenants = (data ?? []).map((tenant: any) => ({
+            id: tenant.id,
+            full_name: tenant.full_name,
+            email: tenant.email,
+            phone: tenant.phone,
+            unit: tenant.units?.unit_number ?? '',
+            property: tenant.units?.properties?.name ?? '',
+            property_id: tenant.units?.properties?.id ?? '',
+            address: tenant.units?.properties?.address ?? '',
+            lease_start: tenant.lease_start,
+            lease_end: tenant.lease_end,
+          }));
+
+          return NextResponse.json({ tenants });
+        }
+        return NextResponse.json({ tenants: [] });
+      }
 
       if (!authContext.isSuperAdmin && !authContext.organizationId) {
         return NextResponse.json({ tenants: [] });

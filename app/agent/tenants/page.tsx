@@ -22,6 +22,8 @@ export default function AgentTenantsPage() {
   const [agentLeaseEnd, setAgentLeaseEnd] = useState('');
   const [agentDeposit, setAgentDeposit] = useState('');
   const [agentLoading, setAgentLoading] = useState(false);
+  const [unitForm, setUnitForm] = useState({ unitNumber: '', rentAmount: '', unitType: '' });
+  const [unitLoading, setUnitLoading] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -30,20 +32,19 @@ export default function AgentTenantsPage() {
     try {
       const storedPropertyId = localStorage.getItem('agentPropertyId');
       const [tenantsResponse, unitsResponse] = await Promise.all([
-        fetch('/api/tenants'),
-        fetch('/api/units'),
+        fetch(`/api/tenants?propertyId=${storedPropertyId}`),
+        fetch(`/api/units?propertyId=${storedPropertyId}`),
       ]);
       const tenantsResult = await tenantsResponse.json();
       const unitsResult = await unitsResponse.json();
 
       if (tenantsResponse.ok) {
-        if (storedPropertyId) {
-          setTenants(tenantsResult.tenants.filter((t: any) => (t.property_id || t.units?.property_id) === storedPropertyId));
-        } else {
-          setTenants(tenantsResult.tenants ?? []);
-        }
+        setTenants(tenantsResult.tenants ?? []);
       }
-      if (unitsResponse.ok) setUnits(unitsResult.units ?? []);
+      if (unitsResponse.ok) {
+        // Filter units to only show vacant ones under this property
+        setUnits(unitsResult.units?.filter((u: any) => u.property_id === storedPropertyId) ?? []);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -65,7 +66,7 @@ export default function AgentTenantsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         fullName: agentTenantName, email: agentTenantEmail, phone: agentTenantPhone,
-        unitId: selectedUnit?.id || agentTenantUnit, propertyId: storedPropertyId,
+        unitId: selectedUnit?.id || null, propertyId: storedPropertyId,
         leaseStart: agentLeaseStart, leaseEnd: agentLeaseEnd,
         depositAmount: Number(agentDeposit),
       }),
@@ -85,6 +86,36 @@ export default function AgentTenantsPage() {
     setAgentLoading(false);
   }
 
+  async function handleAddUnit(event: React.FormEvent) {
+    event.preventDefault();
+    setUnitLoading(true);
+    setError('');
+
+    const storedPropertyId = localStorage.getItem('agentPropertyId');
+    const response = await fetch('/api/units', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        propertyId: storedPropertyId,
+        unitNumber: unitForm.unitNumber,
+        rentAmount: Number(unitForm.rentAmount) || 0,
+        unitType: unitForm.unitType,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to add unit.');
+      setUnitLoading(false);
+      return;
+    }
+
+    setUnitForm({ unitNumber: '', rentAmount: '', unitType: '' });
+    loadData();
+    setUnitLoading(false);
+  }
+
   return (
     <main className="container admin-no-hero" style={{ padding: '34px 0 80px' }}>
       <div className="card-admin-header">
@@ -93,6 +124,27 @@ export default function AgentTenantsPage() {
 
       <section className="bento-section">
         <div className="bento">
+
+          <article className="card">
+            <div className="card-label"><span className="badge badge-pm" style={{ background: 'var(--accent)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </span>Add Unit</div>
+            <h3>Create New Unit</h3>
+            <form onSubmit={handleAddUnit} className="form-grid">
+              <input value={unitForm.unitNumber} onChange={(e) => setUnitForm(f => ({ ...f, unitNumber: e.target.value }))} required placeholder="Unit number (e.g., A1)" />
+              <input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" />
+              <select value={unitForm.unitType} onChange={(e) => setUnitForm(f => ({ ...f, unitType: e.target.value }))}>
+                <option value="">Unit Type (optional)</option>
+                <option value="single-room">Single Room</option>
+                <option value="bedsitter">Bedsitter</option>
+                <option value="one-bedroom">One Bedroom</option>
+                <option value="two-bedroom">Two Bedroom</option>
+                <option value="three-bedroom">Three Bedroom</option>
+              </select>
+              <button type="submit" disabled={unitLoading}>{unitLoading ? 'Adding…' : 'Add Unit'}</button>
+            </form>
+          </article>
+
           <article className="card">
             <div className="card-label">Add Tenant</div>
             <h3>Create New Tenant Record</h3>
@@ -102,8 +154,8 @@ export default function AgentTenantsPage() {
               <input value={agentTenantPhone} onChange={(event) => setAgentTenantPhone(event.target.value)} placeholder="Phone" />
               <select value={agentTenantUnit} onChange={(event) => setAgentTenantUnit(event.target.value)} required>
                 <option value="">Select unit</option>
-                {units.filter(u => u.occupancy_status === 'vacant').map(u => (
-                  <option key={u.id} value={u.unit_number}>{u.unit_number}</option>
+                {units.map(u => (
+                  <option key={u.id} value={u.unit_number}>{u.unit_number} ({u.unit_type || 'unit'})</option>
                 ))}
               </select>
               <input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required />
