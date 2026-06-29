@@ -175,10 +175,12 @@ async function enrichProperties(rows: any[]) {
 
   return rows.map((row) => {
     const propertyUnits = unitsByProperty[row.id] ?? [];
+    const occupiedUnits = propertyUnits.filter((u) => u.occupancy_status === 'occupied').length;
     const rentRoll = propertyUnits.reduce((sum, unit) => sum + Number(unit.rent_amount ?? 0), 0);
     return {
       ...row,
       unit_count: propertyUnits.length,
+      occupied_units: occupiedUnits,
       tenant_count: tenantsByProperty[row.id] ?? 0,
       rent_roll: rentRoll,
     };
