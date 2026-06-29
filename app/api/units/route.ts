@@ -102,20 +102,21 @@ export async function GET(request: NextRequest) {
     if (authContext.isSuperAdmin) {
       // Super admin - can see all units
     } else {
-      // Get properties user owns or is assigned to
-      if (authContext.organizationId) {
+      // Get the user's profile with organization_id (fresh from DB)
+      const { data: freshProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, organization_id')
+        .eq('user_id', authContext.sessionUser?.id ?? '')
+        .single();
+      
+      const orgId = freshProfile?.organization_id || authContext.organizationId;
+      
+      if (orgId) {
         const { data: orgProps } = await supabaseAdmin
           .from('properties')
           .select('id')
-          .eq('organization_id', authContext.organizationId);
+          .eq('organization_id', orgId);
         propertyIds = (orgProps ?? []).map((p: any) => p.id);
-      } else if (authContext.profile?.id) {
-        // Check if user owns properties via their profile
-        const { data: ownedProps } = await supabaseAdmin
-          .from('properties')
-          .select('id')
-          .eq('organization_id', authContext.profile.organization_id);
-        propertyIds = (ownedProps ?? []).map((p: any) => p.id);
       }
       
       // For agents, get units from assigned property
