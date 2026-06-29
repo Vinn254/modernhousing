@@ -376,6 +376,8 @@ body {
 .form-grid select,
 .form-grid textarea {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 13px;

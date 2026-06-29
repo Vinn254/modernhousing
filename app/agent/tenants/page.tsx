@@ -154,21 +154,21 @@ export default function AgentTenantsPage() {
               </span>Add Tenant
             </div>
             <h3>Register New Tenant</h3>
-            <form onSubmit={handleAddTenant} className="form-grid">
-              <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} required placeholder="Tenant name" />
-              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="Tenant email" />
-              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" />
-              <select value={form.unitNumber} onChange={e => setForm(f => ({ ...f, unitNumber: e.target.value }))} required>
-                <option value="">Select unit</option>
-                {units.filter(u => u.occupancy_status === 'vacant').map(u => (
-                  <option key={u.id} value={u.unit_number}>{u.unit_number} ({u.unit_type || 'unit'})</option>
-                ))}
-              </select>
-              <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
-              <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
-              <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="Deposit" />
-              <button type="submit">Add Tenant</button>
-            </form>
+<form onSubmit={handleAddTenant} className="form-grid">
+               <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} required placeholder="Tenant name" />
+               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="Tenant email" />
+               <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" />
+               <select value={form.unitNumber} onChange={e => setForm(f => ({ ...f, unitNumber: e.target.value }))} required>
+                 <option value="">Select unit</option>
+                 {units.filter(u => u.occupancy_status === 'vacant').map(u => (
+                   <option key={u.id} value={u.unit_number}>{u.unit_number} ({u.unit_type || 'unit'})</option>
+                 ))}
+               </select>
+               <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required placeholder="Lease start" />
+               <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required placeholder="Lease end" />
+               <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="Deposit amount" />
+               <button type="submit">Add Tenant</button>
+             </form>
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </article>
