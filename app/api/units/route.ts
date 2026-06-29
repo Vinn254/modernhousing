@@ -106,7 +106,27 @@ export async function GET(request: NextRequest) {
         if (effectivePropertyId) {
           query = query.eq('property_id', effectivePropertyId);
         } else {
-          return NextResponse.json({ units: [] });
+          // No property context - check if user has any units via property ownership
+          const { data: userProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('organization_id')
+            .eq('user_id', authContext.sessionUser?.id ?? '')
+            .single();
+          if (userProfile?.organization_id) {
+            // Fetch all units for user's organization
+            const { data: orgProps } = await supabaseAdmin
+              .from('properties')
+              .select('id')
+              .eq('organization_id', userProfile.organization_id);
+            const propIds = (orgProps ?? []).map((p: any) => p.id);
+            if (propIds.length > 0) {
+              query = query.in('property_id', propIds);
+            } else {
+              return NextResponse.json({ units: [] });
+            }
+          } else {
+            return NextResponse.json({ units: [] });
+          }
         }
       } else {
         const { data: orgProps } = await supabaseAdmin
@@ -128,7 +148,7 @@ export async function GET(request: NextRequest) {
     } else if (propertyId) {
       query = query.eq('property_id', propertyId);
     } else {
-      // Super admin without propertyId gets all units - could be limited
+      // Super admin without propertyId gets all units
       query = query.limit(50);
     }
 
