@@ -103,10 +103,13 @@ export async function GET(request: NextRequest) {
       // Super admin - can see all units
     } else {
       // Get the user's profile with organization_id (fresh from DB)
+      const sessionUser = authContext.sessionUser;
+      const userId = sessionUser?.id ?? '';
+      
       const { data: freshProfile } = await supabaseAdmin
         .from('profiles')
         .select('id, organization_id')
-        .eq('user_id', authContext.userId ?? '')
+        .eq('user_id', userId)
         .single();
       
       const orgId = freshProfile?.organization_id || authContext.organizationId;
@@ -120,7 +123,7 @@ export async function GET(request: NextRequest) {
       }
       
       // For agents, get units from assigned property
-      const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
+      const userMetadata = sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
       if (userMetadata?.property_id && !propertyIds.includes(userMetadata.property_id)) {
         propertyIds.push(userMetadata.property_id);
       }
