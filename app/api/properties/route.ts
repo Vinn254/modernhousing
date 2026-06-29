@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
       organizationId: authContext.organizationId 
     });
 
-    if (!authContext.isSuperAdmin) {
+if (!authContext.isSuperAdmin) {
       let orgId = authContext.organizationId;
 
       // If no org_id, create one and update profile
@@ -274,20 +274,20 @@ export async function POST(request: NextRequest) {
           .eq('user_id', authContext.userId)
           .single();
 
-if (profile && orgId && authContext.userId) {
-           await supabaseAdmin
-             .from('profiles')
-             .update({ organization_id: orgId, role: 'project_manager' })
-             .eq('id', profile.id);
-           
-           // Also update auth user metadata for session consistency
-           await supabaseAdmin.auth.admin.updateUserById(authContext.userId, {
-             user_metadata: { 
-               organization_id: orgId,
-               role: 'project_manager'
-             }
-           });
-         }
+        if (profile && orgId && authContext.userId) {
+          await supabaseAdmin
+            .from('profiles')
+            .update({ organization_id: orgId, role: 'project_manager' })
+            .eq('id', profile.id);
+          
+          // Also update auth user metadata for session consistency
+          await supabaseAdmin.auth.admin.updateUserById(authContext.userId, {
+            user_metadata: { 
+              organization_id: orgId,
+              role: 'project_manager'
+            }
+          });
+        }
       }
 
       if (!orgId) {
