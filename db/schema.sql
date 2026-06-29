@@ -27,6 +27,7 @@ create table properties (
    size text,
    amenities text,
    ownership_info text,
+   unit_count integer default 0,
    created_at timestamp with time zone default now()
 );
 

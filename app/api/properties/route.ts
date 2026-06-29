@@ -177,9 +177,11 @@ async function enrichProperties(rows: any[]) {
     const propertyUnits = unitsByProperty[row.id] ?? [];
     const occupiedUnits = propertyUnits.filter((u) => u.occupancy_status === 'occupied').length;
     const rentRoll = propertyUnits.reduce((sum, unit) => sum + Number(unit.rent_amount ?? 0), 0);
+    const storedUnitCount = Number(row.unit_count ?? 0);
+    const totalUnits = storedUnitCount > 0 ? storedUnitCount : propertyUnits.length;
     return {
       ...row,
-      unit_count: propertyUnits.length,
+      unit_count: totalUnits,
       occupied_units: occupiedUnits,
       tenant_count: tenantsByProperty[row.id] ?? 0,
       rent_roll: rentRoll,
@@ -238,7 +240,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     const body = await request.json();
-    const { name, address, size, amenities, ownershipInfo } = body;
+    const { name, address, unitCount, amenities, ownershipInfo } = body;
 
     if (!name?.trim() || !address?.trim()) {
       return NextResponse.json({ message: 'Property name and address are required.' }, { status: 400 });
@@ -289,7 +291,7 @@ export async function POST(request: NextRequest) {
         .insert({
           name: name.trim(),
           address: address.trim(),
-          size,
+          unit_count: unitCount ? Number(unitCount) : 0,
           amenities,
           ownership_info: ownershipInfo,
           organization_id: orgId,
@@ -311,7 +313,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name: name.trim(),
         address: address.trim(),
-        size,
+        unit_count: unitCount ? Number(unitCount) : 0,
         amenities,
         ownership_info: ownershipInfo,
       })
@@ -335,7 +337,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Property id is required.' }, { status: 400 });
     }
 
-    const { name, address, size, amenities, ownershipInfo } = body;
+    const { name, address, unitCount, amenities, ownershipInfo } = body;
 
     const authContext = await getAuthContext(request);
     const property = await assertPropertyAccess(propertyId, authContext);
@@ -348,7 +350,7 @@ export async function PATCH(request: NextRequest) {
       .update({
         name: name?.trim() ?? undefined,
         address: address?.trim() ?? undefined,
-        size,
+        unit_count: unitCount !== undefined ? Number(unitCount) : undefined,
         amenities,
         ownership_info: ownershipInfo,
       })
