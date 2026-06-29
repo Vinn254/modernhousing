@@ -171,21 +171,39 @@ export async function POST(request: NextRequest) {
     const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
 
     if (!authContext.isSuperAdmin) {
-      // For agents: check if property matches their assigned property
+      // For agents without organization: use property_id from user_metadata
       if (!authContext.organizationId && userMetadata?.property_id && userMetadata.property_id !== propertyId) {
         return NextResponse.json({ message: 'You can only add units to your assigned property.' }, { status: 403 });
       }
 
-      if (authContext.organizationId) {
-        const { data: prop } = await supabaseAdmin
-          .from('properties')
+      // Verify property exists
+      const { data: prop } = await supabaseAdmin
+        .from('properties')
+        .select('id, organization_id')
+        .eq('id', propertyId)
+        .maybeSingle();
+
+      if (!prop) {
+        return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
+      }
+
+      // For landlords: check if property belongs to their organization
+      if (authContext.organizationId && prop.organization_id !== authContext.organizationId) {
+        return NextResponse.json({ message: 'You can only add units to properties in your own landlord workspace.' }, { status: 403 });
+      }
+
+      // For users without organization but with a valid property, allow access
+      if (!authContext.organizationId && !userMetadata?.property_id) {
+        // Check if user is a landlord/project_manager of this property via profile
+        const { data: userProperty } = await supabaseAdmin
+          .from('profiles')
           .select('id')
-          .eq('id', propertyId)
-          .eq('organization_id', authContext.organizationId)
+          .eq('user_id', authContext.sessionUser?.id ?? '')
+          .eq('organization_id', prop.organization_id)
           .maybeSingle();
 
-        if (!prop) {
-          return NextResponse.json({ message: 'You can only add units to properties in your own workspace.' }, { status: 403 });
+        if (!userProperty) {
+          return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
         }
       }
     }
