@@ -274,12 +274,22 @@ export async function POST(request: NextRequest) {
           .eq('user_id', authContext.userId)
           .single();
 
-        if (profile && orgId) {
-          await supabaseAdmin
-            .from('profiles')
-            .update({ organization_id: orgId, role: 'project_manager' })
-            .eq('id', profile.id);
-        }
+if (profile && orgId) {
+           await supabaseAdmin
+             .from('profiles')
+             .update({ organization_id: orgId, role: 'project_manager' })
+             .eq('id', profile.id);
+           
+           // Also update auth user metadata for session consistency
+           if (authContext.sessionUser?.id) {
+             await supabaseAdmin.auth.admin.updateUserById(authContext.sessionUser.id, {
+               user_metadata: { 
+                 organization_id: orgId,
+                 role: 'project_manager'
+               }
+             });
+           }
+         }
       }
 
       if (!orgId) {
