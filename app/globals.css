@@ -387,6 +387,29 @@ body {
   transition: border-color .2s, box-shadow .2s;
 }
 
+.form-grid .field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-grid .field-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.form-grid .field-group input,
+.form-grid .field-group select {
+  width: 100%;
+  padding: 12px 13px;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  transition: border-color .2s, box-shadow .2s;
+}
+
 .form-grid input:focus,
 .form-grid select:focus,
 .form-grid textarea:focus {

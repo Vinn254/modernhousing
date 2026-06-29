@@ -34,7 +34,7 @@ export default function AgentTenantsPage() {
     email: '',
     phone: '',
     unitNumber: '',
-    leaseStart: '',
+    leaseStart: new Date().toISOString().split('T')[0],
     leaseEnd: '',
     depositAmount: '',
   });
@@ -155,18 +155,39 @@ export default function AgentTenantsPage() {
             </div>
             <h3>Register New Tenant</h3>
 <form onSubmit={handleAddTenant} className="form-grid">
-               <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} required placeholder="Tenant name" />
-               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="Tenant email" />
-               <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" />
-               <select value={form.unitNumber} onChange={e => setForm(f => ({ ...f, unitNumber: e.target.value }))} required>
-                 <option value="">Select unit</option>
-                 {units.filter(u => u.occupancy_status === 'vacant').map(u => (
-                   <option key={u.id} value={u.unit_number}>{u.unit_number} ({u.unit_type || 'unit'})</option>
-                 ))}
-               </select>
-               <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required placeholder="Lease start" />
-               <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required placeholder="Lease end" />
-               <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="Deposit amount" />
+               <div className="field-group">
+                 <label>Full name</label>
+                 <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} required placeholder="Tenant name" />
+               </div>
+               <div className="field-group">
+                 <label>Email</label>
+                 <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="Tenant email" />
+               </div>
+               <div className="field-group">
+                 <label>Phone</label>
+                 <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone number" />
+               </div>
+               <div className="field-group">
+                 <label>Select unit</label>
+                 <select value={form.unitNumber} onChange={e => setForm(f => ({ ...f, unitNumber: e.target.value }))} required>
+                   <option value="">Choose vacant unit</option>
+                   {units.filter(u => u.occupancy_status === 'vacant').map(u => (
+                     <option key={u.id} value={u.unit_number}>{u.unit_number} ({u.unit_type || 'unit'})</option>
+                   ))}
+                 </select>
+               </div>
+               <div className="field-group">
+                 <label>Lease Start Date</label>
+                 <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
+               </div>
+               <div className="field-group">
+                 <label>Lease End Date</label>
+                 <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
+               </div>
+               <div className="field-group">
+                 <label>Deposit Amount (KSH)</label>
+                 <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="e.g., 5000" />
+               </div>
                <button type="submit">Add Tenant</button>
              </form>
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
@@ -180,19 +201,28 @@ export default function AgentTenantsPage() {
               </span>Create New Unit
             </div>
             <h3>Add Unit</h3>
-            <form onSubmit={handleAddUnit} className="form-grid">
-              <input value={unitForm.unitNumber} onChange={e => setUnitForm(f => ({ ...f, unitNumber: e.target.value }))} required placeholder="Unit number (e.g., A1)" />
-              <input type="number" value={unitForm.rentAmount} onChange={e => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" />
-              <select value={unitForm.unitType} onChange={e => setUnitForm(f => ({ ...f, unitType: e.target.value }))}>
-                <option value="">Unit Type (optional)</option>
-                <option value="single-room">Single Room</option>
-                <option value="bedsitter">Bedsitter</option>
-                <option value="one-bedroom">One Bedroom</option>
-                <option value="two-bedroom">Two Bedroom</option>
-                <option value="three-bedroom">Three Bedroom</option>
-              </select>
-              <button type="submit">Add Unit</button>
-            </form>
+<form onSubmit={handleAddUnit} className="form-grid">
+               <div className="field-group">
+                 <label>Unit number</label>
+                 <input value={unitForm.unitNumber} onChange={e => setUnitForm(f => ({ ...f, unitNumber: e.target.value }))} required placeholder="e.g., A1" />
+               </div>
+               <div className="field-group">
+                 <label>Rent amount (KSH)</label>
+                 <input type="number" value={unitForm.rentAmount} onChange={e => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="e.g., 6000" />
+               </div>
+               <div className="field-group">
+                 <label>Unit Type</label>
+                 <select value={unitForm.unitType} onChange={e => setUnitForm(f => ({ ...f, unitType: e.target.value }))}>
+                   <option value="">Choose type (optional)</option>
+                   <option value="single-room">Single Room</option>
+                   <option value="bedsitter">Bedsitter</option>
+                   <option value="one-bedroom">One Bedroom</option>
+                   <option value="two-bedroom">Two Bedroom</option>
+                   <option value="three-bedroom">Three Bedroom</option>
+                 </select>
+               </div>
+               <button type="submit">Add Unit</button>
+             </form>
           </article>
 
           <article className="card" style={{ gridColumn: 'span 12' }}>
