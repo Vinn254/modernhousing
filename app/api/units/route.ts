@@ -96,6 +96,39 @@ export async function GET(request: NextRequest) {
     const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
+    // Get all properties the user owns/assigned to
+    let propertyIds: string[] = [];
+    
+    if (authContext.isSuperAdmin) {
+      // Super admin - can see all units
+    } else {
+      // Get properties user owns or is assigned to
+      if (authContext.organizationId) {
+        const { data: orgProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('organization_id', authContext.organizationId);
+        propertyIds = (orgProps ?? []).map((p: any) => p.id);
+      } else if (authContext.profile?.id) {
+        // Check if user owns properties via their profile
+        const { data: ownedProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('organization_id', authContext.profile.organization_id);
+        propertyIds = (ownedProps ?? []).map((p: any) => p.id);
+      }
+      
+      // For agents, get units from assigned property
+      const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
+      if (userMetadata?.property_id && !propertyIds.includes(userMetadata.property_id)) {
+        propertyIds.push(userMetadata.property_id);
+      }
+      
+      if (propertyIds.length === 0 && !propertyId) {
+        return NextResponse.json({ units: [] });
+      }
+    }
+
     let query = supabaseAdmin
       .from('units')
       .select(`
@@ -108,58 +141,11 @@ export async function GET(request: NextRequest) {
         tenants(id, full_name, email, lease_start, lease_end)
       `);
 
-    if (!authContext.isSuperAdmin) {
-      const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
-
-      if (!authContext.organizationId) {
-        // Try to get org from profile via email fallback
-        const orgFromProfile = authContext.profile?.organization_id;
-        const effectiveOrgId = orgFromProfile || userMetadata.organization_id;
-
-        if (effectiveOrgId) {
-          // Fetch all units for user's organization
-          const { data: orgProps } = await supabaseAdmin
-            .from('properties')
-            .select('id')
-            .eq('organization_id', effectiveOrgId);
-          const propIds = (orgProps ?? []).map((p: any) => p.id);
-          if (propIds.length > 0) {
-            query = propertyId
-              ? query.eq('property_id', propertyId)
-              : query.in('property_id', propIds);
-          } else {
-            return NextResponse.json({ units: [] });
-          }
-        } else {
-          // No org but has property_id - check if it's the agent's assigned property
-          const effectivePropertyId = userMetadata?.property_id || propertyId;
-          if (effectivePropertyId) {
-            query = query.eq('property_id', effectivePropertyId);
-          } else {
-            return NextResponse.json({ units: [] });
-          }
-        }
-      } else {
-        const { data: orgProps } = await supabaseAdmin
-          .from('properties')
-          .select('id')
-          .eq('organization_id', authContext.organizationId);
-        const propIds = (orgProps ?? []).map((p: any) => p.id);
-
-        if (propIds.length === 0) {
-          return NextResponse.json({ units: [] });
-        }
-
-        if (propertyId) {
-          query = query.eq('property_id', propertyId);
-        } else {
-          query = query.in('property_id', propIds);
-        }
-      }
-    } else if (propertyId) {
+    if (propertyId) {
       query = query.eq('property_id', propertyId);
+    } else if (propertyIds.length > 0) {
+      query = query.in('property_id', propertyIds);
     } else {
-      // Super admin without propertyId gets all units
       query = query.limit(50);
     }
 
