@@ -473,7 +473,6 @@ export default function PropertiesPage() {
                              <div className="landlord-actions">
                                <button type="button" className="action-button" onClick={() => setSelectedProperty(property)}>View Units</button>
                                <button type="button" className="action-button primary" onClick={() => handleEdit(property)}>Edit</button>
-                               <button type="button" className="action-button danger" onClick={() => handleRemove(property.id)}>Remove</button>
                              </div>
                            </td>
                         </tr>
@@ -534,7 +533,6 @@ export default function PropertiesPage() {
                              {unit.occupancy_status !== 'occupied' && (
                                <button type="button" className="action-button" onClick={() => handleMarkOccupied(unit.id)} style={{ padding: '6px 10px', fontSize: '12px' }}>Mark Occupied</button>
                              )}
-                             <button type="button" className="action-button danger" onClick={() => handleDeleteUnit(unit.id)} style={{ padding: '6px 10px', fontSize: '12px' }}>Delete</button>
                            </div>
                          </td>
                       </tr>
