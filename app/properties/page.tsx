@@ -24,6 +24,7 @@ interface Property {
   occupied_units?: number;
   tenant_count?: number;
   rent_roll?: number;
+  unitCount?: number;
 }
 
 const emptyForm = {
@@ -32,6 +33,7 @@ const emptyForm = {
   size: '',
   amenities: '',
   ownershipInfo: '',
+  unitCount: '',
 };
 
 async function getAuthHeaders() {
@@ -149,6 +151,7 @@ export default function PropertiesPage() {
       size: property.size ?? '',
       amenities: property.amenities ?? '',
       ownershipInfo: property.ownership_info ?? '',
+      unitCount: String(property.unit_count ?? property.unitCount ?? ''),
     });
     setMessage('');
     setError('');
@@ -349,8 +352,8 @@ export default function PropertiesPage() {
                 <input value={form.address} onChange={(event) => updateForm('address', event.target.value)} required placeholder="123 Main Street" />
               </div>
               <div className="field-group">
-                <label>Size / units</label>
-                <input value={form.size} onChange={(event) => updateForm('size', event.target.value)} placeholder="24 units" />
+                <label>Units</label>
+                <input type="number" min="0" value={form.unitCount} onChange={(event) => updateForm('unitCount', event.target.value)} required placeholder="24" />
               </div>
               <div className="field-group">
                 <label>Amenities</label>
@@ -452,9 +455,9 @@ export default function PropertiesPage() {
                       const occupancy = unitCount > 0 ? Math.round((occupiedCount / unitCount) * 100) : 0;
                       return (
                         <tr key={property.id}>
-                          <td className="landlord-name" style={{ cursor: 'pointer' }}>
-                            <span onClick={() => setSelectedProperty(property)} style={{ textDecoration: 'underline' }}>{property.name}</span>
-                            <small>{property.size || 'No size recorded'}</small>
+                          <td className="landlord-name">
+                            <span onClick={() => setSelectedProperty(property)} style={{ cursor: 'pointer', textDecoration: 'underline' }}>{property.name}</span>
+                            <small>{unitCount} unit{unitCount !== 1 ? 's' : ''}</small>
                           </td>
                           <td>{property.address}</td>
                           <td>{unitCount}</td>
@@ -466,13 +469,13 @@ export default function PropertiesPage() {
                             <span className={`renewal-pill ${unitCount === occupiedCount ? 'status-active' : 'status-pending'}`}>{occupancy}%</span>
                           </td>
                           <td className="landlord-name">KSH {Number(property.rent_roll ?? 0).toLocaleString()}</td>
-                          <td>
-                            <div className="landlord-actions">
-                              <button className="action-button" onClick={() => setSelectedProperty(property)}>View Units</button>
-                              <button className="action-button primary" onClick={() => handleEdit(property)}>Edit</button>
-                              <button className="action-button danger" onClick={() => handleRemove(property.id)}>Remove</button>
-                            </div>
-                          </td>
+<td>
+                             <div className="landlord-actions">
+                               <button type="button" className="action-button" onClick={() => setSelectedProperty(property)}>View Units</button>
+                               <button type="button" className="action-button primary" onClick={() => handleEdit(property)}>Edit</button>
+                               <button type="button" className="action-button danger" onClick={() => handleRemove(property.id)}>Remove</button>
+                             </div>
+                           </td>
                         </tr>
                       );
                     })}
@@ -525,15 +528,15 @@ export default function PropertiesPage() {
                             {unit.occupancy_status}
                           </span>
                         </td>
-                        <td>
-                          <div className="landlord-actions">
-                            <button className="action-button primary" onClick={() => handleEditUnit(unit)} style={{ padding: '6px 10px', fontSize: '12px' }}>Edit</button>
-                            {unit.occupancy_status !== 'occupied' && (
-                              <button className="action-button" onClick={() => handleMarkOccupied(unit.id)} style={{ padding: '6px 10px', fontSize: '12px' }}>Mark Occupied</button>
-                            )}
-                            <button className="action-button danger" onClick={() => handleDeleteUnit(unit.id)} style={{ padding: '6px 10px', fontSize: '12px' }}>Delete</button>
-                          </div>
-                        </td>
+<td>
+                           <div className="landlord-actions">
+                             <button type="button" className="action-button primary" onClick={() => handleEditUnit(unit)} style={{ padding: '6px 10px', fontSize: '12px' }}>Edit</button>
+                             {unit.occupancy_status !== 'occupied' && (
+                               <button type="button" className="action-button" onClick={() => handleMarkOccupied(unit.id)} style={{ padding: '6px 10px', fontSize: '12px' }}>Mark Occupied</button>
+                             )}
+                             <button type="button" className="action-button danger" onClick={() => handleDeleteUnit(unit.id)} style={{ padding: '6px 10px', fontSize: '12px' }}>Delete</button>
+                           </div>
+                         </td>
                       </tr>
                     );
                   })}
