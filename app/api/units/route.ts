@@ -58,6 +58,17 @@ async function getAuthContext(request: NextRequest) {
     } catch (e) {}
   }
 
+  // Method 3: Try session from cookie (fallback)
+  if (!sessionUser && cookie) {
+    try {
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { cookie } },
+      });
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      sessionUser = session?.user;
+    } catch (e) {}
+  }
+
   if (!sessionUser) {
     return { isSuperAdmin: false, profile: null, organizationId: null };
   }
@@ -100,30 +111,30 @@ export async function GET(request: NextRequest) {
     if (!authContext.isSuperAdmin) {
       const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
 
-      // For agents without organization: use property_id from user_metadata or query param
       if (!authContext.organizationId) {
-        const effectivePropertyId = userMetadata?.property_id || propertyId;
-        if (effectivePropertyId) {
-          query = query.eq('property_id', effectivePropertyId);
+        // Try to get org from profile via email fallback
+        const orgFromProfile = authContext.profile?.organization_id;
+        const effectiveOrgId = orgFromProfile || userMetadata.organization_id;
+
+        if (effectiveOrgId) {
+          // Fetch all units for user's organization
+          const { data: orgProps } = await supabaseAdmin
+            .from('properties')
+            .select('id')
+            .eq('organization_id', effectiveOrgId);
+          const propIds = (orgProps ?? []).map((p: any) => p.id);
+          if (propIds.length > 0) {
+            query = propertyId
+              ? query.eq('property_id', propertyId)
+              : query.in('property_id', propIds);
+          } else {
+            return NextResponse.json({ units: [] });
+          }
         } else {
-          // No property context - check if user has any units via property ownership
-          const { data: userProfile } = await supabaseAdmin
-            .from('profiles')
-            .select('organization_id')
-            .eq('user_id', authContext.sessionUser?.id ?? '')
-            .single();
-          if (userProfile?.organization_id) {
-            // Fetch all units for user's organization
-            const { data: orgProps } = await supabaseAdmin
-              .from('properties')
-              .select('id')
-              .eq('organization_id', userProfile.organization_id);
-            const propIds = (orgProps ?? []).map((p: any) => p.id);
-            if (propIds.length > 0) {
-              query = query.in('property_id', propIds);
-            } else {
-              return NextResponse.json({ units: [] });
-            }
+          // No org but has property_id - check if it's the agent's assigned property
+          const effectivePropertyId = userMetadata?.property_id || propertyId;
+          if (effectivePropertyId) {
+            query = query.eq('property_id', effectivePropertyId);
           } else {
             return NextResponse.json({ units: [] });
           }
