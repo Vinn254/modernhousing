@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       const { data: freshProfile } = await supabaseAdmin
         .from('profiles')
         .select('id, organization_id')
-        .eq('user_id', authContext.sessionUser?.id ?? '')
+        .eq('user_id', authContext.userId ?? '')
         .single();
       
       const orgId = freshProfile?.organization_id || authContext.organizationId;
