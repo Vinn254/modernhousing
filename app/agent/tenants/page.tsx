@@ -181,8 +181,9 @@ export default function AgentTenantsPage() {
                  <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
                </div>
                <div className="field-group">
-                 <label>Lease End Date</label>
+                 <label>Payment Due Date</label>
                  <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
+                 <small style={{ color: 'var(--ink-3)', fontSize: '12px' }}>When tenant is expected to make rent payment</small>
                </div>
                <div className="field-group">
                  <label>Deposit Amount (KSH)</label>
