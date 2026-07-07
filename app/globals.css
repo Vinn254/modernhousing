@@ -40,6 +40,8 @@ body {
   color: #fff;
   padding: 20px 28px 120px;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 .hero::after {
   content: "";
@@ -1535,6 +1537,7 @@ body {
   margin: 0 auto;
   padding: 80px 28px 40px;
   text-align: center;
+  flex: 1;
 }
 
 .pricing-hero-inner h1 {
