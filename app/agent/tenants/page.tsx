@@ -341,17 +341,4 @@ return (
       </section>
     </main>
   );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
-            {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
-          </article>
-
-        </div>
-      </section>
-    </main>
-  );
 }
