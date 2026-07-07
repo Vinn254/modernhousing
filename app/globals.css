@@ -229,12 +229,17 @@ body {
 .float-card .dot {
   width: 8px; height: 8px; border-radius: 50%;
 }
-.float-1 { top: 30%; left: 4%; transform: rotate(-3deg); animation: floatA 6s ease-in-out infinite; }
-.float-2 { top: 22%; right: 5%; transform: rotate(2deg); animation: floatB 7s ease-in-out infinite; }
-.float-3 { bottom: 18%; left: 8%; transform: rotate(2deg); animation: floatA 8s ease-in-out infinite 1s; }
+.float-1 { top: 20%; left: 4%; transform: rotate(-3deg); animation: floatA 6s ease-in-out infinite; }
+.float-2 { top: 15%; right: 5%; transform: rotate(2deg); animation: floatB 7s ease-in-out infinite; }
+.float-3 { bottom: 20%; left: 8%; transform: rotate(2deg); animation: floatA 8s ease-in-out infinite 1s; }
 @keyframes floatA { 0%,100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(-10px); } }
 @keyframes floatB { 0%,100% { transform: rotate(2deg) translateY(0); } 50% { transform: rotate(2deg) translateY(-12px); } }
-@media (max-width: 900px) { .floats { display: none; } }
+@media (max-width: 900px) {
+  .float-1 { top: 25%; left: 50%; transform: translateX(-50%) rotate(-3deg); }
+  .float-2 { top: 40%; left: 50%; transform: translateX(-50%) rotate(2deg); }
+  .float-3 { top: 55%; left: 50%; transform: translateX(-50%) rotate(2deg); }
+  .float-card { width: 90%; max-width: 280px; }
+}
 
 /* ========== BENTO ========== */
 .bento-section {
