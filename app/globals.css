@@ -216,12 +216,12 @@ body {
 }
 .float-card {
   position: absolute;
-  background: transparent;
-  border: 1px solid transparent;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
   border-radius: 12px;
   padding: 12px 16px;
   font-size: 12px;
-  box-shadow: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   color: #fff;
 }
 .float-card .row { display: flex; align-items: center; gap: 8px; }
@@ -229,21 +229,16 @@ body {
   width: 8px; height: 8px; border-radius: 50%;
   background: currentColor;
 }
-.float-1 { top: 20%; left: 4%; transform: rotate(-3deg); animation: floatA 6s ease-in-out infinite; }
-.float-2 { top: 15%; right: 5%; transform: rotate(2deg); animation: floatB 7s ease-in-out infinite; }
-.float-3 { bottom: 20%; left: 8%; transform: rotate(2deg); animation: floatA 8s ease-in-out infinite 1s; }
+.float-1 { top: 20%; left: 4%; transform: rotate(-3deg); animation: floatA 6s ease-in-out infinite; color: var(--accent); }
+.float-2 { top: 15%; right: 5%; transform: rotate(2deg); animation: floatB 7s ease-in-out infinite; color: var(--amber); }
+.float-3 { bottom: 20%; left: 8%; transform: rotate(2deg); animation: floatA 8s ease-in-out infinite 1s; color: #0ea5e9; }
 @keyframes floatA { 0%,100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(-10px); } }
 @keyframes floatB { 0%,100% { transform: rotate(2deg) translateY(0); } 50% { transform: rotate(2deg) translateY(-12px); } }
 @media (max-width: 900px) {
-  .float-1 { top: 30%; left: 50%; transform: translateX(-50%) rotate(-3deg); color: var(--accent); }
-  .float-2 { top: 42%; left: 50%; transform: translateX(-50%) rotate(2deg); color: var(--amber); }
-  .float-3 { top: 54%; left: 50%; transform: translateX(-50%) rotate(2deg); color: #0ea5e9; }
+  .float-1 { top: 30%; left: 50%; transform: translateX(-50%) rotate(-3deg); }
+  .float-2 { top: 42%; left: 50%; transform: translateX(-50%) rotate(2deg); }
+  .float-3 { top: 54%; left: 50%; transform: translateX(-50%) rotate(2deg); }
   .float-card { width: 90%; max-width: 280px; margin: 0 auto; }
-}
-@media (min-width: 901px) {
-  .float-1 { color: var(--accent); }
-  .float-2 { color: var(--amber); }
-  .float-3 { color: #0ea5e9; }
 }
 
 /* ========== BENTO ========== */
