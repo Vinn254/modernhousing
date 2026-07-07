@@ -36,8 +36,7 @@ body {
 /* ========== HERO ========== */
 .hero {
   position: relative;
-  background: var(--navy-800);
-  background-image: url('/hero.png');
+  background: linear-gradient(135deg, var(--navy-800) 0%, var(--navy-900) 100%), url('/hero.png');
   background-size: cover;
   background-position: center;
   color: #fff;
@@ -48,7 +47,7 @@ body {
 .hero::before {
   content: "";
   position: absolute; inset: 0;
-  background: rgba(6, 21, 40, 0.45);
+  background: rgba(6, 21, 40, 0.25);
   z-index: -1;
 }
 @keyframes heroZoom {
