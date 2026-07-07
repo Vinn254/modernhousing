@@ -39,11 +39,9 @@ body {
   background: url('/hero.png') center/cover no-repeat;
   background-color: #0a1f3a;
   color: #fff;
-  padding: 20px 28px 120px;
+  padding: 20px 28px 100px;
   isolation: isolate;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 .hero::before {
   content: "";
@@ -65,7 +63,6 @@ body {
   padding: 80px 0 40px;
   text-align: center;
   position: relative;
-  flex: 1;
 }
 
 .nav {
@@ -1555,7 +1552,6 @@ body {
   margin: 0 auto;
   padding: 80px 28px 40px;
   text-align: center;
-  flex: 1;
 }
 
 .pricing-hero-inner h1 {
