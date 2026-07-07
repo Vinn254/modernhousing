@@ -434,7 +434,7 @@ export default function DashboardPage() {
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
   return (
-    <main className="container" style={{ padding: '34px 0 80px' }}>
+    <main className="container">
       <div className="card-admin-header">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
           <div>

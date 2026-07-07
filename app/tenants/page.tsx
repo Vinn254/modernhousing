@@ -112,7 +112,7 @@ export default function TenantsPage() {
   }
 
   return (
-    <main className="container" style={{ padding: '34px 0 80px' }}>
+    <main className="container">
       <div className="card-admin-header">
         <p className="heading">Tenants</p>
         <p className="subheading">Create tenant records, assign units, and manage active leases.</p>

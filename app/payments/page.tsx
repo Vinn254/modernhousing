@@ -239,7 +239,7 @@ export default function PaymentsPage() {
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
 return (
-    <main className="container" style={{ padding: '34px 0 80px' }}>
+    <main className="container">
       <div className="card-admin-header">
         <p className="heading">Payments</p>
         <p className="subheading">Record rent transactions, track balances, and view due dates.</p>

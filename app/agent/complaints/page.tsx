@@ -34,7 +34,7 @@ export default function AgentComplaintsPage() {
   useEffect(() => { loadData(); }, []);
 
   return (
-    <main className="container admin-no-hero" style={{ padding: '34px 0 80px' }}>
+    <main className="container admin-no-hero">
       <div className="card-admin-header">
         <div><p className="heading">Tenant Complaints</p><p className="subheading">View house problems raised by tenants for your assigned property.</p></div>
       </div>

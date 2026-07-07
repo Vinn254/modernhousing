@@ -65,7 +65,7 @@ export default function SuperAdminPaymentsPage() {
 
   return (
     <>
-      <main className="container admin-no-hero" style={{ padding: '34px 0 80px' }}>
+      <main className="container admin-no-hero">
         <div className="card-admin-header">
           <div>
             <p className="heading">Payments</p>

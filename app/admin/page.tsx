@@ -36,7 +36,7 @@ export default function AdminDashboard() {
 
 return (
     <>
-      <main className="container admin-no-hero" style={{ padding: '34px 0 80px' }}>
+      <main className="container admin-no-hero">
         <div className="card-admin-header" style={{ marginBottom: '24px' }}>
           <div>
             <p className="heading">Project Manager Dashboard</p>

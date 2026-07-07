@@ -53,7 +53,7 @@ async function loadDocuments() {
 
 return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <main className="container admin-no-hero" style={{ flex: 1, padding: '34px 0 80px' }}>
+        <main className="container admin-no-hero" style={{ flex: 1 }}>
           <div className="card-admin-header">
             <div>
               <p className="heading">Tenant Documents</p>

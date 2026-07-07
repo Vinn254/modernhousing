@@ -1,6 +1,6 @@
 export default function TermsPage() {
   return (
-    <main className="container" style={{ padding: '34px 0 80px', maxWidth: '800px' }}>
+    <main className="container" style={{ maxWidth: '800px' }}>
       <div className="card-admin-header">
         <div>
           <p className="heading">Terms and Conditions</p>
