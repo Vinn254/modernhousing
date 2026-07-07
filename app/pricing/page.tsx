@@ -48,16 +48,22 @@ function PricingContent() {
           </div>
         </nav>
 
-        <div className="pricing-hero-inner">
-          <span className="eyebrow"><span className="pulse"></span> Subscription Packages</span>
-          <h1>{restricted ? 'Subscription Required' : 'Choose a project manager workspace plan.'}</h1>
-          <p className="hero-sub">
-            {restricted
-              ? 'Your subscription has expired. Renew below to regain access to your workspace.'
-              : 'Simple subscription packages for project managers who need secure property, agent, tenant, and payment management.'}
-          </p>
-        </div>
-      </section>
+<div className="pricing-hero-inner">
+           <span className="eyebrow"><span className="pulse"></span> Subscription Packages</span>
+           <h1>{restricted ? 'Subscription Required' : 'Choose a project manager workspace plan.'}</h1>
+           <p className="hero-sub">
+             {restricted
+               ? 'Your subscription has expired. Renew below to regain access to your workspace.'
+               : 'Simple subscription packages for project managers who need secure property, agent, tenant, and payment management.'}
+           </p>
+         </div>
+
+         <div className="floats">
+           <div className="float-card float-1"><div className="row"><span className="dot"></span> Rent collected</div></div>
+           <div className="float-card float-2"><div className="row"><span className="dot"></span> Agent assigned</div></div>
+           <div className="float-card float-3"><div className="row"><span className="dot"></span> Tenant support</div></div>
+         </div>
+       </section>
 
       <section className="pricing-section">
         <div className="pricing-grid">
