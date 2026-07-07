@@ -39,6 +39,7 @@ body {
   background: url('/hero.png');
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   color: #fff;
   padding: 20px 28px 100px;
   isolation: isolate;
@@ -53,14 +54,6 @@ body {
 @keyframes heroZoom {
   0% { background-size: 105%; }
   100% { background-size: 115%; }
-}
-.hero::after {
-  content: "";
-  position: absolute;
-  top: -200px; right: -200px;
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 60%);
-  z-index: -1;
 }
 
 .nav {
