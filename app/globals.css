@@ -36,21 +36,14 @@ body {
 /* ========== HERO ========== */
 .hero {
   position: relative;
-  background: url('/hero.png');
+  background: linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)), url('/hero.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   color: #fff;
   padding: 20px 28px 120px;
-  isolation: isolate;
   animation: heroZoom 20s infinite alternate ease-in-out;
   min-height: 100vh;
-}
-.hero::before {
-  content: "";
-  position: absolute; inset: 0;
-  background: rgba(0, 0, 0, 0.15);
-  z-index: -1;
 }
 @keyframes heroZoom {
   0% { background-size: 105%; }
