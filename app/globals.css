@@ -36,25 +36,16 @@ body {
 /* ========== HERO ========== */
 .hero {
   position: relative;
-  background-color: #061528;
-  background-image: url('/hero.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: #0a1f3a url('/hero.png') center/cover no-repeat;
   color: #fff;
   padding: 20px 28px 120px;
   min-height: 100vh;
-  animation: heroZoom 20s infinite alternate ease-in-out;
 }
 .hero::after {
   content: "";
   position: absolute; inset: 0;
   background: rgba(0, 0, 0, 0.15);
   pointer-events: none;
-}
-@keyframes heroZoom {
-  0% { background-size: 105%; }
-  100% { background-size: 115%; }
 }
 
 .nav {
