@@ -216,18 +216,18 @@ body {
 }
 .float-card {
   position: absolute;
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(16,185,129,0.18);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 12px;
   padding: 12px 16px;
   font-size: 12px;
-  color: #052e1f;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  box-shadow: none;
+  color: #fff;
 }
 .float-card .row { display: flex; align-items: center; gap: 8px; }
 .float-card .dot {
   width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor;
 }
 .float-1 { top: 20%; left: 4%; transform: rotate(-3deg); animation: floatA 6s ease-in-out infinite; }
 .float-2 { top: 15%; right: 5%; transform: rotate(2deg); animation: floatB 7s ease-in-out infinite; }
@@ -235,10 +235,15 @@ body {
 @keyframes floatA { 0%,100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(-10px); } }
 @keyframes floatB { 0%,100% { transform: rotate(2deg) translateY(0); } 50% { transform: rotate(2deg) translateY(-12px); } }
 @media (max-width: 900px) {
-  .float-1 { top: 25%; left: 50%; transform: translateX(-50%) rotate(-3deg); }
-  .float-2 { top: 40%; left: 50%; transform: translateX(-50%) rotate(2deg); }
-  .float-3 { top: 55%; left: 50%; transform: translateX(-50%) rotate(2deg); }
-  .float-card { width: 90%; max-width: 280px; }
+  .float-1 { top: 30%; left: 50%; transform: translateX(-50%) rotate(-3deg); color: var(--accent); }
+  .float-2 { top: 42%; left: 50%; transform: translateX(-50%) rotate(2deg); color: var(--amber); }
+  .float-3 { top: 54%; left: 50%; transform: translateX(-50%) rotate(2deg); color: #0ea5e9; }
+  .float-card { width: 90%; max-width: 280px; margin: 0 auto; }
+}
+@media (min-width: 901px) {
+  .float-1 { color: var(--accent); }
+  .float-2 { color: var(--amber); }
+  .float-3 { color: #0ea5e9; }
 }
 
 /* ========== BENTO ========== */

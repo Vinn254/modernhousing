@@ -27,11 +27,11 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="floats">
-          <div className="float-card float-1"><div className="row"><span className="dot" style={{ background: 'var(--accent)' }}></span> Rent collected</div></div>
-          <div className="float-card float-2"><div className="row"><span className="dot" style={{ background: 'var(--amber)' }}></span> Agent assigned</div></div>
-          <div className="float-card float-3"><div className="row"><span className="dot" style={{ background: '#0ea5e9' }}></span> Tenant support</div></div>
-        </div>
+<div className="floats">
+           <div className="float-card float-1"><div className="row"><span className="dot"></span> Rent collected</div></div>
+           <div className="float-card float-2"><div className="row"><span className="dot"></span> Agent assigned</div></div>
+           <div className="float-card float-3"><div className="row"><span className="dot"></span> Tenant support</div></div>
+         </div>
       </section>
 
       <section className="bento-section">
