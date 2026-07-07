@@ -1770,7 +1770,8 @@ body {
 
   .landlord-stats,
   .property-stats,
-  .payments-form-grid {
+  .payments-form-grid,
+  .pricing-grid {
     grid-template-columns: 1fr;
   }
 
