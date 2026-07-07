@@ -54,15 +54,6 @@ body {
   0% { background-size: 105%; }
   100% { background-size: 115%; }
 }
-.hero::before {
-  content: "";
-  position: absolute; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
-  background-size: 24px 24px;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 80%);
-  z-index: -1;
-}
 .hero::after {
   content: "";
   position: absolute;
