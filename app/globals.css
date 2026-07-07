@@ -47,7 +47,7 @@ body {
 .hero::before {
   content: "";
   position: absolute; inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.35);
   z-index: -1;
 }
 @keyframes heroZoom {
@@ -72,7 +72,7 @@ body {
 .logo {
    display: flex; align-items: center; gap: 10px;
    font-weight: 700; font-size: 17px; letter-spacing: -0.01em;
-   color: #000;
+   color: #fff;
    text-decoration: none;
 }
 
@@ -181,14 +181,14 @@ body {
   line-height: 1.02;
   margin: 24px auto 18px;
   max-width: 900px;
-  background: linear-gradient(180deg, #fff 0%, #c4d3e6 100%);
+  background: linear-gradient(180deg, #fff 0%, #e0f2fe 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 .hero-sub {
   font-size: clamp(16px, 1.6vw, 19px);
-  color: #334155;
+  color: var(--navy-300);
   max-width: 620px;
   margin: 0 auto 40px;
   line-height: 1.55;
