@@ -238,7 +238,7 @@ export default function PaymentsPage() {
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
-  return (
+return (
     <main className="container" style={{ padding: '34px 0 80px' }}>
       <div className="card-admin-header">
         <p className="heading">Payments</p>
@@ -248,7 +248,7 @@ export default function PaymentsPage() {
       {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
       {error && <p style={{ color: '#dc2626', fontWeight: 700, marginBottom: 16 }}>{error}</p>}
 
-      <section className="payments-form-grid" style={{ display: 'grid', gap: 20, alignItems: 'start' }}>
+      <section className="card-grid">
         <div className="card">
           <div className="card-label">Manual Payment Entry</div>
           <h3 style={{ marginBottom: 16 }}>Record Direct Payment</h3>
@@ -290,14 +290,14 @@ export default function PaymentsPage() {
         <article className="card" style={{ marginTop: 24 }}>
           <div className="card-label">Payment Instructions</div>
           <h3 style={{ marginBottom: 16 }}>Tenant Payment Details</h3>
-          <p style={{ color: '#111827', marginBottom: 12 }}>Share these details with tenants for manual payments:</p>
-<div style={{ display: 'grid', gap: 8, padding: 12, background: 'var(--surface)', borderRadius: 8, color: '#111827' }}>
-             {paybill && <div><strong>Paybill:</strong> {paybill}{paybillAccount && ` (Account: ${paybillAccount})`}</div>}
-             {till && <div><strong>Till:</strong> {till}</div>}
-             {pochi && <div><strong>Pochi la Biashara:</strong> {pochi}</div>}
-             {mobile && <div><strong>Mobile Number:</strong> {mobile}</div>}
-             {!paybill && !till && !pochi && !mobile && <div>No payment details configured. Click "Edit Payment Details" to add.</div>}
-           </div>
+          <p style={{ color: '#111827', marginBottom: 12 }}>Share these details with tenants for manual payments via M-Pesa:</p>
+          <div style={{ padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '14px', color: '#111827' }}>
+            {paybill && <div><strong>Paybill:</strong> {paybill}{paybillAccount ? ` (Account: ${paybillAccount})` : ''}</div>}
+            {till && <div><strong>Till:</strong> {till}</div>}
+            {pochi && <div><strong>Pochi la Biashara:</strong> {pochi}</div>}
+            {mobile && <div><strong>Mobile:</strong> {mobile}</div>}
+            {!paybill && !till && !pochi && !mobile && <div>No payment details configured. Click "Edit Payment Details" to add.</div>}
+          </div>
           <button onClick={() => setShowSettings(true)} className="btn btn-ghost" style={{ marginTop: 12, fontSize: '14px', padding: '10px 16px', fontWeight: 600, background: '#f3f4f6', color: '#111827', border: '1px solid #d1d5db' }}>Edit Payment Details</button>
         </article>
       )}
@@ -312,23 +312,23 @@ export default function PaymentsPage() {
               <input value={consumerKey} onChange={e => setConsumerKey(e.target.value)} placeholder="Consumer Key" />
               <input value={consumerSecret} onChange={e => setConsumerSecret(e.target.value)} placeholder="Consumer Secret" />
               <input value={passkey} onChange={e => setPasskey(e.target.value)} placeholder="Passkey" />
-              
+
               <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>Payment Method Selection</h4>
               <select value={selectedMethod} onChange={e => setSelectedMethod(e.target.value as any)}>
                 {paymentMethods.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
-              
-<h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>Payment Number</h4>
-               {selectedMethod === 'paybill' && (
-                 <>
-                   <input value={paybill} onChange={e => setPaybill(e.target.value)} placeholder="Paybill Number" />
-                   <input value={paybillAccount} onChange={e => setPaybillAccount(e.target.value)} placeholder="Account Number" />
-                 </>
-               )}
-               {selectedMethod === 'till' && <input value={till} onChange={e => setTill(e.target.value)} placeholder="Till Number" />}
-               {selectedMethod === 'pochi' && <input value={pochi} onChange={e => setPochi(e.target.value)} placeholder="Pochi Number" />}
-               {selectedMethod === 'mobile' && <input value={mobile} onChange={e => setMobile(e.target.value)} placeholder="Mobile Number" />}
-              
+
+              <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>Payment Number</h4>
+              {selectedMethod === 'paybill' && (
+                <>
+                  <input value={paybill} onChange={e => setPaybill(e.target.value)} placeholder="Paybill Number" />
+                  <input value={paybillAccount} onChange={e => setPaybillAccount(e.target.value)} placeholder="Account Number" />
+                </>
+              )}
+              {selectedMethod === 'till' && <input value={till} onChange={e => setTill(e.target.value)} placeholder="Till Number" />}
+              {selectedMethod === 'pochi' && <input value={pochi} onChange={e => setPochi(e.target.value)} placeholder="Pochi Number" />}
+              {selectedMethod === 'mobile' && <input value={mobile} onChange={e => setMobile(e.target.value)} placeholder="Mobile Number" />}
+
               <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
                 <button type="submit">Save Settings</button>
                 <button type="button" onClick={() => setShowSettings(false)} className="btn btn-ghost">Cancel</button>
