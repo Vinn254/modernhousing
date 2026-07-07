@@ -190,7 +190,10 @@ body {
   line-height: 1.02;
   margin: 24px auto 18px;
   max-width: 900px;
-  color: #000;
+  background: linear-gradient(180deg, #fff 0%, #c4d3e6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 .hero-sub {
   font-size: clamp(16px, 1.6vw, 19px);
@@ -233,18 +236,18 @@ body {
 .floats {
   position: absolute; inset: 0;
   pointer-events: none;
-  z-index: -1;
+  z-index: 1;
 }
 .float-card {
   position: absolute;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.95);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(16,185,129,0.18);
   border-radius: 12px;
   padding: 12px 16px;
   font-size: 12px;
-  color: var(--navy-300);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  color: #052e1f;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
 }
 .float-card .row { display: flex; align-items: center; gap: 8px; }
 .float-card .dot {
