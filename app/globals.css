@@ -37,9 +37,23 @@ body {
 .hero {
   position: relative;
   background: var(--navy-800);
+  background-image: url('/hero.png');
+  background-size: cover;
+  background-position: center;
   color: #fff;
   padding: 20px 28px 100px;
   isolation: isolate;
+  animation: heroZoom 20s infinite alternate ease-in-out;
+}
+.hero::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: rgba(6, 21, 40, 0.45);
+  z-index: -1;
+}
+@keyframes heroZoom {
+  0% { background-size: 105%; }
+  100% { background-size: 115%; }
 }
 .hero::before {
   content: "";
