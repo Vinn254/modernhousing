@@ -53,16 +53,16 @@ async function loadDocuments() {
 
 return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <main className="container admin-no-hero" style={{ flex: 1 }}>
-          <div className="card-admin-header">
-            <div>
-              <p className="heading">Tenant Documents</p>
-              <p className="subheading">Review documents submitted by tenants for verification.</p>
-            </div>
-          </div>
+<main className="container admin-no-hero">
+           <div className="card-admin-header">
+             <div>
+               <p className="heading">Tenant Documents</p>
+               <p className="subheading">Review documents submitted by tenants for verification.</p>
+             </div>
+           </div>
 
-          <section className="card-grid-item">
-            <article className="card">
+           <section className="card-grid">
+             <article className="card card-grid-item">
               <div className="card-label"><span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               </span>Submitted Documents</div>

@@ -1709,14 +1709,20 @@ body {
 }
 
 .card-grid-item {
-  height: 100%;
+  grid-column: span 2;
+}
+@media (max-width: 900px) {
+  .card-grid-item {
+    grid-column: span 1;
+  }
 }
 
 @media (max-width: 900px) {
-  .dashboard-section-grid,
-  .card-grid {
-    grid-template-columns: 1fr !important;
-  }
+   .dashboard-section-grid,
+   .card-grid,
+   .card-grid-item {
+     grid-template-columns: 1fr !important;
+   }
 }
 
 .dashboard-hero-stats {
