@@ -255,10 +255,13 @@ body {
 @keyframes floatA { 0%,100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(-10px); } }
 @keyframes floatB { 0%,100% { transform: rotate(2deg) translateY(0); } 50% { transform: rotate(2deg) translateY(-12px); } }
 @media (max-width: 900px) {
-  .float-1, .float-4 { top: 20%; left: 50%; transform: translateX(-50%) rotate(-3deg); }
-  .float-2, .float-5 { top: 42%; left: 50%; transform: translateX(-50%) rotate(2deg); }
-  .float-3, .float-6 { top: 64%; left: 50%; transform: translateX(-50%) rotate(2deg); }
-  .float-card { width: 90%; max-width: 280px; }
+  .float-1 { top: 16%; left: 50% !important; transform: translateX(-50%) rotate(-3deg); }
+  .float-2 { top: 32%; left: 50% !important; transform: translateX(-50%) rotate(2deg); }
+  .float-3 { top: 48%; left: 50% !important; transform: translateX(-50%) rotate(-2deg); }
+  .float-4 { top: 64%; left: 50% !important; transform: translateX(-50%) rotate(3deg); }
+  .float-5 { top: 80%; left: 50% !important; transform: translateX(-50%) rotate(-2deg); }
+  .float-6 { top: 96%; left: 50% !important; transform: translateX(-50%) rotate(2deg); }
+  .float-card { width: 90%; max-width: 280px; margin: 0 auto; }
 }
 
 /* ========== BENTO ========== */
