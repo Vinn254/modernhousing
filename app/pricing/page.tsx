@@ -62,6 +62,9 @@ function PricingContent() {
            <div className="float-card float-1"><div className="row"><span className="dot"></span> Rent collected</div></div>
            <div className="float-card float-2"><div className="row"><span className="dot"></span> Agent assigned</div></div>
            <div className="float-card float-3"><div className="row"><span className="dot"></span> Tenant support</div></div>
+           <div className="float-card float-4"><div className="row"><span className="dot"></span> Secure portal</div></div>
+           <div className="float-card float-5"><div className="row"><span className="dot"></span> Quick setup</div></div>
+           <div className="float-card float-6"><div className="row"><span className="dot"></span> Real-time sync</div></div>
          </div>
        </section>
 
