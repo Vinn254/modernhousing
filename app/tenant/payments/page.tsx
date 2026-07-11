@@ -168,8 +168,8 @@ export default function TenantPaymentsPage() {
     return billsList.map(bill => {
       // bill_balance: what tenant owes (due - paid), positive = owes money
       const billBalance = bill.due_amount - bill.paid_amount - bill.penalty_fee;
-      // contribution: paid - due (positive = credit, negative = owes)
-      const contribution = bill.paid_amount - bill.due_amount + bill.penalty_fee;
+      // contribution: paid - due - penalty (what affects running balance)
+      const contribution = bill.paid_amount - bill.due_amount - bill.penalty_fee;
       runningBalance += contribution;
       return { ...bill, bill_balance: billBalance, running_balance: runningBalance };
     });
