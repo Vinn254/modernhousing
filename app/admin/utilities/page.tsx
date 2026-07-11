@@ -16,6 +16,7 @@ interface Tenant {
   full_name: string;
   email: string;
   unit: string;
+  unit_id?: string;
   property: string;
   property_id?: string;
 }
