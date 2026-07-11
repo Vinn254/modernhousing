@@ -29,10 +29,26 @@ interface Unit {
   tenant?: { id: string; full_name: string };
 }
 
+interface Bill {
+  id: string;
+  tenant_id: string;
+  tenant_name?: string;
+  description: string;
+  month_due: string;
+  due_amount: number;
+  paid_amount: number;
+  penalty_fee: number;
+  balance: number;
+  transaction_type: string;
+  payment_date: string;
+  created_at: string;
+}
+
 export default function UtilitiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -73,19 +89,22 @@ export default function UtilitiesPage() {
     setError('');
 
     try {
-      const [propsResponse, tenantsResponse, unitsResponse] = await Promise.all([
+      const [propsResponse, tenantsResponse, unitsResponse, billsResponse] = await Promise.all([
         fetch('/api/properties', { headers: await getAuthHeaders() }),
         fetch('/api/tenants', { headers: await getAuthHeaders() }),
         fetch('/api/units', { headers: await getAuthHeaders() }),
+        fetch('/api/bills', { headers: await getAuthHeaders() }),
       ]);
 
       const propsResult = await propsResponse.json();
       const tenantsResult = await tenantsResponse.json();
       const unitsResult = await unitsResponse.json();
+      const billsResult = await billsResponse.json();
 
       setProperties(propsResult.properties ?? []);
       setTenants(tenantsResult.tenants ?? []);
       setUnits(unitsResult.units ?? []);
+      setBills(billsResult.bills ?? []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -273,9 +292,55 @@ export default function UtilitiesPage() {
                 ))}
               </div>
             )}
-            {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
-            {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </article>
+        </section>
+
+        <section className="card" style={{ marginTop: 24 }}>
+          <div className="card-label"><span className="badge badge-agent">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </span>Recorded Bills</div>
+          <h3 style={{ marginBottom: 16 }}>All Utility Records</h3>
+
+          {loading && <p className="landlord-muted">Loading bills...</p>}
+          {!loading && bills.length === 0 && <p className="landlord-empty">No bills recorded yet.</p>}
+
+          {!loading && bills.length > 0 && (
+            <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Tenant</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Due Amount</th>
+                    <th>Paid</th>
+                    <th>Penalty</th>
+                    <th>Balance</th>
+                    <th>Payment Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bills.map(bill => (
+                    <tr key={bill.id}>
+                      <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
+                      <td>{bill.tenant_name || tenants.find(t => t.id === bill.tenant_id)?.full_name || '-'}</td>
+                      <td>{bill.description}</td>
+                      <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
+                      <td>{bill.due_amount.toLocaleString()}</td>
+                      <td>{bill.paid_amount.toLocaleString() || '-'}</td>
+                      <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
+                      <td style={{ color: bill.balance > 0 ? '#dc2626' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
+                      <td>{bill.payment_date || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {error && <p className="landlord-error" style={{ marginTop: 12 }}>{error}</p>}
+          {message && <p className="landlord-success" style={{ marginTop: 12 }}>{message}</p>}
         </section>
       </main>
 
