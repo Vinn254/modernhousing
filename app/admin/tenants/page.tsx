@@ -123,9 +123,9 @@ const body = editingTenant
       return;
     }
 
-    setMessage(editingTenant ? 'Tenant updated.' : 'Tenant registered.');
-    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '' });
-    setEditingTenant(null);
+setMessage(editingTenant ? 'Tenant updated.' : 'Tenant registered.');
+     setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinId: '' });
+     setEditingTenant(null);
     await loadData();
   }
 
