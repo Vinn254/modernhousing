@@ -46,16 +46,6 @@ ADD COLUMN IF NOT EXISTS national_id text,
 ADD COLUMN IF NOT EXISTS kra_pin text,
 ADD COLUMN IF NOT EXISTS next_of_kin_id text;
 
--- Update bills transaction_type constraint to include all utility types (run after table exists)
-DO $$ 
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bills_transaction_type_check') THEN
-    ALTER TABLE bills DROP CONSTRAINT bills_transaction_type_check;
-    ALTER TABLE bills ADD CONSTRAINT bills_transaction_type_check 
-      CHECK (transaction_type in ('deposit', 'rent', 'water', 'service_charge', 'utility', 'other', 'garbage', 'parking', 'security'));
-  END IF;
-END $$;
-
 -- Create bills/transactions table for monthly rent and utility tracking
 CREATE TABLE IF NOT EXISTS bills (
     id uuid primary key default uuid_generate_v4(),
@@ -76,3 +66,13 @@ CREATE TABLE IF NOT EXISTS bills (
     reference_number text,
     created_at timestamp with time zone default now()
 );
+
+-- Update bills transaction_type constraint to include all utility types (run after table exists)
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bills_transaction_type_check') THEN
+    ALTER TABLE bills DROP CONSTRAINT bills_transaction_type_check;
+    ALTER TABLE bills ADD CONSTRAINT bills_transaction_type_check 
+      CHECK (transaction_type in ('deposit', 'rent', 'water', 'service_charge', 'utility', 'other', 'garbage', 'parking', 'security'));
+  END IF;
+END $$;

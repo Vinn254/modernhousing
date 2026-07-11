@@ -12,15 +12,9 @@ interface Bill {
   penalty_fee: number;
   balance: number;
   transaction_type: string;
-  transaction_number: string;
-  transaction_code: string;
   payment_date: string;
-  payment_method: string;
-  reference_number: string;
   created_at: string;
 }
-
-const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export default function TenantPaymentsPage() {
   const [user, setUser] = useState<any>(null);
@@ -45,42 +39,16 @@ export default function TenantPaymentsPage() {
       ? `/api/bills?tenantId=${tenantId}` 
       : `/api/bills?tenantEmail=${encodeURIComponent(email)}`;
 
-    const [billsResponse, paymentsResponse, settingsResponse] = await Promise.all([
+    const [billsResponse, settingsResponse] = await Promise.all([
       fetch(billsUrl, { headers }).catch(() => null),
-      fetch(`/api/payments?email=${encodeURIComponent(email)}`, { headers }).catch(() => null),
       fetch(tenantId ? `/api/payment-settings?tenantId=${tenantId}` : '/api/payment-settings', { headers }).catch(() => null),
     ]);
 
-    const allBills: Bill[] = [];
-
     if (billsResponse?.ok) {
       const billsResult = await billsResponse.json();
-      (billsResult.bills ?? []).forEach((b: any) => allBills.push(b));
+      setBills(billsResult.bills ?? []);
     }
 
-    if (paymentsResponse?.ok) {
-      const paymentsResult = await paymentsResponse.json();
-      (paymentsResult.payments ?? []).forEach((p: any) => {
-        allBills.push({
-          id: p.id,
-          description: p.description,
-          month_due: p.month_due || '',
-          due_amount: p.due_amount || 0,
-          paid_amount: p.amount || 0,
-          penalty_fee: 0,
-          balance: p.balance_remaining || 0,
-          transaction_type: p.transaction_type || 'rent',
-          transaction_number: p.transaction_number || '',
-          transaction_code: p.transaction_code || '',
-          payment_date: p.paid_at ? new Date(p.paid_at).toISOString().split('T')[0] : '',
-          payment_method: p.payment_method || '',
-          reference_number: p.reference_number || '',
-          created_at: p.created_at,
-        });
-      });
-    }
-
-    setBills(allBills);
     if (settingsResponse?.ok) {
       const settings = await settingsResponse.json();
       setPaymentSettings(settings);
@@ -120,23 +88,7 @@ export default function TenantPaymentsPage() {
     setMpesaPhone(''); setMpesaAmount('');
   }
 
-  // Group bills by month
-  const billsByMonth: Record<string, Bill[]> = {};
-  bills.forEach(bill => {
-    const monthKey = bill.month_due || 'No Month';
-    if (!billsByMonth[monthKey]) billsByMonth[monthKey] = [];
-    billsByMonth[monthKey].push(bill);
-  });
-
-  const monthlyTotals = Object.entries(billsByMonth).map(([month, monthBills]) => ({
-    month,
-    rent: monthBills.filter(b => b.transaction_type === 'rent').reduce((sum, b) => sum + Number(b.balance || 0), 0),
-    water: monthBills.filter(b => b.transaction_type === 'water').reduce((sum, b) => sum + Number(b.balance || 0), 0),
-    utilities: monthBills.filter(b => !['rent', 'water'].includes(b.transaction_type)).reduce((sum, b) => sum + Number(b.balance || 0), 0),
-    total: monthBills.reduce((sum, b) => sum + Number(b.balance || 0), 0),
-  }));
-
-  const totalOutstanding = monthlyTotals.reduce((sum, m) => sum + m.total, 0);
+  const totalOutstanding = bills.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
   if (loading) {
     return (
@@ -171,9 +123,9 @@ export default function TenantPaymentsPage() {
 
       <section className="card" style={{ marginTop: 24 }}>
         <div className="card-label">MONTHLY TRANSACTION STATEMENT - BED SITTER MAIN</div>
-        <h3 style={{ marginBottom: 16 }}>Bills by Month</h3>
+        <h3 style={{ marginBottom: 16 }}>Transaction History</h3>
         
-        {Object.keys(billsByMonth).length === 0 ? (
+        {bills.length === 0 ? (
           <p className="landlord-empty">No bills recorded yet.</p>
         ) : (
           <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
@@ -191,24 +143,17 @@ export default function TenantPaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(billsByMonth).map(([month, monthBills]) => (
-                  <>
-                    <tr key={`header-${month}`} style={{ background: 'var(--line-soft)' }}>
-                      <td colSpan={7} style={{ fontWeight: 700, textTransform: 'capitalize' }}>{month}</td>
-                    </tr>
-                    {monthBills.map(bill => (
-                      <tr key={bill.id}>
-                        <td></td>
-                        <td>{bill.description}</td>
-                        <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
-                        <td>{bill.due_amount.toLocaleString()}</td>
-                        <td>{bill.paid_amount.toLocaleString() || '-'}</td>
-                        <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
-                        <td style={{ color: bill.balance > 0 ? '#dc2626' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
-                        <td>{bill.payment_date || '-'}</td>
-                      </tr>
-                    ))}
-                  </>
+                {bills.map(bill => (
+                  <tr key={bill.id}>
+                    <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
+                    <td>{bill.description}</td>
+                    <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
+                    <td>{bill.due_amount.toLocaleString()}</td>
+                    <td>{bill.paid_amount.toLocaleString() || '-'}</td>
+                    <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
+                    <td style={{ color: bill.balance > 0 ? '#dc2626' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
+                    <td>{bill.payment_date || '-'}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -217,15 +162,8 @@ export default function TenantPaymentsPage() {
       </section>
 
       <section className="card" style={{ marginTop: 24 }}>
-        <div className="card-label">Monthly Summary</div>
+        <div className="card-label">Balance Summary</div>
         <div style={{ padding: '16px', background: 'var(--line-soft)', borderRadius: '8px' }}>
-          {monthlyTotals.map(m => (
-            <div key={m.month} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
-              <span>{m.month}:</span>
-              <span style={{ color: m.total > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 600 }}>{formatCurrency(m.total)}</span>
-            </div>
-          ))}
-          <hr style={{ margin: '12px 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700 }}>
             <span>Total Outstanding:</span>
             <span style={{ color: totalOutstanding > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalOutstanding)}</span>

@@ -74,25 +74,8 @@ export default function TenantsPage() {
     kraPin: '',
     nextOfKinId: '',
   });
-  const [utilityForm, setUtilityForm] = useState({
-    tenantId: '',
-    utilityType: '',
-    monthDue: '',
-    amount: '',
-    description: '',
-  });
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
-  const [billForm, setBillForm] = useState({
-    description: '',
-    monthDue: '',
-    dueAmount: '',
-    paidAmount: '',
-    penaltyFee: '0',
-    transactionType: 'rent',
-    paymentMethod: '',
-    referenceNumber: '',
-  });
   const formRef = useRef<HTMLDivElement>(null);
 
   async function loadData() {
@@ -221,96 +204,32 @@ export default function TenantsPage() {
 
   async function handleViewBills(tenant: Tenant) {
     setSelectedTenant(tenant);
-    setBillForm({
-      description: `Rent for ${tenant.full_name}`,
-      monthDue: '',
-      dueAmount: String(tenant.deposit_amount || 0),
-      paidAmount: '',
-      penaltyFee: '0',
-      transactionType: 'rent',
-      paymentMethod: '',
-      referenceNumber: '',
-    });
     await loadBills(tenant.id);
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
   }
 
-  async function handleAddBill(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedTenant) return;
-    
-    setError('');
-    
-    const selectedUnit = units.find(u => u.id === selectedTenant.unit_id);
-    
+  async function handlePayBill(billId: string) {
+    const selectedBill = bills.find(b => b.id === billId);
+    if (!selectedBill) return;
+
     const response = await fetch('/api/bills', {
-      method: 'POST',
+      method: 'PATCH',
       headers: await getAuthHeaders(),
       body: JSON.stringify({
-        tenantId: selectedTenant.id,
-        unitId: selectedUnit?.id,
-        propertyId: selectedUnit?.property_id,
-        description: billForm.description,
-        monthDue: billForm.monthDue,
-        dueAmount: Number(billForm.dueAmount) || 0,
-        paidAmount: Number(billForm.paidAmount) || 0,
-        penaltyFee: Number(billForm.penaltyFee) || 0,
-        transactionType: billForm.transactionType,
-        paymentMethod: billForm.paymentMethod,
-        referenceNumber: billForm.referenceNumber,
+        id: billId,
+        paidAmount: Number(prompt(`Enter paid amount (due: ${selectedBill.due_amount}, paid so far: ${selectedBill.paid_amount}):`) || 0),
+        paymentMethod: prompt('Payment method (M-pesa, Cash, Bank Transfer):') || 'Cash',
+        referenceNumber: prompt('Reference number (optional):') || '',
       }),
     });
 
     const result = await response.json();
-
     if (!response.ok) {
-      setError(result.message ?? 'Unable to record bill.');
+      setError(result.message ?? 'Unable to record payment.');
       return;
     }
-
-    setMessage('Bill recorded.');
-    await loadBills(selectedTenant.id);
-  }
-
-  async function handleAddUtilityBill(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setMessage('');
-    setError('');
-
-    if (!utilityForm.tenantId || !utilityForm.utilityType || !utilityForm.amount) {
-      setError('All fields are required.');
-      return;
-    }
-
-    const tenantData = tenants.find(t => t.id === utilityForm.tenantId);
-    const tenantPropertyId = tenantData?.property_id || '';
-
-    const response = await fetch('/api/bills', {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({
-        tenantId: utilityForm.tenantId,
-        propertyId: tenantPropertyId,
-        description: utilityForm.description || `${utilityForm.utilityType} bill`,
-        monthDue: utilityForm.monthDue || '',
-        dueAmount: Number(utilityForm.amount),
-        paidAmount: 0,
-        penaltyFee: 0,
-        transactionType: utilityForm.utilityType,
-        paymentMethod: '',
-        referenceNumber: '',
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      setError(result.message ?? 'Unable to record utility bill.');
-      return;
-    }
-
-    setMessage('Utility bill recorded.');
-    setUtilityForm({ tenantId: '', utilityType: '', monthDue: '', amount: '', description: '' });
+    setMessage('Payment recorded.');
+    await loadBills(selectedTenant!.id);
   }
 
   return (
@@ -357,90 +276,60 @@ export default function TenantsPage() {
           </article>
         </section>
 
-<section className="card-grid-item">
-           <article className="card">
-             <div className="card-label">
-               <span className="badge badge-agent">
-                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-               </span>All Tenants
-             </div>
-             <h3 style={{ marginBottom: 16 }}>Tenant Records</h3>
+        <section className="card-grid-item">
+          <article className="card">
+            <div className="card-label">
+              <span className="badge badge-agent">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              </span>All Tenants
+            </div>
+            <h3 style={{ marginBottom: 16 }}>Tenant Records</h3>
 
-             {loading && <p className="landlord-muted">Loading tenants...</p>}
-             {!loading && tenants.length === 0 && <p className="landlord-empty">No tenants registered yet.</p>}
+            {loading && <p className="landlord-muted">Loading tenants...</p>}
+            {!loading && tenants.length === 0 && <p className="landlord-empty">No tenants registered yet.</p>}
 
-             {!loading && tenants.length > 0 && (
-               <div className="table-shell">
-                 <table className="landlord-table" style={{ minWidth: '100%', fontSize: '13px' }}>
-                   <thead>
-                     <tr>
-                       <th>Name</th>
-                       <th>Email</th>
-                       <th>Unit</th>
-                       <th>Property</th>
-                       <th>Lease</th>
-                       <th>Status</th>
-                       <th>Actions</th>
-                     </tr>
-                   </thead>
-                   <tbody>
-                     {tenants.map(tenant => (
-                       <tr key={tenant.id}>
-                         <td className="landlord-name">{tenant.full_name}</td>
-                         <td>{tenant.email}</td>
-                         <td>{tenant.unit}</td>
-                         <td>{tenant.property}</td>
-                         <td>{tenant.lease_start} → {tenant.lease_end}</td>
-                         <td>
-                           <span className={`status-pill ${tenant.status === 'active' || !tenant.status ? 'status-active' : 'status-pending'}`}>
-                             {tenant.status ?? 'Active'}
-                           </span>
-                         </td>
-                         <td>
-                           <div className="landlord-actions">
-                             <button className="action-button primary" onClick={() => handleEdit(tenant)}>Edit</button>
-                             <button className="action-button" style={{ marginLeft: 8 }} onClick={() => handleViewBills(tenant)}>Bills</button>
-                             <button className="action-button danger" onClick={() => handleRemove(tenant.id)}>Remove</button>
-                           </div>
-                         </td>
-                       </tr>
-                     ))}
-                   </tbody>
-                 </table>
-               </div>
-             )}
-           </article>
-         </section>
-
-         <section className="card-grid" style={{ marginTop: 24 }}>
-           <article className="card">
-             <div className="card-label"><span className="badge badge-pm">
-               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-             </span>Record Utility Bill</div>
-             <h3 style={{ marginBottom: 12 }}>Water / Utility Billing</h3>
-             <form onSubmit={handleAddUtilityBill} className="form-grid">
-               <select value={utilityForm.tenantId} onChange={e => setUtilityForm(f => ({ ...f, tenantId: e.target.value }))} required>
-                 <option value="">Select tenant</option>
-                 {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} - {t.property}</option>)}
-               </select>
-               <select value={utilityForm.utilityType} onChange={e => setUtilityForm(f => ({ ...f, utilityType: e.target.value }))} required>
-                 <option value="">Utility type</option>
-                 <option value="water">Water Bill</option>
-                 <option value="garbage">Garbage Collection</option>
-                 <option value="service_charge">Service Charge</option>
-                 <option value="parking">Parking Fee</option>
-                 <option value="security">Security Fee</option>
-                 <option value="other">Other</option>
-               </select>
-               <input type="month" value={utilityForm.monthDue} onChange={e => setUtilityForm(f => ({ ...f, monthDue: e.target.value }))} required />
-               <input type="number" value={utilityForm.amount} onChange={e => setUtilityForm(f => ({ ...f, amount: e.target.value }))} required placeholder="Amount (KSH)" />
-               <input value={utilityForm.description} onChange={e => setUtilityForm(f => ({ ...f, description: e.target.value }))} placeholder="Description (optional)" />
-               <button type="submit">Record Utility</button>
-             </form>
-             {error && <p className="landlord-error" style={{ marginTop: 12 }}>{error}</p>}
-             {message && <p className="landlord-success" style={{ marginTop: 12 }}>{message}</p>}
-           </article>
-         </section>
+            {!loading && tenants.length > 0 && (
+              <div className="table-shell">
+                <table className="landlord-table" style={{ minWidth: '100%', fontSize: '13px' }}>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Unit</th>
+                      <th>Property</th>
+                      <th>Lease</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tenants.map(tenant => (
+                      <tr key={tenant.id}>
+                        <td className="landlord-name">{tenant.full_name}</td>
+                        <td>{tenant.email}</td>
+                        <td>{tenant.unit}</td>
+                        <td>{tenant.property}</td>
+                        <td>{tenant.lease_start} → {tenant.lease_end}</td>
+                        <td>
+                          <span className={`status-pill ${tenant.status === 'active' || !tenant.status ? 'status-active' : 'status-pending'}`}>
+                            {tenant.status ?? 'Active'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="landlord-actions">
+                            <button className="action-button primary" onClick={() => handleEdit(tenant)}>Edit</button>
+                            <button className="action-button" style={{ marginLeft: 8 }} onClick={() => handleViewBills(tenant)}>Bills</button>
+                            <button className="action-button danger" onClick={() => handleRemove(tenant.id)}>Remove</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </article>
+        </section>
 
         {selectedTenant && (
           <section className="card-grid-item" style={{ marginTop: 24 }} ref={formRef}>
@@ -448,62 +337,6 @@ export default function TenantsPage() {
               <div className="card-label">
                 <span className="badge badge-pm" style={{ background: 'var(--accent)' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                </span>Record Bill Payment - {selectedTenant.full_name}
-              </div>
-              <h3>Add Bill Payment</h3>
-              <form onSubmit={handleAddBill} className="form-grid">
-                <div className="field-group">
-                  <label>Description</label>
-                  <input value={billForm.description} onChange={e => setBillForm(f => ({ ...f, description: e.target.value }))} required placeholder="e.g., Rent, Water" />
-                </div>
-                <div className="field-group">
-                  <label>Month Due</label>
-                  <input value={billForm.monthDue} onChange={e => setBillForm(f => ({ ...f, monthDue: e.target.value }))} placeholder="e.g., August 2024" />
-                </div>
-                <div className="field-group">
-                  <label>Due Amount (KSH)</label>
-                  <input type="number" value={billForm.dueAmount} onChange={e => setBillForm(f => ({ ...f, dueAmount: e.target.value }))} required placeholder="e.g., 5000" />
-                </div>
-                <div className="field-group">
-                  <label>Paid Amount (KSH)</label>
-                  <input type="number" value={billForm.paidAmount} onChange={e => setBillForm(f => ({ ...f, paidAmount: e.target.value }))} placeholder="e.g., 3000" />
-                </div>
-                <div className="field-group">
-                  <label>Penalty Fee (KSH)</label>
-                  <input type="number" value={billForm.penaltyFee} onChange={e => setBillForm(f => ({ ...f, penaltyFee: e.target.value }))} placeholder="e.g., 500" />
-                </div>
-                <div className="field-group">
-                  <label>Transaction Type</label>
-                  <select value={billForm.transactionType} onChange={e => setBillForm(f => ({ ...f, transactionType: e.target.value }))}>
-                    <option value="rent">Rent</option>
-                    <option value="water">Water</option>
-                    <option value="service_charge">Service Charge</option>
-                    <option value="utility">Utility</option>
-                    <option value="deposit">Deposit</option>
-                  </select>
-                </div>
-                <div className="field-group">
-                  <label>Payment Method</label>
-                  <select value={billForm.paymentMethod} onChange={e => setBillForm(f => ({ ...f, paymentMethod: e.target.value }))}>
-                    <option value="">Select method</option>
-                    <option value="M-pesa">M-pesa</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Bank">Bank Transfer</option>
-                  </select>
-                </div>
-                <div className="field-group">
-                  <label>Reference Number</label>
-                  <input value={billForm.referenceNumber} onChange={e => setBillForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="e.g., SH31T8MAYN" />
-                </div>
-                <button type="submit">Record Payment</button>
-                <button type="button" className="secondary-button" onClick={() => setSelectedTenant(null)}>Back to Tenants</button>
-              </form>
-            </article>
-
-            <article className="card" style={{ gridColumn: 'span 2', marginTop: 24 }}>
-              <div className="card-label">
-                <span className="badge badge-agent">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                 </span>Bills & Payments - {selectedTenant.full_name}
               </div>
               <h3 style={{ marginBottom: 16 }}>Transaction Statement</h3>
@@ -511,7 +344,7 @@ export default function TenantsPage() {
               {!loadingBills && bills.length === 0 && <p className="landlord-empty">No bills recorded yet.</p>}
 
               {!loadingBills && bills.length > 0 && (
-                <div className="table-shell" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
                   <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
                     <thead>
                       <tr>
@@ -523,9 +356,8 @@ export default function TenantsPage() {
                         <th>Penalty Fee</th>
                         <th>Balance</th>
                         <th>Type</th>
-                        <th>Trans #</th>
-                        <th>Code</th>
                         <th>Payment Date</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -538,16 +370,20 @@ export default function TenantsPage() {
                           <td>{bill.paid_amount.toLocaleString() || '-'}</td>
                           <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
                           <td style={{ color: bill.balance > 0 ? 'var(--error)' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
-                          <td>{bill.transaction_type}</td>
-                          <td>{bill.transaction_number}</td>
-                          <td>{bill.transaction_code || '-'}</td>
+                          <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
                           <td>{bill.payment_date || '-'}</td>
+                          <td>
+                            {bill.balance > 0 && (
+                              <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handlePayBill(bill.id)}>Pay</button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               )}
+              <button type="button" className="secondary-button" onClick={() => setSelectedTenant(null)} style={{ marginTop: 16 }}>Back to Tenants</button>
             </article>
           </section>
         )}
