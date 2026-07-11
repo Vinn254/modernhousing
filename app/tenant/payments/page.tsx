@@ -34,6 +34,7 @@ export default function TenantPaymentsPage() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'payments' | 'utilities'>('payments');
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [mpesaAmount, setMpesaAmount] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -64,7 +65,6 @@ export default function TenantPaymentsPage() {
 
     if (billsResponse?.ok) {
       const billsResult = await billsResponse.json();
-      // Show all bills (rent, overdue, deposit, utilities)
       allBills = (billsResult.bills ?? []).map((b: any) => ({
         id: b.id,
         description: b.description,
@@ -82,7 +82,6 @@ export default function TenantPaymentsPage() {
 
     if (paymentsResponse?.ok) {
       const paymentsResult = await paymentsResponse.json();
-      // Map payments to bills format
       const legacyBills = (paymentsResult.payments ?? []).map((p: any) => ({
         id: p.id,
         description: p.description,
@@ -98,18 +97,8 @@ export default function TenantPaymentsPage() {
       allBills = [...allBills, ...legacyBills];
     }
 
-    // Sort by date descending, then calculate running balance
     allBills.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    
-    // Calculate proper balance: apply payments to oldest balances first
-    let runningBalance = 0;
-    const billsWithCalculatedBalance = allBills.map(bill => {
-      const effectiveBalance = bill.balance + runningBalance;
-      runningBalance = effectiveBalance > 0 ? effectiveBalance : 0;
-      return { ...bill, calculated_balance: effectiveBalance };
-    });
-    
-    setBills(billsWithCalculatedBalance);
+    setBills(allBills);
 
     if (invoicesResponse?.ok) {
       const invoicesResult = await invoicesResponse.json();
@@ -155,7 +144,25 @@ export default function TenantPaymentsPage() {
     setMpesaPhone(''); setMpesaAmount('');
   }
 
-  const totalOutstanding = bills.reduce((sum, b) => sum + Number(b.balance || 0), 0);
+  // Separate bills by type
+  const rentBills = bills.filter(b => ['rent', 'overdue', 'deposit'].includes(b.transaction_type));
+  const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'].includes(b.transaction_type));
+  
+  // Calculate running balance for proper payment application
+  const calculateRunningBalance = (billsList: Bill[]) => {
+    let runningBalance = 0;
+    return billsList.map(bill => {
+      runningBalance += bill.balance;
+      return { ...bill, running_balance: runningBalance > 0 ? runningBalance : 0 };
+    });
+  };
+
+  const rentWithBalance = calculateRunningBalance([...rentBills].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
+  const utilityWithBalance = calculateRunningBalance([...utilityBills].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
+
+  const totalRentBalance = rentWithBalance.reduce((sum, b) => sum + (b.running_balance || 0), 0);
+  const totalUtilityBalance = utilityWithBalance.reduce((sum, b) => sum + (b.running_balance || 0), 0);
+  const totalOutstanding = totalRentBalance + totalUtilityBalance;
 
   const getTypeLabel = (type: string) => {
     const map: Record<string, string> = {
@@ -183,40 +190,45 @@ export default function TenantPaymentsPage() {
   return (
     <main className="container page-layout">
       <div className="card-admin-header">
-        <div><p className="heading">Tenant Payment History</p><p className="subheading">Monthly rent payments, utility bills, and invoices.</p></div>
+        <div><p className="heading">Tenant Payments</p><p className="subheading">Rent and utility payments.</p></div>
       </div>
 
       {user && (
         <section className="card-grid" style={{ marginBottom: 24 }}>
           <article className="card">
-            <div className="card-label">Make Payment</div>
-            <h3>Pay via M-Pesa STK Push</h3>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <button 
+                onClick={() => setActiveTab('payments')} 
+                className={activeTab === 'payments' ? 'action-button primary' : 'secondary-button'}
+                style={{ flex: 1 }}>
+                Rent Payments
+              </button>
+              <button 
+                onClick={() => setActiveTab('utilities')} 
+                className={activeTab === 'utilities' ? 'action-button primary' : 'secondary-button'}
+                style={{ flex: 1 }}>
+                Utilities
+              </button>
+            </div>
+
+            <div className="card-label" style={{ marginBottom: 8 }}>
+              {activeTab === 'payments' ? 'Make Rent Payment' : 'Make Utility Payment'}
+            </div>
+            
             <form onSubmit={handleStkPush} className="form-grid">
               <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)" />
               <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
               <button type="submit" disabled={processing}>{processing ? 'Processing…' : 'Pay Now'}</button>
             </form>
             
-            {paymentSettings.paybill && (
-              <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
-                <strong>Paybill:</strong> {paymentSettings.paybill}{paymentSettings.paybillAccount ? ` (Account: ${paymentSettings.paybillAccount})` : ''}
-              </div>
-            )}
-            {paymentSettings.till && (
-              <div style={{ marginTop: 8, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
-                <strong>Till:</strong> {paymentSettings.till}
-              </div>
-            )}
-            {paymentSettings.pochi && (
-              <div style={{ marginTop: 8, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
-                <strong>Pochi la Biashara:</strong> {paymentSettings.pochi}
-              </div>
-            )}
-            {paymentSettings.mobile && (
-              <div style={{ marginTop: 8, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
-                <strong>Mobile:</strong> {paymentSettings.mobile}
-              </div>
-            )}
+            <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
+              <strong>Payment Details:</strong>
+              {paymentSettings.paybill && <div>Paybill: {paymentSettings.paybill}{paymentSettings.paybillAccount ? ` (Account: ${paymentSettings.paybillAccount})` : ''}</div>}
+              {paymentSettings.till && <div>Till: {paymentSettings.till}</div>}
+              {paymentSettings.pochi && <div>Pochi: {paymentSettings.pochi}</div>}
+              {paymentSettings.mobile && <div>Mobile: {paymentSettings.mobile}</div>}
+              {!paymentSettings.paybill && !paymentSettings.till && !paymentSettings.pochi && !paymentSettings.mobile && <div style={{ color: 'var(--ink-3)' }}>Contact landlord for payment details.</div>}
+            </div>
             
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
@@ -225,106 +237,97 @@ export default function TenantPaymentsPage() {
       )}
 
       <section className="card" style={{ marginTop: 24 }}>
-        <div className="card-label">PAYMENT INSTRUCTIONS</div>
-        <h3 style={{ marginBottom: 16 }}>How to Pay</h3>
-        <p style={{ color: '#111827', marginBottom: 12 }}>Use these details for manual payments:</p>
-        <div style={{ padding: 12, background: 'var(--line-soft)', borderRadius: 8 }}>
-          {paymentSettings.paybill && <div><strong>Paybill:</strong> {paymentSettings.paybill}{paymentSettings.paybillAccount ? ` (Account: ${paymentSettings.paybillAccount})` : ''}</div>}
-          {paymentSettings.till && <div><strong>Till:</strong> {paymentSettings.till}</div>}
-          {paymentSettings.pochi && <div><strong>Pochi la Biashara:</strong> {paymentSettings.pochi}</div>}
-          {paymentSettings.mobile && <div><strong>Mobile:</strong> {paymentSettings.mobile}</div>}
-          {!paymentSettings.paybill && !paymentSettings.till && !paymentSettings.pochi && !paymentSettings.mobile && <div style={{ color: 'var(--ink-3)' }}>No payment details configured. Contact your landlord.</div>}
-        </div>
-      </section>
-
-      {invoices.length > 0 && (
-        <section className="card" style={{ marginTop: 24 }}>
-          <div className="card-label">INVOICES</div>
-          <h3 style={{ marginBottom: 16 }}>Download Invoices</h3>
-          <div className="table-shell">
-            <table className="landlord-table">
-              <thead>
-                <tr>
-                  <th>Month</th>
-                  <th>Type</th>
-                  <th>Description</th>
-                  <th>Amount</th>
-                  <th>Due Date</th>
-                  <th>Status</th>
-                  <th>Download</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map(invoice => (
-                  <tr key={invoice.id}>
-                    <td>{invoice.month_due || '-'}</td>
-                    <td style={{ textTransform: 'capitalize' }}>{invoice.invoice_type}</td>
-                    <td>{invoice.description}</td>
-                    <td>{formatCurrency(invoice.amount)}</td>
-                    <td>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}</td>
-                    <td>
-                      <span className={`status-pill ${invoice.status === 'paid' ? 'status-active' : 'status-pending'}`}>
-                        {invoice.status}
-                      </span>
-                    </td>
-                    <td>
-                      {invoice.file_path && (
-                        <a href={`/api/invoices/download/${invoice.id}`} className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      <section className="card" style={{ marginTop: 24 }}>
-        <div className="card-label">TRANSACTION HISTORY</div>
-        <h3 style={{ marginBottom: 16 }}>Payment Records</h3>
+        <div className="card-label">{activeTab === 'payments' ? 'RENT PAYMENT HISTORY' : 'UTILITY BILL HISTORY'}</div>
         
-        {bills.length === 0 ? (
-          <p className="landlord-empty">No bills recorded yet.</p>
-        ) : (
-          <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-            <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
-              <thead>
-                <tr>
-                  <th>Month</th>
-                  <th>Description</th>
-                  <th>Type</th>
-                  <th>Due Amount</th>
-                  <th>Paid</th>
-                  <th>Penalty</th>
-                  <th>Balance</th>
-                  <th>Payment Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bills.map(bill => (
-                  <tr key={bill.id}>
-                    <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
-                    <td>{bill.description}</td>
-                    <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
-                    <td>{formatCurrency(bill.due_amount)}</td>
-                    <td>{formatCurrency(bill.paid_amount)}</td>
-                    <td>{formatCurrency(bill.penalty_fee || 0)}</td>
-                    <td style={{ color: bill.balance > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 600 }}>
-                      {formatCurrency(bill.balance)}
-                    </td>
-                    <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
+        {activeTab === 'payments' ? (
+          rentBills.length === 0 ? (
+            <p className="landlord-empty">No rent payments recorded yet.</p>
+          ) : (
+            <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Due Amount</th>
+                    <th>Paid</th>
+                    <th>Penalty</th>
+                    <th>Balance</th>
+                    <th>Payment Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {rentWithBalance.map(bill => (
+                    <tr key={bill.id}>
+                      <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
+                      <td>{bill.description}</td>
+                      <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
+                      <td>{formatCurrency(bill.due_amount)}</td>
+                      <td>{formatCurrency(bill.paid_amount)}</td>
+                      <td>{formatCurrency(bill.penalty_fee || 0)}</td>
+                      <td style={{ color: (bill.running_balance || 0) > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 600 }}>
+                        {formatCurrency(bill.running_balance || 0)}
+                      </td>
+                      <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          utilityBills.length === 0 ? (
+            <p className="landlord-empty">No utility bills recorded yet.</p>
+          ) : (
+            <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Due Amount</th>
+                    <th>Paid</th>
+                    <th>Penalty</th>
+                    <th>Balance</th>
+                    <th>Payment Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {utilityWithBalance.map(bill => (
+                    <tr key={bill.id}>
+                      <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
+                      <td>{bill.description}</td>
+                      <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
+                      <td>{formatCurrency(bill.due_amount)}</td>
+                      <td>{formatCurrency(bill.paid_amount)}</td>
+                      <td>{formatCurrency(bill.penalty_fee || 0)}</td>
+                      <td style={{ color: (bill.running_balance || 0) > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 600 }}>
+                        {formatCurrency(bill.running_balance || 0)}
+                      </td>
+                      <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </section>
 
       <section className="card" style={{ marginTop: 24 }}>
         <div className="card-label">BALANCE SUMMARY</div>
         <div style={{ padding: '16px', background: 'var(--line-soft)', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span>Rent Balance:</span>
+            <span style={{ color: totalRentBalance > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalRentBalance)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span>Utility Balance:</span>
+            <span style={{ color: totalUtilityBalance > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalUtilityBalance)}</span>
+          </div>
+          <hr style={{ margin: '12px 0', borderColor: 'var(--line)' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700 }}>
             <span>Total Outstanding:</span>
             <span style={{ color: totalOutstanding > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalOutstanding)}</span>
