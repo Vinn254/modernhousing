@@ -30,14 +30,15 @@ export default function LandlordDocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [showUpload, setShowUpload] = useState(false);
+  
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [uploadForm, setUploadForm] = useState({
     tenantId: '',
     documentName: '',
     documentType: 'agreement',
-    documentUrl: '',
     notes: '',
   });
+  const [uploading, setUploading] = useState(false);
 
   async function getAuthHeaders() {
     const { data } = await supabase.auth.getSession();
@@ -77,31 +78,47 @@ export default function LandlordDocumentsPage() {
     setMessage('');
     setError('');
 
-    if (!uploadForm.tenantId || !uploadForm.documentUrl) {
-      setError('Tenant and document URL are required.');
+    if (!documentFile) {
+      setError('Please select a document file.');
       return;
     }
 
-    const response = await fetch('/api/documents', {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({
-        tenantId: uploadForm.tenantId,
-        documentName: uploadForm.documentName || 'Tenancy Agreement',
-        documentUrl: uploadForm.documentUrl,
-        documentType: uploadForm.documentType,
-        notes: uploadForm.notes,
-      }),
-    });
+    setUploading(true);
+    const { data: { session } } = await supabase.auth.getSession();
 
-    const result = await response.json();
-    if (response.ok) {
-      setMessage('Agreement uploaded successfully.');
-      setShowUpload(false);
-      setUploadForm({ tenantId: '', documentName: '', documentType: 'agreement', documentUrl: '', notes: '' });
+    // Handle "all" tenants - upload to each one
+    const targetTenantIds = uploadForm.tenantId === 'all' 
+      ? tenants.map(t => t.id) 
+      : [uploadForm.tenantId];
+
+    try {
+      for (const tenantId of targetTenantIds) {
+        const formData = new FormData();
+        formData.append('file', documentFile);
+        formData.append('tenantId', tenantId);
+        formData.append('documentType', uploadForm.documentType);
+        formData.append('documentName', uploadForm.documentName || documentFile.name);
+
+        const response = await fetch('/api/documents', {
+          method: 'POST',
+          body: formData,
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message ?? 'Upload failed');
+        }
+      }
+
+      setMessage(`Document uploaded to ${targetTenantIds.length} tenant${targetTenantIds.length > 1 ? 's' : ''}.`);
+      setDocumentFile(null);
+      setUploadForm({ tenantId: '', documentName: '', documentType: 'agreement', notes: '' });
       loadData();
-    } else {
-      setError(result.message ?? 'Unable to upload agreement.');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -181,17 +198,21 @@ export default function LandlordDocumentsPage() {
             <form onSubmit={handleUploadAgreement} className="form-grid">
               <select value={uploadForm.tenantId} onChange={e => setUploadForm(f => ({ ...f, tenantId: e.target.value }))} required>
                 <option value="">Select tenant</option>
+                <option value="all">All Tenants</option>
                 {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} - {t.property} · Unit {t.unit}</option>)}
               </select>
               <input value={uploadForm.documentName} onChange={e => setUploadForm(f => ({ ...f, documentName: e.target.value }))} placeholder="Document name (e.g., Tenancy Agreement)" />
               <select value={uploadForm.documentType} onChange={e => setUploadForm(f => ({ ...f, documentType: e.target.value }))}>
                 <option value="agreement">Agreement</option>
                 <option value="id_document">ID Document</option>
-                <option value="signed_agreement">Signed Agreement</option>
               </select>
-              <input value={uploadForm.documentUrl} onChange={e => setUploadForm(f => ({ ...f, documentUrl: e.target.value }))} required placeholder="Document URL (PDF link)" />
+              <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => {
+                const file = e.target.files?.[0] ?? null;
+                setDocumentFile(file);
+                if (file) setUploadForm(f => ({ ...f, documentName: file.name.replace(/\.[^/.]+$/, '') }));
+              }} required />
               <input value={uploadForm.notes} onChange={e => setUploadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" />
-              <button type="submit">Upload & Assign</button>
+              <button type="submit" disabled={uploading}>Upload & Assign</button>
             </form>
             <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 8 }}>Upload agreement PDF and assign to tenant.</p>
           </article>

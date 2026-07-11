@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       const formData = await request.formData();
       const file = formData.get('file') as File | null;
       const tenantId = formData.get('tenantId') as string;
-      const documentType = (formData.get('documentType') as string) || 'other';
+      const documentType = (formData.get('documentType') as string) || 'agreement';
       const documentName = (formData.get('documentName') as string) || documentType;
 
       if (!file || !tenantId) {
@@ -159,14 +159,20 @@ export async function POST(request: NextRequest) {
 
       const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData.path);
 
+      // Determine status based on who's uploading
+      // Landlords uploading agreements: status = 'sent'
+      // Tenants uploading signed docs: status = 'signed'
+      const isLandlordUpload = documentType === 'agreement' || documentType === 'id_document';
+      const status = isLandlordUpload ? 'sent' : 'signed';
+
       const insertData: any = {
         tenant_id: tenantId,
         uploaded_by: authContext.userId,
         document_name: documentName,
         document_url: publicUrl.publicUrl,
-        document_type: documentType === 'id_document' && documentName.includes('Photo') ? 'id_document' : documentType,
-        status: 'signed',
-        notes: documentName.includes('Photo') ? 'Passport photo for profile' : null,
+        document_type: documentType,
+        status: status,
+        notes: null,
       };
 
       const result = await supabaseAdmin.from('documents')
@@ -177,7 +183,7 @@ export async function POST(request: NextRequest) {
       if (result.error) throw result.error;
 
       // If passport photo, update tenant picture_url
-      if (documentName.includes('Photo')) {
+      if (documentName.toLowerCase().includes('photo')) {
         await supabaseAdmin
           .from('tenants')
           .update({ passport_photo_url: publicUrl.publicUrl })
