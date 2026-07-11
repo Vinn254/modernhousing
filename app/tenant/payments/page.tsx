@@ -72,7 +72,7 @@ export default function TenantPaymentsPage() {
         due_amount: b.due_amount || 0,
         paid_amount: b.paid_amount || 0,
         penalty_fee: b.penalty_fee || 0,
-        balance: b.balance || 0,
+        balance: (b.due_amount || 0) - (b.paid_amount || 0) - (b.penalty_fee || 0),
         transaction_type: b.transaction_type,
         payment_date: b.payment_date,
         transaction_number: b.transaction_number,
@@ -89,7 +89,7 @@ export default function TenantPaymentsPage() {
         due_amount: p.due_amount || p.amount || 0,
         paid_amount: p.amount || 0,
         penalty_fee: 0,
-        balance: p.balance_remaining || 0,
+        balance: (p.due_amount || p.amount || 0) - (p.amount || 0),
         transaction_type: p.transaction_type || 'rent',
         payment_date: p.paid_at?.split('T')[0] || null,
         created_at: p.paid_at || p.created_at,
@@ -97,7 +97,10 @@ export default function TenantPaymentsPage() {
       allBills = [...allBills, ...legacyBills];
     }
 
-    allBills.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    allBills.sort((a, b) => {
+      const monthCompare = (a.month_due || '').localeCompare(b.month_due || '');
+      return monthCompare !== 0 ? monthCompare : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
     setBills(allBills);
 
     if (invoicesResponse?.ok) {
@@ -144,24 +147,24 @@ export default function TenantPaymentsPage() {
     setMpesaPhone(''); setMpesaAmount('');
   }
 
-  // Separate bills by type
   const rentBills = bills.filter(b => ['rent', 'overdue', 'deposit'].includes(b.transaction_type));
   const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'].includes(b.transaction_type));
   
-  // Calculate running balance for proper payment application
   const calculateRunningBalance = (billsList: Bill[]) => {
     let runningBalance = 0;
     return billsList.map(bill => {
-      runningBalance += bill.balance;
-      return { ...bill, running_balance: runningBalance > 0 ? runningBalance : 0 };
+      const billBalance = bill.balance;
+      runningBalance += billBalance;
+      const effectiveBalance = runningBalance > 0 ? runningBalance : 0;
+      return { ...bill, running_balance: effectiveBalance };
     });
   };
 
-  const rentWithBalance = calculateRunningBalance([...rentBills].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
-  const utilityWithBalance = calculateRunningBalance([...utilityBills].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
+  const rentWithBalance = calculateRunningBalance([...rentBills]);
+  const utilityWithBalance = calculateRunningBalance([...utilityBills]);
 
-  const totalRentBalance = rentWithBalance.reduce((sum, b) => sum + (b.running_balance || 0), 0);
-  const totalUtilityBalance = utilityWithBalance.reduce((sum, b) => sum + (b.running_balance || 0), 0);
+  const totalRentBalance = (rentWithBalance.at(-1)?.running_balance ?? 0);
+  const totalUtilityBalance = (utilityWithBalance.at(-1)?.running_balance ?? 0);
   const totalOutstanding = totalRentBalance + totalUtilityBalance;
 
   const getTypeLabel = (type: string) => {
