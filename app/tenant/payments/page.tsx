@@ -52,8 +52,16 @@ export default function TenantPaymentsPage() {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
 
+    // Fetch bills by tenantId or email (fallback)
+    let billsUrl = '/api/bills';
+    if (tenantId) {
+      billsUrl = `/api/bills?tenantId=${tenantId}`;
+    } else {
+      billsUrl = `/api/bills?tenantEmail=${encodeURIComponent(email)}`;
+    }
+
     const [billsResponse, invoicesResponse, settingsResponse] = await Promise.all([
-      fetch(tenantId ? `/api/bills?tenantId=${tenantId}` : '/api/bills', { headers }).catch(() => null),
+      fetch(billsUrl, { headers }).catch(() => null),
       fetch(`/api/invoices?tenantEmail=${encodeURIComponent(email)}`, { headers }).catch(() => null),
       fetch(tenantId ? `/api/payment-settings?tenantId=${tenantId}` : '/api/payment-settings', { headers }).catch(() => null),
     ]);

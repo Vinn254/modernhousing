@@ -51,7 +51,7 @@ async function getAuthContext(request: NextRequest) {
   }
 
   if (!sessionUser) {
-    return { isSuperAdmin: false, userId: undefined, organizationId: null };
+    return { isSuperAdmin: false, userId: undefined, organizationId: null, sessionUser: null };
   }
 
   const userMetadata = sessionUser.user_metadata || {};
@@ -78,13 +78,26 @@ export async function GET(request: NextRequest) {
   try {
     const authContext = await getAuthContext(request);
     const tenantId = request.nextUrl.searchParams.get('tenantId');
+    const tenantEmail = request.nextUrl.searchParams.get('tenantEmail');
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
-    if (tenantId) {
+    let effectiveTenantId = tenantId;
+
+    // If tenantEmail provided, look up tenant ID
+    if (tenantEmail && !tenantId) {
+      const { data: tenantData } = await supabaseAdmin
+        .from('tenants')
+        .select('id')
+        .eq('email', tenantEmail)
+        .single();
+      effectiveTenantId = tenantData?.id ?? null;
+    }
+
+    if (effectiveTenantId) {
       const { data, error } = await supabaseAdmin
         .from('bills')
-        .select(`*, tenants(full_name, email, units(unit_number))`)
-        .eq('tenant_id', tenantId)
+        .select(`*`)
+        .eq('tenant_id', effectiveTenantId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -92,8 +105,6 @@ export async function GET(request: NextRequest) {
       const bills = (data ?? []).map((bill: any) => ({
         id: bill.id,
         tenant_id: bill.tenant_id,
-        unit_number: bill.tenants?.units?.unit_number ?? '',
-        tenant_name: bill.tenants?.full_name ?? '',
         description: bill.description,
         month_due: bill.month_due,
         due_amount: bill.due_amount,
