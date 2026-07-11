@@ -29,12 +29,22 @@ interface Invoice {
   created_at: string;
 }
 
+const MONTH_ORDER: Record<string, number> = {
+  january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+  july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+};
+
+function getMonthSortValue(month: string): number {
+  const normalized = (month || '').toLowerCase();
+  return MONTH_ORDER[normalized] || 0;
+}
+
 export default function TenantPaymentsPage() {
   const [user, setUser] = useState<any>(null);
   const [bills, setBills] = useState<Bill[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'payments' | 'utilities'>('payments');
+  const [activeTab, setActiveTab] = useState<'payments' | 'utilities' | 'invoices'>('payments');
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [mpesaAmount, setMpesaAmount] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -98,8 +108,12 @@ export default function TenantPaymentsPage() {
     }
 
     allBills.sort((a, b) => {
-      const monthCompare = (a.month_due || '').localeCompare(b.month_due || '');
-      return monthCompare !== 0 ? monthCompare : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      const aOrder = getMonthSortValue(a.month_due);
+      const bOrder = getMonthSortValue(b.month_due);
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      const aCreated = a.month_due || a.created_at;
+      const bCreated = b.month_due || b.created_at;
+      return aCreated.localeCompare(bCreated);
     });
     setBills(allBills);
 
@@ -149,44 +163,47 @@ export default function TenantPaymentsPage() {
 
   const rentBills = bills.filter(b => ['rent', 'overdue', 'deposit'].includes(b.transaction_type));
   const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'].includes(b.transaction_type));
-  
+
   const calculateRunningBalance = (billsList: Bill[]) => {
     let runningBalance = 0;
     return billsList.map(bill => {
       runningBalance += bill.balance;
-      const effectiveBalance = Math.max(0, runningBalance);
-      return { ...bill, running_balance: effectiveBalance };
+      return { ...bill, running_balance: Math.max(0, runningBalance) };
     });
   };
 
   const rentBillsSorted = [...rentBills].sort((a, b) => {
-    const monthCompare = (a.month_due || '').localeCompare(b.month_due || '');
-    return monthCompare !== 0 ? monthCompare : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    const aOrder = getMonthSortValue(a.month_due);
+    const bOrder = getMonthSortValue(b.month_due);
+    return aOrder - bOrder || a.month_due.localeCompare(b.month_due);
   });
   
   const utilityBillsSorted = [...utilityBills].sort((a, b) => {
-    const monthCompare = (a.month_due || '').localeCompare(b.month_due || '');
-    return monthCompare !== 0 ? monthCompare : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    const aOrder = getMonthSortValue(a.month_due);
+    const bOrder = getMonthSortValue(b.month_due);
+    return aOrder - bOrder || a.month_due.localeCompare(b.month_due);
   });
 
   const rentWithBalance = calculateRunningBalance(rentBillsSorted);
   const utilityWithBalance = calculateRunningBalance(utilityBillsSorted);
 
-  const totalRentBalance = (rentWithBalance.at(-1)?.running_balance ?? 0);
-  const totalUtilityBalance = (utilityWithBalance.at(-1)?.running_balance ?? 0);
+  const totalRentBalance = rentWithBalance.length > 0 ? rentWithBalance[rentWithBalance.length - 1].running_balance : 0;
+  const totalUtilityBalance = utilityWithBalance.length > 0 ? utilityWithBalance[utilityWithBalance.length - 1].running_balance : 0;
   const totalOutstanding = totalRentBalance + totalUtilityBalance;
 
   const getTypeLabel = (type: string) => {
     const map: Record<string, string> = {
-      rent: 'Rent',
-      overdue: 'Overdue',
-      deposit: 'Deposit',
-      water: 'Water',
-      garbage: 'Garbage',
-      service_charge: 'Service Charge',
-      parking: 'Parking',
-      security: 'Security',
-      other: 'Other',
+      rent: 'Rent', overdue: 'Overdue', deposit: 'Deposit',
+      water: 'Water', garbage: 'Garbage', service_charge: 'Service Charge',
+      parking: 'Parking', security: 'Security', other: 'Other',
+    };
+    return map[type] || type;
+  };
+
+  const getInvoiceTypeLabel = (type: string) => {
+    const map: Record<string, string> = {
+      rent: 'Rent', water: 'Water', utility: 'Utility', other: 'Other',
+      garbage: 'Garbage', service_charge: 'Service Charge', parking: 'Parking', security: 'Security',
     };
     return map[type] || type;
   };
@@ -202,45 +219,40 @@ export default function TenantPaymentsPage() {
   return (
     <main className="container page-layout">
       <div className="card-admin-header">
-        <div><p className="heading">Tenant Payments</p><p className="subheading">Rent and utility payments.</p></div>
+        <div><p className="heading">Tenant Payments</p><p className="subheading">Rent, utility payments, and invoices.</p></div>
       </div>
 
       {user && (
         <section className="card-grid" style={{ marginBottom: 24 }}>
           <article className="card">
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <button 
-                onClick={() => setActiveTab('payments')} 
-                className={activeTab === 'payments' ? 'action-button primary' : 'secondary-button'}
-                style={{ flex: 1 }}>
-                Rent Payments
-              </button>
-              <button 
-                onClick={() => setActiveTab('utilities')} 
-                className={activeTab === 'utilities' ? 'action-button primary' : 'secondary-button'}
-                style={{ flex: 1 }}>
-                Utilities
-              </button>
+              <button onClick={() => setActiveTab('payments')} className={activeTab === 'payments' ? 'action-button primary' : 'secondary-button'} style={{ flex: 1 }}>Rent Payments</button>
+              <button onClick={() => setActiveTab('utilities')} className={activeTab === 'utilities' ? 'action-button primary' : 'secondary-button'} style={{ flex: 1 }}>Utilities</button>
+              <button onClick={() => setActiveTab('invoices')} className={activeTab === 'invoices' ? 'action-button primary' : 'secondary-button'} style={{ flex: 1 }}>Invoices</button>
             </div>
 
             <div className="card-label" style={{ marginBottom: 8 }}>
-              {activeTab === 'payments' ? 'Make Rent Payment' : 'Make Utility Payment'}
+              {activeTab === 'payments' ? 'Make Rent Payment' : activeTab === 'utilities' ? 'Make Utility Payment' : 'Download Invoices'}
             </div>
             
-            <form onSubmit={handleStkPush} className="form-grid">
-              <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)" />
-              <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
-              <button type="submit" disabled={processing}>{processing ? 'Processing…' : 'Pay Now'}</button>
-            </form>
+            {activeTab !== 'invoices' && (
+              <form onSubmit={handleStkPush} className="form-grid">
+                <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)" />
+                <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
+                <button type="submit" disabled={processing}>{processing ? 'Processing…' : 'Pay Now'}</button>
+              </form>
+            )}
             
-            <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
-              <strong>Payment Details:</strong>
-              {paymentSettings.paybill && <div>Paybill: {paymentSettings.paybill}{paymentSettings.paybillAccount ? ` (Account: ${paymentSettings.paybillAccount})` : ''}</div>}
-              {paymentSettings.till && <div>Till: {paymentSettings.till}</div>}
-              {paymentSettings.pochi && <div>Pochi: {paymentSettings.pochi}</div>}
-              {paymentSettings.mobile && <div>Mobile: {paymentSettings.mobile}</div>}
-              {!paymentSettings.paybill && !paymentSettings.till && !paymentSettings.pochi && !paymentSettings.mobile && <div style={{ color: 'var(--ink-3)' }}>Contact landlord for payment details.</div>}
-            </div>
+            {activeTab !== 'invoices' && (
+              <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
+                <strong>Payment Details:</strong>
+                {paymentSettings.paybill && <div>Paybill: {paymentSettings.paybill}{paymentSettings.paybillAccount ? ` (Account: ${paymentSettings.paybillAccount})` : ''}</div>}
+                {paymentSettings.till && <div>Till: {paymentSettings.till}</div>}
+                {paymentSettings.pochi && <div>Pochi: {paymentSettings.pochi}</div>}
+                {paymentSettings.mobile && <div>Mobile: {paymentSettings.mobile}</div>}
+                {!paymentSettings.paybill && !paymentSettings.till && !paymentSettings.pochi && !paymentSettings.mobile && <div style={{ color: 'var(--ink-3)' }}>Contact landlord for payment details.</div>}
+              </div>
+            )}
             
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
@@ -249,9 +261,50 @@ export default function TenantPaymentsPage() {
       )}
 
       <section className="card" style={{ marginTop: 24 }}>
-        <div className="card-label">{activeTab === 'payments' ? 'RENT PAYMENT HISTORY' : 'UTILITY BILL HISTORY'}</div>
+        <div className="card-label">{activeTab === 'payments' ? 'RENT PAYMENT HISTORY' : activeTab === 'utilities' ? 'UTILITY BILL HISTORY' : 'INVOICES'}</div>
         
-        {activeTab === 'payments' ? (
+        {activeTab === 'invoices' ? (
+          invoices.length === 0 ? (
+            <p className="landlord-empty">No invoices available.</p>
+          ) : (
+            <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Download</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.sort((a, b) => {
+                    const aOrder = getMonthSortValue(a.month_due);
+                    const bOrder = getMonthSortValue(b.month_due);
+                    return aOrder - bOrder || a.month_due.localeCompare(b.month_due);
+                  }).map(inv => (
+                    <tr key={inv.id}>
+                      <td style={{ textTransform: 'capitalize' }}>{inv.month_due || '-'}</td>
+                      <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getInvoiceTypeLabel(inv.invoice_type)}</span></td>
+                      <td>{inv.description}</td>
+                      <td>{formatCurrency(inv.amount)}</td>
+                      <td>{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '-'}</td>
+                      <td><span style={{ textTransform: 'capitalize' }}>{inv.status}</span></td>
+                      <td>
+                        {inv.file_path ? (
+                          <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
+                        ) : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (activeTab === 'payments' ? (
           rentBills.length === 0 ? (
             <p className="landlord-empty">No rent payments recorded yet.</p>
           ) : (
@@ -325,7 +378,7 @@ export default function TenantPaymentsPage() {
               </table>
             </div>
           )
-        )}
+        ))}
       </section>
 
       <section className="card" style={{ marginTop: 24 }}>

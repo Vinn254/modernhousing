@@ -113,7 +113,18 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ invoices });
+    const MONTH_ORDER: Record<string, number> = {
+      january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+      july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+    };
+
+    const sortedInvoices = (invoices ?? []).sort((a: any, b: any) => {
+      const aOrder = MONTH_ORDER[(a.month_due || '').toLowerCase()] || 0;
+      const bOrder = MONTH_ORDER[(b.month_due || '').toLowerCase()] || 0;
+      return aOrder - bOrder || (a.month_due || '').localeCompare(b.month_due || '');
+    });
+
+    return NextResponse.json({ invoices: sortedInvoices });
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to fetch invoices.' }, { status: 500 });
   }
