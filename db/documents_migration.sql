@@ -18,3 +18,7 @@ ALTER TABLE tenants
 ADD COLUMN IF NOT EXISTS signed_agreement_url text,
 ADD COLUMN IF NOT EXISTS id_document_url text,
 ADD COLUMN IF NOT EXISTS passport_photo_url text;
+
+-- Make uploaded_by nullable to allow tenant uploads without profile record
+-- This allows both landlords and tenants to upload documents
+ALTER TABLE documents ALTER COLUMN uploaded_by DROP NOT NULL;
