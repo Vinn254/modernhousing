@@ -74,6 +74,13 @@ export default function TenantsPage() {
     kraPin: '',
     nextOfKinId: '',
   });
+  const [utilityForm, setUtilityForm] = useState({
+    tenantId: '',
+    utilityType: '',
+    monthDue: '',
+    amount: '',
+    description: '',
+  });
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [billForm, setBillForm] = useState({
@@ -265,6 +272,47 @@ export default function TenantsPage() {
     await loadBills(selectedTenant.id);
   }
 
+  async function handleAddUtilityBill(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+
+    if (!utilityForm.tenantId || !utilityForm.utilityType || !utilityForm.amount) {
+      setError('All fields are required.');
+      return;
+    }
+
+    const tenantData = tenants.find(t => t.id === utilityForm.tenantId);
+    const tenantPropertyId = tenantData?.property_id || '';
+
+    const response = await fetch('/api/bills', {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        tenantId: utilityForm.tenantId,
+        propertyId: tenantPropertyId,
+        description: utilityForm.description || `${utilityForm.utilityType} bill`,
+        monthDue: utilityForm.monthDue || '',
+        dueAmount: Number(utilityForm.amount),
+        paidAmount: 0,
+        penaltyFee: 0,
+        transactionType: utilityForm.utilityType,
+        paymentMethod: '',
+        referenceNumber: '',
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to record utility bill.');
+      return;
+    }
+
+    setMessage('Utility bill recorded.');
+    setUtilityForm({ tenantId: '', utilityType: '', monthDue: '', amount: '', description: '' });
+  }
+
   return (
     <>
       <main className="container admin-no-hero">
@@ -309,60 +357,90 @@ export default function TenantsPage() {
           </article>
         </section>
 
-        <section className="card-grid-item">
-          <article className="card">
-            <div className="card-label">
-              <span className="badge badge-agent">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-              </span>All Tenants
-            </div>
-            <h3 style={{ marginBottom: 16 }}>Tenant Records</h3>
+<section className="card-grid-item">
+           <article className="card">
+             <div className="card-label">
+               <span className="badge badge-agent">
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+               </span>All Tenants
+             </div>
+             <h3 style={{ marginBottom: 16 }}>Tenant Records</h3>
 
-            {loading && <p className="landlord-muted">Loading tenants...</p>}
-            {!loading && tenants.length === 0 && <p className="landlord-empty">No tenants registered yet.</p>}
+             {loading && <p className="landlord-muted">Loading tenants...</p>}
+             {!loading && tenants.length === 0 && <p className="landlord-empty">No tenants registered yet.</p>}
 
-            {!loading && tenants.length > 0 && (
-              <div className="table-shell">
-                <table className="landlord-table" style={{ minWidth: '100%', fontSize: '13px' }}>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Unit</th>
-                      <th>Property</th>
-                      <th>Lease</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tenants.map(tenant => (
-                      <tr key={tenant.id}>
-                        <td className="landlord-name">{tenant.full_name}</td>
-                        <td>{tenant.email}</td>
-                        <td>{tenant.unit}</td>
-                        <td>{tenant.property}</td>
-                        <td>{tenant.lease_start} → {tenant.lease_end}</td>
-                        <td>
-                          <span className={`status-pill ${tenant.status === 'active' || !tenant.status ? 'status-active' : 'status-pending'}`}>
-                            {tenant.status ?? 'Active'}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="landlord-actions">
-                            <button className="action-button primary" onClick={() => handleEdit(tenant)}>Edit</button>
-                            <button className="action-button" style={{ marginLeft: 8 }} onClick={() => handleViewBills(tenant)}>Bills</button>
-                            <button className="action-button danger" onClick={() => handleRemove(tenant.id)}>Remove</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </article>
-        </section>
+             {!loading && tenants.length > 0 && (
+               <div className="table-shell">
+                 <table className="landlord-table" style={{ minWidth: '100%', fontSize: '13px' }}>
+                   <thead>
+                     <tr>
+                       <th>Name</th>
+                       <th>Email</th>
+                       <th>Unit</th>
+                       <th>Property</th>
+                       <th>Lease</th>
+                       <th>Status</th>
+                       <th>Actions</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {tenants.map(tenant => (
+                       <tr key={tenant.id}>
+                         <td className="landlord-name">{tenant.full_name}</td>
+                         <td>{tenant.email}</td>
+                         <td>{tenant.unit}</td>
+                         <td>{tenant.property}</td>
+                         <td>{tenant.lease_start} → {tenant.lease_end}</td>
+                         <td>
+                           <span className={`status-pill ${tenant.status === 'active' || !tenant.status ? 'status-active' : 'status-pending'}`}>
+                             {tenant.status ?? 'Active'}
+                           </span>
+                         </td>
+                         <td>
+                           <div className="landlord-actions">
+                             <button className="action-button primary" onClick={() => handleEdit(tenant)}>Edit</button>
+                             <button className="action-button" style={{ marginLeft: 8 }} onClick={() => handleViewBills(tenant)}>Bills</button>
+                             <button className="action-button danger" onClick={() => handleRemove(tenant.id)}>Remove</button>
+                           </div>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             )}
+           </article>
+         </section>
+
+         <section className="card-grid" style={{ marginTop: 24 }}>
+           <article className="card">
+             <div className="card-label"><span className="badge badge-pm">
+               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+             </span>Record Utility Bill</div>
+             <h3 style={{ marginBottom: 12 }}>Water / Utility Billing</h3>
+             <form onSubmit={handleAddUtilityBill} className="form-grid">
+               <select value={utilityForm.tenantId} onChange={e => setUtilityForm(f => ({ ...f, tenantId: e.target.value }))} required>
+                 <option value="">Select tenant</option>
+                 {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} - {t.property}</option>)}
+               </select>
+               <select value={utilityForm.utilityType} onChange={e => setUtilityForm(f => ({ ...f, utilityType: e.target.value }))} required>
+                 <option value="">Utility type</option>
+                 <option value="water">Water Bill</option>
+                 <option value="garbage">Garbage Collection</option>
+                 <option value="service_charge">Service Charge</option>
+                 <option value="parking">Parking Fee</option>
+                 <option value="security">Security Fee</option>
+                 <option value="other">Other</option>
+               </select>
+               <input type="month" value={utilityForm.monthDue} onChange={e => setUtilityForm(f => ({ ...f, monthDue: e.target.value }))} required />
+               <input type="number" value={utilityForm.amount} onChange={e => setUtilityForm(f => ({ ...f, amount: e.target.value }))} required placeholder="Amount (KSH)" />
+               <input value={utilityForm.description} onChange={e => setUtilityForm(f => ({ ...f, description: e.target.value }))} placeholder="Description (optional)" />
+               <button type="submit">Record Utility</button>
+             </form>
+             {error && <p className="landlord-error" style={{ marginTop: 12 }}>{error}</p>}
+             {message && <p className="landlord-success" style={{ marginTop: 12 }}>{message}</p>}
+           </article>
+         </section>
 
         {selectedTenant && (
           <section className="card-grid-item" style={{ marginTop: 24 }} ref={formRef}>
