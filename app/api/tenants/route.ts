@@ -118,18 +118,16 @@ if (effectivePropertyId) {
            national_id: tenant.national_id,
            kra_pin: tenant.kra_pin,
            next_of_kin_id: tenant.next_of_kin_id,
-         }));
+}));
 
-         return NextResponse.json({ tenants });
-       }
-       return NextResponse.json({ tenants: [] });
-     }
-     return NextResponse.json({ tenants: [] });
-    }
+          return NextResponse.json({ tenants });
+        }
+        return NextResponse.json({ tenants: [] });
+      }
 
-    if (!authContext.isSuperAdmin && !authContext.organizationId && !authContext.userId) {
-      return NextResponse.json({ tenants: [] });
-    }
+      if (!authContext.isSuperAdmin && !authContext.organizationId && !authContext.userId) {
+        return NextResponse.json({ tenants: [] });
+      }
 
     const { data: orgProps } = await supabaseAdmin
       .from('properties')
