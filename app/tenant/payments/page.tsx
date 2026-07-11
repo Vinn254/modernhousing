@@ -161,18 +161,18 @@ export default function TenantPaymentsPage() {
 
   // Calculate cumulative balance across months
   // Payments are applied to reduce balances chronologically
-  const calculateWithBalance = (billsList: Bill[]) => {
+  const calculateWithRunningBalance = (billsList: Bill[]) => {
     let runningBalance = 0;
     return billsList.map(bill => {
       const billBalance = bill.due_amount - bill.paid_amount - bill.penalty_fee;
       runningBalance += billBalance;
       const effectiveBalance = Math.max(0, runningBalance);
-      return { ...bill, running_balance: effectiveBalance };
+      return { ...bill, bill_balance: billBalance, running_balance: effectiveBalance };
     });
   };
 
-  const rentWithBalance = calculateWithBalance([...rentBills]);
-  const utilityWithBalance = calculateWithBalance([...utilityBills]);
+  const rentWithBalance = calculateWithRunningBalance([...rentBills]);
+  const utilityWithBalance = calculateWithRunningBalance([...utilityBills]);
 
   const totalRentBalance = rentWithBalance.length > 0 ? rentWithBalance[rentWithBalance.length - 1].running_balance : 0;
   const totalUtilityBalance = utilityWithBalance.length > 0 ? utilityWithBalance[utilityWithBalance.length - 1].running_balance : 0;
@@ -221,7 +221,6 @@ export default function TenantPaymentsPage() {
             <div className="card-label" style={{ marginBottom: 8 }}>
               {activeTab === 'payments' ? 'Make Rent Payment' : activeTab === 'utilities' ? 'Make Utility Payment' : 'Download Invoices'}
             </div>
-            
             {activeTab !== 'invoices' && (
               <form onSubmit={handleStkPush} className="form-grid">
                 <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)" />
@@ -229,7 +228,6 @@ export default function TenantPaymentsPage() {
                 <button type="submit" disabled={processing}>{processing ? 'Processing…' : 'Pay Now'}</button>
               </form>
             )}
-            
             {activeTab !== 'invoices' && (
               <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
                 <strong>Payment Details:</strong>
@@ -240,7 +238,6 @@ export default function TenantPaymentsPage() {
                 {!paymentSettings.paybill && !paymentSettings.till && !paymentSettings.pochi && !paymentSettings.mobile && <div style={{ color: 'var(--ink-3)' }}>Contact landlord for payment details.</div>}
               </div>
             )}
-            
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </article>
@@ -249,7 +246,6 @@ export default function TenantPaymentsPage() {
 
       <section className="card" style={{ marginTop: 24 }}>
         <div className="card-label">{activeTab === 'payments' ? 'RENT PAYMENT HISTORY' : activeTab === 'utilities' ? 'UTILITY BILL HISTORY' : 'INVOICES'}</div>
-        
         {activeTab === 'invoices' ? (
           invoices.length === 0 ? (
             <p className="landlord-empty">No invoices available.</p>
@@ -292,41 +288,46 @@ export default function TenantPaymentsPage() {
             </div>
           )
         ) : (
-          <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-            <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
-              <thead>
-                <tr>
-                  <th>Month</th>
-                  <th>Description</th>
-                  <th>Type</th>
-                  <th>Due Amount</th>
-                  <th>Paid</th>
-                  <th>Penalty</th>
-                  <th>Running Balance</th>
-                  <th>Payment Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(activeTab === 'payments' ? rentWithBalance : utilityWithBalance).map(bill => (
-                  <tr key={bill.id}>
-                    <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
-                    <td>{bill.description}</td>
-                    <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
-                    <td>{formatCurrency(bill.due_amount)}</td>
-                    <td>{formatCurrency(bill.paid_amount)}</td>
-                    <td>{formatCurrency(bill.penalty_fee || 0)}</td>
-                    <td style={{ color: (bill.running_balance || 0) > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 600 }}>
-                      {formatCurrency(bill.running_balance || 0)}
-                    </td>
-                    <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
+          (activeTab === 'payments' ? rentWithBalance : utilityWithBalance).length === 0 ? (
+            <p className="landlord-empty">{activeTab === 'payments' ? 'No rent payments recorded yet.' : 'No utility bills recorded yet.'}</p>
+          ) : (
+            <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Due Amount</th>
+                    <th>Paid</th>
+                    <th>Penalty</th>
+                    <th>Balance</th>
+                    <th>Running Balance</th>
+                    <th>Payment Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {(activeTab !== 'invoices' && (activeTab === 'payments' ? rentBills.length === 0 : utilityBills.length === 0)) && (
-          <p className="landlord-empty">{activeTab === 'payments' ? 'No rent payments recorded yet.' : 'No utility bills recorded yet.'}</p>
+                </thead>
+                <tbody>
+                  {(activeTab === 'payments' ? rentWithBalance : utilityWithBalance).map(bill => (
+                    <tr key={bill.id}>
+                      <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
+                      <td>{bill.description}</td>
+                      <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
+                      <td>{formatCurrency(bill.due_amount)}</td>
+                      <td>{formatCurrency(bill.paid_amount)}</td>
+                      <td>{formatCurrency(bill.penalty_fee || 0)}</td>
+                      <td style={{ color: bill.bill_balance < 0 ? 'var(--accent)' : (bill.bill_balance > 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: bill.bill_balance !== 0 ? 600 : 400 }}>
+                        {formatCurrency(bill.bill_balance)}
+                      </td>
+                      <td style={{ color: (bill.running_balance || 0) > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 600 }}>
+                        {formatCurrency(bill.running_balance || 0)}
+                      </td>
+                      <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </section>
 
