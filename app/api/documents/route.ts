@@ -170,33 +170,20 @@ export async function POST(request: NextRequest) {
 
       const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData.path);
 
-      // Check if user exists in profiles, if not just skip uploaded_by
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('user_id', authContext.userId)
-        .single();
-
       // Determine status based on who's uploading
-      const isLandlordUpload = documentType === 'agreement' && authContext.tenantId !== tenantId;
+      const isLandlordUpload = documentType === 'agreement';
       const status = isLandlordUpload ? 'sent' : 'signed';
 
-      const insertData: any = {
-        tenant_id: tenantId,
-        document_name: documentName,
-        document_url: publicUrl.publicUrl,
-        document_type: documentType,
-        status: status,
-        notes: null,
-      };
-
-      // Only set uploaded_by if profile exists
-      if (profile) {
-        insertData.uploaded_by = authContext.userId;
-      }
-
       const result = await supabaseAdmin.from('documents')
-        .insert(insertData)
+        .insert({
+          tenant_id: tenantId,
+          uploaded_by: authContext.userId,
+          document_name: documentName,
+          document_url: publicUrl.publicUrl,
+          document_type: documentType,
+          status: status,
+          notes: null,
+        })
         .select()
         .single();
 
@@ -235,27 +222,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Invalid document type.' }, { status: 400 });
   }
 
-  // Check if user exists in profiles
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('id')
-    .eq('user_id', authContext.userId)
-    .single();
-
-  const insertData: any = {
+  const result = await supabaseAdmin.from('documents').insert({
     tenant_id: tenantId,
+    uploaded_by: authContext.userId,
     document_name: documentName,
     document_url: documentUrl,
     document_type: documentType,
     status: documentType === 'signed_agreement' ? 'signed' : 'sent',
     notes: notes || null,
-  };
-
-  if (profile) {
-    insertData.uploaded_by = authContext.userId;
-  }
-
-  const result = await supabaseAdmin.from('documents').insert(insertData).select();
+  }).select();
 
   if (result.error) {
     return NextResponse.json({ message: result.error.message }, { status: 500 });

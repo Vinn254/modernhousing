@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS documents (
     id uuid primary key default uuid_generate_v4(),
     tenant_id uuid references tenants(id) on delete cascade,
     property_id uuid references properties(id) on delete set null,
-    uploaded_by uuid references profiles(id) on delete set null,
+    uploaded_by uuid references auth.users(id) on delete set null,
     document_name text not null,
     document_url text not null,
     document_type text not null check (document_type in ('agreement', 'id_document', 'signed_agreement')),
@@ -19,6 +19,5 @@ ADD COLUMN IF NOT EXISTS signed_agreement_url text,
 ADD COLUMN IF NOT EXISTS id_document_url text,
 ADD COLUMN IF NOT EXISTS passport_photo_url text;
 
--- Make uploaded_by nullable to allow tenant uploads without profile record
--- This allows both landlords and tenants to upload documents
+-- Make uploaded_by nullable to allow tenant uploads without auth.users record
 ALTER TABLE documents ALTER COLUMN uploaded_by DROP NOT NULL;
