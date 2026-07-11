@@ -61,10 +61,10 @@ async function getAuthContext(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { unitId, currentReading, monthDue } = body;
+    const { unitId, consumption, monthDue } = body;
 
-    if (!unitId || currentReading === undefined) {
-      return NextResponse.json({ message: 'Unit ID and current reading are required.' }, { status: 400 });
+    if (!unitId || consumption === undefined) {
+      return NextResponse.json({ message: 'Unit ID and consumption are required.' }, { status: 400 });
     }
 
     const authContext = await getAuthContext(request);
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     // Get unit first
     const { data: unit, error: unitError } = await supabaseAdmin
       .from('units')
-      .select('id, previous_water_reading, current_water_reading, property_id')
+      .select('id, property_id, previous_water_reading, current_water_reading')
       .eq('id', unitId)
       .single();
 
@@ -92,38 +92,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'You can only record meter readings for units in your assigned property.' }, { status: 403 });
     }
 
-    // Get property water rate
-    const { data: propertyData, error: propError } = await supabaseAdmin
-      .from('properties')
-      .select('id, water_rate')
-      .eq('id', unit.property_id)
-      .single();
-
-    if (propError || !propertyData) {
-      return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
+    const unitsConsumed = Math.max(0, Number(consumption));
+    
+    if (unitsConsumed === 0) {
+      return NextResponse.json({ message: 'Consumption is 0 - no bill generated.' }, { status: 200 });
     }
 
-    const previousReading = Number(unit.previous_water_reading || 0);
-    const current = Number(currentReading);
-    const consumption = current - previousReading;
-
-    if (consumption < 0) {
-      return NextResponse.json({ message: 'Current reading cannot be less than previous reading.' }, { status: 400 });
+    // Tiered water billing: 1-6 units = 88 KSH, 7-20 units = 132 KSH, 21+ = 132 + 150 per extra
+    let amount: number;
+    if (unitsConsumed <= 6) {
+      amount = 88;
+    } else if (unitsConsumed <= 20) {
+      amount = 132;
+    } else {
+      amount = 132 + (unitsConsumed - 20) * 150;
     }
-
-    if (consumption === 0) {
-      return NextResponse.json({ message: 'Consumption is 0 - no bill generated (current reading same as previous).' }, { status: 200 });
-    }
-
-    const waterRate = Number(propertyData.water_rate || 150);
-    const amount = consumption * waterRate;
 
     // Update unit with new readings
     const { error: updateError } = await supabaseAdmin
       .from('units')
       .update({
         previous_water_reading: unit.current_water_reading || 0,
-        current_water_reading: currentReading,
+        current_water_reading: (unit.current_water_reading || 0) + unitsConsumed,
         last_meter_update: new Date().toISOString(),
       })
       .eq('id', unitId);
@@ -197,7 +187,6 @@ export async function POST(request: NextRequest) {
       message: 'Water meter reading recorded and bill generated.',
       consumption,
       amount,
-      waterRate,
     }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to record meter reading.' }, { status: 500 });

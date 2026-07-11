@@ -61,13 +61,20 @@ export default function UtilitiesPage() {
     description: '',
   });
 
-  const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: string}>({});
+const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: string}>({});
   const [waterMonthDue, setWaterMonthDue] = useState('');
   const [waterForm, setWaterForm] = useState({
     tenantId: '',
     amount: '',
     description: '',
   });
+
+  function calculateWaterBill(consumption: number): number {
+    if (consumption <= 0) return 0;
+    if (consumption <= 6) return 88;
+    if (consumption <= 20) return 132;
+    return 132 + (consumption - 20) * 150;
+  }
 
   const utilityTypes = [
     { value: 'garbage', label: 'Garbage Collection' },
@@ -201,19 +208,19 @@ export default function UtilitiesPage() {
   }
 
   async function handleWaterMeterReading(unitId: string) {
-    const reading = waterMeterReadings[unitId];
-    if (!reading) return;
+    const consumption = waterMeterReadings[unitId];
+    if (!consumption) return;
 
     const propertyId = units.find(u => u.id === unitId)?.property_id;
     const response = await fetch('/api/water', {
       method: 'POST',
       headers: await getAuthHeaders(),
-      body: JSON.stringify({ unitId, currentReading: Number(reading), monthDue: waterMonthDue, propertyId }),
+      body: JSON.stringify({ unitId, consumption: Number(consumption), monthDue: waterMonthDue, propertyId }),
     });
 
     const result = await response.json();
     if (response.ok) {
-      setMessage(`Water bill: ${result.consumption} units × ${result.waterRate} = ${result.amount.toLocaleString()} KES`);
+      setMessage(`Water bill: ${consumption} units = ${calculateWaterBill(Number(consumption)).toLocaleString()} KES`);
       setWaterMeterReadings((prev) => ({ ...prev, [unitId]: '' }));
       loadData();
     } else {
@@ -275,25 +282,22 @@ export default function UtilitiesPage() {
             <div className="card-label"><span className="badge badge-agent">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             </span>Water Meter Billing</div>
-            <h3 style={{ marginBottom: 16 }}>Record Water Reading</h3>
-            <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Water is billed at KES 150/unit. Consumption = Current - Previous.</p>
+            <h3 style={{ marginBottom: 16 }}>Record Water Consumption</h3>
+            <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Water rates: 1-6 units = 88 KSH, 7-20 units = 132 KSH, 21+ units = 132 + 150 per extra unit.</p>
             <input type="month" value={waterMonthDue} onChange={(event) => setWaterMonthDue(event.target.value)} placeholder="Billing month" style={{ marginBottom: 12 }} />
             {units.length === 0 ? (
               <p style={{ color: 'var(--ink-3)', fontSize: '13px' }}>No units available.</p>
             ) : (
               <div style={{ maxHeight: '240px', overflow: 'auto', marginBottom: 12, border: '1px solid var(--line)', borderRadius: '8px', padding: '8px' }}>
                 {units.map((unit) => {
-                  const current = Number(waterMeterReadings[unit.id] || 0);
-                  const previous = Number(unit.previous_water_reading || 0);
-                  const consumption = Math.max(0, current - previous);
-                  const billAmount = consumption * 150;
+                  const consumption = Number(waterMeterReadings[unit.id] || 0);
+                  const billAmount = calculateWaterBill(consumption);
                   return (
                     <div key={unit.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--line-soft)' }}>
                       <span style={{ width: 120, fontSize: '13px' }}>{properties.find(p => p.id === unit.property_id)?.name ?? '—'} — Unit {unit.unit_number}</span>
-                      <span style={{ width: 60, fontSize: '12px', color: 'var(--ink-3)' }}>{previous} →</span>
-                      <input type="number" value={waterMeterReadings[unit.id] || ''} onChange={(e) => setWaterMeterReadings((prev) => ({ ...prev, [unit.id]: e.target.value }))} placeholder="Current" style={{ flex: 1, padding: '6px' }} />
-                      <span style={{ width: 80, fontSize: '12px', color: consumption > 0 ? 'var(--accent)' : 'var(--ink-3)' }}>{consumption > 0 ? `${consumption} units × 150 = ${billAmount.toLocaleString()}` : '-'}</span>
-                      <button type="button" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id] || consumption === 0} style={{ padding: '6px 12px', fontSize: '12px' }}>Bill</button>
+                      <input type="number" value={waterMeterReadings[unit.id] || ''} onChange={(e) => setWaterMeterReadings((prev) => ({ ...prev, [unit.id]: e.target.value }))} placeholder="Consumption (units)" style={{ flex: 1, padding: '6px' }} min="0" />
+                      <span style={{ width: 100, fontSize: '12px', color: consumption > 0 ? 'var(--accent)' : 'var(--ink-3)' }}>{consumption > 0 ? `${consumption} units = ${billAmount.toLocaleString()} KSH` : '-'}</span>
+                      <button type="button" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id] || Number(waterMeterReadings[unit.id]) <= 0} style={{ padding: '6px 12px', fontSize: '12px' }}>Bill</button>
                     </div>
                   );
                 })}
