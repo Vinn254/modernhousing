@@ -166,8 +166,7 @@ export default function TenantPaymentsPage() {
     return billsList.map(bill => {
       const billBalance = bill.due_amount - bill.paid_amount - bill.penalty_fee;
       runningBalance += billBalance;
-      const effectiveBalance = Math.max(0, runningBalance);
-      return { ...bill, bill_balance: billBalance, running_balance: effectiveBalance };
+      return { ...bill, bill_balance: billBalance, running_balance: runningBalance };
     });
   };
 
@@ -176,7 +175,7 @@ export default function TenantPaymentsPage() {
 
   const totalRentBalance = rentWithBalance.length > 0 ? rentWithBalance[rentWithBalance.length - 1].running_balance : 0;
   const totalUtilityBalance = utilityWithBalance.length > 0 ? utilityWithBalance[utilityWithBalance.length - 1].running_balance : 0;
-  const totalOutstanding = totalRentBalance + totalUtilityBalance;
+  const totalOutstanding = Math.max(0, totalRentBalance + totalUtilityBalance);
 
   const getTypeLabel = (type: string) => {
     const map: Record<string, string> = {
@@ -318,7 +317,7 @@ export default function TenantPaymentsPage() {
                       <td style={{ color: bill.bill_balance < 0 ? 'var(--accent)' : (bill.bill_balance > 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: bill.bill_balance !== 0 ? 600 : 400 }}>
                         {formatCurrency(bill.bill_balance)}
                       </td>
-                      <td style={{ color: (bill.running_balance || 0) > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 600 }}>
+                      <td style={{ color: bill.running_balance < 0 ? 'var(--accent)' : (bill.running_balance > 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: 600 }}>
                         {formatCurrency(bill.running_balance || 0)}
                       </td>
                       <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
