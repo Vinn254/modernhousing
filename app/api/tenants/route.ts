@@ -275,7 +275,7 @@ export async function POST(request: NextRequest) {
   const tenantId = result.data?.id;
 
   // Update user metadata with tenant_id if user exists
-  if (tenantId) {
+  if (tenantId && authContext.userId) {
     await supabaseAdmin.auth.admin.updateUserById(authContext.userId, {
       user_metadata: { tenant_id: tenantId, role: 'tenant' }
     }).catch(() => {});
