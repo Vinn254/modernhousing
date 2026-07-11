@@ -23,6 +23,9 @@ interface Tenant {
   lease_end: string;
   status?: string;
   deposit_amount?: number;
+  national_id?: string;
+  kra_pin?: string;
+  next_of_kin_id?: string;
 }
 
 async function getAuthHeaders() {
@@ -141,19 +144,22 @@ setMessage(editingTenant ? 'Tenant updated.' : 'Tenant registered.');
     setMessage('Tenant removed.');
   }
 
-  function handleEdit(tenant: Tenant) {
-    setEditingTenant(tenant);
-    setForm({
-      fullName: tenant.full_name,
-      email: tenant.email,
-      phone: tenant.phone ?? '',
-      unitId: tenant.unit_id ?? '',
-      leaseStart: tenant.lease_start ?? '',
-      leaseEnd: tenant.lease_end ?? '',
-      depositAmount: String(tenant.deposit_amount ?? ''),
-    });
-    scrollToForm();
-  }
+function handleEdit(tenant: Tenant) {
+     setEditingTenant(tenant);
+     setForm({
+       fullName: tenant.full_name,
+       email: tenant.email,
+       phone: tenant.phone ?? '',
+       unitId: tenant.unit_id ?? '',
+       leaseStart: tenant.lease_start ?? '',
+       leaseEnd: tenant.lease_end ?? '',
+       depositAmount: String(tenant.deposit_amount ?? ''),
+       nationalId: tenant.national_id ?? '',
+       kraPin: tenant.kra_pin ?? '',
+       nextOfKinId: tenant.next_of_kin_id ?? '',
+     });
+     scrollToForm();
+   }
 
   function resetForm() {
     setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinId: '' });
