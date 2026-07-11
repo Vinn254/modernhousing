@@ -187,23 +187,23 @@ function handleEdit(tenant: Tenant) {
             </div>
             <h3>{editingTenant ? 'Update Tenant Details' : 'Register New Tenant'}</h3>
             <form onSubmit={handleSubmit} className="form-grid">
-              <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} required placeholder="Full name" />
-              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="Email" />
-              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" />
-              {!editingTenant && (
-                <select value={form.unitId} onChange={e => setForm(f => ({ ...f, unitId: e.target.value }))} required>
-                  <option value="">Select unit</option>
-                  {units.filter(u => u.occupancy_status === 'vacant').map(u => (
-                    <option key={u.id} value={u.id}>{u.unit_number} - {properties.find(p => p.id === (u as any).property_id)?.name ?? '—'}</option>
-                  ))}
-                </select>
-              )}
-              <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
-              <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
-{!editingTenant && <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="Deposit amount" />}
+<input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} required placeholder="Full name" />
+               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="Email" />
+               <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" />
                <input value={form.nationalId} onChange={e => setForm(f => ({ ...f, nationalId: e.target.value }))} placeholder="National ID (Optional)" />
                <input value={form.kraPin} onChange={e => setForm(f => ({ ...f, kraPin: e.target.value }))} placeholder="KRA PIN (Optional)" />
                <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Next of Kin ID (Optional)" />
+               {!editingTenant && (
+                 <select value={form.unitId} onChange={e => setForm(f => ({ ...f, unitId: e.target.value }))} required>
+                   <option value="">Select unit</option>
+                   {units.filter(u => u.occupancy_status === 'vacant').map(u => (
+                     <option key={u.id} value={u.id}>{u.unit_number} - {properties.find(p => p.id === (u as any).property_id)?.name ?? '—'}</option>
+                   ))}
+                 </select>
+               )}
+               <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
+               <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
+               {!editingTenant && <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="Deposit amount" />}
                <button type="submit">{editingTenant ? 'Update Tenant' : 'Add Tenant'}</button>
               {editingTenant && <button type="button" className="secondary-button" onClick={resetForm}>Cancel Edit</button>}
             </form>

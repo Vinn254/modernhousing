@@ -231,44 +231,44 @@ return (
               <label>Email</label>
               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="Tenant email" />
             </div>
-            <div className="field-group">
-              <label>Phone</label>
-              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone number" />
-            </div>
-            <div className="field-group">
-              <label>Select unit</label>
-              <select value={form.unitNumber} onChange={e => setForm(f => ({ ...f, unitNumber: e.target.value }))} required>
-                <option value="">Choose vacant unit</option>
-                {units.filter(u => u.occupancy_status === 'vacant').map(u => (
-                  <option key={u.id} value={u.unit_number}>{u.unit_number} ({u.unit_type || 'unit'})</option>
-                ))}
-              </select>
-            </div>
-            <div className="field-group">
-              <label>Lease Start Date</label>
-              <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
-            </div>
-            <div className="field-group">
-              <label>Payment Due Date</label>
-              <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
-              <small style={{ color: 'var(--ink-3)', fontSize: '12px' }}>When tenant is expected to make rent payment</small>
-            </div>
-            <div className="field-group">
-              <label>Deposit Amount (KSH)</label>
-              <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="e.g., 5000" />
-            </div>
-            <div className="field-group">
-              <label>National ID Number</label>
-              <input value={form.nationalId} onChange={e => setForm(f => ({ ...f, nationalId: e.target.value }))} placeholder="Optional" />
-            </div>
-            <div className="field-group">
-              <label>KRA PIN Number</label>
-              <input value={form.kraPin} onChange={e => setForm(f => ({ ...f, kraPin: e.target.value }))} placeholder="Optional" />
-            </div>
-            <div className="field-group">
-              <label>Next of Kin ID Number</label>
-              <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Optional" />
-            </div>
+<div className="field-group">
+               <label>Phone</label>
+               <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone number" />
+             </div>
+             <div className="field-group">
+               <label>National ID Number</label>
+               <input value={form.nationalId} onChange={e => setForm(f => ({ ...f, nationalId: e.target.value }))} placeholder="Optional" />
+             </div>
+             <div className="field-group">
+               <label>KRA PIN Number</label>
+               <input value={form.kraPin} onChange={e => setForm(f => ({ ...f, kraPin: e.target.value }))} placeholder="Optional" />
+             </div>
+             <div className="field-group">
+               <label>Next of Kin ID Number</label>
+               <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Optional" />
+             </div>
+             <div className="field-group">
+               <label>Select unit</label>
+               <select value={form.unitNumber} onChange={e => setForm(f => ({ ...f, unitNumber: e.target.value }))} required>
+                 <option value="">Choose vacant unit</option>
+                 {units.filter(u => u.occupancy_status === 'vacant').map(u => (
+                   <option key={u.id} value={u.unit_number}>{u.unit_number} ({u.unit_type || 'unit'})</option>
+                 ))}
+               </select>
+             </div>
+             <div className="field-group">
+               <label>Lease Start Date</label>
+               <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
+             </div>
+             <div className="field-group">
+               <label>Payment Due Date</label>
+               <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
+               <small style={{ color: 'var(--ink-3)', fontSize: '12px' }}>When tenant is expected to make rent payment</small>
+             </div>
+             <div className="field-group">
+               <label>Deposit Amount (KSH)</label>
+               <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="e.g., 5000" />
+             </div>
             <button type="submit">Add Tenant</button>
           </form>
           {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
