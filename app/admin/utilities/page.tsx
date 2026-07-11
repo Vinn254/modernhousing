@@ -42,6 +42,8 @@ interface Bill {
   transaction_type: string;
   payment_date: string;
   transaction_number?: string;
+  transaction_code?: string;
+  payment_method?: string;
   created_at: string;
 }
 
