@@ -58,17 +58,11 @@ export default function PaymentsPage() {
   const [manualTransNumber, setManualTransNumber] = useState('');
   const [manualTransCode, setManualTransCode] = useState('');
   const [manualPaymentMethod, setManualPaymentMethod] = useState('Cash');
-  const [manualPenaltyFee, setManualPenaltyFee] = useState('0');
 
   const transactionTypes = [
     { value: 'rent', label: 'Rent' },
-    { value: 'water', label: 'Water' },
-    { value: 'garbage', label: 'Garbage Collection' },
-    { value: 'service_charge', label: 'Service Charge' },
-    { value: 'parking', label: 'Parking Fee' },
-    { value: 'security', label: 'Security Fee' },
+    { value: 'overdue', label: 'Overdue' },
     { value: 'deposit', label: 'Deposit' },
-    { value: 'other', label: 'Other' },
   ];
 
   const [paybill, setPaybill] = useState('');
@@ -97,23 +91,25 @@ export default function PaymentsPage() {
       setLoading(false);
       return;
     }
-    // Map bills to payments format for display
-    const mappedPayments = (result.bills ?? []).map((b: any) => ({
-      id: b.id,
-      tenant: b.tenant_name || '—',
-      tenant_email: '',
-      property: '',
-      unit: b.unit_number || '—',
-      description: b.description,
-      transaction_type: b.transaction_type,
-      amount: b.paid_amount || 0,
-      due_amount: b.due_amount || 0,
-      month_due: b.month_due,
-      balance_remaining: b.balance || 0,
-      status: b.balance === 0 ? 'paid' : 'pending',
-      transaction_number: b.transaction_number,
-      created_at: b.created_at,
-    }));
+    // Map bills to payments format for display - only rent, overdue, deposit
+    const mappedPayments = (result.bills ?? [])
+      .filter((b: any) => b.transaction_type === 'rent' || b.transaction_type === 'overdue' || b.transaction_type === 'deposit')
+      .map((b: any) => ({
+        id: b.id,
+        tenant: b.tenant_name || '—',
+        tenant_email: '',
+        property: '',
+        unit: b.unit_number || '—',
+        description: b.description,
+        transaction_type: b.transaction_type,
+        amount: b.paid_amount || 0,
+        due_amount: b.due_amount || 0,
+        month_due: b.month_due,
+        balance_remaining: b.balance || 0,
+        status: b.balance === 0 ? 'paid' : 'pending',
+        transaction_number: b.transaction_number,
+        created_at: b.created_at,
+      }));
     setPayments(mappedPayments);
     setLoading(false);
   }
@@ -203,14 +199,14 @@ export default function PaymentsPage() {
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         tenantId,
-        description: `${manualMonth || 'Bill'} payment`,
+        description: `${manualMonth || 'Rent'} payment`,
         monthDue: manualMonth,
         dueAmount: Number(manualDueAmount) || 0,
         paidAmount: Number(manualPaidAmount) || 0,
-        penaltyFee: Number(manualPenaltyFee) || 0,
         transactionType: manualTransType,
         paymentMethod: manualPaymentMethod,
         referenceNumber: manualTransNumber,
+        transactionCode: manualTransCode || null,
         paymentDate: manualDate
       }),
     });
@@ -232,7 +228,6 @@ export default function PaymentsPage() {
     setManualTransNumber('');
     setManualTransCode('');
     setManualPaymentMethod('Cash');
-    setManualPenaltyFee('0');
     await loadPayments();
   }
 
@@ -241,8 +236,8 @@ export default function PaymentsPage() {
 return (
     <main className="container">
       <div className="card-admin-header">
-        <p className="heading">Payments & Bills</p>
-        <p className="subheading">Record rent, utilities, and other transactions. Track balances and view payment history.</p>
+        <p className="heading">Rent Payments</p>
+        <p className="subheading">Record rent transactions, track balances, and view payment history.</p>
       </div>
 
       {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
@@ -264,8 +259,6 @@ return (
             </select>
             <input type="number" step="0.01" value={manualDueAmount} onChange={(event) => setManualDueAmount(event.target.value)} placeholder="Due Amount" />
             <input type="number" step="0.01" value={manualPaidAmount} onChange={(event) => setManualPaidAmount(event.target.value)} required placeholder="Amount Paid" />
-            <input type="number" step="0.01" value={manualBalAmount} onChange={(event) => setManualBalAmount(event.target.value)} placeholder="Balance" />
-            <input type="number" step="0.01" value={manualPenaltyFee} onChange={(event) => setManualPenaltyFee(event.target.value)} placeholder="Penalty Fee" />
             <select value={manualPaymentMethod} onChange={(event) => setManualPaymentMethod(event.target.value)}>
               <option value="Cash">Cash</option>
               <option value="M-pesa">M-pesa</option>

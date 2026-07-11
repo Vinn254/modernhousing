@@ -74,6 +74,7 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
     amount: '',
     paymentMethod: 'Cash',
     referenceNumber: '',
+    transactionCode: '',
   });
   const [showPayForm, setShowPayForm] = useState(false);
 
@@ -237,7 +238,7 @@ async function handleWaterMeterReading(unitId: string) {
   }
 
   async function handleShowPayForm(billId: string, balance: number) {
-    setPayForm({ billId, amount: String(balance), paymentMethod: 'Cash', referenceNumber: '' });
+    setPayForm({ billId, amount: String(balance), paymentMethod: 'Cash', referenceNumber: '', transactionCode: '' });
     setShowPayForm(true);
   }
 
@@ -259,6 +260,7 @@ async function handleWaterMeterReading(unitId: string) {
         paidAmount: Number(payForm.amount),
         paymentMethod: payForm.paymentMethod,
         referenceNumber: payForm.referenceNumber,
+        transactionCode: payForm.transactionCode,
       }),
     });
 
@@ -370,6 +372,10 @@ async function handleWaterMeterReading(unitId: string) {
                 <div className="field-group">
                   <label>Reference Number</label>
                   <input value={payForm.referenceNumber} onChange={e => setPayForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="e.g., SH31T8MAYN" />
+                </div>
+                <div className="field-group">
+                  <label>Transaction Code</label>
+                  <input value={payForm.transactionCode} onChange={e => setPayForm(f => ({ ...f, transactionCode: e.target.value }))} placeholder="MPESA transaction code" />
                 </div>
                 <button type="submit">Record Payment</button>
                 <button type="button" className="secondary-button" onClick={() => setShowPayForm(false)}>Cancel</button>

@@ -171,23 +171,44 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authContext = await getAuthContext(request);
+  
+  if (!authContext.userId) {
+    return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+  }
+
   const body = await request.json();
   const {
-    tenantId, description, transactionType, amount, balanceRemaining, propertyId,
-    monthDue, dueAmount, paidAmount, transType, transNumber, transCode, paymentDate
+    tenantId,
+    description,
+    transactionType,
+    amount,
+    balanceRemaining,
+    monthDue,
+    dueAmount,
+    paidAmount,
+    transNumber,
+    transCode,
+    paymentDate
   } = body;
 
-  if (!tenantId || !amount) {
+  // Validate transaction type - only allow rent, overdue, deposit
+  const validTypes = ['rent', 'overdue', 'deposit'];
+  if (transactionType && !validTypes.includes(transactionType)) {
+    return NextResponse.json({ message: 'Invalid transaction type. Only rent, overdue, and deposit are allowed.' }, { status: 400 });
+  }
+
+  if (!tenantId || !paidAmount) {
     return NextResponse.json({ message: 'Missing required payment fields.' }, { status: 400 });
   }
 
   const insertData: any = {
     tenant_id: tenantId,
-    description: description ?? `${transactionType || 'Utility'} Payment`,
-    transaction_type: transactionType || 'utility',
-    amount: Number(amount) || 0,
+    description: description ?? `${transactionType || 'Rent'} payment`,
+    transaction_type: transactionType || 'rent',
+    amount: Number(amount || paidAmount) || 0,
     balance_remaining: Number(balanceRemaining) || 0,
-    transaction_number: transNumber ?? `UTL-${Date.now().toString().slice(-6)}`,
+    transaction_number: transNumber ?? `PAY-${Date.now().toString().slice(-6)}`,
     paid_at: paymentDate || new Date().toISOString(),
     month_due: monthDue ?? null,
     due_amount: Number(dueAmount) || null,
@@ -210,12 +231,12 @@ export async function POST(request: NextRequest) {
     await supabaseAdmin.from('notifications').insert({
       recipient: 'tenant',
       tenant_id: tenantId,
-      type: 'utility_payment',
-      message: `Utility payment of KSH ${amount} recorded.`,
+      type: 'rent_payment',
+      message: `Rent payment of KSH ${paidAmount} recorded.`,
       status: 'sent',
       created_at: new Date().toISOString(),
     }).select();
   }
 
-  return NextResponse.json({ message: 'Utility payment recorded.' }, { status: 201 });
+  return NextResponse.json({ message: 'Payment recorded.', payment: result.data?.[0] }, { status: 201 });
 }

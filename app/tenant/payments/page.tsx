@@ -46,7 +46,11 @@ export default function TenantPaymentsPage() {
 
     if (billsResponse?.ok) {
       const billsResult = await billsResponse.json();
-      setBills(billsResult.bills ?? []);
+      // Filter out utility bills - only show rent, overdue, deposit
+      const filteredBills = (billsResult.bills ?? []).filter((b: any) => 
+        b.transaction_type === 'rent' || b.transaction_type === 'overdue' || b.transaction_type === 'deposit'
+      );
+      setBills(filteredBills);
     }
 
     if (settingsResponse?.ok) {
@@ -101,7 +105,7 @@ export default function TenantPaymentsPage() {
   return (
     <main className="container page-layout">
       <div className="card-admin-header">
-        <div><p className="heading">Tenant Payment History</p><p className="subheading">BEDSITTER MAIN - Monthly rent and utility billing</p></div>
+        <div><p className="heading">Tenant Payment History</p><p className="subheading">Monthly rent payments and deposit history.</p></div>
       </div>
 
       {user && (

@@ -335,8 +335,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Missing required bill fields.' }, { status: 400 });
   }
 
+  // For rent transactions, fetch unit rent amount if not provided
+  let finalDueAmount = dueAmount;
+  if ((transactionType === 'rent' || !transactionType) && !dueAmount && unitId) {
+    const { data: unit } = await supabaseAdmin
+      .from('units')
+      .select('rent_amount')
+      .eq('id', unitId)
+      .single();
+    finalDueAmount = unit?.rent_amount || 0;
+  }
+
   // Calculate balance: due_amount - paid_amount
-  const calculatedBalance = (Number(dueAmount) || 0) - (Number(paidAmount) || 0);
+  const calculatedBalance = (Number(finalDueAmount) || 0) - (Number(paidAmount) || 0);
 
   const insertData: any = {
     tenant_id: tenantId,
@@ -344,13 +355,13 @@ export async function POST(request: NextRequest) {
     property_id: propertyId || null,
     description,
     month_due: monthDue,
-    due_amount: Number(dueAmount) || 0,
+    due_amount: Number(finalDueAmount) || 0,
     paid_amount: Number(paidAmount) || 0,
     penalty_fee: Number(penaltyFee) || 0,
     balance: calculatedBalance,
     transaction_type: transactionType || 'rent',
     transaction_number: transactionNumber ?? `BILL-${Date.now().toString().slice(-8)}`,
-    transaction_code: transactionCode ?? null,
+    transaction_code: transactionCode || null,
     payment_date: paymentDate || null,
     payment_method: paymentMethod || null,
     reference_number: referenceNumber || null,
@@ -371,7 +382,8 @@ export async function PATCH(request: NextRequest) {
     id,
     paidAmount,
     paymentMethod,
-    referenceNumber
+    referenceNumber,
+    transactionCode
   } = body;
 
   if (!id) {
@@ -393,14 +405,20 @@ export async function PATCH(request: NextRequest) {
   const newPaidAmount = (Number(existingBill.paid_amount) || 0) + (Number(paidAmount) || 0);
   const newBalance = (Number(existingBill.due_amount) || 0) - newPaidAmount;
 
+  const updateData: any = {
+    paid_amount: newPaidAmount,
+    balance: newBalance,
+    payment_method: paymentMethod || null,
+    reference_number: referenceNumber || null,
+    payment_date: new Date().toISOString().split('T')[0]
+  };
+
+  if (transactionCode) {
+    updateData.transaction_code = transactionCode;
+  }
+
   const result = await supabaseAdmin.from('bills')
-    .update({
-      paid_amount: newPaidAmount,
-      balance: newBalance,
-      payment_method: paymentMethod || null,
-      reference_number: referenceNumber || null,
-      payment_date: new Date().toISOString().split('T')[0]
-    })
+    .update(updateData)
     .eq('id', id)
     .select();
 
