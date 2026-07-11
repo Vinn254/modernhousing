@@ -76,13 +76,25 @@ export default function TenantsPage() {
   });
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+  
   const [payForm, setPayForm] = useState({
     billId: '',
     amount: '',
     paymentMethod: 'Cash',
     referenceNumber: '',
   });
+  
+  const [directPaymentForm, setDirectPaymentForm] = useState({
+    tenantId: '',
+    transactionType: 'rent',
+    monthDue: '',
+    amount: '',
+    paymentMethod: 'Cash',
+    referenceNumber: '',
+  });
+  
   const [showPayForm, setShowPayForm] = useState(false);
+  const [showDirectPayment, setShowDirectPayment] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
   async function loadData() {
@@ -213,14 +225,12 @@ export default function TenantsPage() {
     setSelectedTenant(tenant);
     setPayForm({ billId: '', amount: '', paymentMethod: 'Cash', referenceNumber: '' });
     setShowPayForm(false);
+    setShowDirectPayment(false);
     await loadBills(tenant.id);
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
   }
 
   async function handleShowPayForm(billId: string, balance: number) {
-    const selectedBill = bills.find(b => b.id === billId);
-    if (!selectedBill) return;
-    
     setPayForm({
       billId,
       amount: String(balance),
@@ -260,6 +270,46 @@ export default function TenantsPage() {
     setShowPayForm(false);
     await loadBills(selectedTenant!.id);
   }
+
+  async function handleDirectPayment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+
+    if (!directPaymentForm.tenantId || !directPaymentForm.transactionType || !directPaymentForm.amount) {
+      setError('All fields required.');
+      return;
+    }
+
+    const response = await fetch('/api/bills', {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        tenantId: directPaymentForm.tenantId,
+        unitId: tenants.find(t => t.id === directPaymentForm.tenantId)?.unit_id,
+        propertyId: tenants.find(t => t.id === directPaymentForm.tenantId)?.property_id,
+        description: `${directPaymentForm.transactionType.replace('_', ' ')} payment`,
+        monthDue: directPaymentForm.monthDue || null,
+        dueAmount: Number(directPaymentForm.amount),
+        paidAmount: Number(directPaymentForm.amount),
+        penaltyFee: 0,
+        transactionType: directPaymentForm.transactionType,
+        paymentMethod: directPaymentForm.paymentMethod,
+        referenceNumber: directPaymentForm.referenceNumber,
+      }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to record payment.');
+      return;
+    }
+    setMessage('Direct payment recorded.');
+    setDirectPaymentForm({ tenantId: '', transactionType: 'rent', monthDue: '', amount: '', paymentMethod: 'Cash', referenceNumber: '' });
+    if (selectedTenant) await loadBills(selectedTenant.id);
+  }
+
+  const transactionTypes = ['rent', 'water', 'garbage', 'service_charge', 'parking', 'security', 'other', 'deposit'];
 
   return (
     <>
@@ -369,6 +419,45 @@ export default function TenantsPage() {
                 </span>Bills & Payments - {selectedTenant.full_name}
               </div>
               
+              <div style={{ marginBottom: 16 }}>
+                <button className="secondary-button" onClick={() => setShowDirectPayment(!showDirectPayment)}>Record Direct Payment</button>
+              </div>
+
+              {showDirectPayment && (
+                <div className="card" style={{ marginBottom: 16, background: 'var(--surface)' }}>
+                  <h3>Record Direct Payment</h3>
+                  <form onSubmit={handleDirectPayment} className="form-grid">
+                    <div className="field-group">
+                      <label>Transaction Type</label>
+                      <select value={directPaymentForm.transactionType} onChange={e => setDirectPaymentForm(f => ({ ...f, transactionType: e.target.value }))}>
+                        {transactionTypes.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group">
+                      <label>Month Due</label>
+                      <input type="month" value={directPaymentForm.monthDue} onChange={e => setDirectPaymentForm(f => ({ ...f, monthDue: e.target.value }))} />
+                    </div>
+                    <div className="field-group">
+                      <label>Amount (KSH)</label>
+                      <input type="number" value={directPaymentForm.amount} onChange={e => setDirectPaymentForm(f => ({ ...f, amount: e.target.value }))} required placeholder="Amount" />
+                    </div>
+                    <div className="field-group">
+                      <label>Payment Method</label>
+                      <select value={directPaymentForm.paymentMethod} onChange={e => setDirectPaymentForm(f => ({ ...f, paymentMethod: e.target.value }))}>
+                        <option value="Cash">Cash</option>
+                        <option value="M-pesa">M-pesa</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                      </select>
+                    </div>
+                    <div className="field-group">
+                      <label>Reference Number</label>
+                      <input value={directPaymentForm.referenceNumber} onChange={e => setDirectPaymentForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="e.g., SH31T8MAYN" />
+                    </div>
+                    <button type="submit">Record Payment</button>
+                  </form>
+                </div>
+              )}
+
               {showPayForm && (
                 <div className="card" style={{ marginBottom: 16, background: 'var(--surface)' }}>
                   <h3>Make Payment</h3>

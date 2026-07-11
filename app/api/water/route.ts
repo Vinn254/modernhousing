@@ -154,6 +154,30 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: `Failed to create invoice: ${invoiceError.message}` }, { status: 500 });
       }
 
+      // Also create a bill record
+      const { error: billError } = await supabaseAdmin
+        .from('bills')
+        .insert({
+          tenant_id: tenant.id,
+          unit_id: unitId,
+          property_id: unit.property_id,
+          description: `Water bill for ${monthDue || 'current period'}`,
+          month_due: monthDue || null,
+          due_amount: amount,
+          paid_amount: 0,
+          penalty_fee: 0,
+          balance: amount,
+          transaction_type: 'water',
+          transaction_number: `WTR-${Date.now().toString().slice(-8)}`,
+          payment_date: null,
+          payment_method: null,
+          reference_number: null,
+        });
+
+      if (billError) {
+        return NextResponse.json({ message: `Failed to create bill: ${billError.message}` }, { status: 500 });
+      }
+
       // Send notification
       await supabaseAdmin.from('notifications').insert({
         tenant_id: tenant.id,
@@ -166,7 +190,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Water meter reading recorded and invoice generated.',
+      message: 'Water meter reading recorded and bill generated.',
       consumption,
       amount,
       waterRate,

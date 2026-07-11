@@ -51,12 +51,13 @@ async function getAuthContext(request: NextRequest) {
   }
 
   if (!sessionUser) {
-    return { isSuperAdmin: false, userId: undefined, organizationId: null, sessionUser: null };
+    return { isSuperAdmin: false, userId: undefined, organizationId: null, sessionUser: null, tenantId: null };
   }
 
   const userMetadata = sessionUser.user_metadata || {};
 
   let orgId = userMetadata.organization_id ?? null;
+  const tenantId = userMetadata.tenant_id ?? null;
 
   if (!orgId && sessionUser.email) {
     const { data: profileByEmail } = await supabaseAdmin
@@ -72,6 +73,7 @@ async function getAuthContext(request: NextRequest) {
     userId: sessionUser.id,
     organizationId: orgId,
     sessionUser,
+    tenantId,
   };
 }
 
@@ -82,10 +84,10 @@ export async function GET(request: NextRequest) {
     const tenantEmail = request.nextUrl.searchParams.get('tenantEmail');
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
-    let effectiveTenantId = tenantId;
+    let effectiveTenantId = tenantId || authContext.tenantId;
 
     // If tenantEmail provided, look up tenant ID
-    if (tenantEmail && !tenantId) {
+    if (tenantEmail && !effectiveTenantId) {
       const { data: tenantData } = await supabaseAdmin
         .from('tenants')
         .select('id')
@@ -124,6 +126,90 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ bills });
     }
 
+    // For admin/landlord - fetch all bills for their organization or all bills for super_admin
+    const userMetadata = authContext.sessionUser?.user_metadata || {};
+    const isAgent = userMetadata?.role === 'agent';
+    const agentPropertyId = isAgent ? userMetadata?.property_id : null;
+
+    if (authContext.isSuperAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from('bills')
+        .select(`*, tenants(full_name, email, units(unit_number, properties(name)))`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const bills = (data ?? []).map((bill: any) => ({
+        id: bill.id,
+        tenant_id: bill.tenant_id,
+        tenant_name: bill.tenants?.full_name ?? '',
+        unit_number: bill.tenants?.units?.unit_number ?? '',
+        property_name: bill.tenants?.units?.properties?.name ?? '',
+        description: bill.description,
+        month_due: bill.month_due,
+        due_amount: bill.due_amount,
+        paid_amount: bill.paid_amount,
+        penalty_fee: bill.penalty_fee ?? 0,
+        balance: bill.balance,
+        transaction_type: bill.transaction_type,
+        transaction_number: bill.transaction_number,
+        transaction_code: bill.transaction_code,
+        payment_date: bill.payment_date,
+        payment_method: bill.payment_method,
+        reference_number: bill.reference_number,
+        created_at: bill.created_at,
+      }));
+
+      return NextResponse.json({ bills });
+    }
+
+    // For agents - filter by their property
+    if (isAgent && agentPropertyId) {
+      const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', agentPropertyId);
+      const unitIds = (units ?? []).map((u: any) => u.id);
+
+      if (unitIds.length > 0) {
+        const { data: tenants } = await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds);
+        const tenantIds = (tenants ?? []).map((t: any) => t.id);
+
+        if (tenantIds.length > 0) {
+          const { data, error } = await supabaseAdmin
+            .from('bills')
+            .select(`*, tenants(full_name, email, units(unit_number, properties(name)))`)
+            .in('tenant_id', tenantIds)
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+
+          const bills = (data ?? []).map((bill: any) => ({
+            id: bill.id,
+            tenant_id: bill.tenant_id,
+            tenant_name: bill.tenants?.full_name ?? '',
+            unit_number: bill.tenants?.units?.unit_number ?? '',
+            property_name: bill.tenants?.units?.properties?.name ?? '',
+            description: bill.description,
+            month_due: bill.month_due,
+            due_amount: bill.due_amount,
+            paid_amount: bill.paid_amount,
+            penalty_fee: bill.penalty_fee ?? 0,
+            balance: bill.balance,
+            transaction_type: bill.transaction_type,
+            transaction_number: bill.transaction_number,
+            transaction_code: bill.transaction_code,
+            payment_date: bill.payment_date,
+            payment_method: bill.payment_method,
+            reference_number: bill.reference_number,
+            created_at: bill.created_at,
+          }));
+
+          return NextResponse.json({ bills });
+        }
+        return NextResponse.json({ bills: [] });
+      }
+      return NextResponse.json({ bills: [] });
+    }
+
+    // For landlords with property_id parameter
     if (propertyId) {
       const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', propertyId);
       const unitIds = (units ?? []).map((u: any) => u.id);
@@ -165,53 +251,53 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ bills: [] });
     }
 
-    if (!authContext.isSuperAdmin && !authContext.organizationId) {
-      return NextResponse.json({ bills: [] });
-    }
-
-    const { data: orgProps } = await supabaseAdmin
-      .from('properties')
-      .select('id')
-      .eq('organization_id', authContext.organizationId ?? '');
-    const propIds = (orgProps ?? []).map((p: any) => p.id);
-
-    if (propIds.length > 0) {
-      const { data: orgTenants } = await supabaseAdmin
-        .from('tenants')
+    // For landlords with organization
+    if (authContext.organizationId) {
+      const { data: orgProps } = await supabaseAdmin
+        .from('properties')
         .select('id')
-        .in('unit_id', (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map(u => u.id) ?? []);
-      const tenantIds = (orgTenants ?? []).map((t: any) => t.id);
+        .eq('organization_id', authContext.organizationId ?? '');
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
 
-      const { data, error } = await supabaseAdmin
-        .from('bills')
-        .select(`*, tenants(full_name, email, units(unit_number, properties(name)))`)
-        .in('tenant_id', tenantIds)
-        .order('created_at', { ascending: false });
+      if (propIds.length > 0) {
+        const { data: orgTenants } = await supabaseAdmin
+          .from('tenants')
+          .select('id')
+          .in('unit_id', (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map(u => u.id) ?? []);
+        const tenantIds = (orgTenants ?? []).map((t: any) => t.id);
 
-      if (error) throw error;
+        const { data, error } = await supabaseAdmin
+          .from('bills')
+          .select(`*, tenants(full_name, email, units(unit_number, properties(name)))`)
+          .in('tenant_id', tenantIds)
+          .order('created_at', { ascending: false });
 
-      const bills = (data ?? []).map((bill: any) => ({
-        id: bill.id,
-        tenant_id: bill.tenant_id,
-        tenant_name: bill.tenants?.full_name ?? '',
-        unit_number: bill.tenants?.units?.unit_number ?? '',
-        property_name: bill.tenants?.units?.properties?.name ?? '',
-        description: bill.description,
-        month_due: bill.month_due,
-        due_amount: bill.due_amount,
-        paid_amount: bill.paid_amount,
-        penalty_fee: bill.penalty_fee ?? 0,
-        balance: bill.balance,
-        transaction_type: bill.transaction_type,
-        transaction_number: bill.transaction_number,
-        transaction_code: bill.transaction_code,
-        payment_date: bill.payment_date,
-        payment_method: bill.payment_method,
-        reference_number: bill.reference_number,
-        created_at: bill.created_at,
-      }));
+        if (error) throw error;
 
-      return NextResponse.json({ bills });
+        const bills = (data ?? []).map((bill: any) => ({
+          id: bill.id,
+          tenant_id: bill.tenant_id,
+          tenant_name: bill.tenants?.full_name ?? '',
+          unit_number: bill.tenants?.units?.unit_number ?? '',
+          property_name: bill.tenants?.units?.properties?.name ?? '',
+          description: bill.description,
+          month_due: bill.month_due,
+          due_amount: bill.due_amount,
+          paid_amount: bill.paid_amount,
+          penalty_fee: bill.penalty_fee ?? 0,
+          balance: bill.balance,
+          transaction_type: bill.transaction_type,
+          transaction_number: bill.transaction_number,
+          transaction_code: bill.transaction_code,
+          payment_date: bill.payment_date,
+          payment_method: bill.payment_method,
+          reference_number: bill.reference_number,
+          created_at: bill.created_at,
+        }));
+
+        return NextResponse.json({ bills });
+      }
+      return NextResponse.json({ bills: [] });
     }
 
     return NextResponse.json({ bills: [] });
@@ -265,7 +351,7 @@ export async function POST(request: NextRequest) {
     transaction_type: transactionType || 'rent',
     transaction_number: transactionNumber ?? `BILL-${Date.now().toString().slice(-8)}`,
     transaction_code: transactionCode ?? null,
-    payment_date: paymentDate || new Date().toISOString().split('T')[0],
+    payment_date: paymentDate || null,
     payment_method: paymentMethod || null,
     reference_number: referenceNumber || null,
   };
