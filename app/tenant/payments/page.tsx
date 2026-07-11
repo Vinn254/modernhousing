@@ -160,13 +160,17 @@ export default function TenantPaymentsPage() {
   const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'].includes(b.transaction_type));
 
   // Calculate cumulative balance across months
-  // positive running balance = tenant has credit
-  // negative running balance = tenant owes money
+  // Formula: runningBalance = previousBalance + (paid - due)
+  // Positive = tenant has credit (has paid more than owed)
+  // Negative = tenant owes money
   const calculateWithRunningBalance = (billsList: Bill[]) => {
     let runningBalance = 0;
     return billsList.map(bill => {
+      // bill_balance: what tenant owes (due - paid), positive = owes money
       const billBalance = bill.due_amount - bill.paid_amount - bill.penalty_fee;
-      runningBalance += billBalance;
+      // contribution: paid - due (positive = credit, negative = owes)
+      const contribution = bill.paid_amount - bill.due_amount + bill.penalty_fee;
+      runningBalance += contribution;
       return { ...bill, bill_balance: billBalance, running_balance: runningBalance };
     });
   };
