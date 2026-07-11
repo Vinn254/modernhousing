@@ -60,16 +60,44 @@ export default function TenantPaymentsPage() {
       billsUrl = `/api/bills?tenantEmail=${encodeURIComponent(email)}`;
     }
 
-    const [billsResponse, invoicesResponse, settingsResponse] = await Promise.all([
+    const [billsResponse, paymentsResponse, invoicesResponse, settingsResponse] = await Promise.all([
       fetch(billsUrl, { headers }).catch(() => null),
+      fetch(`/api/payments?email=${encodeURIComponent(email)}`, { headers }).catch(() => null),
       fetch(`/api/invoices?tenantEmail=${encodeURIComponent(email)}`, { headers }).catch(() => null),
       fetch(tenantId ? `/api/payment-settings?tenantId=${tenantId}` : '/api/payment-settings', { headers }).catch(() => null),
     ]);
 
+    // Combine bills and payments into single view
+    const allBills: Bill[] = [];
+
     if (billsResponse?.ok) {
       const billsResult = await billsResponse.json();
-      setBills(billsResult.bills ?? []);
+      (billsResult.bills ?? []).forEach((b: any) => allBills.push(b));
     }
+
+    if (paymentsResponse?.ok) {
+      const paymentsResult = await paymentsResponse.json();
+      (paymentsResult.payments ?? []).forEach((p: any) => {
+        allBills.push({
+          id: p.id,
+          description: p.description,
+          month_due: p.month_due || '',
+          due_amount: p.due_amount || 0,
+          paid_amount: p.amount || 0,
+          penalty_fee: 0,
+          balance: p.balance_remaining || 0,
+          transaction_type: p.transaction_type || 'rent',
+          transaction_number: p.transaction_number || '',
+          transaction_code: p.transaction_code || '',
+          payment_date: p.paid_at ? new Date(p.paid_at).toISOString().split('T')[0] : '',
+          payment_method: p.payment_method || '',
+          reference_number: p.reference_number || '',
+          created_at: p.created_at,
+        });
+      });
+    }
+
+    setBills(allBills);
     if (invoicesResponse?.ok) {
       const invoicesResult = await invoicesResponse.json();
       setInvoices(invoicesResult.invoices ?? []);

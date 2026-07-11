@@ -78,6 +78,34 @@ export async function GET(request: NextRequest) {
   try {
     const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
+    const tenantEmail = request.nextUrl.searchParams.get('email');
+
+    // If tenantEmail provided, look up tenant ID
+    let effectiveTenantId = null;
+    if (tenantEmail && !propertyId) {
+      const { data: tenantData } = await supabaseAdmin
+        .from('tenants')
+        .select('id')
+        .eq('email', tenantEmail)
+        .single();
+      effectiveTenantId = tenantData?.id ?? null;
+    }
+
+    if (effectiveTenantId) {
+      const { data, error } = await supabaseAdmin
+        .from('payments')
+        .select('*, tenants(full_name, email, units(property_id))')
+        .eq('tenant_id', effectiveTenantId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      const payments = (data ?? []).map((payment: any) => ({
+        ...payment,
+        tenant: payment.tenants?.full_name ?? '',
+        tenant_email: payment.tenants?.email ?? '',
+      }));
+      return NextResponse.json({ payments });
+    }
 
     // If propertyId is passed, filter by it (for agent dashboard)
     if (propertyId) {
