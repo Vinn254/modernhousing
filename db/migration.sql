@@ -67,12 +67,7 @@ CREATE TABLE IF NOT EXISTS bills (
     created_at timestamp with time zone default now()
 );
 
--- Update bills transaction_type constraint to include all utility types (run after table exists)
-DO $$ 
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bills_transaction_type_check') THEN
-    ALTER TABLE bills DROP CONSTRAINT bills_transaction_type_check;
-    ALTER TABLE bills ADD CONSTRAINT bills_transaction_type_check 
-      CHECK (transaction_type in ('deposit', 'rent', 'overdue', 'water', 'service_charge', 'utility', 'other', 'garbage', 'parking', 'security'));
-  END IF;
-END $$;
+-- Update bills transaction_type constraint to include overdue (run after table exists)
+ALTER TABLE bills DROP CONSTRAINT IF EXISTS bills_transaction_type_check;
+ALTER TABLE bills ADD CONSTRAINT bills_transaction_type_check 
+CHECK (transaction_type in ('deposit', 'rent', 'overdue', 'water', 'service_charge', 'utility', 'other', 'garbage', 'parking', 'security'));
