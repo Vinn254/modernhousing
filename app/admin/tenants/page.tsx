@@ -47,6 +47,9 @@ export default function TenantsPage() {
     leaseStart: '',
     leaseEnd: '',
     depositAmount: '',
+    nationalId: '',
+    kraPin: '',
+    nextOfKinId: '',
   });
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
@@ -96,16 +99,16 @@ export default function TenantsPage() {
     const url = editingTenant ? `/api/tenants?id=${editingTenant.id}` : '/api/tenants';
     const method = editingTenant ? 'PATCH' : 'POST';
 
-    const body = editingTenant
-      ? {
-          id: editingTenant.id,
-          fullName: form.fullName,
-          email: form.email,
-          phone: form.phone,
-          leaseStart: form.leaseStart,
-          leaseEnd: form.leaseEnd,
-        }
-      : { ...form, propertyId, depositAmount: Number(form.depositAmount) || 0 };
+const body = editingTenant
+       ? {
+           id: editingTenant.id,
+           fullName: form.fullName,
+           email: form.email,
+           phone: form.phone,
+           leaseStart: form.leaseStart,
+           leaseEnd: form.leaseEnd,
+         }
+       : { ...form, propertyId, depositAmount: Number(form.depositAmount) || 0, nationalId: form.nationalId || null, kraPin: form.kraPin || null, nextOfKinId: form.nextOfKinId || null };
 
     const response = await fetch(url, {
       method,
@@ -153,7 +156,7 @@ export default function TenantsPage() {
   }
 
   function resetForm() {
-    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '' });
+    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinId: '' });
     setEditingTenant(null);
     setMessage('');
     setError('');
@@ -191,8 +194,11 @@ export default function TenantsPage() {
               )}
               <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
               <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
-              {!editingTenant && <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="Deposit amount" />}
-              <button type="submit">{editingTenant ? 'Update Tenant' : 'Add Tenant'}</button>
+{!editingTenant && <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="Deposit amount" />}
+               <input value={form.nationalId} onChange={e => setForm(f => ({ ...f, nationalId: e.target.value }))} placeholder="National ID (Optional)" />
+               <input value={form.kraPin} onChange={e => setForm(f => ({ ...f, kraPin: e.target.value }))} placeholder="KRA PIN (Optional)" />
+               <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Next of Kin ID (Optional)" />
+               <button type="submit">{editingTenant ? 'Update Tenant' : 'Add Tenant'}</button>
               {editingTenant && <button type="button" className="secondary-button" onClick={resetForm}>Cancel Edit</button>}
             </form>
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}

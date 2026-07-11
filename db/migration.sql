@@ -39,3 +39,9 @@ ADD COLUMN IF NOT EXISTS organization_id uuid references organizations(id) on de
 
 -- Add index for payment_settings organization_id
 CREATE INDEX IF NOT EXISTS payment_settings_org_id_idx ON payment_settings(organization_id);
+
+-- Add ID fields to tenants table
+ALTER TABLE tenants 
+ADD COLUMN IF NOT EXISTS national_id text,
+ADD COLUMN IF NOT EXISTS kra_pin text,
+ADD COLUMN IF NOT EXISTS next_of_kin_id text;

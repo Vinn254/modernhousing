@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { fullName, email, phone, unitId, propertyId, leaseStart, leaseEnd, depositAmount, unitNumber } = body;
+  const { fullName, email, phone, unitId, propertyId, leaseStart, leaseEnd, depositAmount, unitNumber, nationalId, kraPin, nextOfKinId } = body;
 
   if (!fullName || !email || !leaseStart || !leaseEnd) {
     return NextResponse.json({ message: 'Missing required tenant fields.' }, { status: 400 });
@@ -257,6 +257,9 @@ export async function POST(request: NextRequest) {
     lease_start: leaseStart,
     lease_end: leaseEnd,
     deposit_amount: depositAmount,
+    national_id: nationalId || null,
+    kra_pin: kraPin || null,
+    next_of_kin_id: nextOfKinId || null,
   }).select('id').single();
 
   if (result.error) {

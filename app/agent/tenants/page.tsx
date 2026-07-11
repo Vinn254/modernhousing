@@ -38,6 +38,9 @@ export default function AgentTenantsPage() {
     leaseStart: new Date().toISOString().split('T')[0],
     leaseEnd: '',
     depositAmount: '',
+    nationalId: '',
+    kraPin: '',
+    nextOfKinId: '',
   });
   const [unitForm, setUnitForm] = useState({
     unitNumber: '',
@@ -82,20 +85,23 @@ export default function AgentTenantsPage() {
     const storedPropertyId = localStorage.getItem('agentPropertyId');
     const selectedUnit = units.find(u => u.unit_number === form.unitNumber);
 
-    const response = await fetch('/api/tenants', {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({
-        fullName: form.fullName,
-        email: form.email,
-        phone: form.phone,
-        unitId: selectedUnit?.id,
-        propertyId: storedPropertyId,
-        leaseStart: form.leaseStart,
-        leaseEnd: form.leaseEnd,
-        depositAmount: Number(form.depositAmount) || 0,
-      }),
-    });
+const response = await fetch('/api/tenants', {
+       method: 'POST',
+       headers: await getAuthHeaders(),
+       body: JSON.stringify({
+         fullName: form.fullName,
+         email: form.email,
+         phone: form.phone,
+         unitId: selectedUnit?.id,
+         propertyId: storedPropertyId,
+         leaseStart: form.leaseStart,
+         leaseEnd: form.leaseEnd,
+         depositAmount: Number(form.depositAmount) || 0,
+         nationalId: form.nationalId,
+         kraPin: form.kraPin,
+         nextOfKinId: form.nextOfKinId,
+       }),
+     });
 
     const result = await response.json();
 
@@ -104,9 +110,9 @@ export default function AgentTenantsPage() {
       return;
     }
 
-    setMessage('Tenant registered.');
-    setForm({ ...form, fullName: '', email: '', phone: '', unitNumber: '', leaseEnd: '', depositAmount: '' });
-    await loadData();
+setMessage('Tenant registered.');
+     setForm({ ...form, fullName: '', email: '', phone: '', unitNumber: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinId: '' });
+     await loadData();
   }
 
   async function handleAddUnit(event: React.FormEvent<HTMLFormElement>) {
@@ -247,6 +253,18 @@ return (
             <div className="field-group">
               <label>Deposit Amount (KSH)</label>
               <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="e.g., 5000" />
+            </div>
+            <div className="field-group">
+              <label>National ID Number</label>
+              <input value={form.nationalId} onChange={e => setForm(f => ({ ...f, nationalId: e.target.value }))} placeholder="Optional" />
+            </div>
+            <div className="field-group">
+              <label>KRA PIN Number</label>
+              <input value={form.kraPin} onChange={e => setForm(f => ({ ...f, kraPin: e.target.value }))} placeholder="Optional" />
+            </div>
+            <div className="field-group">
+              <label>Next of Kin ID Number</label>
+              <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Optional" />
             </div>
             <button type="submit">Add Tenant</button>
           </form>
