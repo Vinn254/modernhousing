@@ -271,7 +271,6 @@ async function handleWaterMeterReading(unitId: string) {
     setShowPayForm(false);
     loadData();
   }
-  }
 
   return (
     <>
@@ -388,40 +387,40 @@ async function handleWaterMeterReading(unitId: string) {
           {!loading && bills.length > 0 && (
             <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
               <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
-<thead>
-                    <tr>
-                      <th>Month</th>
-                      <th>Tenant</th>
-                      <th>Description</th>
-                      <th>Type</th>
-                      <th>Due Amount</th>
-                      <th>Paid</th>
-                      <th>Penalty</th>
-                      <th>Balance</th>
-                      <th>Payment Date</th>
-                      <th>Action</th>
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Tenant</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Due Amount</th>
+                    <th>Paid</th>
+                    <th>Penalty</th>
+                    <th>Balance</th>
+                    <th>Payment Date</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bills.map(bill => (
+                    <tr key={bill.id}>
+                      <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
+                      <td>{bill.tenant_name || tenants.find(t => t.id === bill.tenant_id)?.full_name || '-'}</td>
+                      <td>{bill.description}</td>
+                      <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
+                      <td>{bill.due_amount.toLocaleString()}</td>
+                      <td>{bill.paid_amount.toLocaleString() || '-'}</td>
+                      <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
+                      <td style={{ color: bill.balance > 0 ? '#dc2626' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
+                      <td>{bill.payment_date || '-'}</td>
+                      <td>
+                        {bill.balance > 0 && (
+                          <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
+                        )}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {bills.map(bill => (
-                      <tr key={bill.id}>
-                        <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
-                        <td>{bill.tenant_name || tenants.find(t => t.id === bill.tenant_id)?.full_name || '-'}</td>
-                        <td>{bill.description}</td>
-                        <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
-                        <td>{bill.due_amount.toLocaleString()}</td>
-                        <td>{bill.paid_amount.toLocaleString() || '-'}</td>
-                        <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
-                        <td style={{ color: bill.balance > 0 ? '#dc2626' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
-                        <td>{bill.payment_date || '-'}</td>
-                        <td>
-                          {bill.balance > 0 && (
-                            <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                  ))}
+                </tbody>
               </table>
             </div>
           )}
