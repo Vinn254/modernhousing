@@ -111,6 +111,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Current reading cannot be less than previous reading.' }, { status: 400 });
     }
 
+    if (consumption === 0) {
+      return NextResponse.json({ message: 'Consumption is 0 - no bill generated (current reading same as previous).' }, { status: 200 });
+    }
+
     const waterRate = Number(propertyData.water_rate || 150);
     const amount = consumption * waterRate;
 

@@ -282,14 +282,21 @@ export default function UtilitiesPage() {
               <p style={{ color: 'var(--ink-3)', fontSize: '13px' }}>No units available.</p>
             ) : (
               <div style={{ maxHeight: '240px', overflow: 'auto', marginBottom: 12, border: '1px solid var(--line)', borderRadius: '8px', padding: '8px' }}>
-                {units.map((unit) => (
-                  <div key={unit.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                    <span style={{ width: 120, fontSize: '13px' }}>{properties.find(p => p.id === unit.property_id)?.name ?? '—'} — Unit {unit.unit_number}</span>
-                    <span style={{ width: 80, fontSize: '12px', color: 'var(--ink-3)' }}>{unit.previous_water_reading ?? 0} →</span>
-                    <input type="number" value={waterMeterReadings[unit.id] || ''} onChange={(e) => setWaterMeterReadings((prev) => ({ ...prev, [unit.id]: e.target.value }))} placeholder="Current" style={{ flex: 1, padding: '6px' }} />
-                    <button type="button" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id]} style={{ padding: '6px 12px', fontSize: '12px' }}>Bill</button>
-                  </div>
-                ))}
+                {units.map((unit) => {
+                  const current = Number(waterMeterReadings[unit.id] || 0);
+                  const previous = Number(unit.previous_water_reading || 0);
+                  const consumption = Math.max(0, current - previous);
+                  const billAmount = consumption * 150;
+                  return (
+                    <div key={unit.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                      <span style={{ width: 120, fontSize: '13px' }}>{properties.find(p => p.id === unit.property_id)?.name ?? '—'} — Unit {unit.unit_number}</span>
+                      <span style={{ width: 60, fontSize: '12px', color: 'var(--ink-3)' }}>{previous} →</span>
+                      <input type="number" value={waterMeterReadings[unit.id] || ''} onChange={(e) => setWaterMeterReadings((prev) => ({ ...prev, [unit.id]: e.target.value }))} placeholder="Current" style={{ flex: 1, padding: '6px' }} />
+                      <span style={{ width: 80, fontSize: '12px', color: consumption > 0 ? 'var(--accent)' : 'var(--ink-3)' }}>{consumption > 0 ? `${consumption} units × 150 = ${billAmount.toLocaleString()}` : '-'}</span>
+                      <button type="button" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id] || consumption === 0} style={{ padding: '6px 12px', fontSize: '12px' }}>Bill</button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </article>
