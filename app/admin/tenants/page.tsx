@@ -102,16 +102,16 @@ export default function TenantsPage() {
     const url = editingTenant ? `/api/tenants?id=${editingTenant.id}` : '/api/tenants';
     const method = editingTenant ? 'PATCH' : 'POST';
 
-const body = editingTenant
-       ? {
-           id: editingTenant.id,
-           fullName: form.fullName,
-           email: form.email,
-           phone: form.phone,
-           leaseStart: form.leaseStart,
-           leaseEnd: form.leaseEnd,
-         }
-       : { ...form, propertyId, depositAmount: Number(form.depositAmount) || 0, nationalId: form.nationalId || null, kraPin: form.kraPin || null, nextOfKinId: form.nextOfKinId || null };
+    const body = editingTenant
+      ? {
+          id: editingTenant.id,
+          fullName: form.fullName,
+          email: form.email,
+          phone: form.phone,
+          leaseStart: form.leaseStart,
+          leaseEnd: form.leaseEnd,
+        }
+      : { ...form, propertyId, depositAmount: Number(form.depositAmount) || 0, nationalId: form.nationalId || null, kraPin: form.kraPin || null, nextOfKinId: form.nextOfKinId || null };
 
     const response = await fetch(url, {
       method,
@@ -126,9 +126,9 @@ const body = editingTenant
       return;
     }
 
-setMessage(editingTenant ? 'Tenant updated.' : 'Tenant registered.');
-     setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinId: '' });
-     setEditingTenant(null);
+    setMessage(editingTenant ? 'Tenant updated.' : 'Tenant registered.');
+    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinId: '' });
+    setEditingTenant(null);
     await loadData();
   }
 
@@ -144,22 +144,22 @@ setMessage(editingTenant ? 'Tenant updated.' : 'Tenant registered.');
     setMessage('Tenant removed.');
   }
 
-function handleEdit(tenant: Tenant) {
-     setEditingTenant(tenant);
-     setForm({
-       fullName: tenant.full_name,
-       email: tenant.email,
-       phone: tenant.phone ?? '',
-       unitId: tenant.unit_id ?? '',
-       leaseStart: tenant.lease_start ?? '',
-       leaseEnd: tenant.lease_end ?? '',
-       depositAmount: String(tenant.deposit_amount ?? ''),
-       nationalId: tenant.national_id ?? '',
-       kraPin: tenant.kra_pin ?? '',
-       nextOfKinId: tenant.next_of_kin_id ?? '',
-     });
-     scrollToForm();
-   }
+  function handleEdit(tenant: Tenant) {
+    setEditingTenant(tenant);
+    setForm({
+      fullName: tenant.full_name,
+      email: tenant.email,
+      phone: tenant.phone ?? '',
+      unitId: tenant.unit_id ?? '',
+      leaseStart: tenant.lease_start ?? '',
+      leaseEnd: tenant.lease_end ?? '',
+      depositAmount: String(tenant.deposit_amount ?? ''),
+      nationalId: tenant.national_id ?? '',
+      kraPin: tenant.kra_pin ?? '',
+      nextOfKinId: tenant.next_of_kin_id ?? '',
+    });
+    scrollToForm();
+  }
 
   function resetForm() {
     setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinId: '' });
@@ -178,7 +178,7 @@ function handleEdit(tenant: Tenant) {
           </div>
         </div>
 
-<section className="card-grid">
+        <section className="card-grid">
           <article className="card" style={{ gridColumn: 'span 2' }}>
             <div className="card-label">
               <span className="badge badge-pm">
@@ -187,24 +187,24 @@ function handleEdit(tenant: Tenant) {
             </div>
             <h3>{editingTenant ? 'Update Tenant Details' : 'Register New Tenant'}</h3>
             <form onSubmit={handleSubmit} className="form-grid">
-<input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} required placeholder="Full name" />
-               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="Email" />
-               <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" />
-               <input value={form.nationalId} onChange={e => setForm(f => ({ ...f, nationalId: e.target.value }))} placeholder="National ID (Optional)" />
-               <input value={form.kraPin} onChange={e => setForm(f => ({ ...f, kraPin: e.target.value }))} placeholder="KRA PIN (Optional)" />
-               <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Next of Kin ID (Optional)" />
-               {!editingTenant && (
-                 <select value={form.unitId} onChange={e => setForm(f => ({ ...f, unitId: e.target.value }))} required>
-                   <option value="">Select unit</option>
-                   {units.filter(u => u.occupancy_status === 'vacant').map(u => (
-                     <option key={u.id} value={u.id}>{u.unit_number} - {properties.find(p => p.id === (u as any).property_id)?.name ?? '—'}</option>
-                   ))}
-                 </select>
-               )}
-               <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
-               <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
-               {!editingTenant && <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="Deposit amount" />}
-               <button type="submit">{editingTenant ? 'Update Tenant' : 'Add Tenant'}</button>
+              <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} required placeholder="Full name" />
+              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="Email" />
+              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" />
+              <input value={form.nationalId} onChange={e => setForm(f => ({ ...f, nationalId: e.target.value }))} placeholder="National ID (Optional)" />
+              <input value={form.kraPin} onChange={e => setForm(f => ({ ...f, kraPin: e.target.value }))} placeholder="KRA PIN (Optional)" />
+              <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Next of Kin ID (Optional)" />
+              {!editingTenant && (
+                <select value={form.unitId} onChange={e => setForm(f => ({ ...f, unitId: e.target.value }))} required>
+                  <option value="">Select unit</option>
+                  {units.filter(u => u.occupancy_status === 'vacant').map(u => (
+                    <option key={u.id} value={u.id}>{u.unit_number} - {properties.find(p => p.id === (u as any).property_id)?.name ?? '—'}</option>
+                  ))}
+                </select>
+              )}
+              <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
+              <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
+              {!editingTenant && <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="Deposit amount" />}
+              <button type="submit">{editingTenant ? 'Update Tenant' : 'Add Tenant'}</button>
               {editingTenant && <button type="button" className="secondary-button" onClick={resetForm}>Cancel Edit</button>}
             </form>
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
