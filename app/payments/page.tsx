@@ -84,33 +84,60 @@ export default function PaymentsPage() {
   ] as const;
 
   async function loadPayments() {
-    const response = await fetch('/api/bills', { headers: await getAuthHeaders() });
-    const result = await response.json();
-    if (!response.ok) {
-      setError(result.message ?? 'Unable to load payments.');
-      setLoading(false);
-      return;
+    const [billsResponse, paymentsResponse] = await Promise.all([
+      fetch('/api/bills', { headers: await getAuthHeaders() }),
+      fetch('/api/payments', { headers: await getAuthHeaders() }),
+    ]);
+
+    let allPayments: Payment[] = [];
+
+    if (billsResponse.ok) {
+      const billsResult = await billsResponse.json();
+      const billsPayments = (billsResult.bills ?? [])
+        .filter((b: any) => b.transaction_type === 'rent' || b.transaction_type === 'overdue' || b.transaction_type === 'deposit')
+        .map((b: any) => ({
+          id: b.id,
+          tenant: b.tenant_name || '—',
+          tenant_email: '',
+          property: '',
+          unit: b.unit_number || '—',
+          description: b.description,
+          transaction_type: b.transaction_type,
+          amount: b.paid_amount || 0,
+          due_amount: b.due_amount || 0,
+          month_due: b.month_due,
+          balance_remaining: b.balance || 0,
+          status: b.balance === 0 ? 'paid' : 'pending',
+          transaction_number: b.transaction_number,
+          created_at: b.created_at,
+        }));
+      allPayments = [...allPayments, ...billsPayments];
     }
-    // Map bills to payments format for display - only rent, overdue, deposit
-    const mappedPayments = (result.bills ?? [])
-      .filter((b: any) => b.transaction_type === 'rent' || b.transaction_type === 'overdue' || b.transaction_type === 'deposit')
-      .map((b: any) => ({
-        id: b.id,
-        tenant: b.tenant_name || '—',
-        tenant_email: '',
-        property: '',
-        unit: b.unit_number || '—',
-        description: b.description,
-        transaction_type: b.transaction_type,
-        amount: b.paid_amount || 0,
-        due_amount: b.due_amount || 0,
-        month_due: b.month_due,
-        balance_remaining: b.balance || 0,
-        status: b.balance === 0 ? 'paid' : 'pending',
-        transaction_number: b.transaction_number,
-        created_at: b.created_at,
+
+    if (paymentsResponse.ok) {
+      const paymentsResult = await paymentsResponse.json();
+      const legacyPayments = (paymentsResult.payments ?? []).map((p: any) => ({
+        id: p.id,
+        tenant: p.tenant || '—',
+        tenant_email: p.tenant_email || '',
+        property: p.property || '',
+        unit: p.unit || '—',
+        description: p.description,
+        transaction_type: p.transaction_type || 'rent',
+        amount: p.amount || 0,
+        due_amount: p.due_amount || 0,
+        month_due: p.month_due,
+        balance_remaining: p.balance_remaining || 0,
+        status: p.status || 'paid',
+        transaction_number: p.transaction_number,
+        created_at: p.paid_at || p.created_at,
       }));
-    setPayments(mappedPayments);
+      allPayments = [...allPayments, ...legacyPayments];
+    }
+
+    // Sort by date descending
+    allPayments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setPayments(allPayments);
     setLoading(false);
   }
 
