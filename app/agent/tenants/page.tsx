@@ -15,6 +15,9 @@ interface Tenant {
   lease_end: string;
   status?: string;
   deposit_amount?: number;
+  national_id?: string;
+  kra_pin?: string;
+  next_of_kin_id?: string;
 }
 
 async function getAuthHeaders() {
