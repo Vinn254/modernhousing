@@ -153,15 +153,24 @@ export default function TenantPaymentsPage() {
   const calculateRunningBalance = (billsList: Bill[]) => {
     let runningBalance = 0;
     return billsList.map(bill => {
-      const billBalance = bill.balance;
-      runningBalance += billBalance;
-      const effectiveBalance = runningBalance > 0 ? runningBalance : 0;
+      runningBalance += bill.balance;
+      const effectiveBalance = Math.max(0, runningBalance);
       return { ...bill, running_balance: effectiveBalance };
     });
   };
 
-  const rentWithBalance = calculateRunningBalance([...rentBills]);
-  const utilityWithBalance = calculateRunningBalance([...utilityBills]);
+  const rentBillsSorted = [...rentBills].sort((a, b) => {
+    const monthCompare = (a.month_due || '').localeCompare(b.month_due || '');
+    return monthCompare !== 0 ? monthCompare : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+  
+  const utilityBillsSorted = [...utilityBills].sort((a, b) => {
+    const monthCompare = (a.month_due || '').localeCompare(b.month_due || '');
+    return monthCompare !== 0 ? monthCompare : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+
+  const rentWithBalance = calculateRunningBalance(rentBillsSorted);
+  const utilityWithBalance = calculateRunningBalance(utilityBillsSorted);
 
   const totalRentBalance = (rentWithBalance.at(-1)?.running_balance ?? 0);
   const totalUtilityBalance = (utilityWithBalance.at(-1)?.running_balance ?? 0);
