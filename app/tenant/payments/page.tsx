@@ -39,10 +39,13 @@ export default function TenantPaymentsPage() {
       ? `/api/bills?tenantId=${tenantId}` 
       : `/api/bills?tenantEmail=${encodeURIComponent(email)}`;
 
-    const [billsResponse, settingsResponse] = await Promise.all([
+    const [billsResponse, paymentsResponse, settingsResponse] = await Promise.all([
       fetch(billsUrl, { headers }).catch(() => null),
+      fetch(`/api/payments?email=${encodeURIComponent(email)}`, { headers }).catch(() => null),
       fetch(tenantId ? `/api/payment-settings?tenantId=${tenantId}` : '/api/payment-settings', { headers }).catch(() => null),
     ]);
+
+    let allBills: Bill[] = [];
 
     if (billsResponse?.ok) {
       const billsResult = await billsResponse.json();
@@ -50,8 +53,30 @@ export default function TenantPaymentsPage() {
       const filteredBills = (billsResult.bills ?? []).filter((b: any) => 
         b.transaction_type === 'rent' || b.transaction_type === 'overdue' || b.transaction_type === 'deposit'
       );
-      setBills(filteredBills);
+      allBills = [...allBills, ...filteredBills];
     }
+
+    if (paymentsResponse?.ok) {
+      const paymentsResult = await paymentsResponse.json();
+      // Map payments to bills format
+      const legacyBills = (paymentsResult.payments ?? []).map((p: any) => ({
+        id: p.id,
+        description: p.description,
+        month_due: p.month_due,
+        due_amount: p.due_amount || p.amount || 0,
+        paid_amount: p.amount || 0,
+        penalty_fee: 0,
+        balance: p.balance_remaining || 0,
+        transaction_type: p.transaction_type || 'rent',
+        payment_date: p.paid_at?.split('T')[0] || null,
+        created_at: p.paid_at || p.created_at,
+      }));
+      allBills = [...allBills, ...legacyBills];
+    }
+
+    // Sort by date descending
+    allBills.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setBills(allBills);
 
     if (settingsResponse?.ok) {
       const settings = await settingsResponse.json();
