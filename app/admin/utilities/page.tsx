@@ -117,10 +117,19 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
       const unitsResult = await unitsResponse.json();
       const billsResult = await billsResponse.json();
 
-      setProperties(propsResult.properties ?? []);
-      setTenants(tenantsResult.tenants ?? []);
-      setUnits(unitsResult.units ?? []);
-      setBills(billsResult.bills ?? []);
+setProperties(propsResult.properties ?? []);
+       setTenants(tenantsResult.tenants ?? []);
+       setUnits(unitsResult.units ?? []);
+       // Only show utility bills - not rent/overdue/deposit
+       const utilityBills = (billsResult.bills ?? []).filter((b: any) => 
+         b.transaction_type === 'water' || 
+         b.transaction_type === 'garbage' || 
+         b.transaction_type === 'service_charge' ||
+         b.transaction_type === 'parking' ||
+         b.transaction_type === 'security' ||
+         b.transaction_type === 'other'
+       );
+       setBills(utilityBills);
     } catch (err: any) {
       setError(err.message);
     } finally {
