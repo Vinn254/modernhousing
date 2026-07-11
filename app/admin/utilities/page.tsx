@@ -41,6 +41,7 @@ interface Bill {
   balance: number;
   transaction_type: string;
   payment_date: string;
+  transaction_number?: string;
   created_at: string;
 }
 
@@ -77,6 +78,22 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
     transactionCode: '',
   });
   const [showPayForm, setShowPayForm] = useState(false);
+
+  const [editForm, setEditForm] = useState({
+    billId: '',
+    tenantId: '',
+    utilityType: '',
+    monthDue: '',
+    amount: '',
+    paidAmount: '',
+    penaltyFee: '',
+    description: '',
+    paymentDate: '',
+    paymentMethod: 'Cash',
+    referenceNumber: '',
+    transactionCode: '',
+  });
+  const [showEditForm, setShowEditForm] = useState(false);
 
   function calculateWaterBill(consumption: number): number {
     if (consumption <= 0) return 0;
@@ -118,18 +135,18 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
       const billsResult = await billsResponse.json();
 
 setProperties(propsResult.properties ?? []);
-       setTenants(tenantsResult.tenants ?? []);
-       setUnits(unitsResult.units ?? []);
-       // Only show utility bills - not rent/overdue/deposit
-       const utilityBills = (billsResult.bills ?? []).filter((b: any) => 
-         b.transaction_type === 'water' || 
-         b.transaction_type === 'garbage' || 
-         b.transaction_type === 'service_charge' ||
-         b.transaction_type === 'parking' ||
-         b.transaction_type === 'security' ||
-         b.transaction_type === 'other'
-       );
-       setBills(utilityBills);
+      setTenants(tenantsResult.tenants ?? []);
+      setUnits(unitsResult.units ?? []);
+      // Only show utility bills - not rent/overdue/deposit
+      const utilityBills = (billsResult.bills ?? []).filter((b: any) => 
+        b.transaction_type === 'water' || 
+        b.transaction_type === 'garbage' || 
+        b.transaction_type === 'service_charge' ||
+        b.transaction_type === 'parking' ||
+        b.transaction_type === 'security' ||
+        b.transaction_type === 'other'
+      );
+      setBills(utilityBills);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -251,6 +268,76 @@ async function handleWaterMeterReading(unitId: string) {
     setShowPayForm(true);
   }
 
+  async function handleDeleteBill(billId: string) {
+    if (!confirm('Are you sure you want to delete this bill?')) return;
+    
+    const response = await fetch('/api/bills', {
+      method: 'DELETE',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ id: billId }),
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      setMessage('Bill deleted.');
+      loadData();
+    } else {
+      setError(result.message ?? 'Unable to delete bill.');
+    }
+  }
+
+  async function handleShowEditForm(bill: Bill) {
+    setEditForm({
+      billId: bill.id,
+      tenantId: bill.tenant_id,
+      utilityType: bill.transaction_type,
+      monthDue: bill.month_due,
+      amount: String(bill.due_amount),
+      paidAmount: String(bill.paid_amount),
+      penaltyFee: String(bill.penalty_fee || 0),
+      description: bill.description,
+      paymentDate: bill.payment_date || '',
+      paymentMethod: bill.payment_method || 'Cash',
+      referenceNumber: bill.transaction_number || '',
+      transactionCode: bill.transaction_code || '',
+    });
+    setShowEditForm(true);
+  }
+
+  async function handleUpdateBill(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+
+    const response = await fetch('/api/bills', {
+      method: 'PUT',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        id: editForm.billId,
+        tenantId: editForm.tenantId,
+        description: editForm.description || `${editForm.utilityType} invoice`,
+        monthDue: editForm.monthDue,
+        dueAmount: Number(editForm.amount),
+        paidAmount: Number(editForm.paidAmount),
+        penaltyFee: Number(editForm.penaltyFee),
+        transactionType: editForm.utilityType,
+        paymentDate: editForm.paymentDate,
+        paymentMethod: editForm.paymentMethod,
+        referenceNumber: editForm.referenceNumber,
+        transactionCode: editForm.transactionCode,
+      }),
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      setMessage('Bill updated.');
+      setShowEditForm(false);
+      loadData();
+    } else {
+      setError(result.message ?? 'Unable to update bill.');
+    }
+  }
+
   async function handleRecordPayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
@@ -361,6 +448,42 @@ async function handleWaterMeterReading(unitId: string) {
           </article>
         </section>
 
+        {showEditForm && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="card" style={{ maxWidth: 600, width: '90%' }}>
+              <div className="card-label">Edit Bill</div>
+              <h3 style={{ marginBottom: 16 }}>Update Utility Bill</h3>
+              <form onSubmit={handleUpdateBill} className="form-grid">
+                <select value={editForm.tenantId} onChange={e => setEditForm(f => ({ ...f, tenantId: e.target.value }))} required>
+                  <option value="">Select tenant</option>
+                  {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} - {t.property}</option>)}
+                </select>
+                <select value={editForm.utilityType} onChange={e => setEditForm(f => ({ ...f, utilityType: e.target.value }))} required>
+                  <option value="">Utility type</option>
+                  {utilityTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+                <input type="month" value={editForm.monthDue} onChange={e => setEditForm(f => ({ ...f, monthDue: e.target.value }))} required />
+                <input type="number" value={editForm.amount} onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))} required placeholder="Due Amount (KSH)" />
+                <input type="number" value={editForm.paidAmount} onChange={e => setEditForm(f => ({ ...f, paidAmount: e.target.value }))} placeholder="Paid Amount (KSH)" />
+                <input type="number" value={editForm.penaltyFee} onChange={e => setEditForm(f => ({ ...f, penaltyFee: e.target.value }))} placeholder="Penalty Fee" />
+                <input value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" />
+                <input type="date" value={editForm.paymentDate} onChange={e => setEditForm(f => ({ ...f, paymentDate: e.target.value }))} placeholder="Payment Date" />
+                <select value={editForm.paymentMethod} onChange={e => setEditForm(f => ({ ...f, paymentMethod: e.target.value }))}>
+                  <option value="Cash">Cash</option>
+                  <option value="M-pesa">M-pesa</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                </select>
+                <input value={editForm.referenceNumber} onChange={e => setEditForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="Reference Number" />
+                <input value={editForm.transactionCode} onChange={e => setEditForm(f => ({ ...f, transactionCode: e.target.value }))} placeholder="Transaction Code" />
+                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                  <button type="submit">Update Bill</button>
+                  <button type="button" onClick={() => setShowEditForm(false)} className="secondary-button">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         <section className="card" style={{ marginTop: 24 }}>
           {showPayForm && (
             <div className="card" style={{ marginBottom: 16, background: 'var(--surface)' }}>
@@ -413,7 +536,8 @@ async function handleWaterMeterReading(unitId: string) {
                     <th>Penalty</th>
                     <th>Balance</th>
                     <th>Payment Date</th>
-                    <th>Action</th>
+                    <th>Trans #</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -428,10 +552,13 @@ async function handleWaterMeterReading(unitId: string) {
                       <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
                       <td style={{ color: bill.balance > 0 ? '#dc2626' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
                       <td>{bill.payment_date || '-'}</td>
+                      <td style={{ fontSize: '11px' }}>{bill.transaction_number || '-'}</td>
                       <td>
                         {bill.balance > 0 && (
-                          <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
+                          <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4 }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
                         )}
+                        <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(bill)}>Edit</button>
+                        <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeleteBill(bill.id)}>Delete</button>
                       </td>
                     </tr>
                   ))}

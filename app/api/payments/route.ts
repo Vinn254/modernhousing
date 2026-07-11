@@ -240,3 +240,86 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ message: 'Payment recorded.', payment: result.data?.[0] }, { status: 201 });
 }
+
+export async function DELETE(request: NextRequest) {
+  const authContext = await getAuthContext(request);
+
+  if (!authContext.userId) {
+    return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { id } = body;
+
+  if (!id) {
+    return NextResponse.json({ message: 'Payment ID is required.' }, { status: 400 });
+  }
+
+  const result = await supabaseAdmin.from('payments')
+    .delete()
+    .eq('id', id);
+
+  if (result.error) {
+    return NextResponse.json({ message: result.error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ message: 'Payment deleted.' });
+}
+
+export async function PUT(request: NextRequest) {
+  const authContext = await getAuthContext(request);
+
+  if (!authContext.userId) {
+    return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const {
+    id,
+    tenantId,
+    description,
+    transactionType,
+    amount,
+    balanceRemaining,
+    monthDue,
+    dueAmount,
+    paidAmount,
+    transNumber,
+    transCode,
+    paymentDate
+  } = body;
+
+  if (!id) {
+    return NextResponse.json({ message: 'Payment ID is required.' }, { status: 400 });
+  }
+
+  // Validate transaction type - only allow rent, overdue, deposit
+  const validTypes = ['rent', 'overdue', 'deposit'];
+  if (transactionType && !validTypes.includes(transactionType)) {
+    return NextResponse.json({ message: 'Invalid transaction type. Only rent, overdue, and deposit are allowed.' }, { status: 400 });
+  }
+
+  const updateData: any = {
+    tenant_id: tenantId || undefined,
+    description: description ?? undefined,
+    transaction_type: transactionType || 'rent',
+    amount: Number(amount || paidAmount) || 0,
+    balance_remaining: Number(balanceRemaining) || 0,
+    transaction_number: transNumber ?? undefined,
+    paid_at: paymentDate || new Date().toISOString(),
+    month_due: monthDue ?? null,
+    due_amount: Number(dueAmount) || null,
+    transaction_code: transCode ?? null,
+  };
+
+  const result = await supabaseAdmin.from('payments')
+    .update(updateData)
+    .eq('id', id)
+    .select();
+
+  if (result.error) {
+    return NextResponse.json({ message: result.error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ message: 'Payment updated.', payment: result.data?.[0] });
+}

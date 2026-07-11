@@ -76,6 +76,22 @@ export default function PaymentsPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'paybill' | 'till' | 'pochi' | 'mobile'>('paybill');
 
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editForm, setEditForm] = useState({
+    billId: '',
+    tenantId: '',
+    monthDue: '',
+    dueAmount: '',
+    paidAmount: '',
+    penaltyFee: '',
+    description: '',
+    paymentDate: '',
+    paymentMethod: 'Cash',
+    referenceNumber: '',
+    transactionCode: '',
+    transType: 'rent',
+  });
+
   const paymentMethods = [
     { value: 'paybill', label: 'Paybill' },
     { value: 'till', label: 'Till' },
@@ -258,6 +274,76 @@ export default function PaymentsPage() {
     await loadPayments();
   }
 
+  async function handleDeletePayment(billId: string) {
+    if (!confirm('Are you sure you want to delete this payment?')) return;
+    
+    const response = await fetch('/api/bills', {
+      method: 'DELETE',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ id: billId }),
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      setMessage('Payment deleted.');
+      loadPayments();
+    } else {
+      setError(result.message ?? 'Unable to delete payment.');
+    }
+  }
+
+  async function handleShowEditForm(payment: Payment) {
+    setEditForm({
+      billId: payment.id,
+      tenantId: tenants.find(t => t.full_name === payment.tenant)?.id || '',
+      monthDue: (payment as any).month_due || '',
+      dueAmount: String((payment as any).due_amount || payment.amount),
+      paidAmount: String(payment.amount),
+      penaltyFee: '0',
+      description: payment.description,
+      paymentDate: payment.next_payment_date || '',
+      paymentMethod: manualPaymentMethod,
+      referenceNumber: (payment as any).transaction_number || '',
+      transactionCode: '',
+      transType: (payment as any).transaction_type || 'rent',
+    });
+    setShowEditForm(true);
+  }
+
+  async function handleUpdatePayment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+
+    const response = await fetch('/api/bills', {
+      method: 'PUT',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        id: editForm.billId,
+        tenantId: editForm.tenantId,
+        description: editForm.description || `${editForm.transType} payment`,
+        monthDue: editForm.monthDue,
+        dueAmount: Number(editForm.dueAmount),
+        paidAmount: Number(editForm.paidAmount),
+        penaltyFee: Number(editForm.penaltyFee),
+        transactionType: editForm.transType,
+        paymentDate: editForm.paymentDate,
+        paymentMethod: editForm.paymentMethod,
+        referenceNumber: editForm.referenceNumber,
+        transactionCode: editForm.transactionCode,
+      }),
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      setMessage('Payment updated.');
+      setShowEditForm(false);
+      loadPayments();
+    } else {
+      setError(result.message ?? 'Unable to update payment.');
+    }
+  }
+
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
 return (
@@ -362,6 +448,41 @@ return (
         </div>
       )}
 
+      {showEditForm && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card" style={{ maxWidth: 600, width: '90%' }}>
+            <div className="card-label">Edit Payment</div>
+            <h3 style={{ marginBottom: 16 }}>Update Payment Record</h3>
+            <form onSubmit={handleUpdatePayment} className="form-grid">
+              <select value={editForm.tenantId} onChange={e => setEditForm(f => ({ ...f, tenantId: e.target.value }))} required>
+                <option value="">Select tenant</option>
+                {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} — {t.property} · Unit {t.unit}</option>)}
+              </select>
+              <select value={editForm.transType} onChange={e => setEditForm(f => ({ ...f, transType: e.target.value }))}>
+                {transactionTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+              <input type="month" value={editForm.monthDue} onChange={e => setEditForm(f => ({ ...f, monthDue: e.target.value }))} placeholder="Month Due" />
+              <input type="number" step="0.01" value={editForm.dueAmount} onChange={e => setEditForm(f => ({ ...f, dueAmount: e.target.value }))} placeholder="Due Amount" />
+              <input type="number" step="0.01" value={editForm.paidAmount} onChange={e => setEditForm(f => ({ ...f, paidAmount: e.target.value }))} placeholder="Paid Amount" />
+              <input type="number" step="0.01" value={editForm.penaltyFee} onChange={e => setEditForm(f => ({ ...f, penaltyFee: e.target.value }))} placeholder="Penalty Fee" />
+              <input value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" />
+              <input type="date" value={editForm.paymentDate} onChange={e => setEditForm(f => ({ ...f, paymentDate: e.target.value }))} placeholder="Payment Date" />
+              <select value={editForm.paymentMethod} onChange={e => setEditForm(f => ({ ...f, paymentMethod: e.target.value }))}>
+                <option value="Cash">Cash</option>
+                <option value="M-pesa">M-pesa</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+              </select>
+              <input value={editForm.referenceNumber} onChange={e => setEditForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="Reference Number" />
+              <input value={editForm.transactionCode} onChange={e => setEditForm(f => ({ ...f, transactionCode: e.target.value }))} placeholder="Transaction Code" />
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <button type="submit">Update Payment</button>
+                <button type="button" onClick={() => setShowEditForm(false)} className="secondary-button">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <article className="card" style={{ marginTop: 24 }}>
         <div className="card-label">Transactions</div>
         <h3 style={{ marginBottom: 16 }}>Payment History</h3>
@@ -380,6 +501,7 @@ return (
                   <th>Type</th>
                   <th>Trans #</th>
                   <th>Date</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -393,6 +515,10 @@ return (
                     <td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
                     <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
                     <td>{payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—'}</td>
+                    <td>
+                      <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(payment)}>Edit</button>
+                      <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment.id)}>Delete</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

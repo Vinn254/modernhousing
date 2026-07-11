@@ -428,3 +428,95 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ message: 'Bill updated.', bill: result.data?.[0] });
 }
+
+export async function DELETE(request: NextRequest) {
+  const authContext = await getAuthContext(request);
+
+  if (!authContext.userId) {
+    return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { id } = body;
+
+  if (!id) {
+    return NextResponse.json({ message: 'Bill ID is required.' }, { status: 400 });
+  }
+
+  const result = await supabaseAdmin.from('bills')
+    .delete()
+    .eq('id', id);
+
+  if (result.error) {
+    return NextResponse.json({ message: result.error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ message: 'Bill deleted.' });
+}
+
+export async function PUT(request: NextRequest) {
+  const authContext = await getAuthContext(request);
+
+  if (!authContext.userId) {
+    return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const {
+    id,
+    tenantId,
+    unitId,
+    propertyId,
+    description,
+    monthDue,
+    dueAmount,
+    paidAmount,
+    penaltyFee,
+    transactionType,
+    transactionNumber,
+    transactionCode,
+    paymentDate,
+    paymentMethod,
+    referenceNumber
+  } = body;
+
+  if (!id) {
+    return NextResponse.json({ message: 'Bill ID is required.' }, { status: 400 });
+  }
+
+  if (!tenantId || !description) {
+    return NextResponse.json({ message: 'Missing required bill fields.' }, { status: 400 });
+  }
+
+  // Calculate balance: due_amount - paid_amount
+  const calculatedBalance = (Number(dueAmount) || 0) - (Number(paidAmount) || 0);
+
+  const updateData: any = {
+    tenant_id: tenantId,
+    unit_id: unitId || null,
+    property_id: propertyId || null,
+    description,
+    month_due: monthDue,
+    due_amount: Number(dueAmount) || 0,
+    paid_amount: Number(paidAmount) || 0,
+    penalty_fee: Number(penaltyFee) || 0,
+    balance: calculatedBalance,
+    transaction_type: transactionType || 'rent',
+    transaction_number: transactionNumber || null,
+    transaction_code: transactionCode || null,
+    payment_date: paymentDate || null,
+    payment_method: paymentMethod || null,
+    reference_number: referenceNumber || null,
+  };
+
+  const result = await supabaseAdmin.from('bills')
+    .update(updateData)
+    .eq('id', id)
+    .select();
+
+  if (result.error) {
+    return NextResponse.json({ message: result.error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ message: 'Bill updated.', bill: result.data?.[0] });
+}
