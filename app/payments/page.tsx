@@ -28,6 +28,7 @@ interface Payment {
   due_amount?: number;
   penalty_fee?: number;
   transaction_number?: string;
+  source: 'bills' | 'payments';
 }
 
 async function getAuthHeaders() {
@@ -90,6 +91,7 @@ export default function PaymentsPage() {
     referenceNumber: '',
     transactionCode: '',
     transType: 'rent',
+    source: 'bills' as 'bills' | 'payments',
   });
 
   const paymentMethods = [
@@ -126,6 +128,7 @@ export default function PaymentsPage() {
           status: b.balance === 0 ? 'paid' : 'pending',
           transaction_number: b.transaction_number,
           created_at: b.created_at,
+          source: 'bills' as const,
         }));
       allPayments = [...allPayments, ...billsPayments];
     }
@@ -147,11 +150,11 @@ export default function PaymentsPage() {
         status: p.status || 'paid',
         transaction_number: p.transaction_number,
         created_at: p.paid_at || p.created_at,
+        source: 'payments' as const,
       }));
       allPayments = [...allPayments, ...legacyPayments];
     }
 
-    // Sort by date descending
     allPayments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     setPayments(allPayments);
     setLoading(false);
@@ -274,13 +277,14 @@ export default function PaymentsPage() {
     await loadPayments();
   }
 
-  async function handleDeletePayment(billId: string) {
+  async function handleDeletePayment(payment: Payment) {
     if (!confirm('Are you sure you want to delete this payment?')) return;
     
-    const response = await fetch('/api/bills', {
+    const endpoint = payment.source === 'payments' ? '/api/payments' : '/api/bills';
+    const response = await fetch(endpoint, {
       method: 'DELETE',
       headers: await getAuthHeaders(),
-      body: JSON.stringify({ id: billId }),
+      body: JSON.stringify({ id: payment.id }),
     });
 
     const result = await response.json();
@@ -306,6 +310,7 @@ export default function PaymentsPage() {
       referenceNumber: (payment as any).transaction_number || '',
       transactionCode: '',
       transType: (payment as any).transaction_type || 'rent',
+      source: payment.source,
     });
     setShowEditForm(true);
   }
@@ -315,7 +320,8 @@ export default function PaymentsPage() {
     setMessage('');
     setError('');
 
-    const response = await fetch('/api/bills', {
+    const endpoint = editForm.source === 'payments' ? '/api/payments' : '/api/bills';
+    const response = await fetch(endpoint, {
       method: 'PUT',
       headers: await getAuthHeaders(),
       body: JSON.stringify({
@@ -517,7 +523,7 @@ return (
                     <td>{payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—'}</td>
                     <td>
                       <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(payment)}>Edit</button>
-                      <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment.id)}>Delete</button>
+                      <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
                     </td>
                   </tr>
                 ))}
