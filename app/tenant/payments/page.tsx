@@ -160,7 +160,8 @@ export default function TenantPaymentsPage() {
   const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'].includes(b.transaction_type));
 
   // Calculate cumulative balance across months
-  // Payments are applied to reduce balances chronologically
+  // positive running balance = tenant has credit
+  // negative running balance = tenant owes money
   const calculateWithRunningBalance = (billsList: Bill[]) => {
     let runningBalance = 0;
     return billsList.map(bill => {
@@ -173,9 +174,10 @@ export default function TenantPaymentsPage() {
   const rentWithBalance = calculateWithRunningBalance([...rentBills]);
   const utilityWithBalance = calculateWithRunningBalance([...utilityBills]);
 
-  const totalRentBalance = rentWithBalance.length > 0 ? rentWithBalance[rentWithBalance.length - 1].running_balance : 0;
-  const totalUtilityBalance = utilityWithBalance.length > 0 ? utilityWithBalance[utilityWithBalance.length - 1].running_balance : 0;
-  const totalOutstanding = Math.max(0, totalRentBalance + totalUtilityBalance);
+  // For summary: positive means owes, negative means credit
+  const totalRentOwed = rentWithBalance.length > 0 ? rentWithBalance[rentWithBalance.length - 1].running_balance : 0;
+  const totalUtilityOwed = utilityWithBalance.length > 0 ? utilityWithBalance[utilityWithBalance.length - 1].running_balance : 0;
+  const totalTenantOwes = Math.max(0, totalRentOwed) + Math.max(0, totalUtilityOwed);
 
   const getTypeLabel = (type: string) => {
     const map: Record<string, string> = {
@@ -314,11 +316,11 @@ export default function TenantPaymentsPage() {
                       <td>{formatCurrency(bill.due_amount)}</td>
                       <td>{formatCurrency(bill.paid_amount)}</td>
                       <td>{formatCurrency(bill.penalty_fee || 0)}</td>
-                      <td style={{ color: bill.bill_balance < 0 ? 'var(--accent)' : (bill.bill_balance > 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: bill.bill_balance !== 0 ? 600 : 400 }}>
+                      <td style={{ color: bill.bill_balance > 0 ? '#dc2626' : (bill.bill_balance < 0 ? 'var(--accent)' : 'var(--ink-3)'), fontWeight: bill.bill_balance !== 0 ? 600 : 400 }}>
                         {formatCurrency(bill.bill_balance)}
                       </td>
-                      <td style={{ color: bill.running_balance < 0 ? 'var(--accent)' : (bill.running_balance > 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: 600 }}>
-                        {formatCurrency(bill.running_balance || 0)}
+                      <td style={{ color: bill.running_balance > 0 ? 'var(--accent)' : (bill.running_balance < 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: 600 }}>
+                        {formatCurrency(bill.running_balance)}
                       </td>
                       <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
                     </tr>
@@ -335,16 +337,16 @@ export default function TenantPaymentsPage() {
         <div style={{ padding: '16px', background: 'var(--line-soft)', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
             <span>Rent Balance:</span>
-            <span style={{ color: totalRentBalance > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalRentBalance)}</span>
+            <span style={{ color: totalRentOwed > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalRentOwed)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
             <span>Utility Balance:</span>
-            <span style={{ color: totalUtilityBalance > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalUtilityBalance)}</span>
+            <span style={{ color: totalUtilityOwed > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalUtilityOwed)}</span>
           </div>
           <hr style={{ margin: '12px 0', borderColor: 'var(--line)' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700 }}>
             <span>Total Outstanding:</span>
-            <span style={{ color: totalOutstanding > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalOutstanding)}</span>
+            <span style={{ color: totalTenantOwes > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalTenantOwes)}</span>
           </div>
         </div>
       </section>
