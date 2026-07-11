@@ -90,36 +90,41 @@ export async function GET(request: NextRequest) {
     const userMetadata = authContext.sessionUser?.user_metadata || {};
     const effectivePropertyId = urlPropertyId || (userMetadata?.role === 'agent' ? userMetadata?.property_id : null);
 
-    if (effectivePropertyId) {
-      const { data: units, error: unitsError } = await supabaseAdmin.from('units').select('id').eq('property_id', effectivePropertyId);
-      if (unitsError) throw unitsError;
-      const unitIds = (units ?? []).map((u: any) => u.id);
+if (effectivePropertyId) {
+       const { data: units, error: unitsError } = await supabaseAdmin.from('units').select('id').eq('property_id', effectivePropertyId);
+       if (unitsError) throw unitsError;
+       const unitIds = (units ?? []).map((u: any) => u.id);
 
-      if (unitIds.length > 0) {
-        const { data, error } = await supabaseAdmin
-          .from('tenants')
-          .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(id, name, address))')
-          .in('unit_id', unitIds)
-          .order('created_at', { ascending: false });
+       if (unitIds.length > 0) {
+         const { data, error } = await supabaseAdmin
+           .from('tenants')
+           .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_id, units!inner(unit_number, properties(id, name, address))')
+           .in('unit_id', unitIds)
+           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+         if (error) throw error;
 
-        const tenants = (data ?? []).map((tenant: any) => ({
-          id: tenant.id,
-          full_name: tenant.full_name,
-          email: tenant.email,
-          phone: tenant.phone,
-          unit: tenant.units?.unit_number ?? '',
-          property: tenant.units?.properties?.name ?? '',
-          property_id: tenant.units?.properties?.id ?? '',
-          address: tenant.units?.properties?.address ?? '',
-          lease_start: tenant.lease_start,
-          lease_end: tenant.lease_end,
-        }));
+         const tenants = (data ?? []).map((tenant: any) => ({
+           id: tenant.id,
+           full_name: tenant.full_name,
+           email: tenant.email,
+           phone: tenant.phone,
+           unit: tenant.units?.unit_number ?? '',
+           property: tenant.units?.properties?.name ?? '',
+           property_id: tenant.units?.properties?.id ?? '',
+           address: tenant.units?.properties?.address ?? '',
+           lease_start: tenant.lease_start,
+           lease_end: tenant.lease_end,
+           national_id: tenant.national_id,
+           kra_pin: tenant.kra_pin,
+           next_of_kin_id: tenant.next_of_kin_id,
+         }));
 
-        return NextResponse.json({ tenants });
-      }
-      return NextResponse.json({ tenants: [] });
+         return NextResponse.json({ tenants });
+       }
+       return NextResponse.json({ tenants: [] });
+     }
+     return NextResponse.json({ tenants: [] });
     }
 
     if (!authContext.isSuperAdmin && !authContext.organizationId && !authContext.userId) {
@@ -139,7 +144,7 @@ export async function GET(request: NextRequest) {
       if (unitIds.length > 0) {
         const { data, error } = await supabaseAdmin
           .from('tenants')
-          .select('id, full_name, email, phone, lease_start, lease_end, units!inner(unit_number, properties(id, name, address))')
+          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_id, units!inner(unit_number, properties(id, name, address))')
           .in('unit_id', unitIds)
           .order('created_at', { ascending: false });
 
@@ -156,6 +161,9 @@ export async function GET(request: NextRequest) {
           address: tenant.units?.properties?.address ?? '',
           lease_start: tenant.lease_start,
           lease_end: tenant.lease_end,
+          national_id: tenant.national_id,
+          kra_pin: tenant.kra_pin,
+          next_of_kin_id: tenant.next_of_kin_id,
         }));
 
         return NextResponse.json({ tenants });
