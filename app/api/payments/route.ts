@@ -257,10 +257,15 @@ export async function DELETE(request: NextRequest) {
 
   const result = await supabaseAdmin.from('payments')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .select();
 
   if (result.error) {
     return NextResponse.json({ message: result.error.message }, { status: 500 });
+  }
+
+  if (!result.data || result.data.length === 0) {
+    return NextResponse.json({ message: 'Payment not found or could not be deleted.' }, { status: 404 });
   }
 
   return NextResponse.json({ message: 'Payment deleted.' });

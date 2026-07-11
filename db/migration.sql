@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS bills (
     paid_amount numeric(12,2) not null default 0,
     penalty_fee numeric(12,2) default 0,
     balance numeric(12,2) not null default 0,
-    transaction_type text not null check (transaction_type in ('deposit', 'rent', 'water', 'service_charge', 'utility', 'other', 'garbage', 'parking', 'security')),
+    transaction_type text not null check (transaction_type in ('deposit', 'rent', 'overdue', 'water', 'service_charge', 'utility', 'other', 'garbage', 'parking', 'security')),
     transaction_number text,
     transaction_code text,
     payment_date date,
@@ -73,6 +73,6 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bills_transaction_type_check') THEN
     ALTER TABLE bills DROP CONSTRAINT bills_transaction_type_check;
     ALTER TABLE bills ADD CONSTRAINT bills_transaction_type_check 
-      CHECK (transaction_type in ('deposit', 'rent', 'water', 'service_charge', 'utility', 'other', 'garbage', 'parking', 'security'));
+      CHECK (transaction_type in ('deposit', 'rent', 'overdue', 'water', 'service_charge', 'utility', 'other', 'garbage', 'parking', 'security'));
   END IF;
 END $$;
