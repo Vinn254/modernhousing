@@ -71,6 +71,7 @@ async function getAuthContext(request: NextRequest) {
     isSuperAdmin: userMetadata.role === 'super_admin',
     userId: sessionUser.id,
     organizationId: orgId,
+    sessionUser,
   };
 }
 
@@ -220,6 +221,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authContext = await getAuthContext(request);
+  
+  if (!authContext.userId) {
+    return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+  }
+
   const body = await request.json();
   const {
     tenantId,
