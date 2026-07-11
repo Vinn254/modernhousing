@@ -41,10 +41,6 @@ export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [tenantId, setTenantId] = useState('');
-  const [description, setDescription] = useState('');
-  const [transactionType, setTransactionType] = useState('rent');
-  const [amount, setAmount] = useState('');
-  const [balanceRemaining, setBalanceRemaining] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -61,6 +57,19 @@ export default function PaymentsPage() {
   const [manualTransType, setManualTransType] = useState('rent');
   const [manualTransNumber, setManualTransNumber] = useState('');
   const [manualTransCode, setManualTransCode] = useState('');
+  const [manualPaymentMethod, setManualPaymentMethod] = useState('Cash');
+  const [manualPenaltyFee, setManualPenaltyFee] = useState('0');
+
+  const transactionTypes = [
+    { value: 'rent', label: 'Rent' },
+    { value: 'water', label: 'Water' },
+    { value: 'garbage', label: 'Garbage Collection' },
+    { value: 'service_charge', label: 'Service Charge' },
+    { value: 'parking', label: 'Parking Fee' },
+    { value: 'security', label: 'Security Fee' },
+    { value: 'deposit', label: 'Deposit' },
+    { value: 'other', label: 'Other' },
+  ];
 
   const [paybill, setPaybill] = useState('');
   const [paybillAccount, setPaybillAccount] = useState('');
@@ -81,14 +90,31 @@ export default function PaymentsPage() {
   ] as const;
 
   async function loadPayments() {
-    const response = await fetch('/api/payments', { headers: await getAuthHeaders() });
+    const response = await fetch('/api/bills', { headers: await getAuthHeaders() });
     const result = await response.json();
     if (!response.ok) {
       setError(result.message ?? 'Unable to load payments.');
       setLoading(false);
       return;
     }
-    setPayments(result.payments ?? []);
+    // Map bills to payments format for display
+    const mappedPayments = (result.bills ?? []).map((b: any) => ({
+      id: b.id,
+      tenant: b.tenant_name || '—',
+      tenant_email: '',
+      property: '',
+      unit: b.unit_number || '—',
+      description: b.description,
+      transaction_type: b.transaction_type,
+      amount: b.paid_amount || 0,
+      due_amount: b.due_amount || 0,
+      month_due: b.month_due,
+      balance_remaining: b.balance || 0,
+      status: b.balance === 0 ? 'paid' : 'pending',
+      transaction_number: b.transaction_number,
+      created_at: b.created_at,
+    }));
+    setPayments(mappedPayments);
     setLoading(false);
   }
 
@@ -139,33 +165,6 @@ export default function PaymentsPage() {
     Promise.all([loadPayments(), loadTenants(), loadSettings()]);
   }, []);
 
-  async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setMessage('');
-    setError('');
-
-    const response = await fetch('/api/payments', {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({ tenantId, description, transactionType, amount: Number(amount), balanceRemaining: Number(balanceRemaining) }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      setError(result.message || 'Unable to record payment.');
-      return;
-    }
-
-    setMessage('Payment recorded successfully.');
-    setTenantId('');
-    setDescription('');
-    setTransactionType('rent');
-    setAmount('');
-    setBalanceRemaining('');
-    await loadPayments();
-  }
-
   async function handleStkPush(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setProcessing(true);
@@ -199,20 +198,19 @@ export default function PaymentsPage() {
     setMessage('');
     setError('');
 
-    const response = await fetch('/api/payments', {
+    const response = await fetch('/api/bills', {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         tenantId,
-        description: `${manualMonth || 'Rent'} payment`,
-        transactionType: manualTransType,
-        amount: Number(manualPaidAmount),
-        balanceRemaining: Number(manualBalAmount),
+        description: `${manualMonth || 'Bill'} payment`,
         monthDue: manualMonth,
-        dueAmount: Number(manualDueAmount),
-        paidAmount: Number(manualPaidAmount),
-        transNumber: manualTransNumber,
-        transCode: manualTransCode,
+        dueAmount: Number(manualDueAmount) || 0,
+        paidAmount: Number(manualPaidAmount) || 0,
+        penaltyFee: Number(manualPenaltyFee) || 0,
+        transactionType: manualTransType,
+        paymentMethod: manualPaymentMethod,
+        referenceNumber: manualTransNumber,
         paymentDate: manualDate
       }),
     });
@@ -233,6 +231,8 @@ export default function PaymentsPage() {
     setManualTransType('rent');
     setManualTransNumber('');
     setManualTransCode('');
+    setManualPaymentMethod('Cash');
+    setManualPenaltyFee('0');
     await loadPayments();
   }
 
@@ -241,8 +241,8 @@ export default function PaymentsPage() {
 return (
     <main className="container">
       <div className="card-admin-header">
-        <p className="heading">Payments</p>
-        <p className="subheading">Record rent transactions, track balances, and view due dates.</p>
+        <p className="heading">Payments & Bills</p>
+        <p className="subheading">Record rent, utilities, and other transactions. Track balances and view payment history.</p>
       </div>
 
       {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
@@ -259,15 +259,19 @@ return (
             </select>
             <input type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} required placeholder="Payment Date" />
             <input value={manualMonth} onChange={(event) => setManualMonth(event.target.value)} placeholder="Month Due (e.g., January 2024)" />
+            <select value={manualTransType} onChange={(event) => setManualTransType(event.target.value)}>
+              {transactionTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
             <input type="number" step="0.01" value={manualDueAmount} onChange={(event) => setManualDueAmount(event.target.value)} placeholder="Due Amount" />
             <input type="number" step="0.01" value={manualPaidAmount} onChange={(event) => setManualPaidAmount(event.target.value)} required placeholder="Amount Paid" />
             <input type="number" step="0.01" value={manualBalAmount} onChange={(event) => setManualBalAmount(event.target.value)} placeholder="Balance" />
-            <select value={manualTransType} onChange={(event) => setManualTransType(event.target.value)}>
-              <option value="rent">Rent</option>
-              <option value="overdue">Overdue</option>
-              <option value="other">Other</option>
+            <input type="number" step="0.01" value={manualPenaltyFee} onChange={(event) => setManualPenaltyFee(event.target.value)} placeholder="Penalty Fee" />
+            <select value={manualPaymentMethod} onChange={(event) => setManualPaymentMethod(event.target.value)}>
+              <option value="Cash">Cash</option>
+              <option value="M-pesa">M-pesa</option>
+              <option value="Bank Transfer">Bank Transfer</option>
             </select>
-            <input value={manualTransNumber} onChange={(event) => setManualTransNumber(event.target.value)} required placeholder="Transaction Number" />
+            <input value={manualTransNumber} onChange={(event) => setManualTransNumber(event.target.value)} required placeholder="Transaction/Receipt Number" />
             <input value={manualTransCode} onChange={(event) => setManualTransCode(event.target.value)} placeholder="Transaction Code (MPESA code)" />
             <button type="submit" style={{ gridColumn: 'span 2' }}>Record Payment</button>
           </form>

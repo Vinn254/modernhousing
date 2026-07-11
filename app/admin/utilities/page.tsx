@@ -69,6 +69,14 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
     description: '',
   });
 
+  const [payForm, setPayForm] = useState({
+    billId: '',
+    amount: '',
+    paymentMethod: 'Cash',
+    referenceNumber: '',
+  });
+  const [showPayForm, setShowPayForm] = useState(false);
+
   function calculateWaterBill(consumption: number): number {
     if (consumption <= 0) return 0;
     if (consumption <= 6) return 88;
@@ -207,7 +215,7 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
     loadData();
   }
 
-  async function handleWaterMeterReading(unitId: string) {
+async function handleWaterMeterReading(unitId: string) {
     const consumption = waterMeterReadings[unitId];
     if (!consumption) return;
 
@@ -226,6 +234,43 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
     } else {
       setError(result.message ?? 'Failed to record meter reading.');
     }
+  }
+
+  async function handleShowPayForm(billId: string, balance: number) {
+    setPayForm({ billId, amount: String(balance), paymentMethod: 'Cash', referenceNumber: '' });
+    setShowPayForm(true);
+  }
+
+  async function handleRecordPayment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+
+    if (!payForm.billId || !payForm.amount) {
+      setError('Enter payment amount.');
+      return;
+    }
+
+    const response = await fetch('/api/bills', {
+      method: 'PATCH',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        id: payForm.billId,
+        paidAmount: Number(payForm.amount),
+        paymentMethod: payForm.paymentMethod,
+        referenceNumber: payForm.referenceNumber,
+      }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to record payment.');
+      return;
+    }
+    setMessage('Payment recorded.');
+    setShowPayForm(false);
+    loadData();
+  }
   }
 
   return (
@@ -307,6 +352,31 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
         </section>
 
         <section className="card" style={{ marginTop: 24 }}>
+          {showPayForm && (
+            <div className="card" style={{ marginBottom: 16, background: 'var(--surface)' }}>
+              <h3>Make Payment</h3>
+              <form onSubmit={handleRecordPayment} className="form-grid">
+                <div className="field-group">
+                  <label>Amount (KSH)</label>
+                  <input type="number" value={payForm.amount} onChange={e => setPayForm(f => ({ ...f, amount: e.target.value }))} required placeholder="Amount" />
+                </div>
+                <div className="field-group">
+                  <label>Payment Method</label>
+                  <select value={payForm.paymentMethod} onChange={e => setPayForm(f => ({ ...f, paymentMethod: e.target.value }))}>
+                    <option value="Cash">Cash</option>
+                    <option value="M-pesa">M-pesa</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label>Reference Number</label>
+                  <input value={payForm.referenceNumber} onChange={e => setPayForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="e.g., SH31T8MAYN" />
+                </div>
+                <button type="submit">Record Payment</button>
+                <button type="button" className="secondary-button" onClick={() => setShowPayForm(false)}>Cancel</button>
+              </form>
+            </div>
+          )}
           <div className="card-label"><span className="badge badge-agent">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
           </span>Recorded Bills</div>
@@ -318,34 +388,40 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
           {!loading && bills.length > 0 && (
             <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
               <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
-                <thead>
-                  <tr>
-                    <th>Month</th>
-                    <th>Tenant</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th>Due Amount</th>
-                    <th>Paid</th>
-                    <th>Penalty</th>
-                    <th>Balance</th>
-                    <th>Payment Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bills.map(bill => (
-                    <tr key={bill.id}>
-                      <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
-                      <td>{bill.tenant_name || tenants.find(t => t.id === bill.tenant_id)?.full_name || '-'}</td>
-                      <td>{bill.description}</td>
-                      <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
-                      <td>{bill.due_amount.toLocaleString()}</td>
-                      <td>{bill.paid_amount.toLocaleString() || '-'}</td>
-                      <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
-                      <td style={{ color: bill.balance > 0 ? '#dc2626' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
-                      <td>{bill.payment_date || '-'}</td>
+<thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Tenant</th>
+                      <th>Description</th>
+                      <th>Type</th>
+                      <th>Due Amount</th>
+                      <th>Paid</th>
+                      <th>Penalty</th>
+                      <th>Balance</th>
+                      <th>Payment Date</th>
+                      <th>Action</th>
                     </tr>
-                  ))}
-                </tbody>
+                  </thead>
+                  <tbody>
+                    {bills.map(bill => (
+                      <tr key={bill.id}>
+                        <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
+                        <td>{bill.tenant_name || tenants.find(t => t.id === bill.tenant_id)?.full_name || '-'}</td>
+                        <td>{bill.description}</td>
+                        <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
+                        <td>{bill.due_amount.toLocaleString()}</td>
+                        <td>{bill.paid_amount.toLocaleString() || '-'}</td>
+                        <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
+                        <td style={{ color: bill.balance > 0 ? '#dc2626' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
+                        <td>{bill.payment_date || '-'}</td>
+                        <td>
+                          {bill.balance > 0 && (
+                            <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
               </table>
             </div>
           )}
