@@ -291,7 +291,8 @@ export async function PUT(request: NextRequest) {
     paidAmount,
     transNumber,
     transCode,
-    paymentDate
+    paymentDate,
+    balance
   } = body;
 
   if (!id) {
@@ -304,12 +305,15 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ message: 'Invalid transaction type. Only rent, overdue, and deposit are allowed.' }, { status: 400 });
   }
 
+  // Use provided balance if available, otherwise calculate
+  const finalBalanceRemaining = balance !== undefined ? Number(balance) : (Number(balanceRemaining) || 0);
+
   const updateData: any = {
     tenant_id: tenantId || undefined,
     description: description ?? undefined,
     transaction_type: transactionType || 'rent',
     amount: Number(amount || paidAmount) || 0,
-    balance_remaining: Number(balanceRemaining) || 0,
+    balance_remaining: finalBalanceRemaining,
     transaction_number: transNumber ?? undefined,
     paid_at: paymentDate || new Date().toISOString(),
     month_due: monthDue ?? null,

@@ -366,7 +366,7 @@ export default function PaymentsPage() {
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         id: payment.id,
-        balance: newBalance,
+        ...(payment.source === 'payments' ? { balanceRemaining: newBalance } : { balance: newBalance }),
       }),
     });
     if (response.ok) {

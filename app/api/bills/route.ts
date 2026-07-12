@@ -482,19 +482,16 @@ export async function PUT(request: NextRequest) {
     transactionCode,
     paymentDate,
     paymentMethod,
-    referenceNumber
+    referenceNumber,
+    balance
   } = body;
 
   if (!id) {
     return NextResponse.json({ message: 'Bill ID is required.' }, { status: 400 });
   }
 
-  if (!tenantId || !description) {
-    return NextResponse.json({ message: 'Missing required bill fields.' }, { status: 400 });
-  }
-
-  // Calculate balance: due_amount - paid_amount
-  const calculatedBalance = (Number(dueAmount) || 0) - (Number(paidAmount) || 0);
+  // Calculate balance: due_amount - paid_amount (or use provided balance)
+  const calculatedBalance = balance !== undefined ? Number(balance) : (Number(dueAmount) || 0) - (Number(paidAmount) || 0);
 
   const updateData: any = {
     tenant_id: tenantId,
