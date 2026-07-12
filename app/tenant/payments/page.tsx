@@ -224,7 +224,13 @@ export default function TenantPaymentsPage() {
     const result = await response.json();
 
     if (response.ok && result.downloadUrl) {
-      window.open(result.downloadUrl, '_blank');
+      // Open in new tab - user can print to PDF from browser
+      const newWindow = window.open(result.downloadUrl, '_blank');
+      if (newWindow) {
+        newWindow.onload = () => {
+          newWindow.print();
+        };
+      }
     } else {
       setError(result.message ?? 'Unable to generate invoice.');
     }

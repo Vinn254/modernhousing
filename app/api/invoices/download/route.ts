@@ -59,6 +59,7 @@ async function getAuthContext(request: NextRequest) {
 }
 
 function generatePDFContent(invoice: any, tenant: any, balance: number) {
+  const isPositive = balance > 0;
   return `
 <!DOCTYPE html>
 <html>
@@ -66,17 +67,23 @@ function generatePDFContent(invoice: any, tenant: any, balance: number) {
   <meta charset="UTF-8">
   <title>Invoice ${invoice.month_due || invoice.id.slice(0, 8)}</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
+    @media print {
+      body { padding: 0; }
+      .print-btn { display: none; }
+    }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
     .header { text-align: center; margin-bottom: 30px; }
     .invoice-box { border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
     .row { display: flex; justify-content: space-between; margin: 10px 0; }
     .label { font-weight: bold; }
-    .amount { font-size: 18px; color: ${balance > 0 ? '#dc2626' : '#10b981'}; }
+    .amount { font-size: 18px; color: ${isPositive ? '#dc2626' : '#10b981'}; }
+    .print-btn { margin-top: 20px; padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>Invoice</h1>
+    <h1>Springfield Systems</h1>
+    <h2>Invoice</h2>
     <p>${new Date().toLocaleDateString()}</p>
   </div>
   <div class="invoice-box">
@@ -87,8 +94,9 @@ function generatePDFContent(invoice: any, tenant: any, balance: number) {
     <div class="row"><span class="label">Amount Due:</span> <span>KES ${Number(invoice.amount || 0).toLocaleString()}</span></div>
     <div class="row"><span class="label">Due Date:</span> <span>${invoice.due_date || '-'}</span></div>
     <hr>
-    <div class="row"><span class="label">Current Balance:</span> <span class="amount">${balance > 0 ? 'Owes KES ' : 'Credit KES '}${Math.abs(balance).toLocaleString()}</span></div>
+    <div class="row"><span class="label">Current Balance:</span> <span class="amount">${isPositive ? 'Owes KES ' : 'Credit KES '}${Math.abs(balance).toLocaleString()}</span></div>
   </div>
+  <button class="print-btn" onclick="window.print()">Save as PDF / Print</button>
 </body>
 </html>`;
 }
