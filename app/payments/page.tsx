@@ -78,7 +78,9 @@ export default function PaymentsPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'paybill' | 'till' | 'pochi' | 'mobile'>('paybill');
 
-const [showEditForm, setShowEditForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
+  const [editingBalanceValue, setEditingBalanceValue] = useState('');
   const [editForm, setEditForm] = useState({
     billId: '',
     tenantId: '',
