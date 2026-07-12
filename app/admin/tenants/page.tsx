@@ -522,7 +522,6 @@ export default function TenantsPage() {
                             {bill.balance > 0 && (
                               <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4 }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
                             )}
-                            <button className="action-button danger" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDeleteBill(bill.id)}>Delete</button>
                           </td>
                         </tr>
                       ))}
