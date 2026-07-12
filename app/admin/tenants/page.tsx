@@ -26,6 +26,7 @@ interface Tenant {
   national_id?: string;
   kra_pin?: string;
   next_of_kin_id?: string;
+  picture_url?: string;
 }
 
 interface Bill {

@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
       if (unitIds.length > 0) {
         const { data, error } = await supabaseAdmin
           .from('tenants')
-          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_id, units!inner(unit_number, properties(id, name, address))')
+          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_id, picture_url, units!inner(unit_number, properties(id, name, address))')
           .in('unit_id', unitIds)
           .order('created_at', { ascending: false });
 
@@ -118,6 +118,7 @@ export async function GET(request: NextRequest) {
           national_id: tenant.national_id,
           kra_pin: tenant.kra_pin,
           next_of_kin_id: tenant.next_of_kin_id,
+          picture_url: tenant.picture_url,
         }));
 
         return NextResponse.json({ tenants });
@@ -142,7 +143,7 @@ export async function GET(request: NextRequest) {
       if (unitIds.length > 0) {
         const { data, error } = await supabaseAdmin
           .from('tenants')
-          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_id, units!inner(unit_number, properties(id, name, address))')
+          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_id, picture_url, units!inner(unit_number, properties(id, name, address))')
           .in('unit_id', unitIds)
           .order('created_at', { ascending: false });
 
@@ -162,6 +163,7 @@ export async function GET(request: NextRequest) {
           national_id: tenant.national_id,
           kra_pin: tenant.kra_pin,
           next_of_kin_id: tenant.next_of_kin_id,
+          picture_url: tenant.picture_url,
         }));
 
         return NextResponse.json({ tenants });
