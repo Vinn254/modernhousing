@@ -28,6 +28,7 @@ interface Payment {
   due_amount?: number;
   penalty_fee?: number;
   transaction_number?: string;
+  transaction_code?: string;
   source: 'bills' | 'payments';
 }
 
@@ -127,6 +128,7 @@ export default function PaymentsPage() {
           balance_remaining: b.balance || 0,
           status: b.balance === 0 ? 'paid' : 'pending',
           transaction_number: b.transaction_number,
+          transaction_code: b.transaction_code,
           created_at: b.created_at,
           source: 'bills' as const,
         }));
@@ -149,6 +151,7 @@ export default function PaymentsPage() {
         balance_remaining: p.balance_remaining || 0,
         status: p.status || 'paid',
         transaction_number: p.transaction_number,
+        transaction_code: p.transaction_code,
         created_at: p.paid_at || p.created_at,
         source: 'payments' as const,
       }));
@@ -308,7 +311,7 @@ export default function PaymentsPage() {
       paymentDate: payment.next_payment_date || '',
       paymentMethod: manualPaymentMethod,
       referenceNumber: (payment as any).transaction_number || '',
-      transactionCode: '',
+      transactionCode: (payment as any).transaction_code || '',
       transType: (payment as any).transaction_type || 'rent',
       source: payment.source,
     });
@@ -337,6 +340,7 @@ export default function PaymentsPage() {
         paymentMethod: editForm.paymentMethod,
         referenceNumber: editForm.referenceNumber,
         transactionCode: editForm.transactionCode,
+        balance: Number(editForm.penaltyFee) || 0,
       }),
     });
 
@@ -352,7 +356,7 @@ export default function PaymentsPage() {
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
-return (
+  return (
     <main className="container">
       <div className="card-admin-header">
         <p className="heading">Rent Payments</p>
@@ -501,6 +505,7 @@ return (
                 <tr>
                   <th>Tenant</th>
                   <th>Month Due</th>
+                  <th>Trans Code</th>
                   <th>Due</th>
                   <th>Paid</th>
                   <th>Balance</th>
@@ -515,6 +520,7 @@ return (
                   <tr key={payment.id}>
                     <td className="landlord-name">{payment.tenant}</td>
                     <td>{(payment as any).month_due || payment.description}</td>
+                    <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
                     <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
                     <td>{formatCurrency(payment.amount)}</td>
                     <td style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(payment.balance_remaining)}</td>
