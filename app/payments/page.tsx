@@ -79,6 +79,8 @@ export default function PaymentsPage() {
   const [selectedMethod, setSelectedMethod] = useState<'paybill' | 'till' | 'pochi' | 'mobile'>('paybill');
 
   const [showEditForm, setShowEditForm] = useState(false);
+  const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
+  const [editingBalanceValue, setEditingBalanceValue] = useState('');
   const [editForm, setEditForm] = useState({
     billId: '',
     tenantId: '',
@@ -356,6 +358,27 @@ export default function PaymentsPage() {
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
+  async function handleInlineBalanceSave(payment: Payment) {
+    if (editingBalanceId !== payment.id) return;
+    const newBalance = Number(editingBalanceValue);
+    const response = await fetch(payment.source === 'payments' ? '/api/payments' : '/api/bills', {
+      method: 'PUT',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        id: payment.id,
+        balance: newBalance,
+      }),
+    });
+    if (response.ok) {
+      setMessage('Balance updated.');
+      setEditingBalanceId(null);
+      loadPayments();
+    } else {
+      const result = await response.json();
+      setError(result.message ?? 'Unable to update balance.');
+    }
+  }
+
   return (
     <main className="container">
       <div className="card-admin-header">
@@ -509,6 +532,7 @@ export default function PaymentsPage() {
                   <th>Due</th>
                   <th>Paid</th>
                   <th>Balance</th>
+                  <th>Running Balance</th>
                   <th>Type</th>
                   <th>Trans #</th>
                   <th>Date</th>
@@ -516,14 +540,34 @@ export default function PaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
+                {payments.map((payment, index) => {
+                  const runningBalance = payments.slice(0, index + 1).reduce((sum, p) => sum + (p.due_amount || p.amount) - p.amount, 0);
+                  return (
                   <tr key={payment.id}>
                     <td className="landlord-name">{payment.tenant}</td>
                     <td>{(payment as any).month_due || payment.description}</td>
                     <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
                     <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
                     <td>{formatCurrency(payment.amount)}</td>
-                    <td style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(payment.balance_remaining)}</td>
+                    <td style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>
+                      {editingBalanceId === payment.id ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editingBalanceValue}
+                          onChange={e => setEditingBalanceValue(e.target.value)}
+                          onBlur={() => handleInlineBalanceSave(payment)}
+                          onKeyDown={e => e.key === 'Enter' && handleInlineBalanceSave(payment)}
+                          style={{ width: '80px', padding: '2px 4px' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span onClick={() => { setEditingBalanceId(payment.id); setEditingBalanceValue(String(payment.balance_remaining)); }} style={{ cursor: 'pointer' }}>
+                          {formatCurrency(payment.balance_remaining)}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ color: runningBalance > 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(runningBalance)}</td>
                     <td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
                     <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
                     <td>{payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—'}</td>
@@ -532,7 +576,8 @@ export default function PaymentsPage() {
                       <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
 
       // For tenant uploads, create or update bundle
       if (!isLandlordUpload) {
-        let bundle = await supabaseAdmin
+        const bundleResult = await supabaseAdmin
           .from('document_bundles')
           .select('id')
           .eq('tenant_id', tenantId)
@@ -182,13 +182,16 @@ export async function POST(request: NextRequest) {
           .limit(1)
           .single();
 
-        if (!bundle.data) {
-          const bundleResult = await supabaseAdmin
+        let bundleId: string | undefined;
+        if (!bundleResult.data) {
+          const newBundle = await supabaseAdmin
             .from('document_bundles')
             .insert({ tenant_id: tenantId })
             .select()
             .single();
-          bundle = bundleResult;
+          bundleId = newBundle.data?.id;
+        } else {
+          bundleId = bundleResult.data?.id;
         }
 
         // Update bundle with document URLs
@@ -197,11 +200,11 @@ export async function POST(request: NextRequest) {
         if (documentType === 'id_document' && documentName === 'Passport Photo') bundleUpdate.passport_photo_url = publicUrl.publicUrl;
         if (documentType === 'id_document' && documentName !== 'Passport Photo') bundleUpdate.id_document_url = publicUrl.publicUrl;
 
-        if (Object.keys(bundleUpdate).length > 0) {
+        if (Object.keys(bundleUpdate).length > 0 && bundleId) {
           await supabaseAdmin
             .from('document_bundles')
             .update(bundleUpdate)
-            .eq('id', bundle.data?.id ?? bundle.id);
+            .eq('id', bundleId);
         }
       }
 
