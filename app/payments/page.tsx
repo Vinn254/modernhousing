@@ -532,7 +532,6 @@ export default function PaymentsPage() {
                   <th>Due</th>
                   <th>Paid</th>
                   <th>Balance</th>
-                  <th>Running Balance</th>
                   <th>Type</th>
                   <th>Trans #</th>
                   <th>Date</th>
@@ -540,9 +539,7 @@ export default function PaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment, index) => {
-                  const runningBalance = payments.slice(0, index + 1).reduce((sum, p) => sum + (p.due_amount || p.amount) - p.amount, 0);
-                  return (
+                {payments.map((payment) => (
                   <tr key={payment.id}>
                     <td className="landlord-name">{payment.tenant}</td>
                     <td>{(payment as any).month_due || payment.description}</td>
@@ -567,7 +564,6 @@ export default function PaymentsPage() {
                         </span>
                       )}
                     </td>
-                    <td style={{ color: runningBalance > 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(runningBalance)}</td>
                     <td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
                     <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
                     <td>{payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—'}</td>
@@ -576,8 +572,7 @@ export default function PaymentsPage() {
                       <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
                     </td>
                   </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
           </div>
