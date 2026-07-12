@@ -167,7 +167,7 @@ export default function TenantPaymentsPage() {
   const rentBills = bills.filter(b => ['rent', 'overdue', 'deposit'].includes(b.transaction_type));
   const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'].includes(b.transaction_type));
 
-  // Calculate cumulative balance across months
+// Calculate cumulative balance across months
   // Formula: runningBalance = previousBalance + (paid - due)
   // Positive = tenant has credit (has paid more than owed)
   // Negative = tenant owes money
@@ -175,10 +175,13 @@ export default function TenantPaymentsPage() {
     let runningBalance = 0;
     return billsList.map(bill => {
       // bill_balance: what tenant owes for this bill (due - paid), positive = owes
-      const billBalance = bill.due_amount - bill.paid_amount - bill.penalty_fee;
-      // contribution: paid - due - penalty
-      // For overdue, treat paid as credit (don't subtract due for credit payments)
-      const contribution = bill.transaction_type === 'overdue'
+      // For overdue, paid amount is credit (no due to pay off)
+      const isOverdue = bill.transaction_type === 'overdue';
+      const billBalance = isOverdue ? 0 : bill.due_amount - bill.paid_amount - bill.penalty_fee;
+      // contribution: 
+      // - Overdue: paid amount is pure credit
+      // - Regular bills: paid - due - penalty
+      const contribution = isOverdue
         ? bill.paid_amount
         : bill.paid_amount - bill.due_amount - bill.penalty_fee;
       runningBalance += contribution;
@@ -189,10 +192,11 @@ export default function TenantPaymentsPage() {
   const rentWithBalance = calculateWithRunningBalance([...rentBills]);
   const utilityWithBalance = calculateWithRunningBalance([...utilityBills]);
 
-  // For summary: positive means owes, negative means credit
+  // For summary: negative means owes, positive means credit
   const totalRentOwed = rentWithBalance.length > 0 ? rentWithBalance[rentWithBalance.length - 1].running_balance : 0;
   const totalUtilityOwed = utilityWithBalance.length > 0 ? utilityWithBalance[utilityWithBalance.length - 1].running_balance : 0;
-  const totalTenantOwes = Math.max(0, totalRentOwed) + Math.max(0, totalUtilityOwed);
+  // If running_balance is negative, tenant owes money (show absolute value)
+  const totalTenantOwes = Math.max(0, -totalRentOwed) + Math.max(0, -totalUtilityOwed);
 
   const getTypeLabel = (type: string) => {
     const map: Record<string, string> = {
@@ -352,11 +356,11 @@ export default function TenantPaymentsPage() {
         <div style={{ padding: '16px', background: 'var(--line-soft)', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
             <span>Rent Balance:</span>
-            <span style={{ color: totalRentOwed > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalRentOwed)}</span>
+            <span style={{ color: totalRentOwed < 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(-totalRentOwed)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
             <span>Utility Balance:</span>
-            <span style={{ color: totalUtilityOwed > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalUtilityOwed)}</span>
+            <span style={{ color: totalUtilityOwed < 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(-totalUtilityOwed)}</span>
           </div>
           <hr style={{ margin: '12px 0', borderColor: 'var(--line)' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700 }}>
