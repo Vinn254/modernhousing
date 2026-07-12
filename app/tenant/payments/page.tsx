@@ -104,11 +104,17 @@ export default function TenantPaymentsPage() {
       allBills = [...allBills, ...legacyBills];
     }
 
-    allBills.sort((a, b) => {
+    // Sort: overdue first (credit payment), then rent (which uses that credit)
+  const TYPE_ORDER: Record<string, number> = { overdue: 1, deposit: 2, rent: 3, water: 4, garbage: 5, service_charge: 6, parking: 7, security: 8, other: 9 };
+
+  allBills.sort((a, b) => {
       const aOrder = getMonthSortValue(a.month_due);
       const bOrder = getMonthSortValue(b.month_due);
       if (aOrder !== bOrder) return aOrder - bOrder;
-      return (a.month_due || a.created_at).localeCompare(b.month_due || b.created_at);
+      const aType = TYPE_ORDER[a.transaction_type] || 0;
+      const bType = TYPE_ORDER[b.transaction_type] || 0;
+      if (aType !== bType) return aType - bType;
+      return (a.created_at || '').localeCompare(b.created_at || '');
     });
     setBills(allBills);
 
