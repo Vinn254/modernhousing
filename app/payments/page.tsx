@@ -78,9 +78,7 @@ export default function PaymentsPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'paybill' | 'till' | 'pochi' | 'mobile'>('paybill');
 
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
-  const [editingBalanceValue, setEditingBalanceValue] = useState('');
+const [showEditForm, setShowEditForm] = useState(false);
   const [editForm, setEditForm] = useState({
     billId: '',
     tenantId: '',
@@ -88,6 +86,7 @@ export default function PaymentsPage() {
     dueAmount: '',
     paidAmount: '',
     penaltyFee: '',
+    balanceRemaining: '',
     description: '',
     paymentDate: '',
     paymentMethod: 'Cash',
@@ -258,7 +257,8 @@ export default function PaymentsPage() {
         paymentMethod: manualPaymentMethod,
         referenceNumber: manualTransNumber,
         transactionCode: manualTransCode || null,
-        paymentDate: manualDate
+        paymentDate: manualDate,
+        balanceRemaining: manualBalAmount ? Number(manualBalAmount) : undefined,
       }),
     });
 
@@ -309,6 +309,7 @@ export default function PaymentsPage() {
       dueAmount: String((payment as any).due_amount || payment.amount),
       paidAmount: String(payment.amount),
       penaltyFee: '0',
+      balanceRemaining: String(payment.balance_remaining),
       description: payment.description,
       paymentDate: payment.next_payment_date || '',
       paymentMethod: manualPaymentMethod,
@@ -342,7 +343,7 @@ export default function PaymentsPage() {
         paymentMethod: editForm.paymentMethod,
         referenceNumber: editForm.referenceNumber,
         transactionCode: editForm.transactionCode,
-        balance: Number(editForm.penaltyFee) || 0,
+        ...(editForm.source === 'payments' ? { balanceRemaining: editForm.balanceRemaining ? Number(editForm.balanceRemaining) : undefined } : { balanceRemaining: editForm.balanceRemaining ? Number(editForm.balanceRemaining) : undefined }),
       }),
     });
 
@@ -366,7 +367,7 @@ export default function PaymentsPage() {
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         id: payment.id,
-        ...(payment.source === 'payments' ? { balanceRemaining: newBalance } : { balance: newBalance }),
+        balanceRemaining: newBalance,
       }),
     });
     if (response.ok) {
@@ -405,6 +406,7 @@ export default function PaymentsPage() {
             </select>
             <input type="number" step="0.01" value={manualDueAmount} onChange={(event) => setManualDueAmount(event.target.value)} placeholder="Due Amount" />
             <input type="number" step="0.01" value={manualPaidAmount} onChange={(event) => setManualPaidAmount(event.target.value)} required placeholder="Amount Paid" />
+            <input type="number" step="0.01" value={manualBalAmount} onChange={(event) => setManualBalAmount(event.target.value)} placeholder="Balance" />
             <select value={manualPaymentMethod} onChange={(event) => setManualPaymentMethod(event.target.value)}>
               <option value="Cash">Cash</option>
               <option value="M-pesa">M-pesa</option>
@@ -498,6 +500,7 @@ export default function PaymentsPage() {
               <input type="number" step="0.01" value={editForm.dueAmount} onChange={e => setEditForm(f => ({ ...f, dueAmount: e.target.value }))} placeholder="Due Amount" />
               <input type="number" step="0.01" value={editForm.paidAmount} onChange={e => setEditForm(f => ({ ...f, paidAmount: e.target.value }))} placeholder="Paid Amount" />
               <input type="number" step="0.01" value={editForm.penaltyFee} onChange={e => setEditForm(f => ({ ...f, penaltyFee: e.target.value }))} placeholder="Penalty Fee" />
+              <input type="number" step="0.01" value={editForm.balanceRemaining} onChange={e => setEditForm(f => ({ ...f, balanceRemaining: e.target.value }))} placeholder="Balance" />
               <input value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" />
               <input type="date" value={editForm.paymentDate} onChange={e => setEditForm(f => ({ ...f, paymentDate: e.target.value }))} placeholder="Payment Date" />
               <select value={editForm.paymentMethod} onChange={e => setEditForm(f => ({ ...f, paymentMethod: e.target.value }))}>

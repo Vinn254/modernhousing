@@ -328,7 +328,8 @@ export async function POST(request: NextRequest) {
     transactionCode,
     paymentDate,
     paymentMethod,
-    referenceNumber
+    referenceNumber,
+    balanceRemaining
   } = body;
 
   if (!tenantId || !description) {
@@ -346,8 +347,8 @@ export async function POST(request: NextRequest) {
     finalDueAmount = unit?.rent_amount || 0;
   }
 
-  // Calculate balance: due_amount - paid_amount
-  const calculatedBalance = (Number(finalDueAmount) || 0) - (Number(paidAmount) || 0);
+  // Calculate balance: due_amount - paid_amount (or use provided balance)
+  const calculatedBalance = balanceRemaining !== undefined ? Number(balanceRemaining) : (Number(finalDueAmount) || 0) - (Number(paidAmount) || 0);
 
   const insertData: any = {
     tenant_id: tenantId,
@@ -483,15 +484,15 @@ export async function PUT(request: NextRequest) {
     paymentDate,
     paymentMethod,
     referenceNumber,
-    balance
+    balanceRemaining
   } = body;
 
   if (!id) {
     return NextResponse.json({ message: 'Bill ID is required.' }, { status: 400 });
   }
 
-  // Calculate balance: due_amount - paid_amount (or use provided balance)
-  const calculatedBalance = balance !== undefined ? Number(balance) : (Number(dueAmount) || 0) - (Number(paidAmount) || 0);
+  // Calculate balance: due_amount - paid_amount (or use provided balanceRemaining)
+  const calculatedBalance = balanceRemaining !== undefined ? Number(balanceRemaining) : (Number(dueAmount) || 0) - (Number(paidAmount) || 0);
 
   const updateData: any = {
     tenant_id: tenantId,
