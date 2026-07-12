@@ -15,10 +15,16 @@ interface AgreementDocument {
 
 interface Document { id: string; document_type: string; created_at: string; }
 
+interface Bundle {
+  id: string;
+  status: string;
+}
+
 export default function TenantDocumentsPage() {
   const [user, setUser] = useState<any>(null);
   const [agreements, setAgreements] = useState<AgreementDocument[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [bundles, setBundles] = useState<Bundle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -41,18 +47,21 @@ export default function TenantDocumentsPage() {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
     
-    const [agreementsResponse, docsResponse] = await Promise.all([
+    const [agreementsResponse, docsResponse, bundlesResponse] = await Promise.all([
       tenantId ? fetch(`/api/documents?tenantId=${tenantId}`, { headers }).catch(() => null) : null,
       session?.user?.id ? fetch(`/api/tenant/documents?userId=${session.user.id}`, { headers }).catch(() => null) : null,
+      tenantId ? fetch(`/api/document-bundles?tenantId=${tenantId}`, { headers }).catch(() => null) : null,
     ]);
     
-    const [agreementsResult, docsResult] = await Promise.all([
+    const [agreementsResult, docsResult, bundlesResult] = await Promise.all([
       agreementsResponse?.json() ?? Promise.resolve({ documents: [] }),
       docsResponse?.json() ?? Promise.resolve({ documents: [] }),
+      bundlesResponse?.json() ?? Promise.resolve({ bundles: [] }),
     ]);
     
     if (agreementsResponse?.ok) setAgreements(agreementsResult.documents ?? []);
     if (docsResponse?.ok) setDocuments(docsResult.documents ?? []);
+    if (bundlesResponse?.ok) setBundles(bundlesResult.bundles ?? []);
     setLoading(false);
   }
 
@@ -196,10 +205,12 @@ export default function TenantDocumentsPage() {
         {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
       </section>
 
-      {/* Existing documents from agreements table */}
-      {(() => {
+{/* Existing documents from agreements table */}
+       {(() => {
         const signedAgreementDocs = agreements.filter(d => d.document_type === 'signed_agreement');
         const idDocs = agreements.filter(d => d.document_type === 'id_document');
+        const bundle = bundles[0]; // Get the first bundle for this tenant
+        const bundleStatus = bundle?.status || null;
         return (
           <section className="card" style={{ marginTop: 24 }}>
             <div className="card-label">Your Submitted Documents</div>
@@ -214,24 +225,35 @@ export default function TenantDocumentsPage() {
                       <tr key={doc.id}>
                         <td>Signed Agreement</td>
                         <td>
-                          <span className={`status-pill ${doc.status === 'signed' ? 'status-pending' : doc.status === 'approved' ? 'status-active' : 'status-pending'}`}>
-                            {doc.status === 'signed' ? 'Pending Review' : doc.status === 'approved' ? 'Approved' : doc.status}
+                          <span className={`status-pill ${bundleStatus === 'approved' ? 'status-active' : bundleStatus === 'rejected' ? 'status-pending' : 'status-pending'}`}>
+                            {bundleStatus === 'approved' ? 'Approved' : bundleStatus === 'rejected' ? 'Rejected' : 'Pending Review'}
                           </span>
                         </td>
                         <td>{new Date(doc.created_at).toLocaleDateString()}</td>
                       </tr>
                     ))}
-                    {idDocs.map(doc => (
-                      <tr key={doc.id}>
+                    {idDocs.some(d => d.document_name !== 'Passport Photo') && (
+                      <tr>
                         <td>ID Document</td>
                         <td>
-                          <span className={`status-pill ${doc.status === 'approved' ? 'status-active' : 'status-pending'}`}>
-                            {doc.status === 'approved' ? 'Approved' : 'Pending Review'}
+                          <span className={`status-pill ${bundleStatus === 'approved' ? 'status-active' : bundleStatus === 'rejected' ? 'status-pending' : 'status-pending'}`}>
+                            {bundleStatus === 'approved' ? 'Approved' : bundleStatus === 'rejected' ? 'Rejected' : 'Pending Review'}
                           </span>
                         </td>
-                        <td>{new Date(doc.created_at).toLocaleDateString()}</td>
+                        <td>{idDocs[0]?.created_at ? new Date(idDocs[0].created_at).toLocaleDateString() : '-'}</td>
                       </tr>
-                    ))}
+                    )}
+                    {idDocs.filter(d => d.document_name === 'Passport Photo').length > 0 && (
+                      <tr>
+                        <td>Passport Photo</td>
+                        <td>
+                          <span className={`status-pill ${bundleStatus === 'approved' ? 'status-active' : bundleStatus === 'rejected' ? 'status-pending' : 'status-pending'}`}>
+                            {bundleStatus === 'approved' ? 'Approved' : bundleStatus === 'rejected' ? 'Rejected' : 'Pending Review'}
+                          </span>
+                        </td>
+                        <td>{idDocs.find(d => d.document_name === 'Passport Photo')?.created_at ? new Date(idDocs.find(d => d.document_name === 'Passport Photo')!.created_at).toLocaleDateString() : '-'}</td>
+                      </tr>
+                    )}
                     {documents.map(d => (
                       <tr key={d.id}>
                         <td>{d.document_type === 'id_front' ? 'National ID (Front)' : 

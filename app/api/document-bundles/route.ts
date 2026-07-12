@@ -12,10 +12,18 @@ const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 export async function GET(request: NextRequest) {
   try {
-    const { data, error } = await supabaseAdmin
+    const tenantId = request.nextUrl.searchParams.get('tenantId');
+    
+    let query = supabaseAdmin
       .from('document_bundles')
       .select(`*, tenants(full_name, units(unit_number, properties(name)))`)
       .order('created_at', { ascending: false });
+
+    if (tenantId) {
+      query = query.eq('tenant_id', tenantId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
