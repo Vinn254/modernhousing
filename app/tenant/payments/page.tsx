@@ -215,6 +215,22 @@ export default function TenantPaymentsPage() {
     return map[type] || type;
   };
 
+  async function handleGenerateInvoice(invoice: Invoice) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+
+    const response = await fetch(`/api/invoices/download?invoiceId=${invoice.id}`, { headers });
+    const result = await response.json();
+
+    if (response.ok && result.downloadUrl) {
+      window.open(result.downloadUrl, '_blank');
+      loadPayments();
+    } else {
+      setError(result.message ?? 'Unable to generate invoice.');
+    }
+  }
+
   if (loading) {
     return (
       <main className="container page-layout">
@@ -296,13 +312,13 @@ export default function TenantPaymentsPage() {
                        <td>{formatCurrency(inv.amount)}</td>
                        <td>{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '-'}</td>
                        <td><span style={{ textTransform: 'capitalize' }}>{inv.status}</span></td>
-                       <td>
-                         {inv.file_path ? (
-                           <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
-                         ) : (
-                           <span style={{ color: 'var(--ink-3)', fontSize: '11px' }}>Not generated</span>
-                         )}
-                       </td>
+<td>
+                          {inv.file_path ? (
+                            <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
+                          ) : (
+                            <button onClick={() => handleGenerateInvoice(inv)} className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Generate</button>
+                          )}
+                        </td>
                      </tr>
                    ))}
                  </tbody>
