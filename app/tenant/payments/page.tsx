@@ -112,10 +112,10 @@ export default function TenantPaymentsPage() {
       const aOrder = getMonthSortValue(a.month_due);
       const bOrder = getMonthSortValue(b.month_due);
       if (aOrder !== bOrder) return aOrder - bOrder;
-      // Within same month, overdue comes first to apply credit before shortfall
+      // Within same month, overdue comes after rent to apply credit after shortfall
       const isOverdueA = a.transaction_type === 'overdue';
       const isOverdueB = b.transaction_type === 'overdue';
-      if (isOverdueA !== isOverdueB) return isOverdueA ? -1 : 1;
+      if (isOverdueA !== isOverdueB) return isOverdueA ? 1 : -1;
       return (a.created_at || '').localeCompare(b.created_at || '');
     });
     setBills(allBills);
