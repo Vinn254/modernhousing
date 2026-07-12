@@ -2,17 +2,12 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAllAdminUsers, requestError } from '../../../../lib/supabaseAdmin';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing Supabase server environment variables');
-}
-
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-
 export async function GET(request: Request) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+    
     const url = new URL(request.url);
     const landlordId = url.searchParams.get('landlordId');
 

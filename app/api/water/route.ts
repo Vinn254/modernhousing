@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-
-if (!supabaseUrl || !serviceRoleKey) throw new Error('Missing Supabase server environment variables');
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
@@ -42,7 +40,7 @@ async function getAuthContext(request: NextRequest) {
 
   if (!sessionUser && cookie) {
     try {
-      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey!, { global: { headers: { cookie } } });
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { cookie } } });
       const { data: { user } } = await supabaseAuth.auth.getUser();
       sessionUser = user;
     } catch (e) {}
@@ -72,7 +70,6 @@ export async function POST(request: NextRequest) {
     const isAgent = userMetadata?.role === 'agent';
     const agentPropertyId = isAgent ? userMetadata?.property_id : null;
 
-    // Get unit first
     const { data: unit, error: unitError } = await supabaseAdmin
       .from('units')
       .select('id, property_id, previous_water_reading, current_water_reading')
@@ -87,7 +84,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unit not found.', unitId }, { status: 404 });
     }
 
-    // Authorization check for agents
     if (isAgent && agentPropertyId !== unit.property_id) {
       return NextResponse.json({ message: 'You can only record meter readings for units in your assigned property.' }, { status: 403 });
     }
@@ -98,7 +94,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Consumption is 0 - no bill generated.' }, { status: 200 });
     }
 
-    // Tiered water billing: 1-6 units = 88 KSH, 7-20 units = 132 KSH, 21+ = 132 + 150 per extra
     let amount: number;
     if (unitsConsumed <= 6) {
       amount = 88;
@@ -108,7 +103,6 @@ export async function POST(request: NextRequest) {
       amount = 132 + (unitsConsumed - 20) * 150;
     }
 
-    // Update unit with new readings
     const { error: updateError } = await supabaseAdmin
       .from('units')
       .update({
@@ -122,14 +116,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: `Failed to update meter: ${updateError.message}` }, { status: 500 });
     }
 
-    // Get tenant for this unit (if any)
     const { data: tenant } = await supabaseAdmin
       .from('tenants')
       .select('id')
       .eq('unit_id', unitId)
       .single();
 
-    // Create invoice for the tenant
     if (tenant?.id) {
       const { error: invoiceError } = await supabaseAdmin
         .from('invoices')
@@ -148,7 +140,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: `Failed to create invoice: ${invoiceError.message}` }, { status: 500 });
       }
 
-      // Also create a bill record
       const { error: billError } = await supabaseAdmin
         .from('bills')
         .insert({
@@ -172,7 +163,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: `Failed to create bill: ${billError.message}` }, { status: 500 });
       }
 
-      // Send notification
       await supabaseAdmin.from('notifications').insert({
         tenant_id: tenant.id,
         property_id: unit.property_id,
@@ -202,7 +192,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ units: [] });
     }
 
-    // For agents, verify property access
     const userMetadata = authContext.userMetadata || {};
     const isAgent = userMetadata?.role === 'agent';
     if (isAgent && userMetadata?.property_id !== propertyId) {

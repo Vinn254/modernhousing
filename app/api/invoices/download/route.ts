@@ -1,104 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-
-if (!supabaseUrl || !serviceRoleKey) throw new Error('Missing Supabase server environment variables');
-
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-function decodeJWT(token: string): any | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    let payload = parts[1];
-    payload = payload.replace(/-/g, '+').replace(/_/g, '/');
-    while (payload.length % 4) payload += '=';
-    try {
-      return JSON.parse(atob(payload));
-    } catch {
-      return JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
-    }
-  } catch {
-    return null;
-  }
-}
+async function generatePDFBuffer(invoice: any, tenant: any, balance: number): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595.28, 841.89]); // A4
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-async function getAuthContext(request: NextRequest) {
-  const cookie = request.headers.get('cookie') ?? '';
-  const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
-
-  let sessionUser: any = null;
-
-  if (authorization?.startsWith('Bearer ')) {
-    const token = authorization.split(' ')[1];
-    const decoded = decodeJWT(token);
-    if (decoded?.sub) {
-      sessionUser = { id: decoded.sub, email: decoded.email, user_metadata: decoded.user_metadata || {} };
-    }
-  }
-
-  if (!sessionUser && cookie) {
-    try {
-      const supabaseAuth = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', { global: { headers: { cookie } } });
-      const { data: { user } } = await supabaseAuth.auth.getUser();
-      sessionUser = user;
-    } catch (e) {}
-  }
-
-  if (!sessionUser) return { isSuperAdmin: false, sessionUser: null, userMetadata: {}, organizationId: null };
-
-  const userMetadata = sessionUser.user_metadata || {};
-  return {
-    isSuperAdmin: userMetadata.role === 'super_admin',
-    sessionUser,
-    userMetadata,
-    organizationId: userMetadata.organization_id ?? null,
-  };
-}
-
-function generatePDFContent(invoice: any, tenant: any, balance: number) {
   const isPositive = balance > 0;
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Invoice ${invoice.month_due || invoice.id.slice(0, 8)}</title>
-  <style>
-    @media print {
-      body { padding: 0; }
-      .print-btn { display: none; }
-    }
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .invoice-box { border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
-    .row { display: flex; justify-content: space-between; margin: 10px 0; }
-    .label { font-weight: bold; }
-    .amount { font-size: 18px; color: ${isPositive ? '#dc2626' : '#10b981'}; }
-    .print-btn { margin-top: 20px; padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Springfield Systems</h1>
-    <h2>Invoice</h2>
-    <p>${new Date().toLocaleDateString()}</p>
-  </div>
-  <div class="invoice-box">
-    <div class="row"><span class="label">Tenant:</span> <span>${tenant.full_name}</span></div>
-    <div class="row"><span class="label">Property:</span> <span>${tenant.units?.properties?.name || '-'}</span></div>
-    <div class="row"><span class="label">Month:</span> <span>${invoice.month_due || '-'}</span></div>
-    <div class="row"><span class="label">Description:</span> <span>${invoice.description || '-'}</span></div>
-    <div class="row"><span class="label">Amount Due:</span> <span>KES ${Number(invoice.amount || 0).toLocaleString()}</span></div>
-    <div class="row"><span class="label">Due Date:</span> <span>${invoice.due_date || '-'}</span></div>
-    <hr>
-    <div class="row"><span class="label">Current Balance:</span> <span class="amount">${isPositive ? 'Owes KES ' : 'Credit KES '}${Math.abs(balance).toLocaleString()}</span></div>
-  </div>
-  <button class="print-btn" onclick="window.print()">Save as PDF / Print</button>
-</body>
-</html>`;
+  const balanceText = isPositive ? `Owes KES ${Math.abs(balance).toLocaleString()}` : `Credit KES ${Math.abs(balance).toLocaleString()}`;
+  const balanceColor = isPositive ? rgb(0.86, 0.15, 0.15) : rgb(0.06, 0.73, 0.51); // red or green
+
+  const drawText = (text: string, x: number, y: number, options: any = {}) => {
+    page.drawText(text, { x, y, font: options.bold ? boldFont : font, size: options.size || 12, color: options.color || rgb(0, 0, 0) });
+  };
+
+  let y = 750;
+
+  // Header
+  drawText('Springfield Systems', 150, y, { size: 24, bold: true, color: rgb(0.07, 0.09, 0.16) });
+  y -= 30;
+  drawText('INNTIVE Invoice', 200, y, { size: 16, color: rgb(0.42, 0.45, 0.49) });
+  y -= 60;
+
+  // Labels
+  const labels = ['Tenant:', 'Property:', 'Month:', 'Description:', 'Amount Due:', 'Due Date:', 'Current Balance:'];
+  const values = [
+    tenant.full_name,
+    tenant.units?.properties?.name || '-',
+    invoice.month_due || '-',
+    invoice.description || '-',
+    `KES ${(Number(invoice.amount || 0)).toLocaleString()}`,
+    invoice.due_date || '-',
+    balanceText
+  ];
+
+  labels.forEach((label, i) => {
+    drawText(label, 60, y, { bold: true, color: rgb(0.22, 0.25, 0.29) });
+    page.drawText(values[i], { x: 200, y, font: i === labels.length - 1 ? boldFont : font, size: 12, color: i === labels.length - 1 ? balanceColor : rgb(0, 0, 0) });
+    y -= 30;
+  });
+
+  return Buffer.from(await pdfDoc.save());
 }
 
 export async function GET(request: NextRequest) {
@@ -133,20 +81,24 @@ export async function GET(request: NextRequest) {
       balance = bills.reduce((sum: number, b: any) => sum + (b.due_amount || 0) - (b.paid_amount || 0) - (b.penalty_fee || 0), 0);
     }
 
-    // Generate PDF and upload to storage
-    const htmlContent = generatePDFContent(invoice, tenant, balance);
-    const fileName = `invoice-${invoiceId}.html`;
+    // Generate PDF
+    const pdfBuffer = await generatePDFBuffer(invoice, tenant, balance);
+
+    const fileName = `invoice-${invoiceId}.pdf`;
     const filePath = `invoices/${fileName}`;
 
     const { data: storageData, error: storageError } = await supabaseAdmin.storage
       .from('documents')
-      .upload(filePath, Buffer.from(htmlContent), { contentType: 'text/html' });
+      .upload(filePath, pdfBuffer, { 
+        contentType: 'application/pdf',
+        upsert: true 
+      });
 
-    if (storageError && storageError.message.includes('already exists') === false) {
+    if (storageError) {
       throw storageError;
     }
 
-    const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData?.path || filePath);
+    const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData.path);
 
     // Update invoice with file_path
     await supabaseAdmin.from('invoices').update({ file_path: publicUrl.publicUrl }).eq('id', invoiceId);

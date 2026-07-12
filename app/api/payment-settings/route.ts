@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-
-if (!supabaseUrl || !serviceRoleKey) throw new Error('Missing Supabase server environment variables');
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
@@ -42,7 +40,7 @@ async function getAuthContext(request: NextRequest) {
 
   if (!sessionUser && cookie) {
     try {
-      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey!, { global: { headers: { cookie } } });
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { cookie } } });
       const { data: { user } } = await supabaseAuth.auth.getUser();
       sessionUser = user;
     } catch (e) {}
@@ -60,7 +58,6 @@ async function getAuthContext(request: NextRequest) {
 
   let orgId = profile?.organization_id ?? userMetadata.organization_id ?? null;
 
-  // Fallback: get organization from user's property (for agents)
   if (!orgId && sessionUser.email) {
     const { data: profileByEmail } = await supabaseAdmin
       .from('profiles')
@@ -70,7 +67,6 @@ async function getAuthContext(request: NextRequest) {
     orgId = profileByEmail?.organization_id ?? null;
   }
 
-  // Fallback: get organization from tenant's property (for tenant users)
   if (!orgId && userMetadata.role === 'tenant' && userMetadata.tenant_id) {
     const { data: tenantData } = await supabaseAdmin
       .from('tenants')
@@ -110,7 +106,6 @@ export async function GET(request: NextRequest) {
       orgId = authContext.organizationId;
     }
 
-    // Only return settings if we have a valid organization
     if (!orgId) {
       return NextResponse.json({
         paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '',

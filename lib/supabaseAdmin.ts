@@ -3,10 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing Supabase server environment variables');
-}
-
 export interface AdminUser {
   id: string;
   email: string;
@@ -17,12 +13,19 @@ export interface AdminUser {
 }
 
 export async function adminRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const url = supabaseUrl || '';
+  const key = serviceRoleKey || '';
+  
+  if (!url || !key) {
+    throw new Error('Missing Supabase server environment variables');
+  }
+  
   const headers = new Headers(options.headers);
-  headers.set('Authorization', `Bearer ${serviceRoleKey}`);
-  headers.set('apikey', serviceRoleKey);
+  headers.set('Authorization', `Bearer ${key}`);
+  headers.set('apikey', key);
   headers.set('Content-Type', 'application/json');
 
-  const response = await fetch(`${supabaseUrl}${path}`, {
+  const response = await fetch(`${url}${path}`, {
     ...options,
     headers,
   });

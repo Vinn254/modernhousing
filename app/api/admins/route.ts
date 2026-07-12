@@ -11,14 +11,11 @@ import {
   updateAdminUser,
 } from '../../../lib/supabaseAdmin';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
-
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing Supabase server environment variables');
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(supabaseUrl, serviceRoleKey);
 }
-
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 type AdminRole = 'admin' | 'super_admin';
 type AdminStatus = 'active' | 'inactive';
@@ -49,6 +46,7 @@ function normalizeAdmin(user: any, profile?: AdminProfile) {
 }
 
 async function upsertProfile(userId: string, fullName: string, email: string, role: AdminRole, status: AdminStatus = 'active') {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data: existingProfile, error: profileFetchError } = await supabaseAdmin
     .from('profiles')
     .select('*')
@@ -91,6 +89,7 @@ async function upsertProfile(userId: string, fullName: string, email: string, ro
 }
 
 async function getAdminProfiles(role?: string) {
+  const supabaseAdmin = getSupabaseAdmin();
   let query = supabaseAdmin
     .from('profiles')
     .select('*')
@@ -108,6 +107,7 @@ async function getAdminProfiles(role?: string) {
 }
 
 async function getProfile(userId: string) {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from('profiles')
     .select('*')
@@ -231,6 +231,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const [users, existingProfile] = await Promise.all([getAllAdminUsers(), getProfile(userId)]);
+    const supabaseAdmin = getSupabaseAdmin();
     const user = users.find((item) => item.id === userId);
 
     if (!user) {
