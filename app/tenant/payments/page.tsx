@@ -215,22 +215,6 @@ export default function TenantPaymentsPage() {
     return map[type] || type;
   };
 
-  async function handleDownloadInvoice(invoiceId: string) {
-    const { data: { session } } = await supabase.auth.getSession();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-    
-    const response = await fetch(`/api/invoices/${invoiceId}/download`, { headers });
-    if (response.ok) {
-      const result = await response.json();
-      if (result.downloadUrl) {
-        window.open(result.downloadUrl, '_blank');
-      }
-    } else {
-      setError('Unable to download invoice.');
-    }
-  }
-
   if (loading) {
     return (
       <main className="container page-layout">
@@ -296,33 +280,32 @@ export default function TenantPaymentsPage() {
                       <th>Amount</th>
                       <th>Due Date</th>
                       <th>Status</th>
-                      <th>File</th>
-                      <th>Action</th>
+                      <th>Download</th>
                     </tr>
                   </thead>
-                <tbody>
-                  {invoices.sort((a, b) => {
-                    const aOrder = getMonthSortValue(a.month_due);
-                    const bOrder = getMonthSortValue(b.month_due);
-                    return aOrder - bOrder || a.month_due.localeCompare(b.month_due);
-                  }).map(inv => (
-                    <tr key={inv.id}>
-                      <td style={{ textTransform: 'capitalize' }}>{inv.month_due || '-'}</td>
-                      <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getInvoiceTypeLabel(inv.invoice_type)}</span></td>
-                      <td>{inv.description}</td>
-                      <td>{formatCurrency(inv.amount)}</td>
-                      <td>{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '-'}</td>
-                      <td><span style={{ textTransform: 'capitalize' }}>{inv.status}</span></td>
-                      <td>
-                        {inv.file_path ? (
-                          <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
-                        ) : (
-                          <span style={{ color: 'var(--ink-3)', fontSize: '11px' }}>Not generated</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+<tbody>
+                   {invoices.sort((a, b) => {
+                     const aOrder = getMonthSortValue(a.month_due);
+                     const bOrder = getMonthSortValue(b.month_due);
+                     return aOrder - bOrder || (a.month_due || '').localeCompare(b.month_due || '');
+                   }).map(inv => (
+                     <tr key={inv.id}>
+                       <td style={{ textTransform: 'capitalize' }}>{inv.month_due || '-'}</td>
+                       <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getInvoiceTypeLabel(inv.invoice_type)}</span></td>
+                       <td>{inv.description}</td>
+                       <td>{formatCurrency(inv.amount)}</td>
+                       <td>{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '-'}</td>
+                       <td><span style={{ textTransform: 'capitalize' }}>{inv.status}</span></td>
+                       <td>
+                         {inv.file_path ? (
+                           <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
+                         ) : (
+                           <span style={{ color: 'var(--ink-3)', fontSize: '11px' }}>Not generated</span>
+                         )}
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
               </table>
             </div>
           )
