@@ -515,13 +515,15 @@ export default function TenantsPage() {
                           <td>{bill.due_amount.toLocaleString()}</td>
                           <td>{bill.paid_amount.toLocaleString() || '-'}</td>
                           <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
-                          <td style={{ color: bill.balance > 0 ? 'var(--error)' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
+<td style={{ color: bill.balance > 0 ? 'var(--error)' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
                           <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
                           <td>{bill.payment_date || '-'}</td>
                           <td>
                             {bill.balance > 0 && (
-                              <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
+                              <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4 }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
                             )}
+                            <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4 }} onClick={() => handleEditBill(bill)}>Edit</button>
+                            <button className="action-button danger" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDeleteBill(bill.id)}>Delete</button>
                           </td>
                         </tr>
                       ))}
