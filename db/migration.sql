@@ -13,13 +13,14 @@ CREATE TABLE IF NOT EXISTS invoices (
     id uuid primary key default uuid_generate_v4(),
     tenant_id uuid references tenants(id) on delete cascade,
     property_id uuid references properties(id) on delete cascade,
-    invoice_type text not null check (invoice_type in ('rent', 'water', 'utility', 'other')),
+    invoice_type text not null check (invoice_type in ('rent', 'water', 'utility', 'other', 'garbage', 'service_charge', 'parking', 'security')),
     description text,
     amount numeric(12,2) not null,
     water_consumption numeric(12,2),
     due_date date,
     status text not null default 'sent' check (status in ('sent', 'downloaded', 'paid', 'overdue')),
     month_due text,
+    file_path text,
     created_at timestamp with time zone default now()
 );
 

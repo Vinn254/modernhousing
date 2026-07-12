@@ -215,6 +215,22 @@ export default function TenantPaymentsPage() {
     return map[type] || type;
   };
 
+  async function handleDownloadInvoice(invoiceId: string) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+    
+    const response = await fetch(`/api/invoices/${invoiceId}/download`, { headers });
+    if (response.ok) {
+      const result = await response.json();
+      if (result.downloadUrl) {
+        window.open(result.downloadUrl, '_blank');
+      }
+    } else {
+      setError('Unable to download invoice.');
+    }
+  }
+
   if (loading) {
     return (
       <main className="container page-layout">
@@ -272,17 +288,18 @@ export default function TenantPaymentsPage() {
           ) : (
             <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
               <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
-                <thead>
-                  <tr>
-                    <th>Month</th>
-                    <th>Type</th>
-                    <th>Description</th>
-                    <th>Amount</th>
-                    <th>Due Date</th>
-                    <th>Status</th>
-                    <th>Download</th>
-                  </tr>
-                </thead>
+<thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Type</th>
+                      <th>Description</th>
+                      <th>Amount</th>
+                      <th>Due Date</th>
+                      <th>Status</th>
+                      <th>File</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {invoices.sort((a, b) => {
                     const aOrder = getMonthSortValue(a.month_due);
@@ -300,6 +317,11 @@ export default function TenantPaymentsPage() {
                         {inv.file_path ? (
                           <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
                         ) : '-'}
+                      </td>
+                      <td>
+                        {!inv.file_path && (
+                          <button onClick={() => handleDownloadInvoice(inv.id)} className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Generate</button>
+                        )}
                       </td>
                     </tr>
                   ))}
