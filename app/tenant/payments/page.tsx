@@ -316,11 +316,8 @@ export default function TenantPaymentsPage() {
                       <td>
                         {inv.file_path ? (
                           <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
-                        ) : '-'}
-                      </td>
-                      <td>
-                        {!inv.file_path && (
-                          <button onClick={() => handleDownloadInvoice(inv.id)} className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Generate</button>
+                        ) : (
+                          <span style={{ color: 'var(--ink-3)', fontSize: '11px' }}>Not generated</span>
                         )}
                       </td>
                     </tr>
