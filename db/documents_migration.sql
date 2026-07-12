@@ -9,6 +9,19 @@ CREATE TABLE IF NOT EXISTS documents (
     document_type text not null check (document_type in ('agreement', 'id_document', 'signed_agreement')),
     status text not null default 'sent' check (status in ('sent', 'downloaded', 'awaiting_signature', 'signed', 'approved', 'rejected')),
     notes text,
+    bundle_id uuid,
+    created_at timestamp with time zone default now(),
+    updated_at timestamp with time zone default now()
+);
+
+-- Create bundles table to group tenant document submissions
+CREATE TABLE IF NOT EXISTS document_bundles (
+    id uuid primary key default uuid_generate_v4(),
+    tenant_id uuid references tenants(id) on delete cascade,
+    status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+    signed_agreement_url text,
+    id_document_url text,
+    passport_photo_url text,
     created_at timestamp with time zone default now(),
     updated_at timestamp with time zone default now()
 );

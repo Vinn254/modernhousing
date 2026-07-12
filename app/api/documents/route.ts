@@ -147,7 +147,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'File and tenant ID are required.' }, { status: 400 });
       }
 
-      // Verify tenant exists
       const { data: tenant, error: tenantError } = await supabaseAdmin
         .from('tenants')
         .select('id')
@@ -170,9 +169,41 @@ export async function POST(request: NextRequest) {
 
       const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData.path);
 
-      // Determine status based on who's uploading
       const isLandlordUpload = documentType === 'agreement';
       const status = isLandlordUpload ? 'sent' : 'signed';
+
+      // For tenant uploads, create or update bundle
+      if (!isLandlordUpload) {
+        let bundle = await supabaseAdmin
+          .from('document_bundles')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!bundle.data) {
+          const bundleResult = await supabaseAdmin
+            .from('document_bundles')
+            .insert({ tenant_id: tenantId })
+            .select()
+            .single();
+          bundle = bundleResult;
+        }
+
+        // Update bundle with document URLs
+        const bundleUpdate: any = {};
+        if (documentType === 'signed_agreement') bundleUpdate.signed_agreement_url = publicUrl.publicUrl;
+        if (documentType === 'id_document' && documentName === 'Passport Photo') bundleUpdate.passport_photo_url = publicUrl.publicUrl;
+        if (documentType === 'id_document' && documentName !== 'Passport Photo') bundleUpdate.id_document_url = publicUrl.publicUrl;
+
+        if (Object.keys(bundleUpdate).length > 0) {
+          await supabaseAdmin
+            .from('document_bundles')
+            .update(bundleUpdate)
+            .eq('id', bundle.data?.id ?? bundle.id);
+        }
+      }
 
       const result = await supabaseAdmin.from('documents')
         .insert({
@@ -189,7 +220,6 @@ export async function POST(request: NextRequest) {
 
       if (result.error) throw result.error;
 
-      // If passport photo, update tenant picture_url
       if (documentName.toLowerCase().includes('photo')) {
         await supabaseAdmin
           .from('tenants')

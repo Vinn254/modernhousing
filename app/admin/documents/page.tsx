@@ -24,8 +24,21 @@ interface Document {
   created_at: string;
 }
 
+interface Bundle {
+  id: string;
+  tenant_id: string;
+  tenant_name?: string;
+  property_name?: string;
+  status: string;
+  signed_agreement_url?: string;
+  id_document_url?: string;
+  passport_photo_url?: string;
+  created_at: string;
+}
+
 export default function LandlordDocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [bundles, setBundles] = useState<Bundle[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -52,15 +65,18 @@ export default function LandlordDocumentsPage() {
     setError('');
 
     try {
-      const [docsResponse, tenantsResponse] = await Promise.all([
+      const [docsResponse, bundlesResponse, tenantsResponse] = await Promise.all([
         fetch('/api/documents', { headers: await getAuthHeaders() }),
+        fetch('/api/document-bundles', { headers: await getAuthHeaders() }).catch(() => null),
         fetch('/api/tenants', { headers: await getAuthHeaders() }),
       ]);
 
       const docsResult = await docsResponse.json();
+      const bundlesResult = bundlesResponse ? await bundlesResponse.json() : { bundles: [] };
       const tenantsResult = await tenantsResponse.json();
 
       setDocuments(docsResult.documents ?? []);
+      setBundles(bundlesResult.bundles ?? []);
       setTenants(tenantsResult.tenants ?? []);
     } catch (err: any) {
       setError(err.message);
@@ -153,6 +169,39 @@ export default function LandlordDocumentsPage() {
       loadData();
     } else {
       setError(result.message ?? 'Unable to delete.');
+    }
+  }
+
+  async function handleApproveBundle(bundleId: string) {
+    const response = await fetch('/api/document-bundles', {
+      method: 'PATCH',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ id: bundleId, status: 'approved' }),
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      setMessage('Bundle approved.');
+      loadData();
+    } else {
+      setError(result.message ?? 'Unable to approve bundle.');
+    }
+  }
+
+  async function handleRejectBundle(bundleId: string) {
+    if (!confirm('Reject this bundle?')) return;
+    const response = await fetch('/api/document-bundles', {
+      method: 'PATCH',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ id: bundleId, status: 'rejected' }),
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      setMessage('Bundle rejected.');
+      loadData();
+    } else {
+      setError(result.message ?? 'Unable to reject bundle.');
     }
   }
 
@@ -273,6 +322,59 @@ export default function LandlordDocumentsPage() {
 
           {error && <p className="landlord-error" style={{ marginTop: 12 }}>{error}</p>}
           {message && <p className="landlord-success" style={{ marginTop: 12 }}>{message}</p>}
+        </section>
+
+        {/* Document Bundles - Pending Review */}
+        <section className="card" style={{ marginTop: 24 }}>
+          <div className="card-label">
+            <span className="badge badge-agent">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </span>Document Bundles
+          </div>
+          <h3 style={{ marginBottom: 16 }}>Tenant Submissions Awaiting Review</h3>
+
+          {loading && <p className="landlord-muted">Loading bundles...</p>}
+          {!loading && bundles.length === 0 && <p className="landlord-empty">No document bundles submitted.</p>}
+
+          {!loading && bundles.length > 0 && (
+            <div className="table-shell" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+                <thead>
+                  <tr>
+                    <th>Tenant</th>
+                    <th>Signed Agreement</th>
+                    <th>ID Document</th>
+                    <th>Passport</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bundles.map(bundle => (
+                    <tr key={bundle.id}>
+                      <td>{bundle.tenant_name || '-'}</td>
+                      <td>{bundle.signed_agreement_url ? <a href={bundle.signed_agreement_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
+                      <td>{bundle.id_document_url ? <a href={bundle.id_document_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
+                      <td>{bundle.passport_photo_url ? <a href={bundle.passport_photo_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
+                      <td>
+                        <span className={`status-pill ${bundle.status === 'approved' ? 'status-active' : 'status-pending'}`} style={{ textTransform: 'capitalize' }}>
+                          {bundle.status}
+                        </span>
+                      </td>
+                      <td>
+                        {bundle.status === 'pending' && (
+                          <>
+                            <button onClick={() => handleApproveBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff', marginRight: 4 }}>Approve</button>
+                            <button onClick={() => handleRejectBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#f59e0b', color: '#fff' }}>Reject</button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </main>
 
