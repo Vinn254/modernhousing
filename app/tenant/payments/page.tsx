@@ -104,16 +104,18 @@ export default function TenantPaymentsPage() {
       allBills = [...allBills, ...legacyBills];
     }
 
-    // Sort: overdue first (credit payment), then rent (which uses that credit)
-  const TYPE_ORDER: Record<string, number> = { overdue: 1, deposit: 2, rent: 3, water: 4, garbage: 5, service_charge: 6, parking: 7, security: 8, other: 9 };
+    // Sort by month first, then by created_at (chronological) within month
+  // Rent should come before Overdue so the credit applies correctly
+  const TYPE_ORDER: Record<string, number> = { rent: 1, deposit: 2, overdue: 3, water: 4, garbage: 5, service_charge: 6, parking: 7, security: 8, other: 9 };
 
   allBills.sort((a, b) => {
       const aOrder = getMonthSortValue(a.month_due);
       const bOrder = getMonthSortValue(b.month_due);
       if (aOrder !== bOrder) return aOrder - bOrder;
-      const aType = TYPE_ORDER[a.transaction_type] || 0;
-      const bType = TYPE_ORDER[b.transaction_type] || 0;
-      if (aType !== bType) return aType - bType;
+      // Within same month, overdue comes first to apply credit before shortfall
+      const isOverdueA = a.transaction_type === 'overdue';
+      const isOverdueB = b.transaction_type === 'overdue';
+      if (isOverdueA !== isOverdueB) return isOverdueA ? -1 : 1;
       return (a.created_at || '').localeCompare(b.created_at || '');
     });
     setBills(allBills);
@@ -172,10 +174,13 @@ export default function TenantPaymentsPage() {
   const calculateWithRunningBalance = (billsList: Bill[]) => {
     let runningBalance = 0;
     return billsList.map(bill => {
-      // bill_balance: what tenant owes (due - paid), positive = owes money
+      // bill_balance: what tenant owes for this bill (due - paid), positive = owes
       const billBalance = bill.due_amount - bill.paid_amount - bill.penalty_fee;
-      // contribution: paid - due - penalty (what affects running balance)
-      const contribution = bill.paid_amount - bill.due_amount - bill.penalty_fee;
+      // contribution: paid - due - penalty
+      // For overdue, treat paid as credit (don't subtract due for credit payments)
+      const contribution = bill.transaction_type === 'overdue'
+        ? bill.paid_amount
+        : bill.paid_amount - bill.due_amount - bill.penalty_fee;
       runningBalance += contribution;
       return { ...bill, bill_balance: billBalance, running_balance: runningBalance };
     });
