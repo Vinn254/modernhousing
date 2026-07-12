@@ -225,7 +225,6 @@ export default function TenantPaymentsPage() {
 
     if (response.ok && result.downloadUrl) {
       window.open(result.downloadUrl, '_blank');
-      loadPayments();
     } else {
       setError(result.message ?? 'Unable to generate invoice.');
     }
