@@ -35,10 +35,17 @@ export async function POST(request: NextRequest) {
 
     if (storageError) throw storageError;
 
-    const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData.path);
-    
-    await supabaseAdmin.from('profiles').update({ picture_url: publicUrl.publicUrl }).eq('user_id', userId as string);
+const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData.path);
 
+    // Update both profiles table and tenants table for picture
+    await supabaseAdmin.from('profiles').update({ picture_url: publicUrl.publicUrl }).eq('user_id', userId as string);
+    
+    // Also update tenants table if tenant_id is available
+    const { data: profile } = await supabaseAdmin.from('profiles').select('tenant_id').eq('user_id', userId as string).single();
+    if (profile?.tenant_id) {
+      await supabaseAdmin.from('tenants').update({ picture_url: publicUrl.publicUrl }).eq('id', profile.tenant_id);
+    }
+    
     return NextResponse.json({ message: 'Profile photo uploaded.', pictureUrl: publicUrl.publicUrl });
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to upload profile photo.' }, { status: 500 });

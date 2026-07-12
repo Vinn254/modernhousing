@@ -45,7 +45,8 @@ CREATE INDEX IF NOT EXISTS payment_settings_org_id_idx ON payment_settings(organ
 ALTER TABLE tenants 
 ADD COLUMN IF NOT EXISTS national_id text,
 ADD COLUMN IF NOT EXISTS kra_pin text,
-ADD COLUMN IF NOT EXISTS next_of_kin_id text;
+ADD COLUMN IF NOT EXISTS next_of_kin_id text,
+ADD COLUMN IF NOT EXISTS picture_url text;
 
 -- Create bills/transactions table for monthly rent and utility tracking
 CREATE TABLE IF NOT EXISTS bills (

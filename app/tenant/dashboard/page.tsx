@@ -132,12 +132,11 @@ export default function TenantDashboardPage() {
           <div className="card">
             <div className="card-label">Personal Details</div>
             <h3 style={{ marginBottom: 16 }}>My Profile</h3>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <div><strong>Name:</strong> {tenant.full_name}</div>
-              <div><strong>Email:</strong> {tenant.email}</div>
-              <div><strong>Phone:</strong> {tenant.phone || '—'}</div>
-              <div><strong>Lease:</strong> {tenant.lease_start} → {tenant.lease_end}</div>
-            </div>
+<div style={{ display: 'grid', gap: 12 }}>
+               <div><strong>Name:</strong> {tenant.full_name}</div>
+               <div><strong>Email:</strong> {tenant.email}</div>
+               <div><strong>Phone:</strong> {tenant.phone || '—'}</div>
+             </div>
             <form onSubmit={handlePictureUpload} style={{ marginTop: 16 }}>
               <label style={{ fontSize: '12px', color: 'var(--ink-3)', marginBottom: 6, display: 'block' }}>Upload Profile Picture</label>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
