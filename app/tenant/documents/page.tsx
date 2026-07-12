@@ -139,15 +139,15 @@ export default function TenantDocumentsPage() {
         <div><p className="heading">Documents</p><p className="subheading">View agreements and submit required documents.</p></div>
       </div>
 
-      {/* Landlord-uploaded agreements */}
-      {agreements.length > 0 && (
+      {/* Landlord-uploaded agreements (only agreement type, not signed_agreement or id_document) */}
+      {agreements.filter(d => d.document_type === 'agreement').length > 0 && (
         <section style={{ marginTop: 24 }}>
           <div className="card">
             <div className="card-label">
-              <span className="status-pill status-pending">Awaiting Signature</span>
+              <span className="status-pill status-pending">{agreements[0].status === 'sent' ? 'Awaiting Signature' : agreements[0].status}</span>
             </div>
-            <h3 style={{ marginBottom: 12 }}>{agreements[0].document_name}</h3>
-            <a href={agreements[0].document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ marginBottom: 12 }}>
+            <h3 style={{ marginBottom: 12 }}>{agreements.find(d => d.document_type === 'agreement')?.document_name}</h3>
+            <a href={agreements.find(d => d.document_type === 'agreement')?.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ marginBottom: 12 }}>
               Download Agreement
             </a>
             <p style={{ fontSize: '12px', color: 'var(--ink-3)', marginTop: 8 }}>
@@ -196,32 +196,61 @@ export default function TenantDocumentsPage() {
         {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
       </section>
 
-      {/* Existing documents */}
-      <section className="card" style={{ marginTop: 24 }}>
-        <div className="card-label">Your Submitted Documents</div>
-        <h3 style={{ marginBottom: 12 }}>Document Status</h3>
-        {documents.length === 0 && <p>No documents uploaded yet.</p>}
-        {documents.length > 0 && (
-          <div className="table-shell">
-            <table className="landlord-table">
-              <thead><tr><th>Document Type</th><th>Date</th></tr></thead>
-              <tbody>
-                {documents.map(d => (
-                  <tr key={d.id}>
-                    <td>{d.document_type === 'id_front' ? 'National ID (Front)' : 
-                         d.document_type === 'id_back' ? 'National ID (Back)' :
-                         d.document_type === 'kra_pin' ? 'KRA PIN' :
-                         d.document_type === 'kin_id' ? 'Next of Kin ID' :
-                         d.document_type === 'tenant_photo' ? 'Tenant Picture' :
-                         d.document_type.replace('_', ' ')}</td>
-                    <td>{new Date(d.created_at).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      {/* Existing documents from agreements table */}
+      {(() => {
+        const signedAgreementDocs = agreements.filter(d => d.document_type === 'signed_agreement');
+        const idDocs = agreements.filter(d => d.document_type === 'id_document');
+        return (
+          <section className="card" style={{ marginTop: 24 }}>
+            <div className="card-label">Your Submitted Documents</div>
+            <h3 style={{ marginBottom: 12 }}>Document Status</h3>
+            {documents.length === 0 && signedAgreementDocs.length === 0 && idDocs.length === 0 && <p>No documents uploaded yet.</p>}
+            {(documents.length > 0 || signedAgreementDocs.length > 0 || idDocs.length > 0) && (
+              <div className="table-shell">
+                <table className="landlord-table">
+                  <thead><tr><th>Document</th><th>Status</th><th>Date</th></tr></thead>
+                  <tbody>
+                    {signedAgreementDocs.map(doc => (
+                      <tr key={doc.id}>
+                        <td>Signed Agreement</td>
+                        <td>
+                          <span className={`status-pill ${doc.status === 'signed' ? 'status-pending' : doc.status === 'approved' ? 'status-active' : 'status-pending'}`}>
+                            {doc.status === 'signed' ? 'Pending Review' : doc.status === 'approved' ? 'Approved' : doc.status}
+                          </span>
+                        </td>
+                        <td>{new Date(doc.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                    {idDocs.map(doc => (
+                      <tr key={doc.id}>
+                        <td>ID Document</td>
+                        <td>
+                          <span className={`status-pill ${doc.status === 'approved' ? 'status-active' : 'status-pending'}`}>
+                            {doc.status === 'approved' ? 'Approved' : 'Pending Review'}
+                          </span>
+                        </td>
+                        <td>{new Date(doc.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                    {documents.map(d => (
+                      <tr key={d.id}>
+                        <td>{d.document_type === 'id_front' ? 'National ID (Front)' : 
+                             d.document_type === 'id_back' ? 'National ID (Back)' :
+                             d.document_type === 'kra_pin' ? 'KRA PIN' :
+                             d.document_type === 'kin_id' ? 'Next of Kin ID' :
+                             d.document_type === 'tenant_photo' ? 'Tenant Picture' :
+                             d.document_type.replace('_', ' ')}</td>
+                        <td>-</td>
+                        <td>{new Date(d.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        );
+      })()}
     </main>
   );
 }
