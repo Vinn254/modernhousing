@@ -69,16 +69,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Tenant not found.' }, { status: 404 });
     }
 
-    // Calculate balance from bills
-    const { data: bills } = await supabaseAdmin
-      .from('bills')
-      .select('due_amount, paid_amount, penalty_fee')
-      .eq('tenant_id', invoice.tenant_id)
-      .order('month_due');
-
+    // Calculate running balance (sum of all bill balances for this tenant)
     let balance = 0;
-    if (bills && bills.length > 0) {
-      balance = bills.reduce((sum: number, b: any) => sum + (b.due_amount || 0) - (b.paid_amount || 0) - (b.penalty_fee || 0), 0);
+    const { data: tenantBills } = await supabaseAdmin
+      .from('bills')
+      .select('balance')
+      .eq('tenant_id', invoice.tenant_id);
+    if (tenantBills) {
+      balance = tenantBills.reduce((sum: number, b: any) => sum + (b.balance || 0), 0);
     }
 
     // Generate PDF
