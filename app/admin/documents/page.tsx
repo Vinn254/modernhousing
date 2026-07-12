@@ -209,7 +209,7 @@ export default function LandlordDocumentsPage() {
               <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => {
                 const file = e.target.files?.[0] ?? null;
                 setDocumentFile(file);
-                if (file) setUploadForm(f => ({ ...f, documentName: file.name.replace(/\.[^/.]+$/, '') }));
+                if (file && !uploadForm.documentName) setUploadForm(f => ({ ...f, documentName: 'Tenancy Agreement' }));
               }} required />
               <input value={uploadForm.notes} onChange={e => setUploadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" />
               <button type="submit" disabled={uploading}>Upload & Assign</button>
