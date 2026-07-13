@@ -231,45 +231,45 @@ export default function LandlordDocumentsPage() {
       <main className="container admin-no-hero">
         <div className="card-admin-header">
           <div>
-            <p className="heading">Tenant Agreements</p>
+            <p className="heading">Tenancy Agreement</p>
             <p className="subheading">Upload rental agreements and review signed documents.</p>
           </div>
         </div>
 
         <section className="card-grid">
-          <article className="card">
-<div className="card-label">
-             <span className="badge badge-pm">
-               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-             </span>Upload Agreement
-           </div>
-           <h3>Send Agreement to Tenant</h3>
-           <form onSubmit={handleUploadAgreement} className="form-grid">
-             <select value={uploadForm.tenantId} onChange={e => setUploadForm(f => ({ ...f, tenantId: e.target.value }))} required>
-               <option value="">Select tenant</option>
-               <option value="all">All Tenants</option>
-               {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} - {t.property} · Unit {t.unit}</option>)}
-             </select>
-             <input value={uploadForm.documentName} onChange={e => setUploadForm(f => ({ ...f, documentName: e.target.value }))} placeholder="Document name (e.g., Tenancy Agreement)" />
-             <select value={uploadForm.documentType} onChange={e => setUploadForm(f => ({ ...f, documentType: e.target.value }))}>
-               <option value="agreement">Agreement</option>
-             </select>
-             <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => {
-               const file = e.target.files?.[0] ?? null;
-               setDocumentFile(file);
-               if (file && !uploadForm.documentName) setUploadForm(f => ({ ...f, documentName: 'Tenancy Agreement' }));
-             }} required />
-             <input value={uploadForm.notes} onChange={e => setUploadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" />
-             <button type="submit" disabled={uploading}>Upload & Assign</button>
-           </form>
-           <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 8 }}>Upload agreement PDF and assign to tenant.</p>
+          <article className="card" style={{ gridColumn: '1 / -1' }}>
+            <div className="card-label">
+              <span className="badge badge-pm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </span>Upload Agreement
+            </div>
+            <h3>Send Agreement to Tenant</h3>
+            <form onSubmit={handleUploadAgreement} className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+              <select value={uploadForm.tenantId} onChange={e => setUploadForm(f => ({ ...f, tenantId: e.target.value }))} required style={{ minWidth: 0 }}>
+                <option value="">Select tenant</option>
+                <option value="all">All Tenants</option>
+                {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} - {t.property} · Unit {t.unit}</option>)}
+              </select>
+              <input value={uploadForm.documentName} onChange={e => setUploadForm(f => ({ ...f, documentName: e.target.value }))} placeholder="Document name (e.g., Tenancy Agreement)" />
+              <select value={uploadForm.documentType} onChange={e => setUploadForm(f => ({ ...f, documentType: e.target.value }))}>
+                <option value="agreement">Agreement</option>
+              </select>
+              <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => {
+                const file = e.target.files?.[0] ?? null;
+                setDocumentFile(file);
+                if (file && !uploadForm.documentName) setUploadForm(f => ({ ...f, documentName: 'Tenancy Agreement' }));
+              }} required />
+              <input value={uploadForm.notes} onChange={e => setUploadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" />
+              <button type="submit" disabled={uploading} style={{ gridColumn: 'span 1' }}>Upload & Assign</button>
+            </form>
+            <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 8 }}>Upload agreement PDF and assign to tenant.</p>
           </article>
         </section>
 
         <section className="card" style={{ marginTop: 24 }}>
           <div className="card-label">
             <span className="badge badge-agent">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x="1" y1="10" x2="23" y2="10"/></svg>
             </span>All Documents
           </div>
           <h3 style={{ marginBottom: 16 }}>Agreement Workflow</h3>
@@ -302,7 +302,7 @@ export default function LandlordDocumentsPage() {
                         </span>
                       </td>
                       <td>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}</td>
-                      <td>
+                      <td style={{ minWidth: 280 }}>
                         <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4 }}>Download</a>
                         {doc.status === 'downloaded' && (
                           <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'awaiting_signature')}>Mark as Signed</button>

@@ -142,8 +142,45 @@ export default function TenantDocumentsPage() {
     );
   }
 
+  const FileInput = ({ label, accept, onChange, file }: { 
+    label: string; 
+    accept: string; 
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    file: File | null;
+  }) => (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: 6 }}>{label}</label>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <label 
+          htmlFor={`file-${label.replace(/\s+/g, '-').toLowerCase()}`}
+          style={{
+            padding: '8px 12px',
+            background: 'var(--line)',
+            borderRadius: 6,
+            cursor: 'pointer',
+            fontSize: '13px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: 180,
+          }}
+        >
+          {file ? file.name : 'Choose File'}
+        </label>
+        <input 
+          id={`file-${label.replace(/\s+/g, '-').toLowerCase()}`}
+          type="file" 
+          accept={accept} 
+          onChange={onChange} 
+          style={{ display: 'none' }}
+        />
+        {file && <span style={{ fontSize: '11px', color: 'var(--ink-3)', flex: 1 }}>{Math.round(file.size / 1024)}KB</span>}
+      </div>
+    </div>
+  );
+
   return (
-    <main className="container page-layout">
+    <main className="container page-layout" style={{ maxWidth: '100%', padding: '0 8px' }}>
       <div className="card-admin-header">
         <div><p className="heading">Documents</p><p className="subheading">View agreements and submit required documents.</p></div>
       </div>
@@ -183,20 +220,26 @@ export default function TenantDocumentsPage() {
         </div>
         <h3 style={{ marginBottom: 12 }}>Submit Required Documents</h3>
 
-        <form onSubmit={handleUploadAll} className="form-grid">
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600 }}>Signed Agreement (PDF/Image) *</label>
-            <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setSignedAgreement(e.target.files?.[0] ?? null)} required />
-          </div>
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600 }}>ID Document (PDF/Image)</label>
-            <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setIdDocument(e.target.files?.[0] ?? null)} />
-          </div>
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600 }}>Passport Photo (JPG/PNG) - Will be used as profile picture</label>
-            <input type="file" accept=".jpg,.jpeg,.png" onChange={e => setPassportPhoto(e.target.files?.[0] ?? null)} />
-          </div>
-          <button type="submit" disabled={uploading} style={{ gridColumn: 'span 2' }}>
+        <form onSubmit={handleUploadAll} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <FileInput 
+            label="Signed Agreement (PDF/Image)" 
+            accept=".pdf,.jpg,.jpeg,.png" 
+            onChange={e => setSignedAgreement(e.target.files?.[0] ?? null)}
+            file={signedAgreement}
+          />
+          <FileInput 
+            label="ID Document (PDF/Image)" 
+            accept=".pdf,.jpg,.jpeg,.png" 
+            onChange={e => setIdDocument(e.target.files?.[0] ?? null)}
+            file={idDocument}
+          />
+          <FileInput 
+            label="Passport Photo (JPG/PNG)" 
+            accept=".jpg,.jpeg,.png" 
+            onChange={e => setPassportPhoto(e.target.files?.[0] ?? null)}
+            file={passportPhoto}
+          />
+          <button type="submit" disabled={uploading} style={{ marginTop: 8 }}>
             {uploading ? 'Uploading…' : 'Upload All Documents'}
           </button>
         </form>
@@ -205,20 +248,20 @@ export default function TenantDocumentsPage() {
         {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
       </section>
 
-{/* Existing documents from agreements table */}
-       {(() => {
+      {/* Existing documents from agreements table */}
+      {(() => {
         const signedAgreementDocs = agreements.filter(d => d.document_type === 'signed_agreement');
         const idDocs = agreements.filter(d => d.document_type === 'id_document');
         const bundle = bundles[0]; // Get the first bundle for this tenant
         const bundleStatus = bundle?.status || null;
         return (
-          <section className="card" style={{ marginTop: 24 }}>
+          <section className="card" style={{ marginTop: 24, overflowX: 'auto' }}>
             <div className="card-label">Your Submitted Documents</div>
             <h3 style={{ marginBottom: 12 }}>Document Status</h3>
             {documents.length === 0 && signedAgreementDocs.length === 0 && idDocs.length === 0 && <p>No documents uploaded yet.</p>}
             {(documents.length > 0 || signedAgreementDocs.length > 0 || idDocs.length > 0) && (
-              <div className="table-shell">
-                <table className="landlord-table">
+              <div className="table-shell" style={{ overflowX: 'auto' }}>
+                <table className="landlord-table" style={{ minWidth: '400px', fontSize: '12px' }}>
                   <thead><tr><th>Document</th><th>Status</th><th>Date</th></tr></thead>
                   <tbody>
                     {signedAgreementDocs.map(doc => (
