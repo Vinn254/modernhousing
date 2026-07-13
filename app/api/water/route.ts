@@ -99,8 +99,14 @@ export async function POST(request: NextRequest) {
       amount = 88;
     } else if (unitsConsumed <= 20) {
       amount = 132;
+    } else if (unitsConsumed <= 50) {
+      amount = 137;
+    } else if (unitsConsumed <= 100) {
+      amount = 148;
+    } else if (unitsConsumed <= 300) {
+      amount = 165;
     } else {
-      amount = 132 + (unitsConsumed - 20) * 150;
+      amount = 0;
     }
 
     const { error: updateError } = await supabaseAdmin
