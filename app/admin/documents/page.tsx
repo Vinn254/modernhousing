@@ -308,119 +308,123 @@ export default function LandlordDocumentsPage() {
           </article>
         </section>
 
-        <section className="card" style={{ marginTop: 24 }}>
-          <div className="card-label">
-            <span className="badge badge-agent">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x="1" y1="10" x2="23" y2="10"/></svg>
-            </span>All Documents
-          </div>
-          <h3 style={{ marginBottom: 16 }}>Agreement Workflow</h3>
-
-          {loading && <p className="landlord-muted">Loading documents...</p>}
-          {!loading && documents.filter(doc => doc.document_type === 'agreement').length === 0 && <p className="landlord-empty">No agreement documents uploaded yet.</p>}
-
-          {!loading && documents.filter(doc => doc.document_type === 'agreement').length > 0 && (
-            <div className="table-shell" style={{ maxHeight: '500px', overflowX: 'auto' }}>
-              <table className="landlord-table" style={{ fontSize: '12px' }}>
-                <thead>
-                  <tr>
-                    <th>Tenant</th>
-                    <th>Document</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Submitted</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents.filter(doc => doc.document_type === 'agreement').map(doc => (
-                    <tr key={doc.id}>
-                      <td>{doc.tenant_name || tenants.find(t => t.id === doc.tenant_id)?.full_name || '-'}</td>
-                      <td>{doc.document_name}</td>
-                      <td>{formatType(doc.document_type)}</td>
-                      <td>
-                        <span className={`status-pill ${getStatusBadge(doc.status)}`} style={{ textTransform: 'capitalize' }}>
-                          {doc.status === 'awaiting_signature' ? 'Awaiting Signature' : doc.status}
-                        </span>
-                      </td>
-                      <td>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}</td>
-                      <td>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
-                          {doc.status === 'downloaded' && (
-                            <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'awaiting_signature')}>Mark as Signed</button>
-                          )}
-                          {doc.status === 'signed' && (
-                            <>
-                              <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'approved')}>Approve</button>
-                              <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#f59e0b', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'rejected')}>Request Re-sign</button>
-                            </>
-                          )}
-                          <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDelete(doc.id)}>Delete</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <section className="card-grid-item">
+          <article className="card">
+            <div className="card-label">
+              <span className="badge badge-agent">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              </span>All Documents
             </div>
-          )}
+            <h3 style={{ marginBottom: 16 }}>Agreement Workflow</h3>
 
-          {error && <p className="landlord-error" style={{ marginTop: 12 }}>{error}</p>}
-          {message && <p className="landlord-success" style={{ marginTop: 12 }}>{message}</p>}
+            {loading && <p className="landlord-muted">Loading documents...</p>}
+            {!loading && documents.filter(doc => doc.document_type === 'agreement').length === 0 && <p className="landlord-empty">No agreement documents uploaded yet.</p>}
+
+            {!loading && documents.filter(doc => doc.document_type === 'agreement').length > 0 && (
+              <div className="table-shell">
+                <table className="landlord-table" style={{ fontSize: '12px' }}>
+                  <thead>
+                    <tr>
+                      <th>Tenant</th>
+                      <th>Document</th>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Submitted</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents.filter(doc => doc.document_type === 'agreement').map(doc => (
+                      <tr key={doc.id}>
+                        <td>{doc.tenant_name || tenants.find(t => t.id === doc.tenant_id)?.full_name || '-'}</td>
+                        <td>{doc.document_name}</td>
+                        <td>{formatType(doc.document_type)}</td>
+                        <td>
+                          <span className={`status-pill ${getStatusBadge(doc.status)}`} style={{ textTransform: 'capitalize' }}>
+                            {doc.status === 'awaiting_signature' ? 'Awaiting Signature' : doc.status}
+                          </span>
+                        </td>
+                        <td>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}</td>
+                        <td>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
+                            {doc.status === 'downloaded' && (
+                              <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'awaiting_signature')}>Mark as Signed</button>
+                            )}
+                            {doc.status === 'signed' && (
+                              <>
+                                <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'approved')}>Approve</button>
+                                <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#f59e0b', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'rejected')}>Request Re-sign</button>
+                              </>
+                            )}
+                            <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDelete(doc.id)}>Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {error && <p className="landlord-error" style={{ marginTop: 12 }}>{error}</p>}
+            {message && <p className="landlord-success" style={{ marginTop: 12 }}>{message}</p>}
+          </article>
         </section>
 
         {/* Document Bundles - Pending Review */}
-        <section className="card" style={{ marginTop: 24 }}>
-          <div className="card-label">
-            <span className="badge badge-agent">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </span>Document Bundles
-          </div>
-          <h3 style={{ marginBottom: 16 }}>Tenant Submissions Awaiting Review</h3>
-
-          {loading && <p className="landlord-muted">Loading bundles...</p>}
-          {!loading && bundles.length === 0 && <p className="landlord-empty">No document bundles submitted.</p>}
-
-          {!loading && bundles.length > 0 && (
-            <div className="table-shell" style={{ maxHeight: '400px', overflowX: 'auto' }}>
-              <table className="landlord-table" style={{ fontSize: '12px' }}>
-                <thead>
-                  <tr>
-                    <th>Tenant</th>
-                    <th>Signed Agreement</th>
-                    <th>ID Document</th>
-                    <th>Passport</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bundles.map(bundle => (
-                    <tr key={bundle.id}>
-                      <td>{bundle.tenant_name || '-'}</td>
-                      <td>{bundle.signed_agreement_url ? <a href={bundle.signed_agreement_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
-                      <td>{bundle.id_document_url ? <a href={bundle.id_document_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
-                      <td>{bundle.passport_photo_url ? <a href={bundle.passport_photo_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
-                      <td>
-                        <span className={`status-pill ${bundle.status === 'approved' ? 'status-active' : 'status-pending'}`} style={{ textTransform: 'capitalize' }}>
-                          {bundle.status}
-                        </span>
-                      </td>
-                      <td>
-                        {bundle.status === 'pending' && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                            <button onClick={() => handleApproveBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }}>Approve</button>
-                            <button onClick={() => handleRejectBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#f59e0b', color: '#fff' }}>Reject</button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <section className="card-grid-item">
+          <article className="card">
+            <div className="card-label">
+              <span className="badge badge-agent">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </span>Document Bundles
             </div>
-          )}
+            <h3 style={{ marginBottom: 16 }}>Tenant Submissions Awaiting Review</h3>
+
+            {loading && <p className="landlord-muted">Loading bundles...</p>}
+            {!loading && bundles.length === 0 && <p className="landlord-empty">No document bundles submitted.</p>}
+
+            {!loading && bundles.length > 0 && (
+              <div className="table-shell">
+                <table className="landlord-table" style={{ fontSize: '12px' }}>
+                  <thead>
+                    <tr>
+                      <th>Tenant</th>
+                      <th>Signed Agreement</th>
+                      <th>ID Document</th>
+                      <th>Passport</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bundles.map(bundle => (
+                      <tr key={bundle.id}>
+                        <td>{bundle.tenant_name || '-'}</td>
+                        <td>{bundle.signed_agreement_url ? <a href={bundle.signed_agreement_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
+                        <td>{bundle.id_document_url ? <a href={bundle.id_document_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
+                        <td>{bundle.passport_photo_url ? <a href={bundle.passport_photo_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
+                        <td>
+                          <span className={`status-pill ${bundle.status === 'approved' ? 'status-active' : 'status-pending'}`} style={{ textTransform: 'capitalize' }}>
+                            {bundle.status}
+                          </span>
+                        </td>
+                        <td>
+                          {bundle.status === 'pending' && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                              <button onClick={() => handleApproveBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }}>Approve</button>
+                              <button onClick={() => handleRejectBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#f59e0b', color: '#fff' }}>Reject</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </article>
         </section>
       </main>
 
