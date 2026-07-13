@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -255,7 +255,7 @@ export default function TenantPaymentsPage() {
             <p className="landlord-empty">No invoices available.</p>
           ) : (
             <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+              <table className="landlord-table" style={{ fontSize: '12px' }}>
                 <thead>
                   <tr>
                     <th>Month</th>
@@ -298,7 +298,7 @@ export default function TenantPaymentsPage() {
             <p className="landlord-empty">{activeTab === 'payments' ? 'No rent payments recorded yet.' : 'No utility bills recorded yet.'}</p>
           ) : (
             <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+              <table className="landlord-table" style={{ fontSize: '12px' }}>
                 <thead>
                   <tr>
                     <th>Month</th>

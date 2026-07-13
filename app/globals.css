@@ -567,13 +567,11 @@ body {
     border-radius: 0;
   }
 
-  .admin-no-hero .card {
-    padding: 16px;
-  }
+  .admin-no-hero .card { padding: 16px; min-width: 0; }
 
   .landlord-table,
   .property-table {
-    min-width: unset;
+     min-width: 650px;
   }
 
   .landlord-table th,
@@ -719,9 +717,7 @@ body {
   font-size: 14px;
 }
 
-.property-table {
-  width: 100%;
-  border-collapse: collapse;
+.property-table { width: auto; min-width: 100%; border-collapse: collapse;
   background: #fff;
 }
 @media (min-width: 768px) {
@@ -730,9 +726,7 @@ body {
   }
 }
 
-.landlord-table {
-  width: 100%;
-  border-collapse: collapse;
+.landlord-table { width: auto; min-width: 100%; border-collapse: collapse;
   background: #fff;
 }
 @media (min-width: 768px) {
@@ -941,19 +935,13 @@ body {
 
   .property-table,
   .landlord-table {
-    min-width: unset;
+     min-width: 650px;
     font-size: 12px;
   }
 
-  .property-table th,
-  .landlord-table th {
-    padding: 10px 8px;
-  }
+  .property-table th, .landlord-table th { white-space: normal; padding: 10px 8px; }
 
-  .property-table td,
-  .landlord-table td {
-    padding: 12px 8px;
-  }
+  .property-table td, .landlord-table td { white-space: normal; padding: 12px 8px; }
 }
 
 @media (max-width: 900px) {
@@ -1161,9 +1149,7 @@ body {
 }
 
 
-.landlord-table {
-  width: 100%;
-  border-collapse: collapse;
+.landlord-table { width: auto; min-width: 100%; border-collapse: collapse;
   background: #fff;
 }
 
@@ -2683,6 +2669,12 @@ footer {
  .admin-layout-wrapper main {
    flex: 1;
  }
+
+
+
+
+
+
 
 
 

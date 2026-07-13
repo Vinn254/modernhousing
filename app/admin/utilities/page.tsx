@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -526,7 +526,7 @@ async function handleWaterMeterReading(unitId: string) {
 
           {!loading && bills.length > 0 && (
             <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+              <table className="landlord-table" style={{ fontSize: '12px' }}>
                 <thead>
                   <tr>
                     <th>Month</th>

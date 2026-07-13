@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -321,7 +321,7 @@ export default function LandlordDocumentsPage() {
 
           {!loading && documents.filter(doc => doc.document_type === 'agreement').length > 0 && (
             <div className="table-shell" style={{ maxHeight: '500px', overflowX: 'auto' }}>
-              <table className="landlord-table" style={{ width: '100%', fontSize: '12px' }}>
+              <table className="landlord-table" style={{ fontSize: '12px' }}>
                 <thead>
                   <tr>
                     <th>Tenant</th>
@@ -384,7 +384,7 @@ export default function LandlordDocumentsPage() {
 
           {!loading && bundles.length > 0 && (
             <div className="table-shell" style={{ maxHeight: '400px', overflowX: 'auto' }}>
-              <table className="landlord-table" style={{ width: '100%', fontSize: '12px' }}>
+              <table className="landlord-table" style={{ fontSize: '12px' }}>
                 <thead>
                   <tr>
                     <th>Tenant</th>
