@@ -101,7 +101,10 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
     if (consumption <= 0) return 0;
     if (consumption <= 6) return 88;
     if (consumption <= 20) return 132;
-    return 132 + (consumption - 20) * 150;
+    if (consumption <= 50) return 137;
+    if (consumption <= 100) return 148;
+    if (consumption <= 300) return 165;
+    return 0;
   }
 
   const utilityTypes = [
@@ -427,7 +430,7 @@ async function handleWaterMeterReading(unitId: string) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             </span>Water Meter Billing</div>
             <h3 style={{ marginBottom: 16 }}>Record Water Consumption</h3>
-            <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Water rates: 1-6 units = 88 KSH, 7-20 units = 132 KSH, 21+ units = 132 + 150 per extra unit.</p>
+            <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Water rates: 1-6 units = 88 KSH, 7-20 units = 132 KSH, 21-50 units = 137 KSH, 51-100 units = 148 KSH, 101-300 units = 165 KSH.</p>
             <input type="month" value={waterMonthDue} onChange={(event) => setWaterMonthDue(event.target.value)} placeholder="Billing month" style={{ marginBottom: 12 }} />
             {units.length === 0 ? (
               <p style={{ color: 'var(--ink-3)', fontSize: '13px' }}>No units available.</p>
@@ -584,3 +587,6 @@ async function handleWaterMeterReading(unitId: string) {
     </>
   );
 }
+
+
+
