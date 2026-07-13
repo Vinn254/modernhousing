@@ -281,27 +281,30 @@ export default function LandlordDocumentsPage() {
               </span>Upload Agreement
             </div>
             <h3>Send Agreement to Tenant</h3>
-            <form onSubmit={handleUploadAgreement} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <select value={uploadForm.tenantId} onChange={e => setUploadForm(f => ({ ...f, tenantId: e.target.value }))} required style={{ width: '100%' }}>
+            <form onSubmit={handleUploadAgreement} className="form-grid">
+              <select value={uploadForm.tenantId} onChange={e => setUploadForm(f => ({ ...f, tenantId: e.target.value }))} required>
                 <option value="">Select tenant</option>
                 <option value="all">All Tenants</option>
                 {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} - {t.property} · Unit {t.unit}</option>)}
               </select>
-              <input value={uploadForm.documentName} onChange={e => setUploadForm(f => ({ ...f, documentName: e.target.value }))} placeholder="Document name (e.g., Tenancy Agreement)" style={{ width: '100%' }} />
-              <select value={uploadForm.documentType} onChange={e => setUploadForm(f => ({ ...f, documentType: e.target.value }))} style={{ width: '100%' }}>
+              <input value={uploadForm.documentName} onChange={e => setUploadForm(f => ({ ...f, documentName: e.target.value }))} placeholder="Document name (e.g., Tenancy Agreement)" required />
+              <select value={uploadForm.documentType} onChange={e => setUploadForm(f => ({ ...f, documentType: e.target.value }))}>
                 <option value="agreement">Agreement</option>
               </select>
-              <FileInput 
-                label="Agreement File" 
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
-                onChange={e => {
-                  const file = e.target.files?.[0] ?? null;
-                  setDocumentFile(file);
-                  if (file && !uploadForm.documentName) setUploadForm(f => ({ ...f, documentName: 'Tenancy Agreement' }));
-                }}
-                file={documentFile}
-              />
-              <input value={uploadForm.notes} onChange={e => setUploadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" style={{ width: '100%' }} />
+              <div className="field-group">
+                <label style={{ fontSize: '12px', color: 'var(--ink-2)' }}>Agreement File</label>
+                <FileInput 
+                  label="Choose File" 
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
+                  onChange={e => {
+                    const file = e.target.files?.[0] ?? null;
+                    setDocumentFile(file);
+                    if (file && !uploadForm.documentName) setUploadForm(f => ({ ...f, documentName: 'Tenancy Agreement' }));
+                  }}
+                  file={documentFile}
+                />
+              </div>
+              <input value={uploadForm.notes} onChange={e => setUploadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" className="field-group-wide" />
               <button type="submit" disabled={uploading}>Upload & Assign</button>
             </form>
             <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 8 }}>Upload agreement PDF and assign to tenant.</p>
@@ -344,7 +347,7 @@ export default function LandlordDocumentsPage() {
                         </td>
                         <td>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}</td>
                         <td>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          <div className="landlord-actions">
                             <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
                             {doc.status === 'downloaded' && (
                               <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'awaiting_signature')}>Mark as Signed</button>
@@ -355,7 +358,7 @@ export default function LandlordDocumentsPage() {
                                 <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#f59e0b', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'rejected')}>Request Re-sign</button>
                               </>
                             )}
-                            <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDelete(doc.id)}>Delete</button>
+                            <button className="action-button danger" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDelete(doc.id)}>Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -406,11 +409,11 @@ export default function LandlordDocumentsPage() {
                             {bundle.status}
                           </span>
                         </td>
-                        <td>
+<td>
                           {bundle.status === 'pending' && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                              <button onClick={() => handleApproveBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }}>Approve</button>
-                              <button onClick={() => handleRejectBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#f59e0b', color: '#fff' }}>Reject</button>
+                            <div className="landlord-actions">
+                              <button onClick={() => handleApproveBundle(bundle.id)} className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }}>Approve</button>
+                              <button onClick={() => handleRejectBundle(bundle.id)} className="action-button danger" style={{ padding: '4px 8px', fontSize: '11px' }}>Reject</button>
                             </div>
                           )}
                         </td>

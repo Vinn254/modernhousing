@@ -1759,20 +1759,25 @@ body {
   grid-column: span 2;
 }
 @media (max-width: 900px) {
+  .property-page-grid {
+    grid-template-columns: 1fr;
+  }
+
   .card-grid-item {
     grid-column: span 1;
   }
-}
 
-@media (max-width: 900px) {
-   .dashboard-section-grid,
-   .card-grid,
-   .card-grid-item {
-     min-width: 0;
-     overflow-x: visible;
-     grid-template-columns: 1fr !important;
-   }
- }
+  .dashboard-section-grid,
+  .card-grid {
+    min-width: 0;
+    overflow-x: visible;
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-no-hero .bento .card {
+    min-width: 0;
+  }
+}
 
 .dashboard-hero-stats {
   display: grid;
