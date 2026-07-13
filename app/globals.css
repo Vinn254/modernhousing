@@ -717,18 +717,14 @@ body {
   font-size: 14px;
 }
 
-.property-table { width: auto; min-width: 100%; border-collapse: collapse;
-  background: #fff;
-}
+.property-table { width: 100%; border-collapse: collapse; background: #fff; }
 @media (min-width: 768px) {
   .property-table {
     min-width: 980px;
   }
 }
 
-.landlord-table { width: auto; min-width: 100%; border-collapse: collapse;
-  background: #fff;
-}
+.landlord-table { width: 100%; border-collapse: collapse; background: #fff; }
 @media (min-width: 768px) {
   .landlord-table {
     min-width: 860px;
@@ -1146,11 +1142,6 @@ body {
   overflow-y: visible;
   border-radius: 16px;
   border: 1px solid var(--line);
-}
-
-
-.landlord-table { width: auto; min-width: 100%; border-collapse: collapse;
-  background: #fff;
 }
 
 
@@ -2669,6 +2660,8 @@ footer {
  .admin-layout-wrapper main {
    flex: 1;
  }
+
+
 
 
 
