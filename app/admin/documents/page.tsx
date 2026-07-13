@@ -273,7 +273,7 @@ export default function LandlordDocumentsPage() {
           </div>
         </div>
 
-        <section className="card-grid">
+<section className="card-grid">
           <article className="card" style={{ gridColumn: '1 / -1' }}>
             <div className="card-label">
               <span className="badge badge-pm">
@@ -306,13 +306,11 @@ export default function LandlordDocumentsPage() {
             </form>
             <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 8 }}>Upload agreement PDF and assign to tenant.</p>
           </article>
-        </section>
 
-        <section className="card-grid-item">
-          <article className="card">
+          <article className="card" style={{ gridColumn: '1 / -1' }}>
             <div className="card-label">
               <span className="badge badge-agent">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x="1" y="10" x2="23" y2="10"/></svg>
               </span>All Documents
             </div>
             <h3 style={{ marginBottom: 16 }}>Agreement Workflow</h3>
@@ -370,11 +368,9 @@ export default function LandlordDocumentsPage() {
             {error && <p className="landlord-error" style={{ marginTop: 12 }}>{error}</p>}
             {message && <p className="landlord-success" style={{ marginTop: 12 }}>{message}</p>}
           </article>
-        </section>
 
-        {/* Document Bundles - Pending Review */}
-        <section className="card-grid-item">
-          <article className="card">
+          {/* Document Bundles - Pending Review */}
+          <article className="card" style={{ gridColumn: '1 / -1' }}>
             <div className="card-label">
               <span className="badge badge-agent">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
