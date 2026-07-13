@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -140,8 +140,9 @@ export default function TenantDashboardPage() {
             <form onSubmit={handlePictureUpload} style={{ marginTop: 16 }}>
               <label style={{ fontSize: '12px', color: 'var(--ink-3)', marginBottom: 6, display: 'block' }}>Upload Profile Picture</label>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input type="file" accept="image/*" onChange={(e) => setProfilePicture(e.target.files?.[0] ?? null)} />
-                <button type="submit" disabled={uploadingPicture} style={{ padding: '6px 12px' }}>{uploadingPicture ? 'Uploading…' : 'Upload'}</button>
+                <input type="file" accept="image/*" onChange={(e) => setProfilePicture(e.target.files?.[0] ?? null)} style={{ flex: 1 }} />
+                {profilePicture && <span style={{ fontSize: "12px", color: "var(--ink-3)" }}>{profilePicture.name} ({Math.round(profilePicture.size / 1024)}KB)</span>}
+                <button type="submit" disabled={uploadingPicture || !profilePicture} style={{ padding: '6px 12px' }}>{uploadingPicture ? 'Uploading…' : 'Upload'}</button>
               </div>
               {pictureMessage && <p style={{ fontSize: '12px', marginTop: 8, color: pictureMessage.includes('failed') ? '#dc2626' : 'var(--accent)' }}>{pictureMessage}</p>}
             </form>
@@ -161,3 +162,4 @@ export default function TenantDashboardPage() {
      </main>
    );
  }
+
