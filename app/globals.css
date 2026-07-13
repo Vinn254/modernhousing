@@ -281,7 +281,7 @@ body {
 }
 .card {
   position: relative;
-  overflow: hidden;
+  
   padding: 24px;
   border-radius: 18px;
   background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
@@ -561,7 +561,7 @@ body {
 
   .table-shell { width: 100%; max-width: 100%; box-sizing: border-box; border-radius: 12px; }
 
-  .admin-no-hero .card { padding: 16px; min-width: 0; }
+  .admin-no-hero .card { padding: 16px; min-width: 0;  }
 
   .landlord-table,
   .property-table {
@@ -575,12 +575,7 @@ body {
     font-size: 11px;
   }
 
-  .landlord-table td,
-  .property-table td {
-    white-space: normal;
-    padding: 12px 8px;
-    font-size: 12px;
-  }
+  .landlord-table td, .property-table td { white-space: normal; padding: 12px 8px; font-size: 12px; max-width: none; text-overflow: clip; }
 }
 
 @media (max-width: 900px) {
@@ -619,7 +614,7 @@ body {
 
 .property-stat {
   position: relative;
-  overflow: hidden;
+  
   padding: 24px;
   border-radius: 22px;
   background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
@@ -753,7 +748,7 @@ body {
   height: 8px;
   border-radius: 999px;
   background: rgba(6,21,40,0.08);
-  overflow: hidden;
+  
   margin-bottom: 8px;
 }
 
@@ -931,7 +926,7 @@ body {
 
   .property-table th, .landlord-table th { white-space: normal; padding: 10px 8px; }
 
-  .property-table td, .landlord-table td { white-space: normal; padding: 12px 8px; }
+  .property-table td, .landlord-table td { white-space: normal; padding: 12px 8px; max-width: none; text-overflow: clip; }
 }
 
 @media (max-width: 900px) {
@@ -997,7 +992,7 @@ body {
 
 .landlord-stat {
   position: relative;
-  overflow: hidden;
+  
   padding: 24px;
   border-radius: 22px;
   background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
@@ -1158,7 +1153,7 @@ body {
   font-size: 14px;
   border-bottom: 1px solid var(--line-soft);
   white-space: nowrap;
-  overflow: hidden;
+  
   text-overflow: ellipsis;
   max-width: 200px;
 }
@@ -1599,7 +1594,7 @@ body {
 
 .pricing-card {
   position: relative;
-  overflow: hidden;
+  
   padding: 28px;
   border-radius: 24px;
   background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
@@ -2182,7 +2177,7 @@ footer {
   min-height: 620px;
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
-  overflow: hidden;
+  
   border-radius: 28px;
   border: 1px solid rgba(255,255,255,0.14);
   background: rgba(255,255,255,0.08);
@@ -2654,6 +2649,10 @@ footer {
  .admin-layout-wrapper main {
    flex: 1;
  }
+
+
+
+
 
 
 
