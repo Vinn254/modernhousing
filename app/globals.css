@@ -559,7 +559,7 @@ body {
     padding: 20px 12px 60px;
   }
 
-  .table-shell { margin-left: 0; margin-right: 0; border-radius: 12px; }
+  .table-shell { width: 100%; max-width: 100%; box-sizing: border-box; border-radius: 12px; }
 
   .admin-no-hero .card { padding: 16px; min-width: 0; }
 
@@ -711,14 +711,14 @@ body {
   font-size: 14px;
 }
 
-.property-table { width: 100%; border-collapse: collapse; background: #fff; }
+.property-table { width: auto; border-collapse: collapse; background: #fff; }
 @media (min-width: 768px) {
   .property-table {
     min-width: 980px;
   }
 }
 
-.landlord-table { width: 100%; border-collapse: collapse; background: #fff; }
+.landlord-table { width: auto; border-collapse: collapse; background: #fff; }
 @media (min-width: 768px) {
   .landlord-table {
     min-width: 860px;
@@ -2654,6 +2654,10 @@ footer {
  .admin-layout-wrapper main {
    flex: 1;
  }
+
+
+
+
 
 
 
