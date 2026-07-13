@@ -88,6 +88,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'You can only record meter readings for units in your assigned property.' }, { status: 403 });
     }
 
+    // For landlords with organization - verify unit belongs to their organization
+    if (!isAgent && userMetadata?.organization_id && !authContext.isSuperAdmin) {
+      const { data: unitOrgCheck } = await supabaseAdmin
+        .from('units')
+        .select('id, property_id, properties!inner(organization_id)')
+        .eq('id', unitId)
+        .eq('properties.organization_id', userMetadata.organization_id)
+        .single();
+      if (!unitOrgCheck) {
+        return NextResponse.json({ message: 'You can only record meter readings for units in your landlord workspace.' }, { status: 403 });
+      }
+    }
+
     const unitsConsumed = Math.max(0, Number(consumption));
     
     if (unitsConsumed === 0) {
