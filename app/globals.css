@@ -30,12 +30,6 @@ html, body {
   padding: 0;
 }
 
-@media (max-width: 768px) {
-  html, body {
-    overflow-x: visible;
-  }
-}
-
 body {
   font-family: 'Outfit', system-ui, sans-serif;
   background: var(--bg);
@@ -2664,6 +2658,7 @@ footer {
  .admin-layout-wrapper main {
    flex: 1;
  }
+
 
 
 
