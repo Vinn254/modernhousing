@@ -565,10 +565,11 @@ body {
   padding: 34px 28px 80px;
 }
 @media (max-width: 768px) {
-  .container,
-  .page-layout {
-    padding: 20px 12px 60px;
-  }
+   .container,
+   .page-layout {
+     padding: 20px 12px 60px;
+     overflow-x: visible;
+   }
 
   .table-shell { width: 100%; max-width: 100%; box-sizing: border-box; border-radius: 12px; overflow-x: auto; overflow-y: visible; }
 
@@ -2662,6 +2663,7 @@ footer {
  .admin-layout-wrapper main {
    flex: 1;
  }
+
 
 
 
