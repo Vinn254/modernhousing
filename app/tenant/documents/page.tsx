@@ -212,40 +212,42 @@ export default function TenantDocumentsPage() {
       )}
 
       {/* Upload signed documents */}
-      <section className="card" style={{ marginTop: 24 }}>
-        <div className="card-label">
-          <span className="badge badge-pm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          </span>Upload Signed Documents
-        </div>
-        <h3 style={{ marginBottom: 12 }}>Submit Required Documents</h3>
+      <section className="card-grid">
+        <article className="card" style={{ gridColumn: '1 / -1' }}>
+          <div className="card-label">
+            <span className="badge badge-pm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </span>Upload Signed Documents
+          </div>
+          <h3 style={{ marginBottom: 12 }}>Submit Required Documents</h3>
 
-        <form onSubmit={handleUploadAll} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <FileInput 
-            label="Signed Agreement (PDF/Image)" 
-            accept=".pdf,.jpg,.jpeg,.png" 
-            onChange={e => setSignedAgreement(e.target.files?.[0] ?? null)}
-            file={signedAgreement}
-          />
-          <FileInput 
-            label="ID Document (PDF/Image)" 
-            accept=".pdf,.jpg,.jpeg,.png" 
-            onChange={e => setIdDocument(e.target.files?.[0] ?? null)}
-            file={idDocument}
-          />
-          <FileInput 
-            label="Passport Photo (JPG/PNG)" 
-            accept=".jpg,.jpeg,.png" 
-            onChange={e => setPassportPhoto(e.target.files?.[0] ?? null)}
-            file={passportPhoto}
-          />
-          <button type="submit" disabled={uploading} style={{ marginTop: 8 }}>
-            {uploading ? 'Uploading…' : 'Upload All Documents'}
-          </button>
-        </form>
+          <form onSubmit={handleUploadAll} className="form-grid">
+            <FileInput 
+              label="Signed Agreement (PDF/Image)" 
+              accept=".pdf,.jpg,.jpeg,.png" 
+              onChange={e => setSignedAgreement(e.target.files?.[0] ?? null)}
+              file={signedAgreement}
+            />
+            <FileInput 
+              label="ID Document (PDF/Image)" 
+              accept=".pdf,.jpg,.jpeg,.png" 
+              onChange={e => setIdDocument(e.target.files?.[0] ?? null)}
+              file={idDocument}
+            />
+            <FileInput 
+              label="Passport Photo (JPG/PNG)" 
+              accept=".jpg,.jpeg,.png" 
+              onChange={e => setPassportPhoto(e.target.files?.[0] ?? null)}
+              file={passportPhoto}
+            />
+            <button type="submit" disabled={uploading} className="action-button primary">
+              {uploading ? 'Uploading…' : 'Upload All Documents'}
+            </button>
+          </form>
 
-        {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
-        {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
+          {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
+          {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
+        </article>
       </section>
 
       {/* Existing documents from agreements table */}

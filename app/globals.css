@@ -47,6 +47,7 @@ body {
   padding: 20px 28px 100px;
   isolation: isolate;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 .hero::before {
   content: "";
@@ -277,6 +278,7 @@ body {
   padding: 0 28px 80px;
   position: relative;
   z-index: 2;
+  overflow-x: hidden;
 }
 .bento {
   display: grid;
