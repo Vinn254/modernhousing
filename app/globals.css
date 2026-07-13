@@ -564,6 +564,10 @@ body {
     padding: 20px 12px 60px;
   }
 
+  .card-grid {
+    overflow-x: visible;
+  }
+
   .table-shell {
     width: 100%;
     max-width: 100%;
