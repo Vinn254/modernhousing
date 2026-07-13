@@ -943,13 +943,28 @@ body {
 
   .property-table,
   .landlord-table {
-     min-width: 650px;
+    min-width: 650px;
     font-size: 12px;
   }
 
-  .property-table th, .landlord-table th { white-space: normal; padding: 10px 8px; }
+  .property-table th,
+  .landlord-table th {
+    white-space: normal;
+    padding: 10px 8px;
+  }
 
-  .property-table td, .landlord-table td { white-space: normal; padding: 12px 8px; max-width: none; text-overflow: clip; }
+  .property-table td,
+  .landlord-table td {
+    white-space: normal;
+    padding: 12px 8px;
+    max-width: none;
+    text-overflow: clip;
+  }
+
+  .table-shell {
+    overflow-x: auto;
+    overflow-y: visible;
+  }
 }
 
 @media (max-width: 900px) {
