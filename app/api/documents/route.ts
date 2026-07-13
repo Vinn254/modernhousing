@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -57,7 +57,7 @@ async function getAuthContext(request: NextRequest) {
   }
 
   if (!sessionUser) {
-    return { isSuperAdmin: false, userId: undefined, organizationId: null, tenantId: null };
+    return { isSuperAdmin: false, userId: undefined, organizationId: null, tenantId: null, userMetadata: null };
   }
 
   const userMetadata = sessionUser.user_metadata || {};
@@ -78,6 +78,7 @@ async function getAuthContext(request: NextRequest) {
     userId: sessionUser.id,
     organizationId: orgId,
     tenantId,
+    userMetadata,
   };
 }
 
@@ -101,7 +102,107 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ documents: data ?? [] });
     }
 
-    // For landlords - get documents for their tenants
+    // For agents - get documents for their property's tenants
+    const userMetadata = authContext.userMetadata || {};
+    const isAgent = userMetadata.role === 'agent';
+    const agentPropertyId = isAgent ? userMetadata.property_id : null;
+
+    if (isAgent && agentPropertyId) {
+      const { data: units } = await client
+        .from('units')
+        .select('id')
+        .eq('property_id', agentPropertyId);
+      const unitIds = (units ?? []).map((u: any) => u.id);
+
+      if (unitIds.length > 0) {
+        const { data: tenantIds } = await client
+          .from('tenants')
+          .select('id')
+          .in('unit_id', unitIds);
+        const tenantIdValues = (tenantIds ?? []).map((t: any) => t.id);
+
+        if (tenantIdValues.length > 0) {
+          const { data, error } = await client
+            .from('documents')
+            .select(`*, tenants(full_name, email, units(unit_number, properties(name)))`)
+            .in('tenant_id', tenantIdValues)
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+
+          const documents = (data ?? []).map((doc: any) => ({
+            id: doc.id,
+            tenant_id: doc.tenant_id,
+            tenant_name: doc.tenants?.full_name ?? '',
+            property_name: doc.tenants?.units?.properties?.name ?? '',
+            unit_number: doc.tenants?.units?.unit_number ?? '',
+            document_name: doc.document_name,
+            document_url: doc.document_url,
+            document_type: doc.document_type,
+            status: doc.status,
+            notes: doc.notes,
+            created_at: doc.created_at,
+          }));
+
+          return NextResponse.json({ documents });
+        }
+      }
+      return NextResponse.json({ documents: [] });
+    }
+
+    // For landlords - get documents for their tenants (organization-scoped)
+    if (!authContext.isSuperAdmin && authContext.organizationId) {
+      const { data: orgProps } = await client
+        .from('properties')
+        .select('id')
+        .eq('organization_id', authContext.organizationId);
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
+
+      if (propIds.length > 0) {
+        const { data: orgUnits } = await client
+          .from('units')
+          .select('id')
+          .in('property_id', propIds);
+        const unitIds = (orgUnits ?? []).map((u: any) => u.id);
+
+        if (unitIds.length > 0) {
+          const { data: tenantIds } = await client
+            .from('tenants')
+            .select('id')
+            .in('unit_id', unitIds);
+          const tenantIdValues = (tenantIds ?? []).map((t: any) => t.id);
+
+          if (tenantIdValues.length > 0) {
+            const { data, error } = await client
+              .from('documents')
+              .select(`*, tenants(full_name, email, units(unit_number, properties(name)))`)
+              .in('tenant_id', tenantIdValues)
+              .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const documents = (data ?? []).map((doc: any) => ({
+              id: doc.id,
+              tenant_id: doc.tenant_id,
+              tenant_name: doc.tenants?.full_name ?? '',
+              property_name: doc.tenants?.units?.properties?.name ?? '',
+              unit_number: doc.tenants?.units?.unit_number ?? '',
+              document_name: doc.document_name,
+              document_url: doc.document_url,
+              document_type: doc.document_type,
+              status: doc.status,
+              notes: doc.notes,
+              created_at: doc.created_at,
+            }));
+
+            return NextResponse.json({ documents });
+          }
+        }
+      }
+      return NextResponse.json({ documents: [] });
+    }
+
+    // Super admin - get all documents
     const { data, error } = await client
       .from('documents')
       .select(`*, tenants(full_name, email, units(unit_number, properties(name)))`)
@@ -149,6 +250,25 @@ export async function POST(request: NextRequest) {
 
       if (!file || !tenantId) {
         return NextResponse.json({ message: 'File and tenant ID are required.' }, { status: 400 });
+      }
+
+      // Verify tenant belongs to landlord's organization
+      if (!authContext.isSuperAdmin && authContext.organizationId) {
+        const { data: orgProps } = await client
+          .from('properties')
+          .select('id')
+          .eq('organization_id', authContext.organizationId);
+        const propIds = (orgProps ?? []).map((p: any) => p.id);
+
+        const { data: tenantCheck } = await client
+          .from('tenants')
+          .select('units!inner(property_id)')
+          .eq('id', tenantId)
+          .in('unit_id', (await client.from('units').select('id').in('property_id', propIds)).data?.map((u: any) => u.id) || []);
+
+        if (!tenantCheck || tenantCheck.length === 0) {
+          return NextResponse.json({ message: 'You can only upload documents for your own tenants.' }, { status: 403 });
+        }
       }
 
       const { data: tenant, error: tenantError } = await client
@@ -259,6 +379,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Invalid document type.' }, { status: 400 });
   }
 
+  // Verify tenant belongs to landlord's organization
+  if (!authContext.isSuperAdmin && authContext.organizationId) {
+    const { data: orgProps } = await client
+      .from('properties')
+      .select('id')
+      .eq('organization_id', authContext.organizationId);
+    const propIds = (orgProps ?? []).map((p: any) => p.id);
+    const { data: orgUnits } = await client.from('units').select('id').in('property_id', propIds);
+    const unitIds = (orgUnits ?? []).map((u: any) => u.id);
+    const { data: tenantCheck } = await client
+      .from('tenants')
+      .select('id')
+      .eq('id', tenantId)
+      .in('unit_id', unitIds)
+      .maybeSingle();
+    if (!tenantCheck) {
+      return NextResponse.json({ message: 'You can only upload documents for your own tenants.' }, { status: 403 });
+    }
+  }
+
   const result = await client.from('documents').insert({
     tenant_id: tenantId,
     uploaded_by: authContext.userId,
@@ -299,6 +439,52 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ message: 'Document ID is required.' }, { status: 400 });
   }
 
+  // Verify document belongs to user's organization
+  if (!authContext.isSuperAdmin) {
+    const userMetadata = authContext.userMetadata || {};
+    const isAgent = userMetadata.role === 'agent';
+    const agentPropertyId = isAgent ? userMetadata.property_id : null;
+    let tenantIds: string[] = [];
+
+    if (agentPropertyId) {
+      const { data: units } = await client
+        .from('units')
+        .select('id')
+        .eq('property_id', agentPropertyId);
+      const unitIds = (units ?? []).map((u: any) => u.id);
+      const { data: tenants } = await client
+        .from('tenants')
+        .select('id')
+        .in('unit_id', unitIds);
+      tenantIds = (tenants ?? []).map((t: any) => t.id);
+    } else if (authContext.organizationId) {
+      const { data: orgProps } = await client
+        .from('properties')
+        .select('id')
+        .eq('organization_id', authContext.organizationId);
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
+      const { data: orgUnits } = await client.from('units').select('id').in('property_id', propIds);
+      const unitIds = (orgUnits ?? []).map((u: any) => u.id);
+      const { data: tenants } = await client
+        .from('tenants')
+        .select('id')
+        .in('unit_id', unitIds);
+      tenantIds = (tenants ?? []).map((t: any) => t.id);
+    }
+
+    if (tenantIds.length > 0) {
+      const { data: docCheck } = await client
+        .from('documents')
+        .select('id')
+        .eq('id', id)
+        .in('tenant_id', tenantIds)
+        .maybeSingle();
+      if (!docCheck) {
+        return NextResponse.json({ message: 'You can only update documents for your own tenants.' }, { status: 403 });
+      }
+    }
+  }
+
   const updateData: any = {
     status: status || 'sent',
     notes: notes || null,
@@ -330,6 +516,52 @@ export async function DELETE(request: NextRequest) {
 
   if (!id) {
     return NextResponse.json({ message: 'Document ID is required.' }, { status: 400 });
+  }
+
+  // Verify document belongs to user's organization
+  if (!authContext.isSuperAdmin) {
+    const userMetadata = authContext.userMetadata || {};
+    const isAgent = userMetadata.role === 'agent';
+    const agentPropertyId = isAgent ? userMetadata.property_id : null;
+    let tenantIds: string[] = [];
+
+    if (agentPropertyId) {
+      const { data: units } = await client
+        .from('units')
+        .select('id')
+        .eq('property_id', agentPropertyId);
+      const unitIds = (units ?? []).map((u: any) => u.id);
+      const { data: tenants } = await client
+        .from('tenants')
+        .select('id')
+        .in('unit_id', unitIds);
+      tenantIds = (tenants ?? []).map((t: any) => t.id);
+    } else if (authContext.organizationId) {
+      const { data: orgProps } = await client
+        .from('properties')
+        .select('id')
+        .eq('organization_id', authContext.organizationId);
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
+      const { data: orgUnits } = await client.from('units').select('id').in('property_id', propIds);
+      const unitIds = (orgUnits ?? []).map((u: any) => u.id);
+      const { data: tenants } = await client
+        .from('tenants')
+        .select('id')
+        .in('unit_id', unitIds);
+      tenantIds = (tenants ?? []).map((t: any) => t.id);
+    }
+
+    if (tenantIds.length > 0) {
+      const { data: docCheck } = await client
+        .from('documents')
+        .select('id')
+        .eq('id', id)
+        .in('tenant_id', tenantIds)
+        .maybeSingle();
+      if (!docCheck) {
+        return NextResponse.json({ message: 'You can only delete documents for your own tenants.' }, { status: 403 });
+      }
+    }
   }
 
   const result = await client.from('documents')

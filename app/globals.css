@@ -559,13 +559,7 @@ body {
     padding: 20px 12px 60px;
   }
 
-  .table-shell {
-    margin-left: -12px;
-    margin-right: -12px;
-    border-left: none;
-    border-right: none;
-    border-radius: 0;
-  }
+  .table-shell { margin-left: 0; margin-right: 0; border-radius: 12px; }
 
   .admin-no-hero .card { padding: 16px; min-width: 0; }
 
@@ -2660,6 +2654,7 @@ footer {
  .admin-layout-wrapper main {
    flex: 1;
  }
+
 
 
 
