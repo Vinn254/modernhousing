@@ -5,9 +5,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-if (!supabaseUrl || !serviceRoleKey) throw new Error('Missing Supabase server environment variables');
-
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+let supabaseAdmin: any = null;
+function getSupabaseAdmin() {
+  if (!supabaseAdmin) {
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error('Missing Supabase server environment variables');
+    }
+    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+  }
+  return supabaseAdmin;
+}
 
 function decodeJWT(token: string): any | null {
   try {
