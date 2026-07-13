@@ -281,17 +281,17 @@ export default function LandlordDocumentsPage() {
               </span>Upload Agreement
             </div>
             <h3>Send Agreement to Tenant</h3>
-            <form onSubmit={handleUploadAgreement} className="form-grid">
-              <select value={uploadForm.tenantId} onChange={e => setUploadForm(f => ({ ...f, tenantId: e.target.value }))} required>
+            <form onSubmit={handleUploadAgreement} className="form-grid" style={{ maxWidth: '100%', overflow: 'hidden' }}>
+              <select value={uploadForm.tenantId} onChange={e => setUploadForm(f => ({ ...f, tenantId: e.target.value }))} required style={{ width: '100%', minWidth: 0 }}>
                 <option value="">Select tenant</option>
                 <option value="all">All Tenants</option>
                 {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} - {t.property} · Unit {t.unit}</option>)}
               </select>
-              <input value={uploadForm.documentName} onChange={e => setUploadForm(f => ({ ...f, documentName: e.target.value }))} placeholder="Document name (e.g., Tenancy Agreement)" required />
-              <select value={uploadForm.documentType} onChange={e => setUploadForm(f => ({ ...f, documentType: e.target.value }))}>
+              <input value={uploadForm.documentName} onChange={e => setUploadForm(f => ({ ...f, documentName: e.target.value }))} placeholder="Document name (e.g., Tenancy Agreement)" required style={{ width: '100%' }} />
+              <select value={uploadForm.documentType} onChange={e => setUploadForm(f => ({ ...f, documentType: e.target.value }))} style={{ width: '100%' }}>
                 <option value="agreement">Agreement</option>
               </select>
-              <div className="field-group">
+              <div className="field-group" style={{ minWidth: 0 }}>
                 <label style={{ fontSize: '12px', color: 'var(--ink-2)' }}>Agreement File</label>
                 <FileInput 
                   label="Choose File" 
@@ -304,8 +304,8 @@ export default function LandlordDocumentsPage() {
                   file={documentFile}
                 />
               </div>
-              <input value={uploadForm.notes} onChange={e => setUploadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" className="field-group-wide" />
-              <button type="submit" disabled={uploading}>Upload & Assign</button>
+              <input value={uploadForm.notes} onChange={e => setUploadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" className="field-group-wide" style={{ width: '100%' }} />
+              <button type="submit" disabled={uploading} style={{ width: '100%' }}>Upload & Assign</button>
             </form>
             <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 8 }}>Upload agreement PDF and assign to tenant.</p>
           </article>
