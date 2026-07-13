@@ -577,6 +577,7 @@ body {
   .admin-no-hero .card {
     padding: 16px;
     min-width: 0;
+    overflow-x: visible;
   }
 
   .landlord-table,
