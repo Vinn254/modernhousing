@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -284,7 +284,7 @@ return (
                     {notifications.map(n => (
                       <tr key={n.id}>
                         <td>{n.type}</td>
-                        <td>{n.message}</td>
+                        <td style={{ whiteSpace: "normal", wordBreak: "break-word", maxWidth: "300px" }}>{n.message}</td>
                         <td>
                           <span className={`renewal-pill ${n.status === 'sent' ? 'status-active' : 'status-pending'}`}>
                             {n.status}
