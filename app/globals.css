@@ -575,6 +575,20 @@ body {
   .property-table {
     min-width: unset;
   }
+
+  .landlord-table th,
+  .property-table th {
+    white-space: normal;
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+
+  .landlord-table td,
+  .property-table td {
+    white-space: normal;
+    padding: 12px 8px;
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 900px) {
