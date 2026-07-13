@@ -232,9 +232,9 @@ export default function LandlordDocumentsPage() {
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     file: File | null;
   }) => (
-    <div style={{ marginBottom: 12 }}>
+    <div style={{ marginBottom: 12, minWidth: 0 }}>
       <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: 6 }}>{label}</label>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', minWidth: 0 }}>
         <label 
           htmlFor={`file-${label.replace(/\s+/g, '-').toLowerCase()}`}
           style={{
@@ -246,7 +246,9 @@ export default function LandlordDocumentsPage() {
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            maxWidth: 180,
+            flex: 1,
+            minWidth: 0,
+            maxWidth: '100%',
           }}
         >
           {file ? file.name : 'Choose File'}
@@ -258,7 +260,7 @@ export default function LandlordDocumentsPage() {
           onChange={onChange} 
           style={{ display: 'none' }}
         />
-        {file && <span style={{ fontSize: '11px', color: 'var(--ink-3)', flex: 1 }}>{Math.round(file.size / 1024)}KB</span>}
+        {file && <span style={{ fontSize: '11px', color: 'var(--ink-3)', flexShrink: 0 }}>{Math.round(file.size / 1024)}KB</span>}
       </div>
     </div>
   );
