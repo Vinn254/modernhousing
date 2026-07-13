@@ -226,6 +226,43 @@ export default function LandlordDocumentsPage() {
     return styles[status] || '';
   };
 
+  const FileInput = ({ label, accept, onChange, file }: { 
+    label: string; 
+    accept: string; 
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    file: File | null;
+  }) => (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: 6 }}>{label}</label>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <label 
+          htmlFor={`file-${label.replace(/\s+/g, '-').toLowerCase()}`}
+          style={{
+            padding: '8px 12px',
+            background: 'var(--line)',
+            borderRadius: 6,
+            cursor: 'pointer',
+            fontSize: '13px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: 180,
+          }}
+        >
+          {file ? file.name : 'Choose File'}
+        </label>
+        <input 
+          id={`file-${label.replace(/\s+/g, '-').toLowerCase()}`}
+          type="file" 
+          accept={accept} 
+          onChange={onChange} 
+          style={{ display: 'none' }}
+        />
+        {file && <span style={{ fontSize: '11px', color: 'var(--ink-3)', flex: 1 }}>{Math.round(file.size / 1024)}KB</span>}
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <main className="container admin-no-hero">
@@ -244,23 +281,28 @@ export default function LandlordDocumentsPage() {
               </span>Upload Agreement
             </div>
             <h3>Send Agreement to Tenant</h3>
-            <form onSubmit={handleUploadAgreement} className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-              <select value={uploadForm.tenantId} onChange={e => setUploadForm(f => ({ ...f, tenantId: e.target.value }))} required style={{ minWidth: 0 }}>
+            <form onSubmit={handleUploadAgreement} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <select value={uploadForm.tenantId} onChange={e => setUploadForm(f => ({ ...f, tenantId: e.target.value }))} required style={{ width: '100%' }}>
                 <option value="">Select tenant</option>
                 <option value="all">All Tenants</option>
                 {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} - {t.property} · Unit {t.unit}</option>)}
               </select>
-              <input value={uploadForm.documentName} onChange={e => setUploadForm(f => ({ ...f, documentName: e.target.value }))} placeholder="Document name (e.g., Tenancy Agreement)" />
-              <select value={uploadForm.documentType} onChange={e => setUploadForm(f => ({ ...f, documentType: e.target.value }))}>
+              <input value={uploadForm.documentName} onChange={e => setUploadForm(f => ({ ...f, documentName: e.target.value }))} placeholder="Document name (e.g., Tenancy Agreement)" style={{ width: '100%' }} />
+              <select value={uploadForm.documentType} onChange={e => setUploadForm(f => ({ ...f, documentType: e.target.value }))} style={{ width: '100%' }}>
                 <option value="agreement">Agreement</option>
               </select>
-              <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => {
-                const file = e.target.files?.[0] ?? null;
-                setDocumentFile(file);
-                if (file && !uploadForm.documentName) setUploadForm(f => ({ ...f, documentName: 'Tenancy Agreement' }));
-              }} required />
-              <input value={uploadForm.notes} onChange={e => setUploadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" />
-              <button type="submit" disabled={uploading} style={{ gridColumn: 'span 1' }}>Upload & Assign</button>
+              <FileInput 
+                label="Agreement File" 
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
+                onChange={e => {
+                  const file = e.target.files?.[0] ?? null;
+                  setDocumentFile(file);
+                  if (file && !uploadForm.documentName) setUploadForm(f => ({ ...f, documentName: 'Tenancy Agreement' }));
+                }}
+                file={documentFile}
+              />
+              <input value={uploadForm.notes} onChange={e => setUploadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" style={{ width: '100%' }} />
+              <button type="submit" disabled={uploading}>Upload & Assign</button>
             </form>
             <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 8 }}>Upload agreement PDF and assign to tenant.</p>
           </article>
@@ -278,8 +320,8 @@ export default function LandlordDocumentsPage() {
           {!loading && documents.filter(doc => doc.document_type === 'agreement').length === 0 && <p className="landlord-empty">No agreement documents uploaded yet.</p>}
 
           {!loading && documents.filter(doc => doc.document_type === 'agreement').length > 0 && (
-            <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+            <div className="table-shell" style={{ maxHeight: '500px', overflowX: 'auto' }}>
+              <table className="landlord-table" style={{ minWidth: '600px', fontSize: '12px' }}>
                 <thead>
                   <tr>
                     <th>Tenant</th>
@@ -302,18 +344,20 @@ export default function LandlordDocumentsPage() {
                         </span>
                       </td>
                       <td>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}</td>
-                      <td style={{ minWidth: 280 }}>
-                        <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4 }}>Download</a>
-                        {doc.status === 'downloaded' && (
-                          <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'awaiting_signature')}>Mark as Signed</button>
-                        )}
-                        {doc.status === 'signed' && (
-                          <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'approved')}>Approve</button>
-                        )}
-                        {doc.status === 'signed' && (
-                          <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'rejected')}>Request Re-sign</button>
-                        )}
-                        <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDelete(doc.id)}>Delete</button>
+                      <td>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
+                          {doc.status === 'downloaded' && (
+                            <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'awaiting_signature')}>Mark as Signed</button>
+                          )}
+                          {doc.status === 'signed' && (
+                            <>
+                              <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'approved')}>Approve</button>
+                              <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#f59e0b', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'rejected')}>Request Re-sign</button>
+                            </>
+                          )}
+                          <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDelete(doc.id)}>Delete</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -339,8 +383,8 @@ export default function LandlordDocumentsPage() {
           {!loading && bundles.length === 0 && <p className="landlord-empty">No document bundles submitted.</p>}
 
           {!loading && bundles.length > 0 && (
-            <div className="table-shell" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
+            <div className="table-shell" style={{ maxHeight: '400px', overflowX: 'auto' }}>
+              <table className="landlord-table" style={{ minWidth: '500px', fontSize: '12px' }}>
                 <thead>
                   <tr>
                     <th>Tenant</th>
@@ -365,10 +409,10 @@ export default function LandlordDocumentsPage() {
                       </td>
                       <td>
                         {bundle.status === 'pending' && (
-                          <>
-                            <button onClick={() => handleApproveBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff', marginRight: 4 }}>Approve</button>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            <button onClick={() => handleApproveBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }}>Approve</button>
                             <button onClick={() => handleRejectBundle(bundle.id)} style={{ padding: '4px 8px', fontSize: '11px', background: '#f59e0b', color: '#fff' }}>Reject</button>
-                          </>
+                          </div>
                         )}
                       </td>
                     </tr>
