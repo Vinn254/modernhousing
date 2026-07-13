@@ -104,15 +104,10 @@ export default function TenantPaymentsPage() {
       allBills = [...allBills, ...legacyBills];
     }
 
-    // Sort by month first, then by created_at (chronological) within month
-  // Rent should come before Overdue so the credit applies correctly
-  const TYPE_ORDER: Record<string, number> = { rent: 1, deposit: 2, overdue: 3, water: 4, garbage: 5, service_charge: 6, parking: 7, security: 8, other: 9 };
-
-  allBills.sort((a, b) => {
+    allBills.sort((a, b) => {
       const aOrder = getMonthSortValue(a.month_due);
       const bOrder = getMonthSortValue(b.month_due);
       if (aOrder !== bOrder) return aOrder - bOrder;
-      // Within same month, overdue comes after rent to apply credit after shortfall
       const isOverdueA = a.transaction_type === 'overdue';
       const isOverdueB = b.transaction_type === 'overdue';
       if (isOverdueA !== isOverdueB) return isOverdueA ? 1 : -1;
@@ -167,20 +162,11 @@ export default function TenantPaymentsPage() {
   const rentBills = bills.filter(b => ['rent', 'overdue', 'deposit'].includes(b.transaction_type));
   const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'].includes(b.transaction_type));
 
-// Calculate cumulative balance across months
-  // Formula: runningBalance = previousBalance + (paid - due)
-  // Positive = tenant has credit (has paid more than owed)
-  // Negative = tenant owes money
   const calculateWithRunningBalance = (billsList: Bill[]) => {
     let runningBalance = 0;
     return billsList.map(bill => {
-      // bill_balance: what tenant owes for this bill (due - paid), positive = owes
-      // For overdue, paid amount is credit (no due to pay off)
       const isOverdue = bill.transaction_type === 'overdue';
       const billBalance = isOverdue ? 0 : bill.due_amount - bill.paid_amount - bill.penalty_fee;
-      // contribution: 
-      // - Overdue: paid amount is pure credit
-      // - Regular bills: paid - due - penalty
       const contribution = isOverdue
         ? bill.paid_amount
         : bill.paid_amount - bill.due_amount - bill.penalty_fee;
@@ -192,10 +178,8 @@ export default function TenantPaymentsPage() {
   const rentWithBalance = calculateWithRunningBalance([...rentBills]);
   const utilityWithBalance = calculateWithRunningBalance([...utilityBills]);
 
-  // For summary: negative means owes, positive means credit
   const totalRentOwed = rentWithBalance.length > 0 ? rentWithBalance[rentWithBalance.length - 1].running_balance : 0;
   const totalUtilityOwed = utilityWithBalance.length > 0 ? utilityWithBalance[utilityWithBalance.length - 1].running_balance : 0;
-  // If running_balance is negative, tenant owes money (show absolute value)
   const totalTenantOwes = Math.max(0, -totalRentOwed) + Math.max(0, -totalUtilityOwed);
 
   const getTypeLabel = (type: string) => {
@@ -214,27 +198,6 @@ export default function TenantPaymentsPage() {
     };
     return map[type] || type;
   };
-
-  async function handleGenerateInvoice(invoice: Invoice) {
-    const { data: { session } } = await supabase.auth.getSession();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-
-    const response = await fetch(`/api/invoices/download?invoiceId=${invoice.id}`, { headers });
-    const result = await response.json();
-
-    if (response.ok && result.downloadUrl) {
-      // Open in new tab - user can print to PDF from browser
-      const newWindow = window.open(result.downloadUrl, '_blank');
-      if (newWindow) {
-        newWindow.onload = () => {
-          newWindow.print();
-        };
-      }
-    } else {
-      setError(result.message ?? 'Unable to generate invoice.');
-    }
-  }
 
   if (loading) {
     return (
@@ -260,7 +223,7 @@ export default function TenantPaymentsPage() {
             </div>
 
             <div className="card-label" style={{ marginBottom: 8 }}>
-              {activeTab === 'payments' ? 'Make Rent Payment' : activeTab === 'utilities' ? 'Make Utility Payment' : 'Download Invoices'}
+              {activeTab === 'payments' ? 'Make Rent Payment' : activeTab === 'utilities' ? 'Make Utility Payment' : 'Invoices'}
             </div>
             {activeTab !== 'invoices' && (
               <form onSubmit={handleStkPush} className="form-grid">
@@ -293,40 +256,40 @@ export default function TenantPaymentsPage() {
           ) : (
             <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
               <table className="landlord-table" style={{ minWidth: '100%', fontSize: '12px' }}>
-<thead>
-                    <tr>
-                      <th>Month</th>
-                      <th>Type</th>
-                      <th>Description</th>
-                      <th>Amount</th>
-                      <th>Due Date</th>
-                      <th>Status</th>
-                      <th>Download</th>
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Download</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.sort((a, b) => {
+                    const aOrder = getMonthSortValue(a.month_due);
+                    const bOrder = getMonthSortValue(b.month_due);
+                    return aOrder - bOrder || (a.month_due || '').localeCompare(b.month_due || '');
+                  }).map(inv => (
+                    <tr key={inv.id}>
+                      <td style={{ textTransform: 'capitalize' }}>{inv.month_due || '-'}</td>
+                      <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getInvoiceTypeLabel(inv.invoice_type)}</span></td>
+                      <td>{inv.description}</td>
+                      <td>{formatCurrency(inv.amount)}</td>
+                      <td>{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '-'}</td>
+                      <td><span style={{ textTransform: 'capitalize' }}>{inv.status}</span></td>
+                      <td>
+                        {inv.file_path ? (
+                          <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
+                        ) : (
+                          <span style={{ color: '#9ca3af', fontSize: '11px' }}>Not generated</span>
+                        )}
+                      </td>
                     </tr>
-                  </thead>
-<tbody>
-                   {invoices.sort((a, b) => {
-                     const aOrder = getMonthSortValue(a.month_due);
-                     const bOrder = getMonthSortValue(b.month_due);
-                     return aOrder - bOrder || (a.month_due || '').localeCompare(b.month_due || '');
-                   }).map(inv => (
-                     <tr key={inv.id}>
-                       <td style={{ textTransform: 'capitalize' }}>{inv.month_due || '-'}</td>
-                       <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getInvoiceTypeLabel(inv.invoice_type)}</span></td>
-                       <td>{inv.description}</td>
-                       <td>{formatCurrency(inv.amount)}</td>
-                       <td>{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '-'}</td>
-                       <td><span style={{ textTransform: 'capitalize' }}>{inv.status}</span></td>
-<td>
-                          {inv.file_path ? (
-                            <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
-                          ) : (
-                            <button onClick={() => handleGenerateInvoice(inv)} className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Generate</button>
-                          )}
-                        </td>
-                     </tr>
-                   ))}
-                 </tbody>
+                  ))}
+                </tbody>
               </table>
             </div>
           )
