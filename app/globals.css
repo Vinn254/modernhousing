@@ -559,9 +559,9 @@ body {
     padding: 20px 12px 60px;
   }
 
-  .table-shell { width: 100%; max-width: 100%; box-sizing: border-box; border-radius: 12px; }
+  .table-shell { width: 100%; max-width: 100%; box-sizing: border-box; border-radius: 12px; overflow-x: auto; overflow-y: visible; }
 
-  .admin-no-hero .card { padding: 16px; min-width: 0;  }
+  .admin-no-hero .card { padding: 16px; min-width: 0; overflow: visible; }
 
   .landlord-table,
   .property-table {
@@ -1727,9 +1727,11 @@ body {
    .dashboard-section-grid,
    .card-grid,
    .card-grid-item {
+     min-width: 0;
+     overflow-x: visible;
      grid-template-columns: 1fr !important;
    }
-}
+ }
 
 .dashboard-hero-stats {
   display: grid;
