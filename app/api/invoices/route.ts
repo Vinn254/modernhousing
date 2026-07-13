@@ -5,15 +5,11 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-let supabaseAdmin: any = null;
 function getSupabaseAdmin() {
-  if (!supabaseAdmin) {
-    if (!supabaseUrl || !serviceRoleKey) {
-      throw new Error('Missing Supabase server environment variables');
-    }
-    supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase server environment variables');
   }
-  return supabaseAdmin;
+  return createClient(supabaseUrl, serviceRoleKey);
 }
 
 function decodeJWT(token: string): any | null {
@@ -34,6 +30,7 @@ function decodeJWT(token: string): any | null {
 }
 
 async function getAuthContext(request: NextRequest) {
+  const client = getSupabaseAdmin();
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
 
@@ -58,24 +55,35 @@ async function getAuthContext(request: NextRequest) {
   if (!sessionUser) return { isSuperAdmin: false, sessionUser: null, userMetadata: {}, organizationId: null };
 
   const userMetadata = sessionUser.user_metadata || {};
-  
-  // Get organization_id from profile
-  const { data: profile } = await supabaseAdmin
+
+  const { data: profile } = await client
     .from('profiles')
-    .select('organization_id')
+    .select('*')
     .eq('user_id', sessionUser.id)
     .single();
-  
+
+  let orgId = profile?.organization_id ?? userMetadata.organization_id ?? null;
+
+  if (!orgId && sessionUser.email) {
+    const { data: profileByEmail } = await client
+      .from('profiles')
+      .select('organization_id')
+      .eq('email', sessionUser.email)
+      .single();
+    orgId = profileByEmail?.organization_id ?? null;
+  }
+
   return {
     isSuperAdmin: userMetadata.role === 'super_admin',
     sessionUser,
     userMetadata,
-    organizationId: profile?.organization_id ?? userMetadata.organization_id ?? null,
+    organizationId: orgId,
   };
 }
 
 export async function GET(request: NextRequest) {
   try {
+    const client = getSupabaseAdmin();
     const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
     const tenantEmail = request.nextUrl.searchParams.get('tenantEmail');
@@ -83,7 +91,7 @@ export async function GET(request: NextRequest) {
 
     let targetTenantId: string | null = null;
     if (tenantEmail) {
-      const { data: tenant } = await supabaseAdmin.from('tenants').select('id').eq('email', tenantEmail).single();
+      const { data: tenant } = await client.from('tenants').select('id').eq('email', tenantEmail).single();
       targetTenantId = tenant?.id ?? null;
     } else if (tenantId) {
       targetTenantId = tenantId;
@@ -94,16 +102,13 @@ export async function GET(request: NextRequest) {
     const isAgent = userMetadata?.role === 'agent';
     const isLandlord = !isAgent && !isSuperAdmin;
 
-    let query = supabaseAdmin.from('invoices').select('*, tenants(full_name, email, units(unit_number, properties(name)))');
+    let query = client.from('invoices').select('*, tenants(full_name, email, units(unit_number, properties(name)))');
 
     if (isSuperAdmin) {
-      // Super admin sees all invoices - no filter
     } else if (isAgent && userMetadata?.property_id) {
-      // Agent only sees invoices for their assigned property
       query = query.eq('property_id', userMetadata.property_id);
     } else if (isLandlord && authContext.organizationId) {
-      // Landlord sees invoices for all their properties via organization
-      const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
+      const { data: orgProps } = await client.from('properties').select('id').eq('organization_id', authContext.organizationId);
       const propIds = (orgProps ?? []).map((p: any) => p.id);
       if (propIds.length > 0) {
         query = query.in('property_id', propIds);
@@ -139,6 +144,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const client = getSupabaseAdmin();
     const body = await request.json();
     const { tenantId, propertyId, invoiceType, description, amount, dueDate, waterConsumption, monthDue } = body;
 
@@ -151,17 +157,16 @@ export async function POST(request: NextRequest) {
     const isAgent = userMetadata?.role === 'agent';
     const agentPropertyId = isAgent ? userMetadata?.property_id : null;
 
-    // Auto-fetch property_id if not provided
     let resolvedPropertyId = propertyId;
     if (!resolvedPropertyId) {
-      const { data: tenant } = await supabaseAdmin
+      const { data: tenant } = await client
         .from('tenants')
         .select('units!inner(property_id)')
         .eq('id', tenantId)
         .single();
 
       resolvedPropertyId = tenant?.units?.[0]?.property_id;
-      
+
       if (isAgent && agentPropertyId !== resolvedPropertyId) {
         return NextResponse.json({ message: 'You can only create invoices for your assigned property.' }, { status: 403 });
       }
@@ -183,7 +188,7 @@ export async function POST(request: NextRequest) {
     if (monthDue) insertData.month_due = monthDue;
     if (waterConsumption) insertData.water_consumption = waterConsumption;
 
-    const result = await supabaseAdmin.from('invoices').insert(insertData).select().single();
+    const result = await client.from('invoices').insert(insertData).select().single();
 
     if (result.error) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });

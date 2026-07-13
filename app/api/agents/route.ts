@@ -15,12 +15,10 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 function getSupabaseAdmin() {
   if (!supabaseUrl || !serviceRoleKey) {
-    return null as any;
+    throw new Error('Missing Supabase server environment variables');
   }
   return createClient(supabaseUrl, serviceRoleKey);
 }
-
-const supabaseAdmin = getSupabaseAdmin();
 
 interface AgentProfile {
   id: string;
@@ -52,6 +50,7 @@ function decodeJWT(token: string): any | null {
 }
 
 async function getAuthContext(request: NextRequest) {
+  const client = getSupabaseAdmin();
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
 
@@ -79,7 +78,7 @@ async function getAuthContext(request: NextRequest) {
 
   const userMetadata = sessionUser.user_metadata || {};
 
-  const { data: profile } = await supabaseAdmin
+  const { data: profile } = await client
     .from('profiles')
     .select('id, user_id, organization_id, role, full_name, email')
     .eq('user_id', sessionUser.id)
@@ -89,7 +88,7 @@ async function getAuthContext(request: NextRequest) {
 
   // Fallback: query by email
   if (!orgId && sessionUser.email) {
-    const { data: profileByEmail } = await supabaseAdmin
+    const { data: profileByEmail } = await client
       .from('profiles')
       .select('id, user_id, organization_id, role, full_name, email')
       .eq('email', sessionUser.email)
@@ -106,7 +105,8 @@ async function getAuthContext(request: NextRequest) {
 }
 
 async function upsertAgentProfile(userId: string, fullName: string, email: string, phone?: string | null, organizationId?: string | null) {
-  const { data: existingProfile, error: profileFetchError } = await supabaseAdmin
+  const client = getSupabaseAdmin();
+  const { data: existingProfile, error: profileFetchError } = await client
     .from('profiles')
     .select('*')
     .eq('user_id', userId)
@@ -127,7 +127,7 @@ async function upsertAgentProfile(userId: string, fullName: string, email: strin
   };
 
   if (existingProfile) {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await client
       .from('profiles')
       .update(payload)
       .eq('user_id', userId)
@@ -138,7 +138,7 @@ async function upsertAgentProfile(userId: string, fullName: string, email: strin
     return data as AgentProfile;
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await client
     .from('profiles')
     .insert(payload)
     .select('*')
@@ -185,12 +185,13 @@ async function updateAgentMetadata(userId: string, input: { fullName?: string; p
 
 export async function GET(request: NextRequest) {
   try {
+    const client = getSupabaseAdmin();
     const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
     const [users, profilesResult] = await Promise.all([
       getAllAdminUsers(),
-      supabaseAdmin.from('profiles').select('*').eq('role', 'agent'),
+      client.from('profiles').select('*').eq('role', 'agent'),
     ]);
 
     if (profilesResult.error) throw profilesResult.error;
@@ -204,7 +205,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ agents: [] });
       }
 
-      const { data: orgProps } = await supabaseAdmin
+      const { data: orgProps } = await client
         .from('properties')
         .select('id')
         .eq('organization_id', authContext.organizationId);
@@ -226,6 +227,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const client = getSupabaseAdmin();
     const body = await request.json();
     const email = String(body.email ?? '').trim();
     const password = String(body.password ?? '');
@@ -244,7 +246,7 @@ export async function POST(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin && authContext.organizationId && propertyId) {
-      const { data: prop } = await supabaseAdmin
+      const { data: prop } = await client
         .from('properties')
         .select('id, organization_id')
         .eq('id', propertyId)
@@ -282,6 +284,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const client = getSupabaseAdmin();
     const body = await request.json();
     const userId = String(body.userId ?? '').trim();
     const fullName = String(body.fullName ?? '').trim();
@@ -295,7 +298,7 @@ export async function PATCH(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin && authContext.organizationId && propertyId) {
-      const { data: prop } = await supabaseAdmin
+      const { data: prop } = await client
         .from('properties')
         .select('id')
         .eq('id', propertyId)
@@ -312,7 +315,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const user = await updateAgentMetadata(userId, { fullName, propertyId, propertyName, status });
-    const profilesResult = await supabaseAdmin.from('profiles').select('*').eq('user_id', userId).single();
+    const profilesResult = await client.from('profiles').select('*').eq('user_id', userId).single();
 
     if (profilesResult.error && profilesResult.error.code !== 'PGRST116') {
       throw profilesResult.error;
@@ -333,6 +336,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const client = getSupabaseAdmin();
     const userId = request.nextUrl.searchParams.get('id');
 
     if (!userId) {
@@ -341,7 +345,7 @@ export async function DELETE(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin) {
-      const { data: agentProfile } = await supabaseAdmin
+      const { data: agentProfile } = await client
         .from('profiles')
         .select('user_id')
         .eq('user_id', userId)
@@ -353,7 +357,7 @@ export async function DELETE(request: NextRequest) {
         const agentPropertyId = agent?.user_metadata?.property_id;
 
         if (agentPropertyId && authContext.organizationId) {
-          const { data: prop } = await supabaseAdmin
+          const { data: prop } = await client
             .from('properties')
             .select('id')
             .eq('id', agentPropertyId)
@@ -369,7 +373,7 @@ export async function DELETE(request: NextRequest) {
 
     const user = await updateAgentMetadata(userId, { status: 'inactive' });
     if (!user) throw new Error('Agent not found.');
-    await supabaseAdmin.from('profiles').update({ status: 'inactive' }).eq('user_id', userId);
+    await client.from('profiles').update({ status: 'inactive' }).eq('user_id', userId);
 
     return NextResponse.json({ agent: normalizeAgent(user) });
   } catch (error: any) {

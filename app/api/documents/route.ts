@@ -12,8 +12,6 @@ function getSupabaseAdmin() {
   return createClient(supabaseUrl, serviceRoleKey);
 }
 
-const supabaseAdmin = getSupabaseAdmin();
-
 function decodeJWT(token: string): any | null {
   try {
     const parts = token.split('.');
@@ -36,6 +34,7 @@ function generateId() {
 }
 
 async function getAuthContext(request: NextRequest) {
+  const client = getSupabaseAdmin();
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
 
@@ -66,7 +65,7 @@ async function getAuthContext(request: NextRequest) {
   const tenantId = userMetadata.tenant_id ?? null;
 
   if (!orgId && sessionUser.email) {
-    const { data: profileByEmail } = await supabaseAdmin
+    const { data: profileByEmail } = await client
       .from('profiles')
       .select('organization_id')
       .eq('email', sessionUser.email)
@@ -84,6 +83,7 @@ async function getAuthContext(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const client = getSupabaseAdmin();
     const authContext = await getAuthContext(request);
     const tenantEmail = request.nextUrl.searchParams.get('email');
     const tenantIdParam = request.nextUrl.searchParams.get('tenantId');
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     // For tenants - get their own documents
     if (authContext.tenantId || tenantIdParam) {
       const effectiveTenantId = authContext.tenantId || tenantIdParam;
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await client
         .from('documents')
         .select('*')
         .eq('tenant_id', effectiveTenantId)
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
     }
 
     // For landlords - get documents for their tenants
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await client
       .from('documents')
       .select(`*, tenants(full_name, email, units(unit_number, properties(name)))`)
       .order('created_at', { ascending: false });
@@ -130,6 +130,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const client = getSupabaseAdmin();
   const authContext = await getAuthContext(request);
 
   if (!authContext.userId) {
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'File and tenant ID are required.' }, { status: 400 });
       }
 
-      const { data: tenant, error: tenantError } = await supabaseAdmin
+      const { data: tenant, error: tenantError } = await client
         .from('tenants')
         .select('id')
         .eq('id', tenantId)
@@ -164,20 +165,20 @@ export async function POST(request: NextRequest) {
       const fileName = `${tenantId}/${documentType}/${generateId()}-${file.name}`;
       const filePath = `tenant-documents/${fileName}`;
 
-      const { data: storageData, error: storageError } = await supabaseAdmin.storage
+      const { data: storageData, error: storageError } = await client.storage
         .from('documents')
         .upload(filePath, buffer, { contentType: file.type });
 
       if (storageError) throw storageError;
 
-      const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData.path);
+      const { data: publicUrl } = client.storage.from('documents').getPublicUrl(storageData.path);
 
       const isLandlordUpload = documentType === 'agreement';
       const status = isLandlordUpload ? 'sent' : 'signed';
 
       // For tenant uploads, create or update bundle
       if (!isLandlordUpload) {
-        const bundleResult = await supabaseAdmin
+        const bundleResult = await client
           .from('document_bundles')
           .select('id')
           .eq('tenant_id', tenantId)
@@ -187,7 +188,7 @@ export async function POST(request: NextRequest) {
 
         let bundleId: string | undefined;
         if (!bundleResult.data) {
-          const newBundle = await supabaseAdmin
+          const newBundle = await client
             .from('document_bundles')
             .insert({ tenant_id: tenantId })
             .select()
@@ -204,14 +205,14 @@ export async function POST(request: NextRequest) {
         if (documentType === 'id_document' && documentName !== 'Passport Photo') bundleUpdate.id_document_url = publicUrl.publicUrl;
 
         if (Object.keys(bundleUpdate).length > 0 && bundleId) {
-          await supabaseAdmin
+          await client
             .from('document_bundles')
             .update(bundleUpdate)
             .eq('id', bundleId);
         }
       }
 
-      const result = await supabaseAdmin.from('documents')
+      const result = await client.from('documents')
         .insert({
           tenant_id: tenantId,
           uploaded_by: authContext.userId,
@@ -227,7 +228,7 @@ export async function POST(request: NextRequest) {
       if (result.error) throw result.error;
 
       if (documentName.toLowerCase().includes('photo')) {
-        await supabaseAdmin
+        await client
           .from('tenants')
           .update({ passport_photo_url: publicUrl.publicUrl })
           .eq('id', tenantId);
@@ -258,7 +259,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Invalid document type.' }, { status: 400 });
   }
 
-  const result = await supabaseAdmin.from('documents').insert({
+  const result = await client.from('documents').insert({
     tenant_id: tenantId,
     uploaded_by: authContext.userId,
     document_name: documentName,
@@ -274,7 +275,7 @@ export async function POST(request: NextRequest) {
 
   // If signed agreement, update tenant record
   if (documentType === 'signed_agreement') {
-    await supabaseAdmin
+    await client
       .from('tenants')
       .update({ signed_agreement_url: documentUrl })
       .eq('id', tenantId);
@@ -284,6 +285,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const client = getSupabaseAdmin();
   const authContext = await getAuthContext(request);
 
   if (!authContext.userId) {
@@ -303,7 +305,7 @@ export async function PATCH(request: NextRequest) {
     updated_at: new Date().toISOString(),
   };
 
-  const result = await supabaseAdmin.from('documents')
+  const result = await client.from('documents')
     .update(updateData)
     .eq('id', id)
     .select();
@@ -316,6 +318,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const client = getSupabaseAdmin();
   const authContext = await getAuthContext(request);
 
   if (!authContext.userId) {
@@ -329,7 +332,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ message: 'Document ID is required.' }, { status: 400 });
   }
 
-  const result = await supabaseAdmin.from('documents')
+  const result = await client.from('documents')
     .delete()
     .eq('id', id);
 

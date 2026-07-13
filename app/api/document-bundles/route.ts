@@ -11,19 +11,12 @@ function getSupabaseAdmin() {
   return createClient(supabaseUrl, serviceRoleKey);
 }
 
-let supabaseAdmin: any = null;
-function getClient() {
-  if (!supabaseAdmin) {
-    supabaseAdmin = getSupabaseAdmin();
-  }
-  return supabaseAdmin;
-}
-
 export async function GET(request: NextRequest) {
   try {
+    const client = getSupabaseAdmin();
     const tenantId = request.nextUrl.searchParams.get('tenantId');
-    
-    let query = supabaseAdmin
+
+    let query = client
       .from('document_bundles')
       .select(`*, tenants(full_name, units(unit_number, properties(name)))`)
       .order('created_at', { ascending: false });
@@ -56,6 +49,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const client = getSupabaseAdmin();
     const body = await request.json();
     const { id, status } = body;
 
@@ -63,7 +57,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Bundle ID is required.' }, { status: 400 });
     }
 
-    const result = await supabaseAdmin
+    const result = await client
       .from('document_bundles')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', id)

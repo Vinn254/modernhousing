@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
   --navy-900: #061528;
@@ -1160,15 +1160,6 @@ body {
   border: 1px solid var(--line);
 }
 
-@media (max-width: 768px) {
-  .table-shell {
-    margin-left: 0;
-    margin-right: 0;
-    border-left: none;
-    border-right: none;
-    border-radius: 0;
-  }
-}
 
 .landlord-table {
   width: 100%;
@@ -1176,26 +1167,6 @@ body {
   background: #fff;
 }
 
-@media (min-width: 768px) {
-  .landlord-table {
-    min-width: 860px;
-  }
-}
-
-@media (max-width: 768px) {
-  .landlord-table,
-  .property-table {
-    min-width: 700px;
-  }
-
-  .landlord-table th,
-  .property-table th,
-  .landlord-table td,
-  .property-table td {
-    white-space: normal;
-  }
-}
-}
 
 .landlord-table th {
   padding: 14px 16px;
@@ -2712,3 +2683,6 @@ footer {
  .admin-layout-wrapper main {
    flex: 1;
  }
+
+
+
