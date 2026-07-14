@@ -12,9 +12,9 @@ interface DashboardStats {
   total_balance: number;
   occupiedUnits: number;
   vacantUnits: number;
-  tenants_with_analytics: Array<{ id: string; payment_count: number; due_date: string }>;
   vacantUnitsList?: Array<{ unit_number: string; property_name: string; rent_amount: number }>;
   rentOwedByTenant?: Array<{ id: string; full_name: string; email: string; unit: string; property: string; total_paid: number; rent_amount: number; balance_remaining: number; last_payment: string | null }>;
+  tenants_with_analytics: Array<{ id: string; payment_count: number; due_date: string }>;
 }
 
 interface Tenant {
@@ -325,13 +325,13 @@ export default function DashboardPage() {
     setAgentTenantPhone('');
     setAgentTenantUnitId('');
     setAgentLeaseStart('');
-setAgentLeaseEnd('');
-     setAgentDeposit('');
-     setAgentNextOfKinName('');
-     setAgentNextOfKinId('');
-     setAgentNextOfKinPhone('');
-     setMessage('Tenant added successfully.');
-     await loadDashboard(true);
+    setAgentLeaseEnd('');
+    setAgentDeposit('');
+    setAgentNextOfKinName('');
+    setAgentNextOfKinId('');
+    setAgentNextOfKinPhone('');
+    setMessage('Tenant added successfully.');
+    await loadDashboard(true);
     setAgentLoading(false);
   }
 
@@ -386,7 +386,6 @@ setAgentLeaseEnd('');
 
     const targetPropertyId = selectedPropertyId || effectivePropertyId;
     
-    // Create invoice instead of payment
     const response = await fetch('/api/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -476,13 +475,13 @@ setAgentLeaseEnd('');
                   <option value="">Auto-create unit</option>
                   {units.map((unit) => <option key={unit.id} value={unit.id}>Unit {unit.unit_number}</option>)}
                 </select>
-<input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required />
-                 <input type="date" value={agentLeaseEnd} onChange={(event) => setAgentLeaseEnd(event.target.value)} required />
-                 <input type="number" value={agentDeposit} onChange={(event) => setAgentDeposit(event.target.value)} placeholder="Deposit" />
-                 <input value={agentNextOfKinName} onChange={(event) => setAgentNextOfKinName(event.target.value)} placeholder="Next of Kin Name" />
-                 <input value={agentNextOfKinId} onChange={(event) => setAgentNextOfKinId(event.target.value)} placeholder="Next of Kin ID" />
-                 <input value={agentNextOfKinPhone} onChange={(event) => setAgentNextOfKinPhone(event.target.value)} placeholder="Next of Kin Phone" />
-                 <button type="submit" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Tenant'}</button>
+                <input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required />
+                <input type="date" value={agentLeaseEnd} onChange={(event) => setAgentLeaseEnd(event.target.value)} required />
+                <input type="number" value={agentDeposit} onChange={(event) => setAgentDeposit(event.target.value)} placeholder="Deposit" />
+                <input value={agentNextOfKinName} onChange={(event) => setAgentNextOfKinName(event.target.value)} placeholder="Next of Kin Name" />
+                <input value={agentNextOfKinId} onChange={(event) => setAgentNextOfKinId(event.target.value)} placeholder="Next of Kin ID" />
+                <input value={agentNextOfKinPhone} onChange={(event) => setAgentNextOfKinPhone(event.target.value)} placeholder="Next of Kin Phone" />
+                <button type="submit" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Tenant'}</button>
               </form>
             </div>
 
@@ -611,13 +610,10 @@ setAgentLeaseEnd('');
                 <article className="card"><div className="card-label">Due Dates</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.tenants_with_analytics.length}</h3><p>Tenants with payment/start-date based due dates.</p></article>
                 <article className="card" style={{ textAlign: 'center' }}>
                   <div className="card-label">Unit Occupancy</div>
-                  <DonutChart 
-                    data={[
-                      { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
-                      { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' },
-                    ]} 
-                    centerLabel={String(stats.occupiedUnits) + '/' + String(stats.occupiedUnits + stats.vacantUnits)} 
-                  />
+                  <DonutChart data={[
+                    { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
+                    { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' },
+                  ]} centerLabel={String(stats.occupiedUnits) + '/' + String(stats.occupiedUnits + stats.vacantUnits)} />
                   <p style={{ color: 'var(--ink-3)', marginTop: 8, fontSize: '13px' }}>Occupied / Vacant Units</p>
                 </article>
               </div>
@@ -628,12 +624,40 @@ setAgentLeaseEnd('');
                 <article className="card" style={{ gridColumn: 'span 3' }}><div className="card-label">Properties</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.properties}</h3><p>Total properties in your portfolio.</p></article>
                 {!isAgent && <article className="card" style={{ gridColumn: 'span 3' }}><div className="card-label">Agents</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.agents}</h3><p>Agents assigned to properties.</p></article>}
                 <article className="card" style={{ gridColumn: 'span 3' }}><div className="card-label">Tenants</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.tenants}</h3><p>Active tenant records.</p></article>
-                {!isAgent && <article className="card" style={{ gridColumn: 'span 3' }}><div className="card-label">Collections</div><h3 style={{ fontSize: '34px', margin: 0 }}>{formatCurrency(stats.total_payments)}</h3><p>Total payments recorded.</p></article>}
-                {!isAgent && <article className="card" style={{ gridColumn: 'span 6' }}><div className="card-label">Outstanding Balance</div><h3 style={{ fontSize: '34px', margin: 0 }}>{formatCurrency(stats.total_balance)}</h3><p>Current balance remaining across tenant accounts.</p></article>}
+                {!isAgent && <article className="card" style={{ gridColumn: 'span 3' }}><div className="card-label">Collections</div><h3 style={{ fontSize: '34px', margin: 0 }}>{formatCurrency(stats.total_payments)}</h3><p>Total payments received.</p></article>}
+                {!isAgent && <article className="card" style={{ gridColumn: 'span 6' }}><div className="card-label">Outstanding Balance</div><h3 style={{ fontSize: '34px', margin: 0 }}>{formatCurrency(stats.total_balance)}</h3><p>Rent owed to collect.</p></article>}
                 <article className="card" style={{ gridColumn: 'span 6' }}><div className="card-label">Due Dates</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.tenants_with_analytics.length}</h3><p>Tenants with payment/start-date based due dates.</p></article>
               </div>
             </section>
           )}
+        </>
+      )}
+
+      {!isAgent && stats && (
+        <>
+          <section style={{ marginTop: 24 }}>
+            <div className="card-admin-header" style={{ marginBottom: 16 }}>
+              <div><span className="landlord-kicker">Vacant Units</span><h2>Available for Rent</h2></div>
+            </div>
+            {stats.vacantUnitsList && stats.vacantUnitsList.length > 0 ? (
+              <div className="table-shell"><table className="landlord-table">
+                <thead><tr><th>Unit</th><th>Property</th><th>Rent Amount</th></tr></thead>
+                <tbody>{stats.vacantUnitsList.map((u, i) => <tr key={i}><td>{u.unit_number}</td><td>{u.property_name}</td><td>{formatCurrency(u.rent_amount)}</td></tr>)}</tbody>
+              </table></div>
+            ) : <p className="landlord-muted">No vacant units.</p>}
+          </section>
+
+          <section style={{ marginTop: 24 }}>
+            <div className="card-admin-header" style={{ marginBottom: 16 }}>
+              <div><span className="landlord-kicker">Rent Owed</span><h2>Tenants with Outstanding Balances</h2></div>
+            </div>
+            {stats.rentOwedByTenant && stats.rentOwedByTenant.some(t => t.balance_remaining > 0) ? (
+              <div className="table-shell"><table className="landlord-table">
+                <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Last Payment</th></tr></thead>
+                <tbody>{stats.rentOwedByTenant.filter(t => t.balance_remaining > 0).map(t => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.balance_remaining)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
+              </table></div>
+            ) : <p className="landlord-muted">All tenants have paid.</p>}
+          </section>
         </>
       )}
 
@@ -685,84 +709,19 @@ setAgentLeaseEnd('');
               </div>
             ))}
 
-<h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
-             {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : payments.slice(0, 6).map((payment) => (
-               <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                   <strong>{payment.tenant}</strong>
-                   <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
-                 </div>
-                 <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {payment.created_at ? new Date(payment.created_at).toLocaleDateString() : ''}</div>
-               </div>
-             ))}
-           </div>
-
-{stats?.vacantUnitsList && stats.vacantUnitsList.length > 0 && (
-           <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 18, marginTop: 24 }}>
-             <div className="card">
-               <div className="card-label">Vacant Units</div>
-               <h3 style={{ marginBottom: 16 }}>Units Available for Rent</h3>
-               <div className="table-shell">
-                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                   <thead>
-                     <tr style={{ borderBottom: '1px solid var(--line)' }}>
-                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Unit #</th>
-                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Property</th>
-                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Rent Amount</th>
-                     </tr>
-                   </thead>
-                   <tbody>
-                     {stats.vacantUnitsList.map((unit) => (
-                       <tr key={unit.unit_number} style={{ borderBottom: '1px solid var(--line-soft)' }}>
-                         <td style={{ padding: '14px 12px' }}>{unit.unit_number}</td>
-                         <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{unit.property_name}</td>
-                         <td style={{ padding: '14px 12px', fontWeight: 600 }}>{formatCurrency(unit.rent_amount)}</td>
-                       </tr>
-                     ))}
-                   </tbody>
-                 </table>
-               </div>
-             </div>
-           </section>
-         )}
-
-         {stats?.rentOwedByTenant && stats.rentOwedByTenant.length > 0 && (
-           <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 18, marginTop: 24 }}>
-             <div className="card">
-               <div className="card-label">Rent Owed</div>
-               <h3 style={{ marginBottom: 16 }}>Tenants with Outstanding Balance</h3>
-               <div className="table-shell">
-                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                   <thead>
-                     <tr style={{ borderBottom: '1px solid var(--line)' }}>
-                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Tenant</th>
-                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Unit</th>
-                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Total Paid</th>
-                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Balance</th>
-                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Last Payment</th>
-                     </tr>
-                   </thead>
-                   <tbody>
-                     {stats.rentOwedByTenant.filter((t) => t.balance_remaining > 0).map((tenant) => (
-                       <tr key={tenant.id} style={{ borderBottom: '1px solid var(--line-soft)' }}>
-                         <td style={{ padding: '14px 12px' }}>
-                           <strong>{tenant.full_name}</strong>
-                           <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{tenant.email}</div>
-                         </td>
-                         <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.unit}</td>
-                         <td style={{ padding: '14px 12px', fontWeight: 600 }}>{formatCurrency(tenant.total_paid)}</td>
-                         <td style={{ padding: '14px 12px', fontWeight: 600, color: '#dc2626' }}>{formatCurrency(tenant.balance_remaining)}</td>
-<td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.last_payment ? new Date(tenant.last_payment).toLocaleDateString() : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
+            {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : payments.slice(0, 6).map((payment) => (
+              <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <strong>{payment.tenant}</strong>
+                  <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
                 </div>
+                <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {payment.created_at ? new Date(payment.created_at).toLocaleDateString() : ''}</div>
               </div>
-            </section>
-          )}
+            ))}
+          </div>
         </section>
       )}
-     </main>
-    );
+    </main>
+  );
 }
