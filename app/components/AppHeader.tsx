@@ -235,12 +235,11 @@ export default function AppHeader() {
       <header className="app-header">
         <div className="app-header-content">
           {user && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span className="app-header-greeting">{timeGreeting}, {firstName} <span>· {roleLabel}</span></span>
+            <>
               <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
               <span className="user-name" style={{ fontSize: '14px' }}>{user.user_metadata?.full_name || user.email}</span>
-              <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu" style={{ position: 'static', marginLeft: '8px' }}>☰</button>
-            </div>
+              <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">☰</button>
+            </>
           )}
         </div>
       </header>
