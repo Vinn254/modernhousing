@@ -37,6 +37,8 @@ export default function AnalyticsPage() {
         .finally(() => setLoading(false));
     }
     loadData();
+    const interval = window.setInterval(loadData, 30000);
+    return () => window.clearInterval(interval);
   }, []);
 
   const unitOccupancyData = [

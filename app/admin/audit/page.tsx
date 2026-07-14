@@ -28,12 +28,13 @@ export default function AuditPage() {
         setUserRole(data.user.user_metadata?.role || '');
       }
     });
-  }, []);
-
-  useEffect(() => {
     if (userRole === 'super_admin') {
       loadAuditLogs();
     }
+    const interval = window.setInterval(() => {
+      if (userRole === 'super_admin') loadAuditLogs();
+    }, 30000);
+    return () => window.clearInterval(interval);
   }, [userRole]);
 
   async function loadAuditLogs() {
@@ -75,6 +76,7 @@ export default function AuditPage() {
           <p className="heading">System Audit Logs</p>
           <p className="subheading">Monitor all activities across the platform for security and compliance.</p>
         </div>
+        <button onClick={loadAuditLogs} style={{ padding: '8px 16px' }}>Refresh</button>
       </div>
 
       <section className="card" style={{ marginBottom: 24 }}>
