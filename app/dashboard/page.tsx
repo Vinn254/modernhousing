@@ -13,6 +13,8 @@ interface DashboardStats {
   occupiedUnits: number;
   vacantUnits: number;
   tenants_with_analytics: Array<{ id: string; payment_count: number; due_date: string }>;
+  vacantUnitsList?: Array<{ unit_number: string; property_name: string; rent_amount: number }>;
+  rentOwedByTenant?: Array<{ id: string; full_name: string; email: string; unit: string; property: string; total_paid: number; rent_amount: number; balance_remaining: number; last_payment: string | null }>;
 }
 
 interface Tenant {
@@ -683,19 +685,84 @@ setAgentLeaseEnd('');
               </div>
             ))}
 
-            <h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
-            {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : payments.slice(0, 6).map((payment) => (
-              <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <strong>{payment.tenant}</strong>
-                  <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
+<h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
+             {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : payments.slice(0, 6).map((payment) => (
+               <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                   <strong>{payment.tenant}</strong>
+                   <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
+                 </div>
+                 <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {payment.created_at ? new Date(payment.created_at).toLocaleDateString() : ''}</div>
+               </div>
+             ))}
+           </div>
+
+{stats?.vacantUnitsList && stats.vacantUnitsList.length > 0 && (
+           <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 18, marginTop: 24 }}>
+             <div className="card">
+               <div className="card-label">Vacant Units</div>
+               <h3 style={{ marginBottom: 16 }}>Units Available for Rent</h3>
+               <div className="table-shell">
+                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                   <thead>
+                     <tr style={{ borderBottom: '1px solid var(--line)' }}>
+                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Unit #</th>
+                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Property</th>
+                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Rent Amount</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {stats.vacantUnitsList.map((unit) => (
+                       <tr key={unit.unit_number} style={{ borderBottom: '1px solid var(--line-soft)' }}>
+                         <td style={{ padding: '14px 12px' }}>{unit.unit_number}</td>
+                         <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{unit.property_name}</td>
+                         <td style={{ padding: '14px 12px', fontWeight: 600 }}>{formatCurrency(unit.rent_amount)}</td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             </div>
+           </section>
+         )}
+
+         {stats?.rentOwedByTenant && stats.rentOwedByTenant.length > 0 && (
+           <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 18, marginTop: 24 }}>
+             <div className="card">
+               <div className="card-label">Rent Owed</div>
+               <h3 style={{ marginBottom: 16 }}>Tenants with Outstanding Balance</h3>
+               <div className="table-shell">
+                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                   <thead>
+                     <tr style={{ borderBottom: '1px solid var(--line)' }}>
+                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Tenant</th>
+                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Unit</th>
+                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Total Paid</th>
+                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Balance</th>
+                       <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Last Payment</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {stats.rentOwedByTenant.filter((t) => t.balance_remaining > 0).map((tenant) => (
+                       <tr key={tenant.id} style={{ borderBottom: '1px solid var(--line-soft)' }}>
+                         <td style={{ padding: '14px 12px' }}>
+                           <strong>{tenant.full_name}</strong>
+                           <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{tenant.email}</div>
+                         </td>
+                         <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.unit}</td>
+                         <td style={{ padding: '14px 12px', fontWeight: 600 }}>{formatCurrency(tenant.total_paid)}</td>
+                         <td style={{ padding: '14px 12px', fontWeight: 600, color: '#dc2626' }}>{formatCurrency(tenant.balance_remaining)}</td>
+<td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.last_payment ? new Date(tenant.last_payment).toLocaleDateString() : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {payment.created_at ? new Date(payment.created_at).toLocaleDateString() : ''}</div>
               </div>
-            ))}
-          </div>
+            </section>
+          )}
         </section>
       )}
-    </main>
-  );
+     </main>
+    );
 }

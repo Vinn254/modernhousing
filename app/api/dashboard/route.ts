@@ -129,12 +129,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const [{ data: propertiesData }, { data: unitsData }, { data: tenantsData }, { data: paymentsData }, { data: subscriptionsData }] = await Promise.all([
+    const [{ data: propertiesData }, { data: unitsData }, { data: tenantsData }, { data: paymentsData }, { data: subscriptionsData }, { data: unitsForVacant }, { data: tenantsForOwed }] = await Promise.all([
       propertiesQuery,
       unitsQuery,
       tenantsQuery,
       paymentsQuery,
       subscriptionsQuery,
+      supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant'),
+      supabaseAdmin.from('tenants').select(`
+        id, full_name, email, lease_start,
+        units!inner(unit_number, rent_amount, properties(name))
+      `),
     ]);
 
     const allTenants = tenantsData ?? [];
@@ -142,6 +147,22 @@ export async function GET(request: NextRequest) {
 
     const occupiedUnits = (allUnits ?? []).filter((u: any) => u.occupancy_status === 'occupied').length;
     const vacantUnits = (allUnits ?? []).length - occupiedUnits;
+
+    // Filter vacant units by organization if landlord
+    let vacantUnitsFiltered = unitsForVacant ?? [];
+    if (!isAgent && !isSuperAdmin && authContext.organizationId) {
+      const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
+      vacantUnitsFiltered = (unitsForVacant ?? []).filter((u: any) => propIds.includes(u.property_id));
+    }
+
+    // Filter tenants for rent owed by organization if landlord
+    let tenantsForOwedFiltered = tenantsForOwed ?? [];
+    if (!isAgent && !isSuperAdmin && authContext.organizationId) {
+      const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
+      tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => propIds.includes(t.units?.property_id));
+    }
 
     const propertyCount = effectivePropertyId ? 1 : (propertiesData?.length ?? 0);
     const financialPayments = (paymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
@@ -172,6 +193,30 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    const vacantUnitsList = vacantUnitsFiltered.map((u: any) => ({
+      unit_number: u.unit_number,
+      property_name: (propertiesData ?? []).find((p: any) => p.id === u.property_id)?.name ?? '—',
+      rent_amount: u.rent_amount ?? 0,
+    }));
+
+    const rentOwedByTenant = tenantsForOwedFiltered.map((tenant: any) => {
+      const tenantPayments = (paymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id);
+      const totalPaid = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount), 0);
+      const expectedRent = toNumber(tenant.units?.rent_amount ?? 0);
+      const balance = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.balance_remaining), 0);
+      return {
+        id: tenant.id,
+        full_name: tenant.full_name,
+        email: tenant.email,
+        unit: tenant.units?.unit_number ?? '—',
+        property: tenant.units?.properties?.name ?? '—',
+        total_paid: totalPaid,
+        rent_amount: expectedRent,
+        balance_remaining: balance,
+        last_payment: tenantPayments.sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]?.created_at ?? null,
+      };
+    });
+
     return NextResponse.json({
       properties: propertyCount,
       agents: 0,
@@ -180,6 +225,8 @@ export async function GET(request: NextRequest) {
       total_balance: totalBalance,
       occupiedUnits,
       vacantUnits,
+      vacantUnitsList,
+      rentOwedByTenant,
       subscribedLandlords: 0,
       totalLandlords: 0,
       totalPayments: paymentsData?.length ?? 0,
