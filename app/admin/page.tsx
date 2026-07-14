@@ -8,8 +8,12 @@ import { supabase } from '../../lib/supabaseClient';
 export default function AdminDashboard() {
   const [occupiedUnits, setOccupiedUnits] = useState(0);
   const [vacantUnits, setVacantUnits] = useState(0);
+  const [vacantUnitsList, setVacantUnitsList] = useState<any[]>([]);
+  const [rentOwedByTenant, setRentOwedByTenant] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState('');
+
+  const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
   useEffect(() => {
     async function loadData() {
@@ -26,6 +30,8 @@ export default function AdminDashboard() {
         .then(data => {
           setOccupiedUnits(data.occupiedUnits ?? 0);
           setVacantUnits(data.vacantUnits ?? 0);
+          setVacantUnitsList(data.vacantUnitsList ?? []);
+          setRentOwedByTenant(data.rentOwedByTenant ?? []);
         })
         .catch(() => {})
         .finally(() => setLoading(false));
@@ -126,13 +132,39 @@ export default function AdminDashboard() {
              <Link href="/admin/documents" className="card-cta">View Documents</Link>
            </article>
 
-           <article className="card">
-             <div className="feat-icon" style={{ background: '#6366f1' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
-             <h3>System Audit</h3>
-             <p>Monitor all system activities and security events.</p>
-             <Link href="/admin/audit" className="card-cta">View Audit Logs</Link>
-           </article>
-         </section>
+<article className="card">
+              <div className="feat-icon" style={{ background: '#6366f1' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+              <h3>System Audit</h3>
+              <p>Monitor all system activities and security events.</p>
+              <Link href="/admin/audit" className="card-cta">View Audit Logs</Link>
+            </article>
+          </section>
+
+          <section style={{ marginBottom: '24px' }}>
+            <div className="card-admin-header" style={{ marginBottom: 16 }}>
+              <div><span className="landlord-kicker">Vacant Units</span><h2>Available for Rent</h2></div>
+            </div>
+            {loading ? <p style={{ color: 'var(--ink-3)' }}>Loading...</p> :
+              vacantUnitsList && vacantUnitsList.length > 0 ? (
+                <div className="table-shell"><table className="landlord-table">
+                  <thead><tr><th>Unit</th><th>Property</th><th>Rent Amount</th></tr></thead>
+                  <tbody>{vacantUnitsList.map((u: any, i: number) => <tr key={i}><td>{u.unit_number}</td><td>{u.property_name}</td><td>{formatCurrency(u.rent_amount)}</td></tr>)}</tbody>
+                </table></div>
+              ) : <p className="landlord-muted">No vacant units.</p>}
+          </section>
+
+          <section style={{ marginBottom: '24px' }}>
+            <div className="card-admin-header" style={{ marginBottom: 16 }}>
+              <div><span className="landlord-kicker">Rent Owed</span><h2>Tenants with Outstanding Balances</h2></div>
+            </div>
+            {loading ? <p style={{ color: 'var(--ink-3)' }}>Loading...</p> :
+              rentOwedByTenant && rentOwedByTenant.some((t: any) => t.balance_remaining > 0) ? (
+                <div className="table-shell"><table className="landlord-table">
+                  <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Last Payment</th></tr></thead>
+                  <tbody>{rentOwedByTenant.filter((t: any) => t.balance_remaining > 0).map((t: any) => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.balance_remaining)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
+                </table></div>
+              ) : <p className="landlord-muted">All tenants have paid.</p>}
+          </section>
       </main>
 
       <footer>
