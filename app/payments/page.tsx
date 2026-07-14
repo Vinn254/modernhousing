@@ -385,30 +385,34 @@ export default function PaymentsPage() {
     y -= 40;
 
     const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-    const totalDue = payments.reduce((sum, p) => sum + ((p as any).due_amount || 0), 0);
     const totalBal = payments.reduce((sum, p) => sum + (p.balance_remaining || 0), 0);
 
-    page.drawText('Tenant', { x: 50, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
-    page.drawText('Month', { x: 180, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
-    page.drawText('Paid', { x: 280, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
-    page.drawText('Bal', { x: 380, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
-    page.drawText('Date', { x: 460, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
-    y -= 20;
-    page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
-    y -= 20;
+    const headers = ['Tenant', 'Month Due', 'Trans Code', 'Paid', 'Balance', 'Date'];
+    const colX = [50, 150, 260, 340, 420, 500];
+    headers.forEach((h, i) => {
+      page.drawText(h, { x: colX[i], y, font: boldFont, size: 10, color: rgb(0.25, 0.25, 0.25) });
+    });
+    y -= 22;
+    page.drawLine({ start: { x: 50, y }, end: { x: 550, y }, thickness: 1, color: rgb(0.6, 0.6, 0.6) });
+    y -= 18;
 
-    payments.forEach(payment => {
-      page.drawText(payment.tenant.substring(0, 20), { x: 50, y, font, size: 10, color: rgb(0.1, 0.1, 0.1) });
-      page.drawText((payment as any).month_due?.substring(0, 12) || '—', { x: 180, y, font, size: 10, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 280, y, font, size: 10, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText(formatCurrency(payment.balance_remaining).replace('KES', ''), { x: 380, y, font, size: 10, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText(payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—', { x: 460, y, font, size: 10, color: rgb(0.2, 0.2, 0.2) });
+    payments.forEach((payment, idx) => {
+      if (idx % 2 === 0) {
+        page.drawRectangle({ x: 48, y: y - 4, width: 504, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
+      }
+      page.drawText(payment.tenant.substring(0, 18), { x: 50, y, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
+      page.drawText((payment as any).month_due?.substring(0, 12) || payment.description?.substring(0, 12) || '—', { x: 150, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 260, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
+      page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 340, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
+      page.drawText(formatCurrency(payment.balance_remaining).replace('KES', ''), { x: 420, y, font, size: 9, color: payment.balance_remaining > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.2, 0.2, 0.2) });
+      page.drawText(payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—', { x: 500, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
       y -= 16;
     });
 
-    y -= 20;
-    page.drawText(`Total Paid: ${formatCurrency(totalPaid)}`, { x: 50, y, font: boldFont, size: 12, color: rgb(0.1, 0.4, 0.2) });
-    page.drawText(`Total Outstanding: ${formatCurrency(totalBal)}`, { x: 220, y, font: boldFont, size: 12, color: rgb(0.8, 0.2, 0.2) });
+    y -= 12;
+    page.drawRectangle({ x: 50, y: y - 10, width: 500, height: 12, color: rgb(0.94, 0.94, 0.96) });
+    page.drawText(`Total Paid: ${formatCurrency(totalPaid)}`, { x: 50, y, font: boldFont, size: 11, color: rgb(0.1, 0.4, 0.2) });
+    page.drawText(`Outstanding: ${formatCurrency(totalBal)}`, { x: 200, y, font: boldFont, size: 11, color: rgb(0.6, 0.2, 0.2) });
     y -= 40;
     page.drawText('This is an official payment record. Verify at springfield-systems.com', { x: 50, y, font, size: 8, color: rgb(0.5, 0.5, 0.5) });
 
