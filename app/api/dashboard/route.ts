@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     const isAgent = userMetadata?.role === 'agent';
     const isSuperAdmin = authContext.isSuperAdmin;
 
-    let propertiesQuery: any = supabaseAdmin.from('properties').select('id');
+    let propertiesQuery: any = supabaseAdmin.from('properties').select('id, name');
     let unitsQuery: any = supabaseAdmin.from('units').select('id, occupancy_status, property_id');
     let tenantsQuery: any = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
     let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
@@ -111,13 +111,13 @@ export async function GET(request: NextRequest) {
           tenantsQuery = tenantsQuery.in('unit_id', unitIds);
           paymentsQuery = paymentsQuery.in('tenant_id', (await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)).data?.map((t: any) => t.id) ?? []);
         }
-      } else {
-        // No properties in org
-        return NextResponse.json({
-          properties: 0, agents: 0, tenants: 0, total_payments: 0, total_balance: 0,
-          occupiedUnits: 0, vacantUnits: 0, subscribedLandlords: 0, totalLandlords: 0, totalPayments: 0, tenants_with_analytics: [],
-        });
       }
+    } else if (!isAgent && !isSuperAdmin && !authContext.organizationId) {
+      // Landlord without organization_id - not assigned yet
+      propertiesQuery = propertiesQuery.eq('id', 'none');
+      unitsQuery = unitsQuery.eq('property_id', 'none');
+      tenantsQuery = tenantsQuery.eq('unit_id', 'none');
+      paymentsQuery = paymentsQuery.eq('tenant_id', 'none');
     } else if (effectivePropertyId) {
       propertiesQuery = propertiesQuery.eq('id', effectivePropertyId);
       unitsQuery = unitsQuery.eq('property_id', effectivePropertyId);
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant'),
       supabaseAdmin.from('tenants').select(`
         id, full_name, email, lease_start,
-        units!inner(unit_number, rent_amount, properties(name))
+        units!inner(unit_number, rent_amount, property_id, properties(name))
       `),
     ]);
 
@@ -154,6 +154,8 @@ export async function GET(request: NextRequest) {
       const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
       const propIds = (orgProps ?? []).map((p: any) => p.id);
       vacantUnitsFiltered = (unitsForVacant ?? []).filter((u: any) => propIds.includes(u.property_id));
+    } else if (!isAgent && !isSuperAdmin && !authContext.organizationId) {
+      vacantUnitsFiltered = [];
     }
 
     // Filter tenants for rent owed by organization if landlord
@@ -162,6 +164,8 @@ export async function GET(request: NextRequest) {
       const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
       const propIds = (orgProps ?? []).map((p: any) => p.id);
       tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => propIds.includes(t.units?.property_id));
+    } else if (!isAgent && !isSuperAdmin && !authContext.organizationId) {
+      tenantsForOwedFiltered = [];
     }
 
     const propertyCount = effectivePropertyId ? 1 : (propertiesData?.length ?? 0);
