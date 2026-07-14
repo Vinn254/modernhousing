@@ -2812,39 +2812,38 @@ footer {
     color: var(--accent-bright);
   }
  
-  /* Friendlier top bar */
-  .app-header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--line-soft);
-    box-shadow: 0 1px 0 rgba(6, 21, 40, 0.02);
-  }
- 
+/* Friendlier top bar */
+.app-header {
+  background: linear-gradient(90deg, var(--navy-900), var(--navy-800));
+  color: #fff;
+}
+
   .app-header-content {
-    color: var(--ink);
+    color: #fff;
     justify-content: space-between;
   }
- 
+
   .app-header-greeting {
     display: none;
     font-size: 14.5px;
     font-weight: 700;
-    color: var(--ink);
+    color: #fff;
   }
- 
+
   .app-header-greeting span {
-    color: var(--ink-3);
+    color: var(--navy-300);
     font-weight: 500;
   }
- 
+
   .app-header .user-name {
-    color: var(--ink) !important;
+    color: #fff !important;
     font-weight: 700;
   }
- 
+
   .app-header .menu-toggle {
-    border-color: var(--line);
-    background: var(--line-soft);
-    color: var(--ink);
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
   }
  
   /* Desktop: sidebar becomes a permanent rail, content shifts over */
