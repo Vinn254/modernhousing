@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import DonutChart from '../components/DonutChart';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -16,7 +15,6 @@ export default function AdminDashboard() {
   const [firstName, setFirstName] = useState('');
   const [showVacantModal, setShowVacantModal] = useState(false);
   const [showRentOwedModal, setShowRentOwedModal] = useState(false);
-  const router = useRouter();
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
@@ -95,22 +93,6 @@ export default function AdminDashboard() {
 
           <article className="card" style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => setShowRentOwedModal(true)}>
             <div className="card-label"><span className="badge badge-pm" style={{ background: '#f59e0b' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg></span>Total Rent Owed</div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: '#b91c1c', margin: '8px 0' }}>
-              {formatCurrency(totalOwed)}
-            </div>
-            <p style={{ color: 'var(--ink-3)', fontSize: '13px', margin: 0 }}>Outstanding balances</p>
-          </article>
-
-          <article className="card" style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => router.push('#rent-owed')}>
-            <div className="card-label"><span className="badge badge-pm" style={{ background: '#f59e0b' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg></span>Total Rent Owed</div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: '#b91c1c', margin: '8px 0' }}>
-              {formatCurrency(totalOwed)}
-            </div>
-            <p style={{ color: 'var(--ink-3)', fontSize: '13px', margin: 0 }}>Outstanding balances</p>
-          </article>
-
-          <article className="card" style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => router.push('/?show=rent-owed')}>
-            <div className="card-label"><span className="badge badge-pm" style={{ background: '#f59e0b' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg></span>Total Rent Owed</div>
             <div style={{ fontSize: '28px', fontWeight: 700, color: '#b91c1c', margin: '8px 0' }}>
               {formatCurrency(totalOwed)}
             </div>
