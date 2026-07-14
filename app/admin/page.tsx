@@ -43,7 +43,7 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <main className="container admin-no-hero">
+      <main className="container admin-no-hero auth-pattern-bg">
         <div className="card-admin-header" style={{ marginBottom: '24px' }}>
           <div>
             <p className="heading">{firstName ? `${timeGreeting}, ${firstName} 👋` : 'Project Manager Dashboard'}</p>

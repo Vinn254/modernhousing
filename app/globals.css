@@ -1795,19 +1795,24 @@ body {
 }
 
 /* Container for authenticated pages - adds side spacing on large screens */
-.container {
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 34px 28px 80px;
-}
-
-@media (max-width: 768px) {
-   .container {
-     padding: 20px 16px 60px;
-     overflow-x: visible;
-   }
+ .container {
+   max-width: 1400px;
+   margin-left: auto;
+   margin-right: auto;
+   padding: 34px 28px 80px;
  }
+
+ .page-layout.auth-pattern-bg {
+   padding: 34px 28px 80px;
+ }
+
+ @media (max-width: 768px) {
+    .container,
+    .page-layout.auth-pattern-bg {
+      padding: 20px 16px 60px;
+      overflow-x: visible;
+    }
+  }
 
 .payments-form-grid {
   grid-template-columns: 1fr 1fr;
@@ -2169,19 +2174,39 @@ footer {
 }
 
 .overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 70;
-  background: rgba(6, 21, 40, 0.42);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s;
-}
+   position: fixed;
+   inset: 0;
+   z-index: 70;
+   background: rgba(6, 21, 40, 0.42);
+   opacity: 0;
+   pointer-events: none;
+   transition: opacity .2s;
+ }
 
-.overlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
+ .overlay.open {
+   opacity: 1;
+   pointer-events: auto;
+ }
+
+ /* ========== AUTHENTICATED PAGE BACKGROUND ========== */
+ .auth-pattern-bg {
+   min-height: 100vh;
+   background: 
+     radial-gradient(circle at 20px 20px, rgba(16, 185, 129, 0.03) 0, transparent 1px),
+     radial-gradient(circle at 60px 60px, rgba(14, 165, 233, 0.02) 0, transparent 1px),
+     radial-gradient(circle at 100px 40px, rgba(16, 185, 129, 0.025) 0, transparent 1px),
+     radial-gradient(circle at 140px 80px, rgba(245, 158, 11, 0.02) 0, transparent 1px),
+     radial-gradient(circle at 180px 20px, rgba(139, 92, 246, 0.02) 0, transparent 1px),
+     radial-gradient(circle at 220px 60px, rgba(244, 63, 94, 0.015) 0, transparent 1px),
+     radial-gradient(circle at 260px 40px, rgba(16, 185, 129, 0.018) 0, transparent 1px),
+     radial-gradient(circle at 300px 80px, rgba(14, 165, 233, 0.022) 0, transparent 1px),
+     radial-gradient(circle at 340px 20px, rgba(245, 158, 11, 0.016) 0, transparent 1px),
+     radial-gradient(circle at 380px 60px, rgba(16, 185, 129, 0.02) 0, transparent 1px),
+     radial-gradient(circle at 420px 40px, rgba(139, 92, 246, 0.014) 0, transparent 1px),
+     radial-gradient(circle at 460px 80px, rgba(244, 63, 94, 0.012) 0, transparent 1px);
+   background-size: 400px 100px;
+   background-repeat: repeat;
+ }
 
 .card-admin-header {
   background: linear-gradient(135deg, var(--navy-700) 0%, var(--navy-800) 100%);
