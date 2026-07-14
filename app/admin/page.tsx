@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import DonutChart from '../components/DonutChart';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -10,8 +11,12 @@ export default function AdminDashboard() {
   const [vacantUnits, setVacantUnits] = useState(0);
   const [vacantUnitsList, setVacantUnitsList] = useState<any[]>([]);
   const [rentOwedByTenant, setRentOwedByTenant] = useState<any[]>([]);
+  const [totalOwed, setTotalOwed] = useState(0);
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState('');
+  const [showVacantModal, setShowVacantModal] = useState(false);
+  const [showRentOwedModal, setShowRentOwedModal] = useState(false);
+  const router = useRouter();
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
@@ -32,6 +37,7 @@ export default function AdminDashboard() {
           setVacantUnits(data.vacantUnits ?? 0);
           setVacantUnitsList(data.vacantUnitsList ?? []);
           setRentOwedByTenant(data.rentOwedByTenant ?? []);
+          setTotalOwed((data.rentOwedByTenant ?? []).reduce((sum: number, t: any) => sum + (t.balance_remaining ?? 0), 0));
         })
         .catch(() => {})
         .finally(() => setLoading(false));
@@ -58,7 +64,7 @@ export default function AdminDashboard() {
         </div>
 
         <section className="dashboard-hero-stats">
-          <article className="card" style={{ textAlign: 'center' }}>
+<article className="card" style={{ textAlign: 'center' }}>
             <div className="card-label"><span className="badge badge-pm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>Unit Occupancy</div>
             <DonutChart 
               data={[
@@ -80,6 +86,36 @@ export default function AdminDashboard() {
               <p style={{ color: 'var(--ink-3)', marginTop: 4 }}>of units occupied</p>
             </article>
           )}
+
+<article className="card" style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => setShowVacantModal(true)}>
+            <div className="card-label"><span className="badge badge-pm" style={{ background: '#9ca3af' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><path d="M9 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg></span>Vacant Units</div>
+            <div style={{ fontSize: '34px', fontWeight: 700, color: 'var(--navy-900)', margin: '8px 0' }}>{vacantUnits}</div>
+            <p style={{ color: 'var(--ink-3)', fontSize: '13px', margin: 0 }}>Available for rent</p>
+          </article>
+
+          <article className="card" style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => setShowRentOwedModal(true)}>
+            <div className="card-label"><span className="badge badge-pm" style={{ background: '#f59e0b' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg></span>Total Rent Owed</div>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: '#b91c1c', margin: '8px 0' }}>
+              {formatCurrency(totalOwed)}
+            </div>
+            <p style={{ color: 'var(--ink-3)', fontSize: '13px', margin: 0 }}>Outstanding balances</p>
+          </article>
+
+          <article className="card" style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => router.push('#rent-owed')}>
+            <div className="card-label"><span className="badge badge-pm" style={{ background: '#f59e0b' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg></span>Total Rent Owed</div>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: '#b91c1c', margin: '8px 0' }}>
+              {formatCurrency(totalOwed)}
+            </div>
+            <p style={{ color: 'var(--ink-3)', fontSize: '13px', margin: 0 }}>Outstanding balances</p>
+          </article>
+
+          <article className="card" style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => router.push('/?show=rent-owed')}>
+            <div className="card-label"><span className="badge badge-pm" style={{ background: '#f59e0b' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg></span>Total Rent Owed</div>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: '#b91c1c', margin: '8px 0' }}>
+              {formatCurrency(totalOwed)}
+            </div>
+            <p style={{ color: 'var(--ink-3)', fontSize: '13px', margin: 0 }}>Outstanding balances</p>
+          </article>
         </section>
 
         <section className="card-grid" style={{ marginBottom: '24px' }}>
@@ -140,31 +176,38 @@ export default function AdminDashboard() {
             </article>
           </section>
 
-          <section style={{ marginBottom: '24px' }}>
-            <div className="card-admin-header" style={{ marginBottom: 16 }}>
-              <div><span className="landlord-kicker">Vacant Units</span><h2>Available for Rent</h2></div>
-            </div>
-            {loading ? <p style={{ color: 'var(--ink-3)' }}>Loading...</p> :
-              vacantUnitsList && vacantUnitsList.length > 0 ? (
-                <div className="table-shell"><table className="landlord-table">
+        {showVacantModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowVacantModal(false)}>
+            <div className="card" style={{ maxWidth: '600px', width: '90%', maxHeight: '80vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+              <div className="card-label">Vacant Units</div>
+              <h3 style={{ marginBottom: 16 }}>Available for Rent</h3>
+              {vacantUnitsList.length > 0 ? (
+                <table className="landlord-table" style={{ width: '100%' }}>
                   <thead><tr><th>Unit</th><th>Property</th><th>Rent Amount</th></tr></thead>
-                  <tbody>{vacantUnitsList.map((u: any, i: number) => <tr key={i}><td>{u.unit_number}</td><td>{u.property_name}</td><td>{formatCurrency(u.rent_amount)}</td></tr>)}</tbody>
-                </table></div>
-              ) : <p className="landlord-muted">No vacant units.</p>}
-          </section>
-
-          <section style={{ marginBottom: '24px' }}>
-            <div className="card-admin-header" style={{ marginBottom: 16 }}>
-              <div><span className="landlord-kicker">Rent Owed</span><h2>Tenants with Outstanding Balances</h2></div>
+                  <tbody>{vacantUnitsList.map((u, i) => <tr key={i}><td>{u.unit_number}</td><td>{u.property_name}</td><td>{formatCurrency(u.rent_amount)}</td></tr>)}</tbody>
+                </table>
+              ) : <p>No vacant units.</p>}
+              <button onClick={() => setShowVacantModal(false)} style={{ marginTop: 16 }}>Close</button>
             </div>
-            {loading ? <p style={{ color: 'var(--ink-3)' }}>Loading...</p> :
-              rentOwedByTenant && rentOwedByTenant.some((t: any) => t.balance_remaining > 0) ? (
-                <div className="table-shell"><table className="landlord-table">
+          </div>
+        )}
+
+        {showRentOwedModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowRentOwedModal(false)}>
+            <div className="card" style={{ maxWidth: '700px', width: '90%', maxHeight: '80vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+              <div className="card-label">Rent Owed</div>
+              <h3 style={{ marginBottom: 16 }}>Tenants with Outstanding Balances</h3>
+              {rentOwedByTenant.some(t => t.balance_remaining > 0) ? (
+                <table className="landlord-table" style={{ width: '100%' }}>
                   <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Last Payment</th></tr></thead>
-                  <tbody>{rentOwedByTenant.filter((t: any) => t.balance_remaining > 0).map((t: any) => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.balance_remaining)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
-                </table></div>
-              ) : <p className="landlord-muted">All tenants have paid.</p>}
-          </section>
+                  <tbody>{rentOwedByTenant.filter(t => t.balance_remaining > 0).map(t => <tr key={t.id}><td>{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.balance_remaining)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
+                </table>
+              ) : <p>All tenants have paid.</p>}
+              <button onClick={() => setShowRentOwedModal(false)} style={{ marginTop: 16 }}>Close</button>
+            </div>
+          </div>
+        )}
+
       </main>
 
       <footer>

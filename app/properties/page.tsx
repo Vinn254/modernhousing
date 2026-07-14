@@ -47,6 +47,7 @@ export default function PropertiesPage() {
   const formRef = useRef<HTMLDivElement>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [monthlyPayments, setMonthlyPayments] = useState<any[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumbers: '', rentAmount: '', unitType: '' });
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
@@ -58,6 +59,16 @@ export default function PropertiesPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  async function loadMonthlyPayments() {
+    try {
+      const response = await fetch('/api/payments', { headers: await getAuthHeaders() });
+      const result = await response.json();
+      if (response.ok) {
+        setMonthlyPayments(result.payments ?? []);
+      }
+    } catch (e) {}
+  }
 
   async function loadProperties() {
     setLoading(true);
@@ -94,7 +105,7 @@ export default function PropertiesPage() {
   }
 
   useEffect(() => {
-    Promise.all([loadProperties(), loadUnits()]);
+    Promise.all([loadProperties(), loadUnits(), loadMonthlyPayments()]);
   }, []);
 
   useEffect(() => {
@@ -318,6 +329,12 @@ export default function PropertiesPage() {
   const rentRoll = properties.reduce((sum, property) => sum + Number(property.rent_roll ?? 0), 0);
   const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const monthlyCollections = monthlyPayments
+    .filter(p => p.created_at && new Date(p.created_at).getMonth() === currentMonth && new Date(p.created_at).getFullYear() === currentYear)
+    .reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0);
+
   // Get units for selected property
   const selectedPropertyUnits = selectedProperty 
     ? units.filter(u => u.property_id === selectedProperty.id) 
@@ -371,6 +388,11 @@ export default function PropertiesPage() {
             <span>Rent Roll</span>
             <strong>KSH {rentRoll.toLocaleString()}</strong>
             <p>Monthly rent from recorded units.</p>
+          </article>
+          <article className="property-stat">
+            <span>Collected ({new Date().toLocaleString('en-US', { month: 'short' })})</span>
+            <strong>KSH {monthlyCollections.toLocaleString()}</strong>
+            <p>Total cash collected this month.</p>
           </article>
         </div>
 
