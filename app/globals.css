@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
   --navy-900: #061528;
@@ -1136,7 +1136,8 @@ body {
   background: linear-gradient(135deg, var(--accent), var(--accent-bright));
   color: #052e1f;
   box-shadow: 0 10px 24px rgba(16,185,129,0.28);
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .landlord-add-button:hover {
@@ -1178,27 +1179,26 @@ body {
 
 
 .landlord-table th {
-  padding: 14px 16px;
-  background: #f8fafc;
-  color: var(--ink-3);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
+   padding: 14px 16px;
+   background: #f8fafc;
+   color: var(--ink-3);
+   font-size: 12px;
+   font-weight: 800;
+   letter-spacing: 0.08em;
+   text-transform: uppercase;
+   text-align: left;
+   border-bottom: 1px solid var(--line);
+   white-space: nowrap;
+ }
 
 .landlord-table td {
   padding: 18px 16px;
   color: var(--ink-2);
   font-size: 14px;
   border-bottom: 1px solid var(--line-soft);
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
   
-  text-overflow: ellipsis;
-  max-width: 200px;
 }
 
 .landlord-table tr:last-child td {
@@ -2785,7 +2785,8 @@ footer {
     color: #fff;
     font-size: 13.5px;
     font-weight: 700;
-    white-space: nowrap;
+    white-space: normal;
+  word-break: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -2966,6 +2967,7 @@ footer {
   .property-table tbody tr:hover {
     background-color: var(--line-soft);
   }
+
 
 
 
