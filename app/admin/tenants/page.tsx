@@ -28,6 +28,7 @@ interface Tenant {
   next_of_kin_name?: string;
   next_of_kin_id?: string;
   next_of_kin_phone?: string;
+  next_of_kin_relationship?: string;
   picture_url?: string;
 }
 
@@ -78,6 +79,7 @@ export default function TenantsPage() {
     nextOfKinName: '',
     nextOfKinId: '',
     nextOfKinPhone: '',
+    nextOfKinRelationship: '',
   });
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
@@ -173,8 +175,9 @@ export default function TenantsPage() {
           nextOfKinName: form.nextOfKinName || null,
           nextOfKinId: form.nextOfKinId || null,
           nextOfKinPhone: form.nextOfKinPhone || null,
+          nextOfKinRelationship: form.nextOfKinRelationship || null,
         }
-      : { ...form, propertyId, depositAmount: Number(form.depositAmount) || 0, nationalId: form.nationalId || null, kraPin: form.kraPin || null, nextOfKinName: form.nextOfKinName || null, nextOfKinId: form.nextOfKinId || null, nextOfKinPhone: form.nextOfKinPhone || null };
+      : { ...form, propertyId, depositAmount: Number(form.depositAmount) || 0, nationalId: form.nationalId || null, kraPin: form.kraPin || null, nextOfKinName: form.nextOfKinName || null, nextOfKinId: form.nextOfKinId || null, nextOfKinPhone: form.nextOfKinPhone || null, nextOfKinRelationship: form.nextOfKinRelationship || null };
 
     const response = await fetch(url, {
       method,
@@ -190,7 +193,7 @@ export default function TenantsPage() {
     }
 
     setMessage(editingTenant ? 'Tenant updated.' : 'Tenant registered.');
-    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinName: '', nextOfKinId: '', nextOfKinPhone: '' });
+    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinName: '', nextOfKinId: '', nextOfKinPhone: '', nextOfKinRelationship: '' });
     setEditingTenant(null);
     await loadData();
   }
@@ -233,12 +236,13 @@ export default function TenantsPage() {
       nextOfKinName: tenant.next_of_kin_name ?? '',
       nextOfKinId: tenant.next_of_kin_id ?? '',
       nextOfKinPhone: tenant.next_of_kin_phone ?? '',
+      nextOfKinRelationship: tenant.next_of_kin_relationship ?? '',
     });
     scrollToForm();
   }
 
   function resetForm() {
-    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinName: '', nextOfKinId: '', nextOfKinPhone: '' });
+    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinName: '', nextOfKinId: '', nextOfKinPhone: '', nextOfKinRelationship: '' });
     setEditingTenant(null);
     setMessage('');
     setError('');
@@ -361,6 +365,17 @@ export default function TenantsPage() {
               <input value={form.nextOfKinName} onChange={e => setForm(f => ({ ...f, nextOfKinName: e.target.value }))} placeholder="Next of Kin Name (Optional)" />
               <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Next of Kin ID (Optional)" />
               <input value={form.nextOfKinPhone} onChange={e => setForm(f => ({ ...f, nextOfKinPhone: e.target.value }))} placeholder="Next of Kin Phone (Optional)" />
+              <select value={form.nextOfKinRelationship} onChange={e => setForm(f => ({ ...f, nextOfKinRelationship: e.target.value }))}>
+                <option value="">Relationship (Optional)</option>
+                <option value="partner">Partner</option>
+                <option value="roommate">Room Mate</option>
+                <option value="spouse">Spouse</option>
+                <option value="parent">Parent</option>
+                <option value="sister">Sister</option>
+                <option value="brother">Brother</option>
+                <option value="uncle">Uncle</option>
+                <option value="grandparent">Grandparent</option>
+              </select>
               {!editingTenant && (
                 <select value={form.unitId} onChange={e => setForm(f => ({ ...f, unitId: e.target.value }))} required>
                   <option value="">Select unit</option>

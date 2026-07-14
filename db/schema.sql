@@ -62,8 +62,9 @@ create table tenants (
    kra_pin text unique,
    next_of_kin_name text,
    next_of_kin_id text unique,
-   next_of_kin_phone text unique,
-   created_at timestamp with time zone default now()
+next_of_kin_phone text unique,
+  next_of_kin_relationship text check (next_of_kin_relationship in ('partner', 'roommate', 'spouse', 'parent', 'sister', 'brother', 'uncle', 'grandparent')),
+  created_at timestamp with time zone default now()
  );
 
 -- Prevent same person being next_of_kin for multiple tenants
