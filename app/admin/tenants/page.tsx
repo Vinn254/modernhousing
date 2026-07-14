@@ -197,13 +197,23 @@ export default function TenantsPage() {
 
   async function handleRemove(tenantId: string) {
     if (!confirm('Remove this tenant? They will be marked as relocated and the unit will be freed.')) return;
+    
+    const tenant = tenants.find(t => t.id === tenantId);
+    const unitId = tenant?.unit_id;
+    
     const response = await fetch(`/api/tenants?id=${encodeURIComponent(tenantId)}`, { method: 'DELETE', headers: await getAuthHeaders() });
     const result = await response.json();
     if (!response.ok) {
       setError(result.message ?? 'Unable to remove tenant.');
       return;
     }
+    
     setTenants(tenants.filter(t => t.id !== tenantId));
+    
+    if (unitId) {
+      setUnits(units.map(u => u.id === unitId ? { ...u, occupancy_status: 'vacant' } : u));
+    }
+    
     setMessage('Tenant removed and unit marked as vacant.');
     await loadData();
   }

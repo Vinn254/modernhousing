@@ -52,6 +52,8 @@ export default function PropertiesPage() {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [unitEditForm, setUnitEditForm] = useState({ unitNumber: '', rentAmount: '', unitType: '', occupancyStatus: '' });
+  const [showUnitEdit, setShowUnitEdit] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -217,13 +219,31 @@ export default function PropertiesPage() {
   }
 
   async function handleEditUnit(unit: Unit) {
-    const newRent = prompt('New rent amount (KSH):', String(unit.rent_amount ?? ''));
-    if (newRent === null) return;
+    setEditingUnit(unit);
+    setUnitEditForm({
+      unitNumber: unit.unit_number,
+      rentAmount: String(unit.rent_amount ?? ''),
+      unitType: unit.unit_type ?? '',
+      occupancyStatus: unit.occupancy_status ?? 'vacant',
+    });
+    setShowUnitEdit(true);
+    setMessage('');
+    setError('');
+  }
 
-    const response = await fetch(`/api/units?id=${unit.id}`, {
+  async function handleUnitEditSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingUnit) return;
+
+    const response = await fetch(`/api/units?id=${editingUnit.id}`, {
       method: 'PATCH',
       headers: await getAuthHeaders(),
-      body: JSON.stringify({ rentAmount: Number(newRent) || unit.rent_amount }),
+      body: JSON.stringify({
+        unitNumber: unitEditForm.unitNumber,
+        rentAmount: Number(unitEditForm.rentAmount) || 0,
+        unitType: unitEditForm.unitType || null,
+        occupancyStatus: unitEditForm.occupancyStatus,
+      }),
     });
 
     const result = await response.json();
@@ -233,6 +253,8 @@ export default function PropertiesPage() {
     }
 
     setMessage('Unit updated.');
+    setShowUnitEdit(false);
+    setEditingUnit(null);
     await loadUnits();
   }
 
@@ -250,6 +272,25 @@ export default function PropertiesPage() {
     }
 
     setMessage('Unit marked as occupied.');
+    await loadUnits();
+  }
+
+  async function handleMarkVacant(unitId: string) {
+    if (!confirm('Mark this unit as vacant?')) return;
+
+    const response = await fetch(`/api/units?id=${unitId}`, {
+      method: 'PATCH',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ occupancyStatus: 'vacant' }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to update unit status.');
+      return;
+    }
+
+    setMessage('Unit marked as vacant.');
     await loadUnits();
   }
 
@@ -528,22 +569,65 @@ export default function PropertiesPage() {
                           </span>
                         </td>
 <td>
-                           <div className="landlord-actions">
-                             <button type="button" className="action-button primary" onClick={() => handleEditUnit(unit)} style={{ padding: '6px 10px', fontSize: '12px' }}>Edit</button>
-                             {unit.occupancy_status !== 'occupied' && (
-                               <button type="button" className="action-button" onClick={() => handleMarkOccupied(unit.id)} style={{ padding: '6px 10px', fontSize: '12px' }}>Mark Occupied</button>
-                             )}
-                           </div>
-                         </td>
-                      </tr>
-                    );
-                  })}
+                          <div className="landlord-actions">
+                            <button type="button" className="action-button primary" onClick={() => handleEditUnit(unit)} style={{ padding: '6px 10px', fontSize: '12px' }}>Edit</button>
+                            {unit.occupancy_status === 'occupied' && (
+                              <button type="button" className="action-button danger" onClick={() => handleMarkVacant(unit.id)} style={{ padding: '6px 10px', fontSize: '12px', marginLeft: 4 }}>Mark Vacant</button>
+                            )}
+                            {unit.occupancy_status !== 'occupied' && (
+                              <button type="button" className="action-button" onClick={() => handleMarkOccupied(unit.id)} style={{ padding: '6px 10px', fontSize: '12px', marginLeft: 4 }}>Mark Occupied</button>
+                            )}
+                          </div>
+                        </td>
+</tr>
+                     );
+                   })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
       </section>
+
+      {showUnitEdit && editingUnit && (
+        <div className="modal-overlay" onClick={() => setShowUnitEdit(false)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginBottom: 16 }}>Edit Unit - {editingUnit.unit_number}</h3>
+            <form onSubmit={handleUnitEditSubmit} className="form-grid">
+              <div className="field-group">
+                <label>Unit Number</label>
+                <input value={unitEditForm.unitNumber} onChange={e => setUnitEditForm(f => ({ ...f, unitNumber: e.target.value }))} required placeholder="e.g., A1" />
+              </div>
+              <div className="field-group">
+                <label>Rent Amount (KSH)</label>
+                <input type="number" value={unitEditForm.rentAmount} onChange={e => setUnitEditForm(f => ({ ...f, rentAmount: e.target.value }))} required placeholder="e.g., 6000" />
+              </div>
+              <div className="field-group">
+                <label>Unit Type</label>
+                <select value={unitEditForm.unitType} onChange={e => setUnitEditForm(f => ({ ...f, unitType: e.target.value }))}>
+                  <option value="">Select type</option>
+                  <option value="single-room">Single Room</option>
+                  <option value="bedsitter">Bedsitter</option>
+                  <option value="one-bedroom">One Bedroom</option>
+                  <option value="two-bedroom">Two Bedroom</option>
+                  <option value="three-bedroom">Three Bedroom</option>
+                </select>
+              </div>
+              <div className="field-group">
+                <label>Status</label>
+                <select value={unitEditForm.occupancyStatus} onChange={e => setUnitEditForm(f => ({ ...f, occupancyStatus: e.target.value }))}>
+                  <option value="vacant">Vacant</option>
+                  <option value="occupied">Occupied</option>
+                </select>
+              </div>
+              <div className="modal-actions">
+                <button type="submit">Save Changes</button>
+                <button type="button" className="secondary-button" onClick={() => { setShowUnitEdit(false); setEditingUnit(null); }}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
