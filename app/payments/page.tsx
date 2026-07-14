@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 interface TenantOption {
   id: string;
@@ -361,6 +362,66 @@ export default function PaymentsPage() {
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
+  async function downloadPaymentStatement() {
+    if (payments.length === 0) {
+      setError('No payments to download.');
+      return;
+    }
+
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595.28, 841.89]);
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    let y = 800;
+    const docId = `STMT-${Date.now().toString().slice(-8)}`;
+    const dateStr = new Date().toLocaleDateString('en-GB');
+
+    page.drawText('SPRINGFIELD SYSTEMS', { x: 50, y, font: boldFont, size: 24, color: rgb(0.08, 0.08, 0.15) });
+    y -= 30;
+    page.drawText('OFFICIAL PAYMENT STATEMENT', { x: 50, y, font: boldFont, size: 16, color: rgb(0.16, 0.16, 0.25) });
+    y -= 15;
+    page.drawText(`Generated: ${dateStr} | Document ID: ${docId}`, { x: 50, y, font, size: 10, color: rgb(0.3, 0.3, 0.3) });
+    y -= 40;
+
+    const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalDue = payments.reduce((sum, p) => sum + ((p as any).due_amount || 0), 0);
+    const totalBal = payments.reduce((sum, p) => sum + (p.balance_remaining || 0), 0);
+
+    page.drawText('Tenant', { x: 50, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
+    page.drawText('Month', { x: 180, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
+    page.drawText('Paid', { x: 280, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
+    page.drawText('Bal', { x: 380, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
+    page.drawText('Date', { x: 460, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
+    y -= 20;
+    page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+    y -= 20;
+
+    payments.forEach(payment => {
+      page.drawText(payment.tenant.substring(0, 20), { x: 50, y, font, size: 10, color: rgb(0.1, 0.1, 0.1) });
+      page.drawText((payment as any).month_due?.substring(0, 12) || '—', { x: 180, y, font, size: 10, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 280, y, font, size: 10, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText(formatCurrency(payment.balance_remaining).replace('KES', ''), { x: 380, y, font, size: 10, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText(payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—', { x: 460, y, font, size: 10, color: rgb(0.2, 0.2, 0.2) });
+      y -= 16;
+    });
+
+    y -= 20;
+    page.drawText(`Total Paid: ${formatCurrency(totalPaid)}`, { x: 50, y, font: boldFont, size: 12, color: rgb(0.1, 0.4, 0.2) });
+    page.drawText(`Total Outstanding: ${formatCurrency(totalBal)}`, { x: 220, y, font: boldFont, size: 12, color: rgb(0.8, 0.2, 0.2) });
+    y -= 40;
+    page.drawText('This is an official payment record. Verify at springfield-systems.com', { x: 50, y, font, size: 8, color: rgb(0.5, 0.5, 0.5) });
+
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `payment-statement-${dateStr.replace(/\//g, '-')}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleInlineBalanceSave(payment: Payment) {
     if (editingBalanceId !== payment.id) return;
     const newBalance = Number(editingBalanceValue);
@@ -522,7 +583,12 @@ export default function PaymentsPage() {
       )}
 
       <article className="card" style={{ marginTop: 24 }}>
-        <div className="card-label">Transactions</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div className="card-label">Transactions</div>
+          {payments.length > 0 && (
+            <button onClick={downloadPaymentStatement} className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px' }}>Download PDF</button>
+          )}
+        </div>
         <h3 style={{ marginBottom: 16 }}>Payment History</h3>
         {loading ? <p style={{ color: '#111827' }}>Loading payments…</p> : payments.length === 0 ? (
           <p style={{ color: '#111827' }}>No payments recorded yet.</p>
