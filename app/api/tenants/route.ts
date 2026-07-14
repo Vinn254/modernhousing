@@ -280,12 +280,6 @@ export async function POST(request: NextRequest) {
 
   const tenantId = result.data?.id;
 
-  if (tenantId && authContext.userId) {
-    await supabaseAdmin.auth.admin.updateUserById(authContext.userId, {
-      user_metadata: { tenant_id: tenantId, role: 'tenant' }
-    }).catch(() => {});
-  }
-
   if (tenantId && finalUnitId) {
     const { data: unitData } = await supabaseAdmin.from('units').select('*, properties!inner(name, address)').eq('id', finalUnitId).single();
     const agreementContent = `TENANCY AGREEMENT
