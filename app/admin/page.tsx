@@ -9,6 +9,7 @@ export default function AdminDashboard() {
   const [occupiedUnits, setOccupiedUnits] = useState(0);
   const [vacantUnits, setVacantUnits] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [firstName, setFirstName] = useState('');
 
   useEffect(() => {
     async function loadData() {
@@ -17,6 +18,9 @@ export default function AdminDashboard() {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       
+      const name = session?.user?.user_metadata?.full_name || session?.user?.email || '';
+      setFirstName(name.split(' ')[0].split('@')[0]);
+
       fetch('/api/dashboard', { headers })
         .then(r => r.json())
         .then(data => {
@@ -29,17 +33,20 @@ export default function AdminDashboard() {
     loadData();
   }, []);
 
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   const occupancyData = [
     { label: 'Occupied', value: occupiedUnits, color: '#10b981' },
     { label: 'Vacant', value: vacantUnits, color: '#9ca3af' },
   ];
 
-return (
+  return (
     <>
       <main className="container admin-no-hero">
         <div className="card-admin-header" style={{ marginBottom: '24px' }}>
           <div>
-            <p className="heading">Project Manager Dashboard</p>
+            <p className="heading">{firstName ? `${timeGreeting}, ${firstName} 👋` : 'Project Manager Dashboard'}</p>
             <p className="subheading">Manage your properties, agents, tenants, payments, and communications.</p>
           </div>
         </div>

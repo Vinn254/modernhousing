@@ -8,6 +8,67 @@ import { supabase } from '../../lib/supabaseClient';
 
 type Role = 'super_admin' | 'admin' | 'landlord' | 'agent' | 'tenant' | 'user';
 
+type IconName =
+  | 'dashboard'
+  | 'properties'
+  | 'agents'
+  | 'tenants'
+  | 'payments'
+  | 'utilities'
+  | 'communications'
+  | 'documents'
+  | 'terms'
+  | 'landlords'
+  | 'analytics'
+  | 'complaints'
+  | 'notifications';
+
+type NavLink = { label: string; href: string; icon: IconName };
+
+function NavIcon({ name }: { name: IconName }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+
+  switch (name) {
+    case 'dashboard':
+      return <svg {...common}><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg>;
+    case 'properties':
+      return <svg {...common}><path d="M3 21h18" /><path d="M5 21V7l8-4v18" /><path d="M19 21V11l-6-4" /></svg>;
+    case 'agents':
+      return <svg {...common}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
+    case 'tenants':
+      return <svg {...common}><path d="M3 9.5 12 3l9 6.5" /><path d="M5 10v10h14V10" /><path d="M9 20v-6h6v6" /></svg>;
+    case 'payments':
+      return <svg {...common}><rect x="1.5" y="5" width="21" height="14" rx="2.5" /><path d="M1.5 10h21" /><path d="M5 15h4" /></svg>;
+    case 'utilities':
+      return <svg {...common}><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></svg>;
+    case 'communications':
+      return <svg {...common}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
+    case 'documents':
+      return <svg {...common}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>;
+    case 'terms':
+      return <svg {...common}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><line x1="9" y1="13" x2="15" y2="13" /><line x1="9" y1="17" x2="15" y2="17" /></svg>;
+    case 'landlords':
+      return <svg {...common}><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>;
+    case 'analytics':
+      return <svg {...common}><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>;
+    case 'complaints':
+      return <svg {...common}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>;
+    case 'notifications':
+      return <svg {...common}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>;
+    default:
+      return null;
+  }
+}
+
 export default function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
@@ -72,69 +133,96 @@ export default function AppHeader() {
   const isSuperAdmin = role === 'super_admin';
   const isAdmin = role === 'admin';
 
-  const dashboardHref = isTenant ? '/tenant/dashboard' : '/admin';
-  const dashboardLabel = isTenant ? 'Tenant Dashboard' : isAgent ? 'Agent Dashboard' : 'Project Manager Dashboard';
-
-  const agentLinks: {label: string; href: string}[] = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Tenants', href: '/agent/tenants' },
-    { label: 'Utilities', href: '/agent/utilities' },
-    { label: 'Notifications', href: '/agent/notifications' },
-    { label: 'Complaints', href: '/agent/complaints' },
-    { label: 'Terms', href: '/terms' },
+  const agentLinks: NavLink[] = [
+    { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
+    { label: 'Tenants', href: '/agent/tenants', icon: 'tenants' },
+    { label: 'Utilities', href: '/agent/utilities', icon: 'utilities' },
+    { label: 'Notifications', href: '/agent/notifications', icon: 'notifications' },
+    { label: 'Complaints', href: '/agent/complaints', icon: 'complaints' },
+    { label: 'Terms', href: '/terms', icon: 'terms' },
   ];
 
-  const tenantLinks: {label: string; href: string}[] = [
-    { label: 'Dashboard', href: '/tenant/dashboard' },
-    { label: 'Payments', href: '/tenant/payments' },
-    { label: 'Documents', href: '/tenant/documents' },
-    { label: 'Complaints', href: '/tenant/complaints' },
-    { label: 'Notifications', href: '/tenant/notifications' },
-    { label: 'Terms', href: '/terms' },
+  const tenantLinks: NavLink[] = [
+    { label: 'Dashboard', href: '/tenant/dashboard', icon: 'dashboard' },
+    { label: 'Payments', href: '/tenant/payments', icon: 'payments' },
+    { label: 'Documents', href: '/tenant/documents', icon: 'documents' },
+    { label: 'Complaints', href: '/tenant/complaints', icon: 'complaints' },
+    { label: 'Notifications', href: '/tenant/notifications', icon: 'notifications' },
+    { label: 'Terms', href: '/terms', icon: 'terms' },
   ];
 
-  const landlordPMLinks: {label: string; href: string}[] = [
-    { label: 'Dashboard', href: '/admin' },
-    { label: 'Properties', href: '/properties' },
-    { label: 'Agents', href: '/admin/agents' },
-    { label: 'Tenants', href: '/admin/tenants' },
-    { label: 'Payments', href: '/payments' },
-    { label: 'Utilities', href: '/admin/utilities' },
-    { label: 'Communications', href: '/admin/communications' },
-    { label: 'Documents', href: '/admin/documents' },
-    { label: 'Terms', href: '/terms' },
+  const landlordPMLinks: NavLink[] = [
+    { label: 'Dashboard', href: '/admin', icon: 'dashboard' },
+    { label: 'Properties', href: '/properties', icon: 'properties' },
+    { label: 'Agents', href: '/admin/agents', icon: 'agents' },
+    { label: 'Tenants', href: '/admin/tenants', icon: 'tenants' },
+    { label: 'Payments', href: '/payments', icon: 'payments' },
+    { label: 'Utilities', href: '/admin/utilities', icon: 'utilities' },
+    { label: 'Communications', href: '/admin/communications', icon: 'communications' },
+    { label: 'Documents', href: '/admin/documents', icon: 'documents' },
+    { label: 'Terms', href: '/terms', icon: 'terms' },
   ];
 
-  const adminLinks: {label: string; href: string}[] = [
-    { label: 'Dashboard', href: '/admin' },
-    { label: 'Landlords', href: '/admin/project-managers' },
-    { label: 'Agents', href: '/admin/agents' },
-    { label: 'Tenants', href: '/admin/tenants' },
-    { label: 'Payments', href: '/admin/payments' },
-    { label: 'Communications', href: '/admin/communications' },
-    { label: 'Terms', href: '/terms' },
+  const adminLinks: NavLink[] = [
+    { label: 'Dashboard', href: '/admin', icon: 'dashboard' },
+    { label: 'Landlords', href: '/admin/project-managers', icon: 'landlords' },
+    { label: 'Agents', href: '/admin/agents', icon: 'agents' },
+    { label: 'Tenants', href: '/admin/tenants', icon: 'tenants' },
+    { label: 'Payments', href: '/admin/payments', icon: 'payments' },
+    { label: 'Communications', href: '/admin/communications', icon: 'communications' },
+    { label: 'Terms', href: '/terms', icon: 'terms' },
   ];
 
-  const superAdminLinks: {label: string; href: string}[] = [
-    { label: 'Dashboard', href: '/super-admin' },
-    { label: 'Landlords', href: '/super-admin/landlords' },
-    { label: 'Agents', href: '/super-admin/agents' },
-    { label: 'Tenants', href: '/super-admin/tenants' },
-    { label: 'Payments', href: '/super-admin/payments' },
-    { label: 'Analytics', href: '/super-admin/analytics' },
-    { label: 'Terms', href: '/terms' },
+  const superAdminLinks: NavLink[] = [
+    { label: 'Dashboard', href: '/super-admin', icon: 'dashboard' },
+    { label: 'Landlords', href: '/super-admin/landlords', icon: 'landlords' },
+    { label: 'Agents', href: '/super-admin/agents', icon: 'agents' },
+    { label: 'Tenants', href: '/super-admin/tenants', icon: 'tenants' },
+    { label: 'Payments', href: '/super-admin/payments', icon: 'payments' },
+    { label: 'Analytics', href: '/super-admin/analytics', icon: 'analytics' },
+    { label: 'Terms', href: '/terms', icon: 'terms' },
   ];
 
   const navLinks = isTenant ? tenantLinks : (isAgent ? agentLinks : (isSuperAdmin ? superAdminLinks : (isAdmin ? adminLinks : landlordPMLinks)));
 
-  return (
+  const isLinkActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href + '/'));
+
+  const firstName = (user?.user_metadata?.full_name || user?.email || 'there').split(' ')[0].split('@')[0];
+  const roleLabel = isTenant ? 'Tenant' : isAgent ? 'Agent' : isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : isLandlord ? 'Project Manager' : 'User';
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
+   return (
     <>
       {user && (
         <>
           <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+            <div className="sidebar-brand">
+              <span className="logo-mark" style={{ width: 28, height: 28, borderRadius: 8 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+              </span>
+              Springfield Systems
+            </div>
+
+            <div className="sidebar-profile">
+              <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
+              <div className="sidebar-profile-info">
+                <div className="sidebar-profile-name">{user.user_metadata?.full_name || user.email}</div>
+                <span className="sidebar-role-chip">{roleLabel}</span>
+              </div>
+            </div>
+
             <nav className="sidebar-nav">
               {navLinks.map((link) => (
-                <Link key={link.href} href={link.href} onClick={() => setSidebarOpen(false)}>{link.label}</Link>
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={isLinkActive(link.href) ? 'active' : ''}
+                >
+                  <NavIcon name={link.icon} />
+                  {link.label}
+                </Link>
               ))}
             </nav>
             <button onClick={handleLogout} className="sidebar-logout">Logout</button>
@@ -148,8 +236,9 @@ export default function AppHeader() {
         <div className="app-header-content">
           {user && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span className="app-header-greeting">{timeGreeting}, {firstName} <span>· {roleLabel}</span></span>
               <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
-              <span className="user-name" style={{ color: '#fff', fontSize: '14px' }}>{user.user_metadata?.full_name || user.email}</span>
+              <span className="user-name" style={{ fontSize: '14px' }}>{user.user_metadata?.full_name || user.email}</span>
               <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu" style={{ position: 'static', marginLeft: '8px' }}>☰</button>
             </div>
           )}

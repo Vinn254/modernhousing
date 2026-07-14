@@ -2691,15 +2691,256 @@ footer {
    }
  }
 
- .admin-layout-wrapper {
-   min-height: 100vh;
-   display: flex;
-   flex-direction: column;
- }
-
- .admin-layout-wrapper main {
-   flex: 1;
- }
+.admin-layout-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+ 
+  .admin-layout-wrapper main {
+    flex: 1;
+  }
+ 
+ 
+  /* ========== MODERN SHELL UPGRADE ========== */
+  /* Persistent desktop sidebar + friendlier nav, layered on top of the
+     existing sidebar/app-header rules above without touching them. */
+ 
+  :root {
+    --shadow-soft: 0 10px 28px rgba(6, 21, 40, 0.08);
+    --shadow-lift: 0 18px 40px rgba(6, 21, 40, 0.14);
+    --shell-width: 264px;
+  }
+ 
+  *:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+ 
+  html {
+    scroll-behavior: smooth;
+  }
+ 
+  /* Sidebar brand lockup */
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 6px 20px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+ 
+  /* Compact profile card inside the sidebar */
+  .sidebar-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 10px;
+    margin-bottom: 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+ 
+  .sidebar-profile .user-avatar {
+    flex-shrink: 0;
+  }
+ 
+  .sidebar-profile-info {
+    min-width: 0;
+  }
+ 
+  .sidebar-profile-name {
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+ 
+  .sidebar-role-chip {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 3px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent-bright);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: capitalize;
+    letter-spacing: 0.03em;
+  }
+ 
+  /* Nav links get icons + active state */
+  .sidebar-nav a {
+    gap: 12px;
+    position: relative;
+  }
+ 
+  .sidebar-nav a svg {
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
+ 
+  .sidebar-nav a.active {
+    color: #fff;
+    background: rgba(16, 185, 129, 0.16);
+  }
+ 
+  .sidebar-nav a.active::before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 22px;
+    border-radius: 0 4px 4px 0;
+    background: linear-gradient(180deg, var(--accent), var(--accent-bright));
+  }
+ 
+  .sidebar-nav a.active svg {
+    opacity: 1;
+    color: var(--accent-bright);
+  }
+ 
+  /* Friendlier top bar */
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line-soft);
+    box-shadow: 0 1px 0 rgba(6, 21, 40, 0.02);
+  }
+ 
+  .app-header-content {
+    color: var(--ink);
+    justify-content: space-between;
+  }
+ 
+  .app-header-greeting {
+    display: none;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+ 
+  .app-header-greeting span {
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+ 
+  .app-header .user-name {
+    color: var(--ink) !important;
+    font-weight: 700;
+  }
+ 
+  .app-header .menu-toggle {
+    border-color: var(--line);
+    background: var(--line-soft);
+    color: var(--ink);
+  }
+ 
+  /* Desktop: sidebar becomes a permanent rail, content shifts over */
+  @media (min-width: 901px) {
+    body.has-app-shell {
+      padding-left: var(--shell-width);
+    }
+ 
+    body.has-app-shell .sidebar {
+      transform: translateX(0);
+      width: var(--shell-width);
+      box-shadow: none;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+    }
+ 
+    body.has-app-shell .menu-toggle,
+    body.has-app-shell .overlay {
+      display: none;
+    }
+ 
+    body.has-app-shell .app-header-greeting {
+      display: block;
+    }
+  }
+ 
+  @media (max-width: 900px) {
+    .sidebar-profile {
+      margin-top: 4px;
+    }
+  }
+ 
+  /* Friendlier stat cards used on dashboards */
+  .stat-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 16px;
+  }
+ 
+  .stat-icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: var(--shadow-soft);
+  }
+ 
+  .stat-card-value {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+ 
+  .stat-card-label {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-3);
+  }
+ 
+  .avatar-ring {
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent-soft);
+    box-shadow: var(--shadow-soft);
+  }
+ 
+  .section-title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+ 
+  .quick-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+ 
+  /* Friendlier table rows across properties, tenants, payments, etc. */
+  .landlord-table tbody tr,
+  .property-table tbody tr {
+    transition: background-color .15s ease;
+  }
+ 
+  .landlord-table tbody tr:hover,
+  .property-table tbody tr:hover {
+    background-color: var(--line-soft);
+  }
 
 
 
