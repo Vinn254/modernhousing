@@ -90,50 +90,53 @@ interface Unit {
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [agentEmail, setAgentEmail] = useState('');
-  const [agentPassword, setAgentPassword] = useState('');
-  const [agentName, setAgentName] = useState('');
-  const [agentPropertyId, setAgentPropertyId] = useState('');
-  const [propertyName, setPropertyName] = useState('');
-  const [propertyAddress, setPropertyAddress] = useState('');
-  const [propertySize, setPropertySize] = useState('');
-  const [selectedPropertyId, setSelectedPropertyId] = useState('');
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [notificationTenantId, setNotificationTenantId] = useState('');
-  const [notificationMessage, setNotificationMessage] = useState('');
-  const [agentTenantName, setAgentTenantName] = useState('');
-  const [agentTenantEmail, setAgentTenantEmail] = useState('');
-  const [agentTenantPhone, setAgentTenantPhone] = useState('');
-  const [agentTenantUnitId, setAgentTenantUnitId] = useState('');
-  const [agentLeaseStart, setAgentLeaseStart] = useState('');
-  const [agentLeaseEnd, setAgentLeaseEnd] = useState('');
-  const [agentDeposit, setAgentDeposit] = useState('');
-  const [propertyLoading, setPropertyLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [agentLoading, setAgentLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [landlordId, setLandlordId] = useState('');
-  const [userRole, setUserRole] = useState('');
-  const [roleLoaded, setRoleLoaded] = useState(false);
-  const [message, setMessage] = useState('');
-  const [assignedPropertyParam, setAssignedPropertyParam] = useState('');
-  const [utilityTenantId, setUtilityTenantId] = useState('');
-  const [utilityType, setUtilityType] = useState('water');
-  const [utilityAmount, setUtilityAmount] = useState('');
-  const [utilityDescription, setUtilityDescription] = useState('');
-  const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'];
-  const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: string}>({});
-  const [waterBills, setWaterBills] = useState<any[]>([]);
-  const [waterMonthDue, setWaterMonthDue] = useState('');
+   const [stats, setStats] = useState<DashboardStats | null>(null);
+   const [tenants, setTenants] = useState<Tenant[]>([]);
+   const [payments, setPayments] = useState<Payment[]>([]);
+   const [agents, setAgents] = useState<Agent[]>([]);
+   const [properties, setProperties] = useState<Property[]>([]);
+   const [units, setUnits] = useState<Unit[]>([]);
+   const [agentEmail, setAgentEmail] = useState('');
+   const [agentPassword, setAgentPassword] = useState('');
+   const [agentName, setAgentName] = useState('');
+   const [agentPropertyId, setAgentPropertyId] = useState('');
+   const [propertyName, setPropertyName] = useState('');
+   const [propertyAddress, setPropertyAddress] = useState('');
+   const [propertySize, setPropertySize] = useState('');
+   const [selectedPropertyId, setSelectedPropertyId] = useState('');
+   const [notifications, setNotifications] = useState<Notification[]>([]);
+   const [comments, setComments] = useState<Comment[]>([]);
+   const [notificationTenantId, setNotificationTenantId] = useState('');
+   const [notificationMessage, setNotificationMessage] = useState('');
+   const [agentTenantName, setAgentTenantName] = useState('');
+   const [agentTenantEmail, setAgentTenantEmail] = useState('');
+   const [agentTenantPhone, setAgentTenantPhone] = useState('');
+   const [agentTenantUnitId, setAgentTenantUnitId] = useState('');
+   const [agentLeaseStart, setAgentLeaseStart] = useState('');
+   const [agentLeaseEnd, setAgentLeaseEnd] = useState('');
+   const [agentDeposit, setAgentDeposit] = useState('');
+   const [agentNextOfKinName, setAgentNextOfKinName] = useState('');
+   const [agentNextOfKinId, setAgentNextOfKinId] = useState('');
+   const [agentNextOfKinPhone, setAgentNextOfKinPhone] = useState('');
+   const [propertyLoading, setPropertyLoading] = useState(false);
+   const [loading, setLoading] = useState(true);
+   const [refreshing, setRefreshing] = useState(false);
+   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+   const [agentLoading, setAgentLoading] = useState(false);
+   const [error, setError] = useState('');
+   const [landlordId, setLandlordId] = useState('');
+   const [userRole, setUserRole] = useState('');
+   const [roleLoaded, setRoleLoaded] = useState(false);
+   const [message, setMessage] = useState('');
+   const [assignedPropertyParam, setAssignedPropertyParam] = useState('');
+   const [utilityTenantId, setUtilityTenantId] = useState('');
+   const [utilityType, setUtilityType] = useState('water');
+   const [utilityAmount, setUtilityAmount] = useState('');
+   const [utilityDescription, setUtilityDescription] = useState('');
+   const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'];
+   const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: string}>({});
+   const [waterBills, setWaterBills] = useState<any[]>([]);
+   const [waterMonthDue, setWaterMonthDue] = useState('');
 
   const isAgent = roleLoaded && userRole === 'agent';
   const agentPropertyFromStorage = typeof window !== 'undefined' ? localStorage.getItem('agentPropertyId') || '' : '';
@@ -303,7 +306,7 @@ export default function DashboardPage() {
     const response = await fetch('/api/tenants', {
        method: 'POST',
        headers,
-       body: JSON.stringify({ propertyId: effectivePropertyId, fullName: agentTenantName, email: agentTenantEmail, phone: agentTenantPhone, unitId: agentTenantUnitId || undefined, leaseStart: agentLeaseStart, leaseEnd: agentLeaseEnd, depositAmount: Number(agentDeposit) }),
+       body: JSON.stringify({ propertyId: effectivePropertyId, fullName: agentTenantName, email: agentTenantEmail, phone: agentTenantPhone, unitId: agentTenantUnitId || undefined, leaseStart: agentLeaseStart, leaseEnd: agentLeaseEnd, depositAmount: Number(agentDeposit), nextOfKinName: agentNextOfKinName, nextOfKinId: agentNextOfKinId, nextOfKinPhone: agentNextOfKinPhone }),
      });
 
     const result = await response.json();
@@ -320,10 +323,13 @@ export default function DashboardPage() {
     setAgentTenantPhone('');
     setAgentTenantUnitId('');
     setAgentLeaseStart('');
-    setAgentLeaseEnd('');
-    setAgentDeposit('');
-    setMessage('Tenant added successfully.');
-    await loadDashboard(true);
+setAgentLeaseEnd('');
+     setAgentDeposit('');
+     setAgentNextOfKinName('');
+     setAgentNextOfKinId('');
+     setAgentNextOfKinPhone('');
+     setMessage('Tenant added successfully.');
+     await loadDashboard(true);
     setAgentLoading(false);
   }
 
@@ -468,10 +474,13 @@ export default function DashboardPage() {
                   <option value="">Auto-create unit</option>
                   {units.map((unit) => <option key={unit.id} value={unit.id}>Unit {unit.unit_number}</option>)}
                 </select>
-                <input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required />
-                <input type="date" value={agentLeaseEnd} onChange={(event) => setAgentLeaseEnd(event.target.value)} required />
-                <input type="number" value={agentDeposit} onChange={(event) => setAgentDeposit(event.target.value)} placeholder="Deposit" />
-                <button type="submit" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Tenant'}</button>
+<input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required />
+                 <input type="date" value={agentLeaseEnd} onChange={(event) => setAgentLeaseEnd(event.target.value)} required />
+                 <input type="number" value={agentDeposit} onChange={(event) => setAgentDeposit(event.target.value)} placeholder="Deposit" />
+                 <input value={agentNextOfKinName} onChange={(event) => setAgentNextOfKinName(event.target.value)} placeholder="Next of Kin Name" />
+                 <input value={agentNextOfKinId} onChange={(event) => setAgentNextOfKinId(event.target.value)} placeholder="Next of Kin ID" />
+                 <input value={agentNextOfKinPhone} onChange={(event) => setAgentNextOfKinPhone(event.target.value)} placeholder="Next of Kin Phone" />
+                 <button type="submit" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Tenant'}</button>
               </form>
             </div>
 

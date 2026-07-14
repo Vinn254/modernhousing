@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS documents (
     uploaded_by uuid references auth.users(id) on delete set null,
     document_name text not null,
     document_url text not null,
-    document_type text not null check (document_type in ('agreement', 'id_document', 'signed_agreement')),
+    document_type text not null check (document_type in ('agreement', 'id_document', 'signed_agreement', 'kin_id')),
     status text not null default 'sent' check (status in ('sent', 'downloaded', 'awaiting_signature', 'signed', 'approved', 'rejected')),
     notes text,
     bundle_id uuid,
@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS document_bundles (
     signed_agreement_url text,
     id_document_url text,
     passport_photo_url text,
+    next_of_kin_id_url text,
     created_at timestamp with time zone default now(),
     updated_at timestamp with time zone default now()
 );
@@ -34,3 +35,6 @@ ADD COLUMN IF NOT EXISTS passport_photo_url text;
 
 -- Make uploaded_by nullable to allow tenant uploads without auth.users record
 ALTER TABLE documents ALTER COLUMN uploaded_by DROP NOT NULL;
+
+-- Add next_of_kin_id_url column if document_bundles already exists
+ALTER TABLE document_bundles ADD COLUMN IF NOT EXISTS next_of_kin_id_url text;

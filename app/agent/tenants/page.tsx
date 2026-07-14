@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -16,7 +16,9 @@ interface Tenant {
   deposit_amount?: number;
   national_id?: string;
   kra_pin?: string;
+  next_of_kin_name?: string;
   next_of_kin_id?: string;
+  next_of_kin_phone?: string;
 }
 
 interface Bill {
@@ -36,6 +38,8 @@ interface Bill {
   reference_number: string;
   created_at: string;
 }
+
+const transactionTypes = ['rent', 'water', 'garbage', 'service_charge', 'parking', 'security', 'other', 'deposit'];
 
 async function getAuthHeaders() {
   const { data } = await supabase.auth.getSession();
@@ -73,12 +77,30 @@ export default function AgentTenantsPage() {
     depositAmount: '',
     nationalId: '',
     kraPin: '',
+    nextOfKinName: '',
     nextOfKinId: '',
+    nextOfKinPhone: '',
   });
   const [unitForm, setUnitForm] = useState({
     unitNumber: '',
     rentAmount: '',
     unitType: '',
+  });
+  const [showPayForm, setShowPayForm] = useState(false);
+  const [showDirectPayment, setShowDirectPayment] = useState(false);
+  const [payForm, setPayForm] = useState({
+    billId: '',
+    amount: '',
+    paymentMethod: 'Cash',
+    referenceNumber: '',
+  });
+  const [directPaymentForm, setDirectPaymentForm] = useState({
+    tenantId: '',
+    transactionType: 'rent',
+    monthDue: '',
+    amount: '',
+    paymentMethod: 'Cash',
+    referenceNumber: '',
   });
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -146,7 +168,9 @@ export default function AgentTenantsPage() {
         depositAmount: Number(form.depositAmount) || 0,
         nationalId: form.nationalId,
         kraPin: form.kraPin,
+        nextOfKinName: form.nextOfKinName,
         nextOfKinId: form.nextOfKinId,
+        nextOfKinPhone: form.nextOfKinPhone,
       }),
     });
 
@@ -158,7 +182,7 @@ export default function AgentTenantsPage() {
     }
 
     setMessage('Tenant registered.');
-    setForm({ ...form, fullName: '', email: '', phone: '', unitNumber: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinId: '' });
+    setForm({ ...form, fullName: '', email: '', phone: '', unitNumber: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinName: '', nextOfKinId: '', nextOfKinPhone: '' });
     await loadData();
   }
 
@@ -222,8 +246,89 @@ export default function AgentTenantsPage() {
       paymentMethod: '',
       referenceNumber: '',
     });
+    setShowPayForm(false);
+    setShowDirectPayment(false);
     await loadBills(tenant.id);
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function handleShowPayForm(billId: string, balance: number) {
+    setPayForm({
+      billId,
+      amount: String(balance),
+      paymentMethod: 'Cash',
+      referenceNumber: '',
+    });
+    setShowPayForm(true);
+  }
+
+  async function handleRecordPayment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+
+    if (!payForm.billId || !payForm.amount) {
+      setError('Select a bill and enter amount.');
+      return;
+    }
+
+    const response = await fetch('/api/bills', {
+      method: 'PATCH',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        id: payForm.billId,
+        paidAmount: Number(payForm.amount),
+        paymentMethod: payForm.paymentMethod,
+        referenceNumber: payForm.referenceNumber,
+      }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to record payment.');
+      return;
+    }
+    setMessage('Payment recorded.');
+    setShowPayForm(false);
+    await loadBills(selectedTenant!.id);
+  }
+
+  async function handleDirectPayment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+
+    if (!directPaymentForm.tenantId || !directPaymentForm.transactionType || !directPaymentForm.amount) {
+      setError('All fields required.');
+      return;
+    }
+
+    const response = await fetch('/api/bills', {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        tenantId: directPaymentForm.tenantId,
+        unitId: tenants.find(t => t.id === directPaymentForm.tenantId)?.unit_id,
+        propertyId: localStorage.getItem('agentPropertyId'),
+        description: `${directPaymentForm.transactionType.replace('_', ' ')} payment`,
+        monthDue: directPaymentForm.monthDue || null,
+        dueAmount: Number(directPaymentForm.amount),
+        paidAmount: Number(directPaymentForm.amount),
+        penaltyFee: 0,
+        transactionType: directPaymentForm.transactionType,
+        paymentMethod: directPaymentForm.paymentMethod,
+        referenceNumber: directPaymentForm.referenceNumber,
+      }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to record payment.');
+      return;
+    }
+    setMessage('Direct payment recorded.');
+    setDirectPaymentForm({ tenantId: '', transactionType: 'rent', monthDue: '', amount: '', paymentMethod: 'Cash', referenceNumber: '' });
+    if (selectedTenant) await loadBills(selectedTenant.id);
   }
 
   async function handleAddBill(event: React.FormEvent<HTMLFormElement>) {
@@ -342,8 +447,16 @@ export default function AgentTenantsPage() {
               <input value={form.kraPin} onChange={e => setForm(f => ({ ...f, kraPin: e.target.value }))} placeholder="Optional" />
             </div>
             <div className="field-group">
+              <label>Next of Kin Name</label>
+              <input value={form.nextOfKinName} onChange={e => setForm(f => ({ ...f, nextOfKinName: e.target.value }))} placeholder="Optional" />
+            </div>
+            <div className="field-group">
               <label>Next of Kin ID Number</label>
               <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Optional" />
+            </div>
+            <div className="field-group">
+              <label>Next of Kin Phone</label>
+              <input value={form.nextOfKinPhone} onChange={e => setForm(f => ({ ...f, nextOfKinPhone: e.target.value }))} placeholder="Optional" />
             </div>
             <div className="field-group">
               <label>Select unit</label>
@@ -477,62 +590,72 @@ export default function AgentTenantsPage() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               </span>Record Bill Payment - {selectedTenant.full_name}
             </div>
-            <h3>Add Bill Payment</h3>
-            <form onSubmit={handleAddBill} className="form-grid">
-              <div className="field-group">
-                <label>Description</label>
-                <input value={billForm.description} onChange={e => setBillForm(f => ({ ...f, description: e.target.value }))} required placeholder="e.g., Rent, Water" />
-              </div>
-              <div className="field-group">
-                <label>Month Due</label>
-                <input value={billForm.monthDue} onChange={e => setBillForm(f => ({ ...f, monthDue: e.target.value }))} placeholder="e.g., August 2024" />
-              </div>
-              <div className="field-group">
-                <label>Due Amount (KSH)</label>
-                <input type="number" value={billForm.dueAmount} onChange={e => setBillForm(f => ({ ...f, dueAmount: e.target.value }))} required placeholder="e.g., 5000" />
-              </div>
-              <div className="field-group">
-                <label>Paid Amount (KSH)</label>
-                <input type="number" value={billForm.paidAmount} onChange={e => setBillForm(f => ({ ...f, paidAmount: e.target.value }))} placeholder="e.g., 3000" />
-              </div>
-              <div className="field-group">
-                <label>Penalty Fee (KSH)</label>
-                <input type="number" value={billForm.penaltyFee} onChange={e => setBillForm(f => ({ ...f, penaltyFee: e.target.value }))} placeholder="e.g., 500" />
-              </div>
-              <div className="field-group">
-                <label>Transaction Type</label>
-                <select value={billForm.transactionType} onChange={e => setBillForm(f => ({ ...f, transactionType: e.target.value }))}>
-                  <option value="rent">Rent</option>
-                  <option value="water">Water</option>
-                  <option value="service_charge">Service Charge</option>
-                  <option value="utility">Utility</option>
-                  <option value="deposit">Deposit</option>
-                </select>
-              </div>
-              <div className="field-group">
-                <label>Payment Method</label>
-                <select value={billForm.paymentMethod} onChange={e => setBillForm(f => ({ ...f, paymentMethod: e.target.value }))}>
-                  <option value="">Select method</option>
-                  <option value="M-pesa">M-pesa</option>
-                  <option value="Cash">Cash</option>
-                  <option value="Bank">Bank Transfer</option>
-                </select>
-              </div>
-              <div className="field-group">
-                <label>Reference Number</label>
-                <input value={billForm.referenceNumber} onChange={e => setBillForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="e.g., SH31T8MAYN" />
-              </div>
-              <button type="submit">Record Payment</button>
-              <button type="button" className="secondary-button" onClick={() => setSelectedTenant(null)}>Back to Tenants</button>
-            </form>
-          </article>
-
-          <article className="card" style={{ gridColumn: 'span 2', marginTop: 24 }}>
-            <div className="card-label">
-              <span className="badge badge-agent">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-              </span>Bills & Payments - {selectedTenant.full_name}
+            
+            <div style={{ marginBottom: 16 }}>
+              <button className="secondary-button" onClick={() => setShowDirectPayment(!showDirectPayment)}>Record Direct Payment</button>
             </div>
+
+            {showDirectPayment && (
+              <div className="card" style={{ marginBottom: 16, background: 'var(--surface)' }}>
+                <h3>Record Direct Payment</h3>
+                <form onSubmit={handleDirectPayment} className="form-grid">
+                  <div className="field-group">
+                    <label>Transaction Type</label>
+                    <select value={directPaymentForm.transactionType} onChange={e => setDirectPaymentForm(f => ({ ...f, transactionType: e.target.value }))}>
+                      {transactionTypes.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
+                    </select>
+                  </div>
+                  <div className="field-group">
+                    <label>Month Due</label>
+                    <input type="month" value={directPaymentForm.monthDue} onChange={e => setDirectPaymentForm(f => ({ ...f, monthDue: e.target.value }))} />
+                  </div>
+                  <div className="field-group">
+                    <label>Amount (KSH)</label>
+                    <input type="number" value={directPaymentForm.amount} onChange={e => setDirectPaymentForm(f => ({ ...f, amount: e.target.value }))} required placeholder="Amount" />
+                  </div>
+                  <div className="field-group">
+                    <label>Payment Method</label>
+                    <select value={directPaymentForm.paymentMethod} onChange={e => setDirectPaymentForm(f => ({ ...f, paymentMethod: e.target.value }))}>
+                      <option value="Cash">Cash</option>
+                      <option value="M-pesa">M-pesa</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                    </select>
+                  </div>
+                  <div className="field-group">
+                    <label>Reference Number</label>
+                    <input value={directPaymentForm.referenceNumber} onChange={e => setDirectPaymentForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="e.g., SH31T8MAYN" />
+                  </div>
+                  <button type="submit">Record Payment</button>
+                </form>
+              </div>
+            )}
+
+            {showPayForm && (
+              <div className="card" style={{ marginBottom: 16, background: 'var(--surface)' }}>
+                <h3>Make Payment</h3>
+                <form onSubmit={handleRecordPayment} className="form-grid">
+                  <div className="field-group">
+                    <label>Amount (KSH)</label>
+                    <input type="number" value={payForm.amount} onChange={e => setPayForm(f => ({ ...f, amount: e.target.value }))} required placeholder="Amount" />
+                  </div>
+                  <div className="field-group">
+                    <label>Payment Method</label>
+                    <select value={payForm.paymentMethod} onChange={e => setPayForm(f => ({ ...f, paymentMethod: e.target.value }))}>
+                      <option value="Cash">Cash</option>
+                      <option value="M-pesa">M-pesa</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                    </select>
+                  </div>
+                  <div className="field-group">
+                    <label>Reference Number</label>
+                    <input value={payForm.referenceNumber} onChange={e => setPayForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="e.g., SH31T8MAYN" />
+                  </div>
+                  <button type="submit">Record Payment</button>
+                  <button type="button" className="secondary-button" onClick={() => setShowPayForm(false)}>Cancel</button>
+                </form>
+              </div>
+            )}
+
             <h3 style={{ marginBottom: 16 }}>Transaction Statement</h3>
             {loadingBills && <p className="landlord-muted">Loading bills...</p>}
             {!loadingBills && bills.length === 0 && <p className="landlord-empty">No bills recorded yet.</p>}
@@ -553,6 +676,7 @@ export default function AgentTenantsPage() {
                       <th>Trans #</th>
                       <th>Code</th>
                       <th>Payment Date</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -569,12 +693,18 @@ export default function AgentTenantsPage() {
                         <td>{bill.transaction_number}</td>
                         <td>{bill.transaction_code || '-'}</td>
                         <td>{bill.payment_date || '-'}</td>
+                        <td>
+                          {bill.balance > 0 && (
+                            <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
+            <button type="button" className="secondary-button" onClick={() => setSelectedTenant(null)} style={{ marginTop: 16 }}>Back to Tenants</button>
           </article>
         </section>
       )}

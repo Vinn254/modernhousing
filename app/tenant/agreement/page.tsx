@@ -16,6 +16,7 @@ interface AgreementDocument {
 export default function TenantDocumentsPage() {
   const [user, setUser] = useState<any>(null);
   const [documents, setDocuments] = useState<AgreementDocument[]>([]);
+  const [bundles, setBundles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -23,20 +24,34 @@ export default function TenantDocumentsPage() {
   const [signedAgreement, setSignedAgreement] = useState<File | null>(null);
   const [idDocument, setIdDocument] = useState<File | null>(null);
   const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
+  const [nextOfKinId, setNextOfKinId] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
   async function loadDocuments() {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.user_metadata?.tenant_id) {
+    const tenantId = session?.user?.user_metadata?.tenant_id;
+    
+    if (!session?.user?.id && !tenantId) {
       setLoading(false);
       return;
     }
-    const response = await fetch(`/api/documents?tenantId=${session.user.user_metadata.tenant_id}`, {
-      headers: session.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
-    });
-    const result = await response.json();
-    if (response.ok) setDocuments(result.documents ?? []);
+    
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+    
+    const [docsResponse, bundlesResponse] = await Promise.all([
+      session?.user?.id ? fetch(`/api/documents?tenantId=${tenantId}`, { headers }).catch(() => null) : null,
+      tenantId ? fetch(`/api/document-bundles?tenantId=${tenantId}`, { headers }).catch(() => null) : null,
+    ]);
+    
+    const [docsResult, bundlesResult] = await Promise.all([
+      docsResponse?.json() ?? Promise.resolve({ documents: [] }),
+      bundlesResponse?.json() ?? Promise.resolve({ bundles: [] }),
+    ]);
+    
+    if (docsResponse?.ok) setDocuments(docsResult.documents ?? []);
+    if (bundlesResponse?.ok) setBundles(bundlesResult.bundles ?? []);
     setLoading(false);
   }
 
@@ -62,8 +77,8 @@ export default function TenantDocumentsPage() {
     const { data: { session } } = await supabase.auth.getSession();
     const tenantId = session?.user?.user_metadata?.tenant_id;
 
-    // Upload all files using multipart form data
-    const uploadFile = async (file: File, type: string, name: string) => {
+    const uploadFile = async (file: File | null, type: string, name: string) => {
+      if (!file) return;
       const formData = new FormData();
       formData.append('file', file);
       formData.append('documentType', type);
@@ -95,10 +110,16 @@ export default function TenantDocumentsPage() {
         await uploadFile(passportPhoto, 'id_document', 'Passport Photo');
       }
 
+      // Upload next of kin ID if provided
+      if (nextOfKinId) {
+        await uploadFile(nextOfKinId, 'kin_id', 'Next of Kin ID');
+      }
+
       setMessage('All documents uploaded successfully.');
       setSignedAgreement(null);
       setIdDocument(null);
       setPassportPhoto(null);
+      setNextOfKinId(null);
       loadDocuments();
     } catch (err: any) {
       setError(err.message || 'Upload failed.');
@@ -110,6 +131,8 @@ export default function TenantDocumentsPage() {
   const agreementDocs = documents.filter(d => d.document_type === 'agreement');
   const signedAgreementDocs = documents.filter(d => d.document_type === 'signed_agreement');
   const idDocs = documents.filter(d => d.document_type === 'id_document');
+  const kinIdDocs = documents.filter(d => d.document_type === 'kin_id');
+  const bundle = bundles[0];
 
   const FileInput = ({ label, accept, onChange, file }: { 
     label: string; 
@@ -209,6 +232,12 @@ export default function TenantDocumentsPage() {
                 onChange={e => setPassportPhoto(e.target.files?.[0] ?? null)}
                 file={passportPhoto}
               />
+              <FileInput 
+                label="Next of Kin ID (PDF/Image)" 
+                accept=".pdf,.jpg,.jpeg,.png" 
+                onChange={e => setNextOfKinId(e.target.files?.[0] ?? null)}
+                file={nextOfKinId}
+              />
               <button type="submit" disabled={uploading} style={{ marginTop: 8 }}>
                 {uploading ? 'Uploading…' : 'Upload All Documents'}
               </button>
@@ -222,7 +251,7 @@ export default function TenantDocumentsPage() {
             <div className="card-label">Your Submitted Documents</div>
             <h3 style={{ marginBottom: 12 }}>Document Status</h3>
             
-            {signedAgreementDocs.length === 0 && idDocs.length === 0 ? (
+            {signedAgreementDocs.length === 0 && idDocs.length === 0 && kinIdDocs.length === 0 ? (
               <p>No documents submitted yet.</p>
             ) : (
               <div className="table-shell" style={{ overflowX: 'auto' }}>
@@ -254,6 +283,13 @@ export default function TenantDocumentsPage() {
                             {doc.status === 'approved' ? 'Approved' : 'Pending Review'}
                           </span>
                         </td>
+                        <td>{new Date(doc.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                    {kinIdDocs.map(doc => (
+                      <tr key={doc.id}>
+                        <td>Next of Kin ID</td>
+                        <td>-</td>
                         <td>{new Date(doc.created_at).toLocaleDateString()}</td>
                       </tr>
                     ))}

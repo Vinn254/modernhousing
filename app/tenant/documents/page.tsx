@@ -31,8 +31,9 @@ export default function TenantDocumentsPage() {
   
   const [signedAgreement, setSignedAgreement] = useState<File | null>(null);
   const [idDocument, setIdDocument] = useState<File | null>(null);
-  const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
+   const [nextOfKinId, setNextOfKinId] = useState<File | null>(null);
+   const [uploading, setUploading] = useState(false);
 
   async function loadDocuments() {
     setLoading(true);
@@ -101,12 +102,15 @@ export default function TenantDocumentsPage() {
     };
 
     try {
-      if (signedAgreement) {
-        await uploadFile(signedAgreement, 'signed_agreement', 'Signed Agreement');
-      }
+      // Upload signed agreement
+      await uploadFile(signedAgreement, 'signed_agreement', 'Signed Agreement');
+
+      // Upload ID document if provided
       if (idDocument) {
         await uploadFile(idDocument, 'id_document', 'ID Document');
       }
+
+      // Upload passport photo if provided
       if (passportPhoto && tenantId) {
         const formData = new FormData();
         formData.append('file', passportPhoto);
@@ -122,10 +126,29 @@ export default function TenantDocumentsPage() {
         const result = await response.json();
         if (!response.ok) throw new Error(result.message ?? 'Failed to upload Passport Photo');
       }
+
+      // Upload next of kin ID if provided
+      if (nextOfKinId && tenantId) {
+        const formData = new FormData();
+        formData.append('file', nextOfKinId);
+        formData.append('documentType', 'kin_id');
+        formData.append('documentName', 'Next of Kin ID');
+        formData.append('tenantId', tenantId);
+        
+        const response = await fetch('/api/documents', {
+          method: 'POST',
+          body: formData,
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message ?? 'Failed to upload Next of Kin ID');
+      }
+
       setMessage('Documents uploaded successfully.');
       setSignedAgreement(null);
       setIdDocument(null);
       setPassportPhoto(null);
+      setNextOfKinId(null);
       loadDocuments();
     } catch (err: any) {
       setError(err.message || 'Upload failed.');
@@ -234,13 +257,19 @@ export default function TenantDocumentsPage() {
               onChange={e => setIdDocument(e.target.files?.[0] ?? null)}
               file={idDocument}
             />
-            <FileInput 
-              label="Passport Photo (JPG/PNG)" 
-              accept=".jpg,.jpeg,.png" 
-              onChange={e => setPassportPhoto(e.target.files?.[0] ?? null)}
-              file={passportPhoto}
-            />
-            <button type="submit" disabled={uploading} className="action-button primary">
+<FileInput 
+               label="Passport Photo (JPG/PNG)" 
+               accept=".jpg,.jpeg,.png" 
+               onChange={e => setPassportPhoto(e.target.files?.[0] ?? null)}
+               file={passportPhoto}
+             />
+             <FileInput 
+               label="Next of Kin ID (PDF/Image)" 
+               accept=".pdf,.jpg,.jpeg,.png" 
+               onChange={e => setNextOfKinId(e.target.files?.[0] ?? null)}
+               file={nextOfKinId}
+             />
+             <button type="submit" disabled={uploading} className="action-button primary">
               {uploading ? 'Uploading…' : 'Upload All Documents'}
             </button>
           </form>

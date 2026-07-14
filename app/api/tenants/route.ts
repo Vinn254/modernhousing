@@ -86,7 +86,6 @@ export async function GET(request: NextRequest) {
     const authContext = await getAuthContext(request);
     const urlPropertyId = request.nextUrl.searchParams.get('propertyId');
 
-    // For agents, use property_id from user_metadata if no propertyId was passed
     const userMetadata = authContext.sessionUser?.user_metadata || {};
     const effectivePropertyId = urlPropertyId || (userMetadata?.role === 'agent' ? userMetadata?.property_id : null);
 
@@ -98,7 +97,7 @@ export async function GET(request: NextRequest) {
       if (unitIds.length > 0) {
         const { data, error } = await supabaseAdmin
           .from('tenants')
-          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_id, picture_url, units!inner(unit_number, properties(id, name, address))')
+          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, properties(id, name, address))')
           .in('unit_id', unitIds)
           .order('created_at', { ascending: false });
 
@@ -117,7 +116,9 @@ export async function GET(request: NextRequest) {
           lease_end: tenant.lease_end,
           national_id: tenant.national_id,
           kra_pin: tenant.kra_pin,
+          next_of_kin_name: tenant.next_of_kin_name,
           next_of_kin_id: tenant.next_of_kin_id,
+          next_of_kin_phone: tenant.next_of_kin_phone,
           picture_url: tenant.picture_url,
         }));
 
@@ -143,7 +144,7 @@ export async function GET(request: NextRequest) {
       if (unitIds.length > 0) {
         const { data, error } = await supabaseAdmin
           .from('tenants')
-          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_id, picture_url, units!inner(unit_number, properties(id, name, address))')
+          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, properties(id, name, address))')
           .in('unit_id', unitIds)
           .order('created_at', { ascending: false });
 
@@ -162,7 +163,9 @@ export async function GET(request: NextRequest) {
           lease_end: tenant.lease_end,
           national_id: tenant.national_id,
           kra_pin: tenant.kra_pin,
+          next_of_kin_name: tenant.next_of_kin_name,
           next_of_kin_id: tenant.next_of_kin_id,
+          next_of_kin_phone: tenant.next_of_kin_phone,
           picture_url: tenant.picture_url,
         }));
 
@@ -178,7 +181,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { fullName, email, phone, unitId, propertyId, leaseStart, leaseEnd, depositAmount, unitNumber, nationalId, kraPin, nextOfKinId } = body;
+  const { fullName, email, phone, unitId, propertyId, leaseStart, leaseEnd, depositAmount, unitNumber, nationalId, kraPin, nextOfKinName, nextOfKinId, nextOfKinPhone } = body;
 
   if (!fullName || !email || !leaseStart || !leaseEnd) {
     return NextResponse.json({ message: 'Missing required tenant fields.' }, { status: 400 });
@@ -196,7 +199,6 @@ export async function POST(request: NextRequest) {
         if (userMetadata?.property_id !== propertyId) {
           return NextResponse.json({ message: 'You can only add tenants to your assigned property.' }, { status: 403 });
         }
-        // Verify unit belongs to agent's property if unitId is provided
         if (unitId) {
           const { data: unitCheck } = await supabaseAdmin
             .from('units')
@@ -267,7 +269,9 @@ export async function POST(request: NextRequest) {
     deposit_amount: depositAmount,
     national_id: nationalId || null,
     kra_pin: kraPin || null,
+    next_of_kin_name: nextOfKinName || null,
     next_of_kin_id: nextOfKinId || null,
+    next_of_kin_phone: nextOfKinPhone || null,
   }).select('id').single();
 
   if (result.error) {
@@ -276,7 +280,6 @@ export async function POST(request: NextRequest) {
 
   const tenantId = result.data?.id;
 
-  // Update user metadata with tenant_id if user exists
   if (tenantId && authContext.userId) {
     await supabaseAdmin.auth.admin.updateUserById(authContext.userId, {
       user_metadata: { tenant_id: tenantId, role: 'tenant' }
@@ -294,6 +297,10 @@ Address: ${unitData?.properties?.address ?? ''}
 
 Lease Period: ${leaseStart} to ${leaseEnd}
 Deposit: KSH ${depositAmount ?? 0}
+
+Next of Kin: ${nextOfKinName || '—'}
+Next of Kin ID: ${nextOfKinId || '—'}
+Next of Kin Phone: ${nextOfKinPhone || '—'}
 
 Terms and Conditions:
 1. Tenant agrees to pay rent on or before the 5th of each month.
@@ -318,7 +325,7 @@ Please acknowledge this agreement by clicking "Accept" in your tenant portal.`;
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, fullName, email, phone, leaseStart, leaseEnd, status } = body;
+    const { id, fullName, email, phone, leaseStart, leaseEnd, status, nationalId, kraPin, nextOfKinName, nextOfKinId, nextOfKinPhone } = body;
 
     if (!id) {
       return NextResponse.json({ message: 'Tenant ID is required.' }, { status: 400 });
@@ -377,6 +384,11 @@ export async function PATCH(request: NextRequest) {
     if (leaseStart) updates.lease_start = leaseStart;
     if (leaseEnd) updates.lease_end = leaseEnd;
     if (status) updates.status = status;
+    if (nationalId !== undefined) updates.national_id = nationalId || null;
+    if (kraPin !== undefined) updates.kra_pin = kraPin || null;
+    if (nextOfKinName !== undefined) updates.next_of_kin_name = nextOfKinName || null;
+    if (nextOfKinId !== undefined) updates.next_of_kin_id = nextOfKinId || null;
+    if (nextOfKinPhone !== undefined) updates.next_of_kin_phone = nextOfKinPhone || null;
 
     const result = await supabaseAdmin.from('tenants').update(updates).eq('id', id).select().single();
 
@@ -402,6 +414,13 @@ export async function DELETE(request: NextRequest) {
     const userMetadata = authContext.sessionUser?.user_metadata || {};
     const isAgent = userMetadata?.role === 'agent';
     
+    // Get tenant's unit before deletion to update its status
+    const { data: tenantData } = await supabaseAdmin
+      .from('tenants')
+      .select('unit_id')
+      .eq('id', id)
+      .maybeSingle();
+
     if (!authContext.isSuperAdmin) {
       const agentPropertyId = isAgent ? userMetadata?.property_id : null;
       
@@ -450,7 +469,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ message: 'Tenant removed.' });
+    // Update unit status to vacant after tenant deletion
+    if (tenantData?.unit_id) {
+      await supabaseAdmin
+        .from('units')
+        .update({ occupancy_status: 'vacant' })
+        .eq('id', tenantData.unit_id);
+    }
+
+    return NextResponse.json({ message: 'Tenant removed and unit marked as vacant.' });
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to remove tenant.' }, { status: 500 });
   }

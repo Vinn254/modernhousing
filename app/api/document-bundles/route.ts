@@ -77,6 +77,21 @@ async function getAuthContext(request: NextRequest) {
   };
 }
 
+function mapBundle(b: any) {
+  return {
+    id: b.id,
+    tenant_id: b.tenant_id,
+    tenant_name: b.tenants?.full_name ?? '',
+    property_name: b.tenants?.units?.properties?.name ?? '',
+    status: b.status,
+    signed_agreement_url: b.signed_agreement_url,
+    id_document_url: b.id_document_url,
+    passport_photo_url: b.passport_photo_url,
+    next_of_kin_id_url: b.next_of_kin_id_url,
+    created_at: b.created_at,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const client = getSupabaseAdmin();
@@ -94,17 +109,7 @@ export async function GET(request: NextRequest) {
 
       if (error) throw error;
 
-      const bundles = (data ?? []).map((b: any) => ({
-        id: b.id,
-        tenant_id: b.tenant_id,
-        tenant_name: b.tenants?.full_name ?? '',
-        property_name: b.tenants?.units?.properties?.name ?? '',
-        status: b.status,
-        signed_agreement_url: b.signed_agreement_url,
-        id_document_url: b.id_document_url,
-        passport_photo_url: b.passport_photo_url,
-        created_at: b.created_at,
-      }));
+      const bundles = (data ?? []).map(mapBundle);
 
       return NextResponse.json({ bundles });
     }
@@ -137,17 +142,7 @@ export async function GET(request: NextRequest) {
 
           if (error) throw error;
 
-          const bundles = (data ?? []).map((b: any) => ({
-            id: b.id,
-            tenant_id: b.tenant_id,
-            tenant_name: b.tenants?.full_name ?? '',
-            property_name: b.tenants?.units?.properties?.name ?? '',
-            status: b.status,
-            signed_agreement_url: b.signed_agreement_url,
-            id_document_url: b.id_document_url,
-            passport_photo_url: b.passport_photo_url,
-            created_at: b.created_at,
-          }));
+          const bundles = (data ?? []).map(mapBundle);
 
           return NextResponse.json({ bundles });
         }
@@ -186,17 +181,7 @@ export async function GET(request: NextRequest) {
 
             if (error) throw error;
 
-            const bundles = (data ?? []).map((b: any) => ({
-              id: b.id,
-              tenant_id: b.tenant_id,
-              tenant_name: b.tenants?.full_name ?? '',
-              property_name: b.tenants?.units?.properties?.name ?? '',
-              status: b.status,
-              signed_agreement_url: b.signed_agreement_url,
-              id_document_url: b.id_document_url,
-              passport_photo_url: b.passport_photo_url,
-              created_at: b.created_at,
-            }));
+            const bundles = (data ?? []).map(mapBundle);
 
             return NextResponse.json({ bundles });
           }
@@ -213,17 +198,7 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    const bundles = (data ?? []).map((b: any) => ({
-      id: b.id,
-      tenant_id: b.tenant_id,
-      tenant_name: b.tenants?.full_name ?? '',
-      property_name: b.tenants?.units?.properties?.name ?? '',
-      status: b.status,
-      signed_agreement_url: b.signed_agreement_url,
-      id_document_url: b.id_document_url,
-      passport_photo_url: b.passport_photo_url,
-      created_at: b.created_at,
-    }));
+    const bundles = (data ?? []).map(mapBundle);
 
     return NextResponse.json({ bundles });
   } catch (error: any) {
@@ -304,4 +279,3 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ message: error.message ?? 'Unable to update bundle.' }, { status: 500 });
   }
 }
-

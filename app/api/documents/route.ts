@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -323,6 +323,7 @@ export async function POST(request: NextRequest) {
         if (documentType === 'signed_agreement') bundleUpdate.signed_agreement_url = publicUrl.publicUrl;
         if (documentType === 'id_document' && documentName === 'Passport Photo') bundleUpdate.passport_photo_url = publicUrl.publicUrl;
         if (documentType === 'id_document' && documentName !== 'Passport Photo') bundleUpdate.id_document_url = publicUrl.publicUrl;
+        if (documentType === 'kin_id') bundleUpdate.next_of_kin_id_url = publicUrl.publicUrl;
 
         if (Object.keys(bundleUpdate).length > 0 && bundleId) {
           await client
@@ -374,7 +375,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Missing required fields.' }, { status: 400 });
   }
 
-  const validTypes = ['agreement', 'id_document', 'signed_agreement'];
+  const validTypes = ['agreement', 'id_document', 'signed_agreement', 'kin_id'];
   if (!validTypes.includes(documentType)) {
     return NextResponse.json({ message: 'Invalid document type.' }, { status: 400 });
   }
@@ -574,3 +575,4 @@ export async function DELETE(request: NextRequest) {
 
   return NextResponse.json({ message: 'Document deleted.' });
 }
+

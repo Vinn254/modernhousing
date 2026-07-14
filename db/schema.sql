@@ -58,6 +58,11 @@ create table tenants (
    lease_end date not null,
    deposit_amount numeric(12,2) not null default 0,
    picture_url text,
+   national_id text,
+   kra_pin text,
+   next_of_kin_name text,
+   next_of_kin_id text,
+   next_of_kin_phone text,
    created_at timestamp with time zone default now()
 );
 

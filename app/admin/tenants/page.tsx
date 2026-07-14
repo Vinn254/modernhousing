@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
@@ -25,7 +25,9 @@ interface Tenant {
   deposit_amount?: number;
   national_id?: string;
   kra_pin?: string;
+  next_of_kin_name?: string;
   next_of_kin_id?: string;
+  next_of_kin_phone?: string;
   picture_url?: string;
 }
 
@@ -48,9 +50,9 @@ interface Bill {
 }
 
 async function getAuthHeaders() {
-  const { data } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
   return headers;
 }
 
@@ -73,7 +75,9 @@ export default function TenantsPage() {
     depositAmount: '',
     nationalId: '',
     kraPin: '',
+    nextOfKinName: '',
     nextOfKinId: '',
+    nextOfKinPhone: '',
   });
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
@@ -164,8 +168,13 @@ export default function TenantsPage() {
           phone: form.phone,
           leaseStart: form.leaseStart,
           leaseEnd: form.leaseEnd,
+          nationalId: form.nationalId || null,
+          kraPin: form.kraPin || null,
+          nextOfKinName: form.nextOfKinName || null,
+          nextOfKinId: form.nextOfKinId || null,
+          nextOfKinPhone: form.nextOfKinPhone || null,
         }
-      : { ...form, propertyId, depositAmount: Number(form.depositAmount) || 0, nationalId: form.nationalId || null, kraPin: form.kraPin || null, nextOfKinId: form.nextOfKinId || null };
+      : { ...form, propertyId, depositAmount: Number(form.depositAmount) || 0, nationalId: form.nationalId || null, kraPin: form.kraPin || null, nextOfKinName: form.nextOfKinName || null, nextOfKinId: form.nextOfKinId || null, nextOfKinPhone: form.nextOfKinPhone || null };
 
     const response = await fetch(url, {
       method,
@@ -181,13 +190,13 @@ export default function TenantsPage() {
     }
 
     setMessage(editingTenant ? 'Tenant updated.' : 'Tenant registered.');
-    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinId: '' });
+    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinName: '', nextOfKinId: '', nextOfKinPhone: '' });
     setEditingTenant(null);
     await loadData();
   }
 
   async function handleRemove(tenantId: string) {
-    if (!confirm('Remove this tenant? They will be marked as relocated.')) return;
+    if (!confirm('Remove this tenant? They will be marked as relocated and the unit will be freed.')) return;
     const response = await fetch(`/api/tenants?id=${encodeURIComponent(tenantId)}`, { method: 'DELETE', headers: await getAuthHeaders() });
     const result = await response.json();
     if (!response.ok) {
@@ -195,7 +204,8 @@ export default function TenantsPage() {
       return;
     }
     setTenants(tenants.filter(t => t.id !== tenantId));
-    setMessage('Tenant removed.');
+    setMessage('Tenant removed and unit marked as vacant.');
+    await loadData();
   }
 
   function handleEdit(tenant: Tenant) {
@@ -210,13 +220,15 @@ export default function TenantsPage() {
       depositAmount: String(tenant.deposit_amount ?? ''),
       nationalId: tenant.national_id ?? '',
       kraPin: tenant.kra_pin ?? '',
+      nextOfKinName: tenant.next_of_kin_name ?? '',
       nextOfKinId: tenant.next_of_kin_id ?? '',
+      nextOfKinPhone: tenant.next_of_kin_phone ?? '',
     });
     scrollToForm();
   }
 
   function resetForm() {
-    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinId: '' });
+    setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinName: '', nextOfKinId: '', nextOfKinPhone: '' });
     setEditingTenant(null);
     setMessage('');
     setError('');
@@ -336,7 +348,9 @@ export default function TenantsPage() {
               <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" />
               <input value={form.nationalId} onChange={e => setForm(f => ({ ...f, nationalId: e.target.value }))} placeholder="National ID (Optional)" />
               <input value={form.kraPin} onChange={e => setForm(f => ({ ...f, kraPin: e.target.value }))} placeholder="KRA PIN (Optional)" />
+              <input value={form.nextOfKinName} onChange={e => setForm(f => ({ ...f, nextOfKinName: e.target.value }))} placeholder="Next of Kin Name (Optional)" />
               <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Next of Kin ID (Optional)" />
+              <input value={form.nextOfKinPhone} onChange={e => setForm(f => ({ ...f, nextOfKinPhone: e.target.value }))} placeholder="Next of Kin Phone (Optional)" />
               {!editingTenant && (
                 <select value={form.unitId} onChange={e => setForm(f => ({ ...f, unitId: e.target.value }))} required>
                   <option value="">Select unit</option>
@@ -375,6 +389,7 @@ export default function TenantsPage() {
                     <tr>
                       <th>Name</th>
                       <th>Email</th>
+                      <th>Phone</th>
                       <th>Unit</th>
                       <th>Property</th>
                       <th>Lease</th>
@@ -387,6 +402,7 @@ export default function TenantsPage() {
                       <tr key={tenant.id}>
                         <td className="landlord-name">{tenant.full_name}</td>
                         <td>{tenant.email}</td>
+                        <td>{tenant.phone || '-'}</td>
                         <td>{tenant.unit}</td>
                         <td>{tenant.property}</td>
                         <td>{tenant.lease_start} → {tenant.lease_end}</td>
@@ -515,7 +531,7 @@ export default function TenantsPage() {
                           <td>{bill.due_amount.toLocaleString()}</td>
                           <td>{bill.paid_amount.toLocaleString() || '-'}</td>
                           <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
-<td style={{ color: bill.balance > 0 ? 'var(--error)' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
+                          <td style={{ color: bill.balance > 0 ? 'var(--error)' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
                           <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
                           <td>{bill.payment_date || '-'}</td>
                           <td>
