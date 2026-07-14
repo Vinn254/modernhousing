@@ -421,13 +421,13 @@ export default function TenantsPage() {
                             {tenant.status ?? 'Active'}
                           </span>
                         </td>
-                        <td>
-                          <div className="landlord-actions">
-                            <button className="action-button primary" onClick={() => handleEdit(tenant)}>Edit</button>
-                            <button className="action-button" style={{ marginLeft: 8 }} onClick={() => handleViewBills(tenant)}>Bills</button>
-                            <button className="action-button danger" onClick={() => handleRemove(tenant.id)}>Remove</button>
-                          </div>
-                        </td>
+<td>
+                           <div className="landlord-actions">
+                             <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleEdit(tenant)}>Edit</button>
+                             <button className="action-button" style={{ padding: '6px 10px', fontSize: '12px', marginLeft: 8 }} onClick={() => handleViewBills(tenant)}>Bills</button>
+                             <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px', marginLeft: 8 }} onClick={() => handleRemove(tenant.id)}>Remove</button>
+                           </div>
+                         </td>
                       </tr>
                     ))}
                   </tbody>
@@ -544,11 +544,11 @@ export default function TenantsPage() {
                           <td style={{ color: bill.balance > 0 ? 'var(--error)' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
                           <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
                           <td>{bill.payment_date || '-'}</td>
-                          <td>
-                            {bill.balance > 0 && (
-                              <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4 }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
-                            )}
-                          </td>
+<td>
+                             {bill.balance > 0 && (
+                               <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px', marginRight: 6 }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
+                             )}
+                           </td>
                         </tr>
                       ))}
                     </tbody>

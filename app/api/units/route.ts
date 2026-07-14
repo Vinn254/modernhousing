@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logAuditEvent } from '../../../lib/auditLogger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -88,6 +89,8 @@ async function getAuthContext(request: NextRequest) {
     profile,
     organizationId: orgId,
     sessionUser,
+    userId: sessionUser?.id,
+    userEmail: sessionUser?.email,
   };
 }
 
@@ -249,6 +252,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
 
+    // Log audit
+    await logAuditEvent(
+      authContext.userId,
+      authContext.userEmail,
+      'create',
+      'unit',
+      result.data?.id,
+      { unit_number: unitNumber, property_id: propertyId, rent_amount: rentAmount }
+    );
+
     return NextResponse.json({ unit: result.data, message: 'Unit created.' }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to create unit.' }, { status: 500 });
@@ -308,6 +321,16 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
 
+    // Log audit
+    await logAuditEvent(
+      authContext.userId,
+      authContext.userEmail,
+      'update',
+      'unit',
+      id,
+      { unit_number: unitNumber, rent_amount: rentAmount, occupancy_status: occupancyStatus }
+    );
+
     return NextResponse.json({ unit: result.data, message: 'Unit updated.' });
   } catch (error: any) {
     console.error('PATCH /api/units error:', error);
@@ -357,6 +380,16 @@ export async function DELETE(request: NextRequest) {
     if (result.error) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
+
+    // Log audit
+    await logAuditEvent(
+      authContext.userId,
+      authContext.userEmail,
+      'delete',
+      'unit',
+      id,
+      { unitId: id }
+    );
 
     return NextResponse.json({ message: 'Unit deleted.' });
   } catch (error: any) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logAuditEvent } from '../../../lib/auditLogger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -51,7 +52,7 @@ async function getAuthContext(request: NextRequest) {
   }
 
   if (!sessionUser) {
-    return { isSuperAdmin: false, userId: undefined, organizationId: null };
+    return { isSuperAdmin: false, userId: undefined, organizationId: null, userEmail: undefined };
   }
 
   const userMetadata = sessionUser.user_metadata || {};
@@ -71,6 +72,7 @@ async function getAuthContext(request: NextRequest) {
     isSuperAdmin: userMetadata.role === 'super_admin',
     userId: sessionUser.id,
     organizationId: orgId,
+    userEmail: sessionUser.email,
   };
 }
 
@@ -215,13 +217,25 @@ export async function POST(request: NextRequest) {
     transaction_code: transCode ?? null,
   };
 
-  const result = await supabaseAdmin.from('payments').insert(insertData);
+const result = await supabaseAdmin.from('payments').insert(insertData);
 
-  if (result.error) {
-    return NextResponse.json({ message: result.error.message }, { status: 500 });
-  }
+    if (result.error) {
+      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    }
 
-  const { data: tenant } = await supabaseAdmin
+    const insertedPayment = result.data as any;
+
+    // Log audit
+    await logAuditEvent(
+      authContext.userId,
+      authContext.userEmail,
+      'create',
+      'payment',
+      insertedPayment?.[0]?.id,
+      { tenant_id: tenantId, amount: paidAmount, type: transactionType }
+    );
+
+    const { data: tenant } = await supabaseAdmin
     .from('tenants')
     .select('email, full_name')
     .eq('id', tenantId)
@@ -248,25 +262,35 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
   }
 
-  const body = await request.json();
+const body = await request.json();
   const { id } = body;
 
   if (!id) {
     return NextResponse.json({ message: 'Payment ID is required.' }, { status: 400 });
   }
 
-  const result = await supabaseAdmin.from('payments')
+  const deleteResult = await supabaseAdmin.from('payments')
     .delete()
     .eq('id', id)
     .select();
 
-  if (result.error) {
-    return NextResponse.json({ message: result.error.message }, { status: 500 });
+  if (deleteResult.error) {
+    return NextResponse.json({ message: deleteResult.error.message }, { status: 500 });
   }
 
-  if (!result.data || result.data.length === 0) {
+  if (!deleteResult.data || deleteResult.data.length === 0) {
     return NextResponse.json({ message: 'Payment not found or could not be deleted.' }, { status: 404 });
   }
+
+  // Log audit
+  await logAuditEvent(
+    authContext.userId,
+    authContext.userEmail,
+    'delete',
+    'payment',
+    id,
+    { paymentId: id }
+  );
 
   return NextResponse.json({ message: 'Payment deleted.' });
 }
@@ -321,14 +345,24 @@ export async function PUT(request: NextRequest) {
     transaction_code: transCode ?? null,
   };
 
-  const result = await supabaseAdmin.from('payments')
+  const updateResult = await supabaseAdmin.from('payments')
     .update(updateData)
     .eq('id', id)
     .select();
 
-  if (result.error) {
-    return NextResponse.json({ message: result.error.message }, { status: 500 });
+  if (updateResult.error) {
+    return NextResponse.json({ message: updateResult.error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ message: 'Payment updated.', payment: result.data?.[0] });
+  // Log audit
+  await logAuditEvent(
+    authContext.userId,
+    authContext.userEmail,
+    'update',
+    'payment',
+    id,
+    { balance_remaining: finalBalanceRemaining }
+  );
+
+  return NextResponse.json({ message: 'Payment updated.', payment: updateResult.data?.[0] });
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logAuditEvent } from '../../../lib/auditLogger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -31,6 +32,7 @@ function decodeJWT(token: string): any | null {
 interface AuthContext {
   isSuperAdmin: boolean;
   userId: string | undefined;
+  userEmail: string | undefined;
   organizationId: string | null;
   sessionUser: any | null;
 }
@@ -58,7 +60,7 @@ async function getAuthContext(request: NextRequest): Promise<AuthContext> {
   }
 
   if (!sessionUser) {
-    return { isSuperAdmin: false, userId: undefined, organizationId: null, sessionUser: null };
+    return { isSuperAdmin: false, userId: undefined, userEmail: undefined, organizationId: null, sessionUser: null };
   }
 
   const userMetadata = sessionUser.user_metadata || {};
@@ -76,6 +78,7 @@ async function getAuthContext(request: NextRequest): Promise<AuthContext> {
   return {
     isSuperAdmin: userMetadata.role === 'super_admin',
     userId: sessionUser.id,
+    userEmail: sessionUser.email,
     organizationId: orgId,
     sessionUser,
   };
@@ -185,6 +188,42 @@ export async function POST(request: NextRequest) {
 
   if (!fullName || !email || !leaseStart || !leaseEnd) {
     return NextResponse.json({ message: 'Missing required tenant fields.' }, { status: 400 });
+  }
+
+  // Check for duplicate email, phone, national_id, kra_pin in tenants
+  const normalizedEmail = email.trim().toLowerCase();
+  const [emailCheck, phoneCheck, nationalIdCheck, kraPinCheck] = await Promise.all([
+    supabaseAdmin.from('tenants').select('id').eq('email', normalizedEmail).maybeSingle(),
+    phone ? supabaseAdmin.from('tenants').select('id').eq('phone', phone).maybeSingle() : { data: null },
+    nationalId ? supabaseAdmin.from('tenants').select('id').eq('national_id', nationalId).maybeSingle() : { data: null },
+    kraPin ? supabaseAdmin.from('tenants').select('id').eq('kra_pin', kraPin).maybeSingle() : { data: null },
+  ]);
+
+  if (emailCheck.data) return NextResponse.json({ message: 'Email already exists in tenant records.' }, { status: 409 });
+  if (phoneCheck.data) return NextResponse.json({ message: 'Phone number already exists in tenant records.' }, { status: 409 });
+  if (nationalIdCheck.data) return NextResponse.json({ message: 'National ID already exists in tenant records.' }, { status: 409 });
+  if (kraPinCheck.data) return NextResponse.json({ message: 'KRA PIN already exists in tenant records.' }, { status: 409 });
+
+  // Check if next_of_kin_id or next_of_kin_phone is already used
+  if (nextOfKinId) {
+    const [kinIdCheck, kinPhoneCheck] = await Promise.all([
+      supabaseAdmin.from('tenants').select('id').eq('next_of_kin_id', nextOfKinId).maybeSingle(),
+      nextOfKinPhone ? supabaseAdmin.from('tenants').select('id').eq('next_of_kin_phone', nextOfKinPhone).maybeSingle() : { data: null },
+    ]);
+    if (kinIdCheck.data) return NextResponse.json({ message: 'Next of Kin ID is already registered.' }, { status: 409 });
+    if (kinPhoneCheck.data) return NextResponse.json({ message: 'Next of Kin Phone is already registered.' }, { status: 409 });
+  }
+
+  // Check if person being added as next_of_kin is already a tenant
+  if (nextOfKinId || nextOfKinPhone || (nextOfKinName && nextOfKinName.toLowerCase() === fullName.toLowerCase())) {
+    const existingTenant = await supabaseAdmin
+      .from('tenants')
+      .select('id')
+      .or(`email.eq.${normalizedEmail},phone.eq.${phone},national_id.eq.${nationalId},kra_pin.eq.${kraPin}`)
+      .maybeSingle();
+    if (existingTenant.data) {
+      return NextResponse.json({ message: 'Cannot add a tenant as their own next of kin.' }, { status: 400 });
+    }
   }
 
   const authContext = await getAuthContext(request);
@@ -313,6 +352,16 @@ Please acknowledge this agreement by clicking "Accept" in your tenant portal.`;
     });
   }
 
+  // Log audit after tenant creation
+  await logAuditEvent(
+    authContext.userId,
+    authContext.userEmail,
+    'create',
+    'tenant',
+    tenantId ?? null,
+    { full_name: fullName, email, phone, unit_id: finalUnitId }
+  );
+
   return NextResponse.json({ message: 'Tenant created.', tenant: { id: tenantId, full_name: fullName, email, phone, lease_start: leaseStart, lease_end: leaseEnd, unit: finalUnitId, property: '' }, unitId: finalUnitId }, { status: 201 });
 }
 
@@ -328,6 +377,16 @@ export async function PATCH(request: NextRequest) {
     const authContext = await getAuthContext(request);
     const userMetadata = authContext.sessionUser?.user_metadata || {};
     const isAgent = userMetadata?.role === 'agent';
+    
+    // Log audit before action
+    await logAuditEvent(
+      authContext.userId,
+      authContext.userEmail,
+      'update',
+      'tenant',
+      id,
+      { fullName, email, phone }
+    );
     
     if (!authContext.isSuperAdmin) {
       const agentPropertyId = isAgent ? userMetadata?.property_id : null;
@@ -462,6 +521,16 @@ export async function DELETE(request: NextRequest) {
     if (result.error) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
+
+    // Log audit
+    await logAuditEvent(
+      authContext.userId,
+      authContext.userEmail,
+      'delete',
+      'tenant',
+      id,
+      { tenantId: id, unitId: tenantData?.unit_id }
+    );
 
     // Update unit status to vacant after tenant deletion
     if (tenantData?.unit_id) {

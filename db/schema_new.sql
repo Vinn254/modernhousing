@@ -52,23 +52,19 @@ create table tenants (
    id uuid primary key default uuid_generate_v4(),
    unit_id uuid references units(id) on delete cascade,
    full_name text not null,
-   email text not null unique,
-   phone text unique,
+   email text not null,
+   phone text,
    lease_start date not null,
    lease_end date not null,
    deposit_amount numeric(12,2) not null default 0,
    picture_url text,
-   national_id text unique,
-   kra_pin text unique,
+   national_id text,
+   kra_pin text,
    next_of_kin_name text,
-   next_of_kin_id text unique,
-   next_of_kin_phone text unique,
+   next_of_kin_id text,
+   next_of_kin_phone text,
    created_at timestamp with time zone default now()
- );
-
--- Prevent same person being next_of_kin for multiple tenants
-create unique index on tenants (next_of_kin_id) where next_of_kin_id is not null;
-create unique index on tenants (next_of_kin_phone) where next_of_kin_phone is not null;
+);
 
 create table tenant_documents (
   id uuid primary key default uuid_generate_v4(),
@@ -184,33 +180,3 @@ create table payment_settings (
 );
 
 create index on payment_settings (organization_id);
-
-create table audit_logs (
-  id uuid primary key default uuid_generate_v4(),
-  user_id uuid references auth.users(id),
-  user_email text,
-  action text not null,
-  resource_type text not null,
-  resource_id uuid,
-  details jsonb,
-  ip_address text,
-  user_agent text,
-  created_at timestamp with time zone default now()
-);
-
-create table login_attempts (
-  id uuid primary key default uuid_generate_v4(),
-  ip_address text,
-  email text,
-  user_id uuid references auth.users(id),
-  success boolean default false,
-  attempted_at timestamp with time zone default now()
-);
-
-create index on audit_logs (user_id);
-create index on audit_logs (created_at);
-create index on audit_logs (resource_type);
-create index on audit_logs (action);
-create index on login_attempts (ip_address);
-create index on login_attempts (email);
-create index on login_attempts (attempted_at);

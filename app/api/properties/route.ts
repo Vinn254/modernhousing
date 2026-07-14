@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logAuditEvent } from '../../../lib/auditLogger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -11,8 +12,8 @@ if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
 
 type AuthContext = {
   isSuperAdmin: boolean;
-  userId?: string;
-  userEmail?: string;
+  userId?: string | null;
+  userEmail?: string | null;
   organizationId: string | null;
   profile?: any;
   userMetadata?: any;
@@ -311,6 +312,16 @@ if (!authContext.isSuperAdmin) {
         return NextResponse.json({ message: result.error.message }, { status: 500 });
       }
 
+      // Log audit
+      await logAuditEvent(
+        authContext.userId,
+        authContext.userEmail,
+        'create',
+        'property',
+        result.data?.id,
+        { name, address, unitCount, amenities }
+      );
+
       const enriched = await enrichProperties([result.data]);
       return NextResponse.json({ message: 'Property created.', property: enriched[0] }, { status: 201 });
     }
@@ -331,6 +342,16 @@ if (!authContext.isSuperAdmin) {
     if (result.error) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
+
+    // Log audit
+    await logAuditEvent(
+      authContext.userId,
+      authContext.userEmail,
+      'create',
+      'property',
+      result.data?.id,
+      { name, address, unitCount, amenities }
+    );
 
     const enriched = await enrichProperties([result.data]);
     return NextResponse.json({ message: 'Property created.', property: enriched[0] }, { status: 201 });
@@ -370,6 +391,16 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
 
+    // Log audit
+    await logAuditEvent(
+      authContext.userId,
+      authContext.userEmail,
+      'update',
+      'property',
+      propertyId,
+      { name, address, amenities }
+    );
+
     const enriched = await enrichProperties([result.data]);
     return NextResponse.json({ message: 'Property updated.', property: enriched[0] });
   } catch (error: any) {
@@ -395,6 +426,16 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       return NextResponse.json({ message: error.message }, { status: 500 });
     }
+
+    // Log audit
+    await logAuditEvent(
+      authContext.userId,
+      authContext.userEmail,
+      'delete',
+      'property',
+      propertyId,
+      { propertyId }
+    );
 
     return NextResponse.json({ message: 'Property removed.' });
   } catch (error: any) {

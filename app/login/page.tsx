@@ -34,6 +34,18 @@ function LoginForm() {
 
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
+    // Record login attempt
+    await fetch('/api/login-attempts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, success: !signInError })
+    });
+
+    // Clear failed attempts on successful login
+    if (!signInError) {
+      await fetch('/api/login-attempts', { method: 'DELETE' });
+    }
+
     if (signInError) {
       setError(signInError.message === 'FetchError: Failed to fetch' ? 'Unable to connect to Springfield Systems. Check your internet connection and Supabase configuration.' : signInError.message);
       setLoading(false);
