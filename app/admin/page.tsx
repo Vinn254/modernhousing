@@ -178,7 +178,7 @@ export default function AdminDashboard() {
 
         {showVacantModal && (
           <div className="modal-overlay" onClick={() => setShowVacantModal(false)}>
-            <div className="modal-card" style={{ maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-card" style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
               <div className="modal-card-header">
                 <div>
                   <div className="card-label" style={{ marginBottom: 6 }}>Vacant Units</div>
@@ -190,8 +190,8 @@ export default function AdminDashboard() {
               </div>
               <div className="modal-card-body">
                 {vacantUnitsList.length > 0 ? (
-                  <div className="table-card">
-                    <table>
+                  <div className="table-shell" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                    <table className="landlord-table">
                       <thead><tr><th>Unit</th><th>Property</th><th>Rent Amount</th></tr></thead>
                       <tbody>{vacantUnitsList.map((u, i) => <tr key={i}><td>{u.unit_number}</td><td>{u.property_name}</td><td>{formatCurrency(u.rent_amount)}</td></tr>)}</tbody>
                     </table>
@@ -204,7 +204,7 @@ export default function AdminDashboard() {
 
         {showRentOwedModal && (
           <div className="modal-overlay" onClick={() => setShowRentOwedModal(false)}>
-            <div className="modal-card" style={{ maxWidth: '720px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-card" style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
               <div className="modal-card-header">
                 <div>
                   <div className="card-label" style={{ marginBottom: 6 }}>Rent Owed</div>
@@ -216,8 +216,8 @@ export default function AdminDashboard() {
               </div>
               <div className="modal-card-body">
                 {rentOwedByTenant.some(t => t.balance_remaining > 0) ? (
-                  <div className="table-card">
-                    <table>
+                  <div className="table-shell" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                    <table className="landlord-table">
                       <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Last Payment</th></tr></thead>
                       <tbody>{rentOwedByTenant.filter(t => t.balance_remaining > 0).map(t => (
                         <tr key={t.id}>

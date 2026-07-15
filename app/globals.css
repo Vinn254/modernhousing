@@ -64,6 +64,7 @@ body {
 }
 
 .modal-card {
+   max-width: 95vw;
   background: var(--surface);
   border-radius: 16px;
   padding: 32px;
