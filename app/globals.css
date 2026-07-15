@@ -3152,6 +3152,8 @@ footer {
 
 .kpi-tile-chart {
   grid-column: span 2;
+  overflow: hidden;
+  minWidth: 0;
 }
 
 .kpi-tile-chart svg {
