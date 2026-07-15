@@ -394,34 +394,6 @@ body {
 .float-6 { top: 55%; right: 6%; transform: rotate(2deg); animation: floatA 7s ease-in-out infinite 1s; color: var(--navy-900); }
 @keyframes floatA { 0%,100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(-10px); } }
 @keyframes floatB { 0%,100% { transform: rotate(2deg) translateY(0); } 50% { transform: rotate(2deg) translateY(-12px); } }
-@media (max-width: 900px) {
-  .kpi-row {
-    grid-template-columns: 1fr;
-  }
-
-  .kpi-tile-chart {
-    grid-column: span 1;
-    flex-direction: column;
-    flex-wrap: wrap;
-  }
-
-  .kpi-tile {
-    padding: 16px;
-  }
-
-  .kpi-tile-chart svg {
-    width: 70px;
-    height: 70px;
-  }
-}
-  .float-1 { top: 18%; }
-  .float-2 { top: 34%; }
-  .float-3 { top: 50%; }
-  .float-4 { top: 66%; }
-  .float-5 { top: 82%; }
-  .float-6 { top: 94%; }
-  .float-card { width: 90%; max-width: 280px; margin: 0 auto; }
-}
 
 /* ========== BENTO ========== */
 .bento-section {
@@ -3190,6 +3162,8 @@ footer {
 
   .kpi-tile-chart {
     grid-column: span 1;
+    flex-direction: column;
+    flex-wrap: wrap;
   }
 
   .kpi-tile {
@@ -3197,8 +3171,8 @@ footer {
   }
 
   .kpi-tile-chart svg {
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
   }
 }
 
