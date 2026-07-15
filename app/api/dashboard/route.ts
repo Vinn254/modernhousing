@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
     const tenantIds = tenantsForOwedFiltered.map((t: any) => t.id);
     const { data: rentPaymentsData } = tenantIds.length > 0
       ? await supabaseAdmin.from('payments').select('tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type').in('tenant_id', tenantIds)
-      : await supabaseAdmin.from('payments').select('tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type').eq('tenant_id', 'none');
+      : { data: [] };
 
     const financialPayments = (rentPaymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
     const totalPayments = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0);
@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
 
     const rentOwedByTenant = tenantsForOwedFiltered.map((tenant: any) => {
       // Only rent and overdue payments
-      const rentPayments = (rentPaymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id && (p.transaction_type === 'rent' || p.transaction_type === 'overdue'));
+      const rentPayments = (rentPaymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id && !nonPaymentTypes.includes(p.transaction_type));
       const totalPaid = rentPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount ?? 0), 0);
       const expectedRent = toNumber(tenant.units?.rent_amount ?? 0);
       // Calculate balance as sum of unpaid rent amounts
