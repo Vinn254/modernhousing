@@ -148,31 +148,53 @@ export async function GET(request: NextRequest) {
       vacantUnitsFiltered = [];
     }
 
-    // Fetch ALL payments for this account's tenants (uses the same tenant set
-    // that drives the rest of the dashboard, so it always matches)
-    const { data: rentPaymentsData } = allTenants.length > 0
-      ? await supabaseAdmin.from('payments').select('tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type').in('tenant_id', allTenants.map((t: any) => t.id))
-      : { data: [] };
+    // Determine which properties this account is allowed to see
+    let scopePropertyIds: string[] | null = null;
+    if (isAgent || isSuperAdmin) {
+      scopePropertyIds = null; // super admin / agent: no restriction
+    } else if (authContext.organizationId) {
+      const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
+      scopePropertyIds = (orgProps ?? []).map((p: any) => p.id);
+    } else if (effectivePropertyId) {
+      scopePropertyIds = [effectivePropertyId];
+    } else {
+      scopePropertyIds = [];
+    }
 
-    const financialPayments = (rentPaymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
-    const totalPayments = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0);
+    // RENT OWED: fetch payments joined straight to tenant -> unit -> property.
+    // This captures every tenant that belongs to this account's properties,
+    // including those the tenant list (filtered by unit_id) might miss.
+    const { data: owedRaw } = await supabaseAdmin
+      .from('payments')
+      .select(`
+        tenant_id, amount, balance_remaining, transaction_type, created_at,
+        tenants!inner(
+          id, full_name, email,
+          units!inner(unit_number, rent_amount, property_id, properties!inner(name, organization_id))
+        )
+      `)
+      .gt('balance_remaining', 0);
 
-    // Any payment with a positive balance_remaining = money still owed by that tenant.
-    // Group them per tenant and sum the balances.
+    const owedPayments = (owedRaw ?? []).filter((p: any) => {
+      if (nonPaymentTypes.includes(p.transaction_type)) return false;
+      if (scopePropertyIds === null) return true; // no restriction
+      const orgOfPayment = p.tenants?.units?.properties?.organization_id;
+      return scopePropertyIds.includes(orgOfPayment);
+    });
+
+    // Sum each tenant's positive balances
     const balanceByTenant = new Map<string, { balance: number; total_paid: number }>();
-    financialPayments.forEach((p: any) => {
-      const balance = toNumber(p.balance_remaining);
-      if (balance <= 0) return;
+    owedPayments.forEach((p: any) => {
       const tid = String(p.tenant_id);
       const cur = balanceByTenant.get(tid) ?? { balance: 0, total_paid: 0 };
-      cur.balance += balance;
+      cur.balance += toNumber(p.balance_remaining);
       cur.total_paid += toNumber(p.amount);
       balanceByTenant.set(tid, cur);
     });
 
     const owedTenantIds = [...balanceByTenant.keys()];
 
-    // Fetch tenant details (unit + property) for the owing tenants
+    // Fetch tenant details (unit + property) for display
     const { data: tenantsOwedInfo } = owedTenantIds.length > 0
       ? await supabaseAdmin.from('tenants').select(`
           id, full_name, email,
@@ -197,8 +219,17 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Total owed = sum of every tenant's balance (this drives the "rent owed" card)
+    // Total owed = sum of every tenant's balance (drives the "rent owed" card)
     const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + toNumber(t.balance_remaining), 0);
+
+    // Payments for analytics (tenant count, payment totals) still use this
+    // account's tenant set
+    const { data: rentPaymentsData } = allTenants.length > 0
+      ? await supabaseAdmin.from('payments').select('tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type').in('tenant_id', allTenants.map((t: any) => t.id))
+      : { data: [] };
+
+    const financialPayments = (rentPaymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
+    const totalPayments = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0);
 
     const paymentsByTenant = new Map<string, number>();
     financialPayments.forEach((payment: any) => {
