@@ -3154,6 +3154,34 @@ footer {
   grid-column: span 2;
 }
 
+.kpi-tile-chart svg {
+  width: 100px;
+  height: 100px;
+}
+
+.kpi-tile-chart .kpi-tile-value {
+  font-size: 22px;
+}
+
+@media (max-width: 900px) {
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-tile-chart {
+    grid-column: span 1;
+  }
+
+  .kpi-tile {
+    padding: 16px;
+  }
+
+  .kpi-tile-chart svg {
+    width: 80px;
+    height: 80px;
+  }
+}
+
 .kpi-tile-icon {
   width: 48px;
   height: 48px;
