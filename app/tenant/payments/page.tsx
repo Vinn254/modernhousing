@@ -212,14 +212,7 @@ const getTypeLabel = (type: string) => {
     y -= 5;
 
     billsList.forEach(bill => {
-      const cols = [
-        bill.month_due || '-',
-        bill.description.substring(0, 20),
-        bill.transaction_type,
-        String(bill.due_amount),
-        String(bill.paid_amount),
-      ];
-      y = drawTableRow(page, font, ...cols, y);
+      y = drawTableRow(page, font, bill.month_due || '-', bill.description.substring(0, 20), bill.transaction_type, String(bill.due_amount), String(bill.paid_amount), y);
       y -= 5;
     });
 
