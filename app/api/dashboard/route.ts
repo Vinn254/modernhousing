@@ -206,12 +206,12 @@ export async function GET(request: NextRequest) {
     }));
 
     const rentOwedByTenant = tenantsForOwedFiltered.map((tenant: any) => {
-      // Get all payments for this tenant where balance_remaining > 0
+      // Get all payments for this tenant where balance_remaining indicates unpaid amount
       const tenantPayments = (rentPaymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id && !nonPaymentTypes.includes(p.transaction_type));
-      const totalPaid = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount ?? 0), 0);
-      const expectedRent = toNumber(tenant.units?.rent_amount ?? 0);
-      // Sum all balance_remaining values (these are the unpaid amounts per payment)
+      // Sum all balance_remaining values - these represent the unpaid amounts
       const balance = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.balance_remaining ?? 0), 0);
+      // Total paid = due_amount - balance_remaining for each payment
+      const totalPaid = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount ?? 0), 0);
 
       return {
         id: tenant.id,
