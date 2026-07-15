@@ -178,6 +178,7 @@ export default function DashboardPage() {
       // Merge payments and bills for owed computation (bills already have tenant_id)
       const mergedPayments = [...(paymentsResult.payments ?? []), ...(billsResult.bills ?? []).map((b: any) => ({
         ...b,
+        amount: b.paid_amount ?? b.amount,
         balance_remaining: b.balance ?? b.balance_remaining,
         created_at: b.created_at,
       }))];
