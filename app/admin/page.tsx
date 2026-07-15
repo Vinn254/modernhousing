@@ -62,10 +62,17 @@ export default function AdminDashboard() {
             id: tid,
             full_name: p.tenant_name || p.tenant || '',
             unit: p.unit_number || p.unit || null,
+            total_paid: 0,
             balance_remaining: 0,
+            last_payment: p.created_at || null,
           });
         }
-        byTenant.get(tid).balance_remaining += balance;
+        const entry = byTenant.get(tid);
+        entry.balance_remaining += balance;
+        entry.total_paid += Number(p.amount || 0);
+        if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
+          entry.last_payment = p.created_at;
+        }
       });
       const owedTenants = Array.from(byTenant.values());
       setRentOwedByTenant(owedTenants);
