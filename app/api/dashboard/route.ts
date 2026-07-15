@@ -95,7 +95,6 @@ export async function GET(request: NextRequest) {
     let propertiesQuery: any = supabaseAdmin.from('properties').select('id, name');
     let unitsQuery: any = supabaseAdmin.from('units').select('id, occupancy_status, property_id');
     let tenantsQuery: any = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
-    let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type');
     let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status');
 
     // For landlords, filter by organization
@@ -109,7 +108,6 @@ export async function GET(request: NextRequest) {
         const unitIds = (unitsInOrg ?? []).map((u: any) => u.id);
         if (unitIds.length > 0) {
           tenantsQuery = tenantsQuery.in('unit_id', unitIds);
-          paymentsQuery = paymentsQuery.in('tenant_id', (await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)).data?.map((t: any) => t.id) ?? []);
         }
       }
     } else if (!isAgent && !isSuperAdmin && !authContext.organizationId) {
@@ -117,7 +115,6 @@ export async function GET(request: NextRequest) {
       propertiesQuery = propertiesQuery.eq('id', 'none');
       unitsQuery = unitsQuery.eq('property_id', 'none');
       tenantsQuery = tenantsQuery.eq('unit_id', 'none');
-      paymentsQuery = paymentsQuery.eq('tenant_id', 'none');
     } else if (effectivePropertyId) {
       propertiesQuery = propertiesQuery.eq('id', effectivePropertyId);
       unitsQuery = unitsQuery.eq('property_id', effectivePropertyId);
@@ -125,15 +122,13 @@ export async function GET(request: NextRequest) {
       const unitIds = (unitsInProp ?? []).map((u: any) => u.id);
       if (unitIds.length > 0) {
         tenantsQuery = tenantsQuery.in('unit_id', unitIds);
-        paymentsQuery = paymentsQuery.in('tenant_id', (await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)).data?.map((t: any) => t.id) ?? []);
       }
     }
 
-    const [{ data: propertiesData }, { data: unitsData }, { data: tenantsData }, { data: paymentsData }, { data: subscriptionsData }, { data: unitsForVacant }, { data: tenantsForOwed }] = await Promise.all([
+    const [{ data: propertiesData }, { data: unitsData }, { data: tenantsData }, { data: subscriptionsData }, { data: unitsForVacant }, { data: tenantsForOwed }] = await Promise.all([
       propertiesQuery,
       unitsQuery,
       tenantsQuery,
-      paymentsQuery,
       subscriptionsQuery,
       supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant'),
       supabaseAdmin.from('tenants').select(`
@@ -169,7 +164,14 @@ export async function GET(request: NextRequest) {
     }
 
     const propertyCount = effectivePropertyId ? 1 : (propertiesData?.length ?? 0);
-    const financialPayments = (paymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
+
+    // Get all rent payments for these tenants
+    const tenantIds = tenantsForOwedFiltered.map((t: any) => t.id);
+    const { data: rentPaymentsData } = tenantIds.length > 0
+      ? await supabaseAdmin.from('payments').select('tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type').in('tenant_id', tenantIds)
+      : await supabaseAdmin.from('payments').select('tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type').eq('tenant_id', 'none');
+
+    const financialPayments = (rentPaymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
     const totalPayments = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0);
     const totalBalance = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.balance_remaining), 0);
 
@@ -205,22 +207,24 @@ export async function GET(request: NextRequest) {
 
     const rentOwedByTenant = tenantsForOwedFiltered.map((tenant: any) => {
       // Only rent and overdue payments
-      const rentPayments = (paymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id && (p.transaction_type === "rent" || p.transaction_type === "overdue"));
+      const rentPayments = (rentPaymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id && (p.transaction_type === 'rent' || p.transaction_type === 'overdue'));
       const totalPaid = rentPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount ?? 0), 0);
       const expectedRent = toNumber(tenant.units?.rent_amount ?? 0);
-      // Calculate balance as sum of unpaid rent amounts (due_amount - amount for each unpaid)
-      const balance = rentPayments.reduce((sum: number, p: any) => sum + Math.max(0, toNumber(p.due_amount ?? p.amount ?? 0) - toNumber(p.amount ?? 0)), 0);
+      // Calculate balance as sum of unpaid rent amounts
+      const balance = rentPayments.reduce((sum: number, p: any) => sum + toNumber(p.balance_remaining ?? 0), 0);
 
       return {
         id: tenant.id,
         full_name: tenant.full_name,
         email: tenant.email,
-        unit: tenant.units?.unit_number ?? "—",
-        property: tenant.units?.properties?.name ?? "—",
+        unit: tenant.units?.unit_number ?? null,
+        property: tenant.units?.properties?.name ?? null,
         total_paid: totalPaid,
         rent_amount: expectedRent,
         balance_remaining: Math.max(0, balance),
-        last_payment: rentPayments.sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]?.created_at ?? null,
+        last_payment: rentPayments.length > 0 
+          ? rentPayments.sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]?.created_at
+          : null,
       };
     });
 
@@ -236,7 +240,7 @@ export async function GET(request: NextRequest) {
       rentOwedByTenant,
       subscribedLandlords: 0,
       totalLandlords: 0,
-      totalPayments: paymentsData?.length ?? 0,
+      totalPayments: rentPaymentsData?.length ?? 0,
       tenants_with_analytics: tenantsWithAnalytics,
     });
   } catch (error) {
