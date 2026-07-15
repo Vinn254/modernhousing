@@ -29,6 +29,7 @@ interface Tenant {
 
 interface Payment {
   id: string;
+  tenant_id: string;
   tenant: string;
   tenant_email: string;
   property: string;
