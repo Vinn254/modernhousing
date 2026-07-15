@@ -64,7 +64,7 @@ export default function AdminDashboard() {
         <section className="kpi-row">
 <div className="kpi-tile kpi-tile-chart">
             <div className="card-label" style={{ justifyContent: 'center' }}><span className="badge badge-pm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>Unit Occupancy</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <DonutChart 
                 data={[
                   { label: 'Occupied', value: occupiedUnits, color: '#10b981' },
