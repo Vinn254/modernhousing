@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getAllAdminUsers } from '../../../../lib/supabaseAdmin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -35,15 +34,23 @@ export async function POST(request: NextRequest) {
 
     if (storageError) throw storageError;
 
-const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData.path);
+    const { data: publicUrl } = supabaseAdmin.storage.from('documents').getPublicUrl(storageData.path);
 
-    // Update both profiles table and tenants table for picture
-    await supabaseAdmin.from('profiles').update({ picture_url: publicUrl.publicUrl }).eq('user_id', userId as string);
-    
-    // Also update tenants table if tenant_id is available
-    const { data: profile } = await supabaseAdmin.from('profiles').select('tenant_id').eq('user_id', userId as string).single();
-    if (profile?.tenant_id) {
-      await supabaseAdmin.from('tenants').update({ picture_url: publicUrl.publicUrl }).eq('id', profile.tenant_id);
+    // Get user email from auth to update tenants table
+    const { data: user } = await supabaseAdmin.auth.admin.getUserById(userId as string);
+    const userEmail = user?.user?.email;
+
+    // Update profiles table (upsert to create if missing)
+    const { data: existingProfile } = await supabaseAdmin.from('profiles').select('user_id').eq('user_id', userId as string).single();
+    if (existingProfile) {
+      await supabaseAdmin.from('profiles').update({ picture_url: publicUrl.publicUrl }).eq('user_id', userId as string);
+    } else if (userEmail) {
+      await supabaseAdmin.from('profiles').insert({ user_id: userId, email: userEmail, full_name: user?.user?.user_metadata?.full_name || '', picture_url: publicUrl.publicUrl });
+    }
+
+    // Also update tenants table by email
+    if (userEmail) {
+      await supabaseAdmin.from('tenants').update({ picture_url: publicUrl.publicUrl }).eq('email', userEmail);
     }
     
     return NextResponse.json({ message: 'Profile photo uploaded.', pictureUrl: publicUrl.publicUrl });

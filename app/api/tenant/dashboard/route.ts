@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     const { data: allTenants, error: tenantError } = await supabaseAdmin
       .from('tenants')
-      .select('*, units(property_id, unit_number, properties(name, address))')
+      .select('*, units(property_id, unit_number, properties(name, address)), picture_url')
       .order('created_at', { ascending: false });
 
     if (tenantError) throw tenantError;
@@ -145,13 +145,13 @@ const [payments, notifications, comments, documents] = await Promise.all([
        getTenantDocuments(tenant.id),
      ]);
 
-     // Get profile picture from profiles table if tenant has no picture
-     if (!tenant.picture_url && userId) {
-       const { data: profile } = await supabaseAdmin.from('profiles').select('picture_url').eq('user_id', userId).single();
-       if (profile?.picture_url) {
-         tenant.picture_url = profile.picture_url;
-       }
-     }
+// Always get profile picture from profiles table to ensure consistency with upload
+    if (userId) {
+      const { data: profile } = await supabaseAdmin.from('profiles').select('picture_url').eq('user_id', userId).single();
+      if (profile?.picture_url) {
+        tenant.picture_url = profile.picture_url;
+      }
+    }
 
     const firstPayment = [...payments]
       .sort((a, b) => new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime())[0];

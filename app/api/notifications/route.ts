@@ -197,8 +197,10 @@ export async function DELETE(request: NextRequest) {
 
     const result = await supabaseAdmin.from('notifications').delete().eq('id', id);
 
-    if (result.error) {
-      return NextResponse.json({ message: result.error.message }, { status: 500 });
+    // If notifications table doesn't exist, try deleting from payments fallback table
+    if (result.error && isMissingTableError(result.error, 'notifications')) {
+      await supabaseAdmin.from('payments').delete().eq('id', id).eq('transaction_type', 'notification');
+      await supabaseAdmin.from('payments').delete().eq('id', id).eq('transaction_type', 'landlord_notification');
     }
 
     return NextResponse.json({ message: 'Notification deleted.' });
