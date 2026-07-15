@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function HelpPage() {
@@ -120,10 +119,6 @@ export default function HelpPage() {
           </div>
         )}
       </section>
-
-      <div style={{ textAlign: 'center', marginTop: '24px' }}>
-        <Link href="/login" className="btn btn-primary">Go to Login</Link>
-      </div>
     </main>
   );
 }
