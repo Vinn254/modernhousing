@@ -111,40 +111,39 @@ const tenant = data.tenant;
         <p className="subheading">Your apartment, payments, notices, and support requests in one place.</p>
       </div>
 
-<section className="dashboard-hero-stats">
-          <div className="card stat-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+<section className="kpi-row">
+          <div className="kpi-tile">
             <img
               src={tenant.picture_url || '/placeholder-avatar.png'}
               alt="Profile"
               className="avatar-ring"
-              style={{ width: 48, height: 48 }}
+              style={{ width: 46, height: 46, flexShrink: 0 }}
               key={tenant.picture_url || 'placeholder'}
             />
-            <div>
-              <p className="stat-card-label" style={{ marginBottom: 2 }}>Apartment</p>
-              <p className="stat-card-value">{tenant.property_name}</p>
-              <p className="stat-card-label">Unit {tenant.unit_number}</p>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value" style={{ fontSize: 16 }}>{tenant.property_name}</span>
+              <span className="kpi-tile-label">Unit {tenant.unit_number}</span>
             </div>
           </div>
-          <div className="card stat-card" style={{ padding: '18px 16px' }}>
-            <StatIcon bg="linear-gradient(135deg, #10b981, #34d399)" path={<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>} />
-            <div>
-              <p className="stat-card-value">{tenant.next_payment_date || 'Pending'}</p>
-              <p className="stat-card-label">Next payment · every 30 days</p>
+          <div className="kpi-tile">
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #10b981, #34d399)' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg></span>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value" style={{ fontSize: 16 }}>{tenant.next_payment_date || 'Pending'}</span>
+              <span className="kpi-tile-label">Next payment</span>
             </div>
           </div>
-          <div className="card stat-card" style={{ padding: '18px 16px' }}>
-            <StatIcon bg="linear-gradient(135deg, #0ea5e9, #38bdf8)" path={<><rect x="1.5" y="5" width="21" height="14" rx="2.5" /><path d="M1.5 10h21" /></>} />
-            <div>
-              <p className="stat-card-value">{data.payments.length}</p>
-              <p className="stat-card-label">Payments recorded</p>
+          <div className="kpi-tile">
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1.5" y="5" width="21" height="14" rx="2.5" /><path d="M1.5 10h21" /></svg></span>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value">{data.payments.length}</span>
+              <span className="kpi-tile-label">Payments recorded</span>
             </div>
           </div>
-          <div className="card stat-card" style={{ padding: '18px 16px' }}>
-            <StatIcon bg="linear-gradient(135deg, #f59e0b, #fbbf24)" path={<><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></>} />
-            <div>
-              <p className="stat-card-value">{data.notifications.length}</p>
-              <p className="stat-card-label">Notices</p>
+          <div className="kpi-tile">
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg></span>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value">{data.notifications.length}</span>
+              <span className="kpi-tile-label">Notices</span>
             </div>
           </div>
         </section>

@@ -89,6 +89,7 @@ interface Unit {
   current_water_reading?: number;
   previous_water_reading?: number;
   tenant?: { id: string; full_name: string };
+  occupancy_status?: string;
 }
 
 export default function DashboardPage() {
@@ -463,6 +464,49 @@ export default function DashboardPage() {
 
       {isAgent && effectivePropertyId && (
         <>
+          <section className="kpi-row" style={{ marginTop: 24 }}>
+            <div className="kpi-tile">
+              <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-bright))' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+              </span>
+              <div className="kpi-tile-body">
+                <span className="kpi-tile-value">{units.length}</span>
+                <span className="kpi-tile-label">Total Units</span>
+                <span className="kpi-tile-caption">in your portfolio</span>
+              </div>
+            </div>
+            <div className="kpi-tile">
+              <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-bright))' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
+              </span>
+              <div className="kpi-tile-body">
+                <span className="kpi-tile-value">{units.filter(u => u.occupancy_status === 'occupied').length}</span>
+                <span className="kpi-tile-label">Occupied</span>
+                <span className="kpi-tile-caption">units with tenants</span>
+              </div>
+            </div>
+            <div className="kpi-tile">
+              <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </span>
+              <div className="kpi-tile-body">
+                <span className="kpi-tile-value">{units.filter(u => u.occupancy_status === 'vacant').length}</span>
+                <span className="kpi-tile-label">Vacant</span>
+                <span className="kpi-tile-caption">available for rent</span>
+              </div>
+            </div>
+            <div className="kpi-tile">
+              <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+              </span>
+              <div className="kpi-tile-body">
+                <span className="kpi-tile-value">{tenants.length}</span>
+                <span className="kpi-tile-label">Active Tenants</span>
+                <span className="kpi-tile-caption">registered</span>
+              </div>
+            </div>
+          </section>
+
           <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
             <div className="card">
               <div className="card-label">Tenant Management</div>
