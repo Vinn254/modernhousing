@@ -3125,3 +3125,88 @@ footer {
 
 
 
+
+/* ========== KPI TILES ========== */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kpi-tile {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.kpi-tile:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+}
+
+.kpi-tile-chart {
+  grid-column: span 2;
+}
+
+.kpi-tile-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.kpi-tile-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.kpi-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kpi-tile-value {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.kpi-tile-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kpi-tile-caption {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.kpi-tile-arrow {
+  margin-left: auto;
+  color: var(--ink-4);
+}
+
+@media (max-width: 900px) {
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-tile {
+    padding: 16px;
+  }
+}
