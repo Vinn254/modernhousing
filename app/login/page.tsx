@@ -221,9 +221,7 @@ function LoginForm() {
           <p className="auth-alt">
             <Link href="/forgot-password">Forgot password?</Link>
           </p>
-          <p className="auth-alt">
-            <Link href="/help">Help & Navigation Guide</Link>
-          </p>
+
         </section>
       </div>
     </main>

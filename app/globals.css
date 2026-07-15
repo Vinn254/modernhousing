@@ -3206,6 +3206,10 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .kpi-tile-chart {
+    grid-column: span 1;
+  }
+
   .kpi-tile {
     padding: 16px;
   }
