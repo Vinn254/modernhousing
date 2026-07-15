@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useState } from 'react';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { supabase } from '../../../lib/supabaseClient';
 
 interface Bill {
@@ -182,7 +183,7 @@ export default function TenantPaymentsPage() {
   const totalUtilityOwed = utilityWithBalance.length > 0 ? utilityWithBalance[utilityWithBalance.length - 1].running_balance : 0;
   const totalTenantOwes = Math.max(0, -totalRentOwed) + Math.max(0, -totalUtilityOwed);
 
-  const getTypeLabel = (type: string) => {
+const getTypeLabel = (type: string) => {
     const map: Record<string, string> = {
       rent: 'Rent', overdue: 'Overdue', deposit: 'Deposit',
       water: 'Water', garbage: 'Garbage', service_charge: 'Service Charge',
@@ -190,6 +191,59 @@ export default function TenantPaymentsPage() {
     };
     return map[type] || type;
   };
+
+  async function generateStatementPDF(billsList: Bill[], title: string, totalBalance: number) {
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([612, 792]);
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const { height } = page.getSize();
+
+    let y = height - 50;
+
+    page.drawText(title, { x: 50, y, size: 20, font: boldFont });
+    y -= 30;
+    page.drawText(`Tenant: ${user?.user_metadata?.full_name || user?.email}`, { x: 50, y, size: 12, font });
+    y -= 15;
+    page.drawText(`Generated: ${new Date().toLocaleDateString()}`, { x: 50, y, size: 12, font });
+    y -= 25;
+
+    y = drawTableRow(page, font, 'Month', 'Description', 'Type', 'Due', 'Paid', y);
+    y -= 5;
+
+    billsList.forEach(bill => {
+      const cols = [
+        bill.month_due || '-',
+        bill.description.substring(0, 20),
+        bill.transaction_type,
+        String(bill.due_amount),
+        String(bill.paid_amount),
+      ];
+      y = drawTableRow(page, font, ...cols, y);
+      y -= 5;
+    });
+
+    y -= 10;
+    page.drawText(`Total Balance: ${formatCurrency(Math.abs(totalBalance))}`, { x: 50, y, size: 14, font: boldFont, color: rgb(0.5, 0.1, 0.1) });
+
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function drawTableRow(page: any, font: any, c1: string, c2: string, c3: string, c4: string, c5: string, y: number) {
+    page.drawText(c1, { x: 50, y, size: 10, font });
+    page.drawText(c2, { x: 110, y, size: 10, font });
+    page.drawText(c3, { x: 210, y, size: 10, font });
+    page.drawText(c4, { x: 280, y, size: 10, font });
+    page.drawText(c5, { x: 350, y, size: 10, font });
+    return y - 15;
+  }
 
   const getInvoiceTypeLabel = (type: string) => {
     const map: Record<string, string> = {
@@ -354,84 +408,18 @@ export default function TenantPaymentsPage() {
             <span style={{ color: totalTenantOwes > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalTenantOwes)}</span>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button 
-              onClick={() => {
-                const printContent = `
-                  <html>
-                  <head><title>Rent Statement - ${user?.user_metadata?.full_name || user?.email}</title></head>
-                  <body>
-                    <h2>Rent Payment Statement</h2>
-                    <p><strong>Tenant:</strong> ${user?.user_metadata?.full_name || user?.email}</p>
-                    <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
-                    <table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:12px;">
-                      <thead>
-                        <tr><th>Month</th><th>Description</th><th>Type</th><th>Due</th><th>Paid</th><th>Balance</th><th>Date</th></tr>
-                      </thead>
-                      <tbody>
-                        ${rentBills.map(bill => {
-                          const billBalance = bill.due_amount - bill.paid_amount - bill.penalty_fee;
-                          return `<tr>
-                            <td>${bill.month_due || '-'}</td>
-                            <td>${bill.description}</td>
-                            <td>${bill.transaction_type}</td>
-                            <td>${formatCurrency(bill.due_amount)}</td>
-                            <td>${formatCurrency(bill.paid_amount)}</td>
-                            <td>${formatCurrency(billBalance)}</td>
-                            <td>${bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
-                          </tr>`;
-                        }).join('')}
-                      </tbody>
-                    </table>
-                    <p style="margin-top:20px;font-weight:bold;">Total Balance: ${formatCurrency(-totalRentOwed)}</p>
-                  </body>
-                  </html>
-                `;
-                const printWindow = window.open('', '_blank');
-                printWindow?.document.write(printContent);
-                printWindow?.document.close();
-                printWindow?.print();
+            <button
+              onClick={async () => {
+                await generateStatementPDF(rentBills, 'Rent Payment Statement', totalRentOwed);
               }}
               className="action-button"
               style={{ flex: 1, padding: '8px', fontSize: '13px' }}
             >
               Download Rent Statement (PDF)
             </button>
-            <button 
-              onClick={() => {
-                const printContent = `
-                  <html>
-                  <head><title>Utility Statement - ${user?.user_metadata?.full_name || user?.email}</title></head>
-                  <body>
-                    <h2>Utility Payment Statement</h2>
-                    <p><strong>Tenant:</strong> ${user?.user_metadata?.full_name || user?.email}</p>
-                    <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
-                    <table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:12px;">
-                      <thead>
-                        <tr><th>Month</th><th>Description</th><th>Type</th><th>Due</th><th>Paid</th><th>Balance</th><th>Date</th></tr>
-                      </thead>
-                      <tbody>
-                        ${utilityBills.map(bill => {
-                          const billBalance = bill.due_amount - bill.paid_amount - bill.penalty_fee;
-                          return `<tr>
-                            <td>${bill.month_due || '-'}</td>
-                            <td>${bill.description}</td>
-                            <td>${bill.transaction_type}</td>
-                            <td>${formatCurrency(bill.due_amount)}</td>
-                            <td>${formatCurrency(bill.paid_amount)}</td>
-                            <td>${formatCurrency(billBalance)}</td>
-                            <td>${bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
-                          </tr>`;
-                        }).join('')}
-                      </tbody>
-                    </table>
-                    <p style="margin-top:20px;font-weight:bold;">Total Balance: ${formatCurrency(-totalUtilityOwed)}</p>
-                  </body>
-                  </html>
-                `;
-                const printWindow = window.open('', '_blank');
-                printWindow?.document.write(printContent);
-                printWindow?.document.close();
-                printWindow?.print();
+            <button
+              onClick={async () => {
+                await generateStatementPDF(utilityBills, 'Utility Payment Statement', totalUtilityOwed);
               }}
               className="secondary-button"
               style={{ flex: 1, padding: '8px', fontSize: '13px' }}
