@@ -70,10 +70,13 @@ export default function AdminDashboard() {
                   { label: 'Occupied', value: occupiedUnits, color: '#10b981' },
                   { label: 'Vacant', value: vacantUnits, color: '#9ca3af' },
                 ]} 
-                centerLabel={String(occupiedUnits) + '/' + String(occupiedUnits + vacantUnits)} 
-                size={75}
+                 
+                size={70}
               />
-              <span style={{ color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: '22px', fontWeight: 700 }}>{occupiedUnits}/{occupiedUnits + vacantUnits}</span>
+                <span style={{ color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</span>
+              </div>
             </div>
           </div>
 
