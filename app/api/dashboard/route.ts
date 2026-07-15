@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
     if (!isAgent && !isSuperAdmin && authContext.organizationId) {
       const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
       const propIds = (orgProps ?? []).map((p: any) => p.id);
-      tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => propIds.includes(t.units?.property_id));
+      tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => t.units?.property_id && propIds.includes(t.units.property_id));
     } else if (!isAgent && !isSuperAdmin && !authContext.organizationId) {
       tenantsForOwedFiltered = [];
     }
@@ -206,12 +206,12 @@ export async function GET(request: NextRequest) {
     }));
 
     const rentOwedByTenant = tenantsForOwedFiltered.map((tenant: any) => {
-      // Only rent and overdue payments
-      const rentPayments = (rentPaymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id && !nonPaymentTypes.includes(p.transaction_type));
-      const totalPaid = rentPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount ?? 0), 0);
+      // Get all payments for this tenant where balance_remaining > 0
+      const tenantPayments = (rentPaymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id && !nonPaymentTypes.includes(p.transaction_type));
+      const totalPaid = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount ?? 0), 0);
       const expectedRent = toNumber(tenant.units?.rent_amount ?? 0);
-      // Calculate balance as sum of unpaid rent amounts
-      const balance = rentPayments.reduce((sum: number, p: any) => sum + toNumber(p.balance_remaining ?? 0), 0);
+      // Sum all balance_remaining values (these are the unpaid amounts per payment)
+      const balance = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.balance_remaining ?? 0), 0);
 
       return {
         id: tenant.id,
@@ -222,8 +222,8 @@ export async function GET(request: NextRequest) {
         total_paid: totalPaid,
         rent_amount: expectedRent,
         balance_remaining: Math.max(0, balance),
-        last_payment: rentPayments.length > 0 
-          ? rentPayments.sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]?.created_at
+        last_payment: tenantPayments.length > 0 
+          ? tenantPayments.sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]?.created_at
           : null,
       };
     });
