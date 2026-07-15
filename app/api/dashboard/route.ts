@@ -148,68 +148,81 @@ export async function GET(request: NextRequest) {
       vacantUnitsFiltered = [];
     }
 
-    // Get all tenant IDs for this organization/property
-    const allTenantIds = allTenants.map((t: any) => t.id);
+    // Build set of this org/property's tenant IDs (null = no restriction, e.g. super admin)
+    let allowedTenantIds: Set<string> | null = null;
+    if (!isAgent && !isSuperAdmin && authContext.organizationId) {
+      const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
+      const { data: unitsInOrg } = propIds.length > 0
+        ? await supabaseAdmin.from('units').select('id').in('property_id', propIds)
+        : { data: [] };
+      const unitIds = (unitsInOrg ?? []).map((u: any) => u.id);
+      const { data: tenantsInUnits } = unitIds.length > 0
+        ? await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)
+        : { data: [] };
+      allowedTenantIds = new Set((tenantsInUnits ?? []).map((t: any) => t.id));
+    } else if (effectivePropertyId) {
+      const { data: unitsInProp } = await supabaseAdmin.from('units').select('id').eq('property_id', effectivePropertyId);
+      const unitIds = (unitsInProp ?? []).map((u: any) => u.id);
+      const { data: tenantsInUnits } = unitIds.length > 0
+        ? await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)
+        : { data: [] };
+      allowedTenantIds = new Set((tenantsInUnits ?? []).map((t: any) => t.id));
+    }
 
-    // Get ALL payments for these tenants (no balance filter at query level)
-    const { data: allPayments } = allTenantIds.length > 0
-      ? await supabaseAdmin.from('payments').select('tenant_id, amount, balance_remaining, created_at, transaction_type').in('tenant_id', allTenantIds)
-      : { data: [] };
+    // Fetch ALL payments that still have a positive balance owed
+    const { data: owedPayments } = await supabaseAdmin
+      .from('payments')
+      .select('tenant_id, amount, balance_remaining, created_at, transaction_type')
+      .gt('balance_remaining', 0);
 
-    // Filter out non-payment types and get only payments with positive balance
-    const paymentsWithPositiveBalance = (allPayments ?? []).filter(
-      (p: any) => !nonPaymentTypes.includes(p.transaction_type) && toNumber(p.balance_remaining) > 0
+    // Keep only this org/property's tenants (if scoped)
+    const scopedPayments = (owedPayments ?? []).filter(
+      (p: any) =>
+        !nonPaymentTypes.includes(p.transaction_type) &&
+        (!allowedTenantIds || allowedTenantIds.has(p.tenant_id))
     );
 
-    // Get unique tenant IDs that have owed amounts
-    const tenantIdsOwed = [...new Set(paymentsWithPositiveBalance.map((p: any) => p.tenant_id))];
+    // Group balances per tenant
+    const balanceByTenant = new Map<string, { balance: number; total_paid: number }>();
+    scopedPayments.forEach((p: any) => {
+      const tid = String(p.tenant_id);
+      const cur = balanceByTenant.get(tid) ?? { balance: 0, total_paid: 0 };
+      cur.balance += toNumber(p.balance_remaining);
+      cur.total_paid += toNumber(p.amount);
+      balanceByTenant.set(tid, cur);
+    });
 
-    // Fetch full tenant info with unit and property details
-    const { data: tenantsOwedInfo } = tenantIdsOwed.length > 0
+    const owedTenantIds = [...balanceByTenant.keys()];
+
+    // Fetch tenant details (unit + property) for the owing tenants
+    const { data: tenantsOwedInfo } = owedTenantIds.length > 0
       ? await supabaseAdmin.from('tenants').select(`
           id, full_name, email,
           units!left(unit_number, rent_amount, properties(name))
-        `).in('id', tenantIdsOwed)
+        `).in('id', owedTenantIds)
       : { data: [] };
 
-    // Build rent owed list - sum up balance per tenant
-    const rentOwedList: any[] = [];
-    paymentsWithPositiveBalance.forEach((p: any) => {
-      const tenantId = p.tenant_id;
-      const existing = rentOwedList.find((item) => item.id === tenantId);
-      if (existing) {
-        existing.balance_remaining = (toNumber(existing.balance_remaining) || 0) + toNumber(p.balance_remaining);
-        existing.total_paid = (toNumber(existing.total_paid) || 0) + toNumber(p.amount);
-      } else {
-        rentOwedList.push({
-          id: tenantId,
-          balance_remaining: toNumber(p.balance_remaining),
-          total_paid: toNumber(p.amount),
-        });
-      }
-    });
-
-    // Enrich with tenant details
-    const rentOwedByTenant = rentOwedList.map((item: any) => {
-      const tenantInfo = tenantsOwedInfo?.find((t: any) => t.id === item.id);
+    const rentOwedByTenant = owedTenantIds.map((tid: string) => {
+      const agg = balanceByTenant.get(tid)!;
+      const tenantInfo = tenantsOwedInfo?.find((t: any) => t.id === tid);
       const unitInfo = tenantInfo?.units?.[0];
-      
       return {
-        id: item.id,
+        id: tid,
         full_name: tenantInfo?.full_name ?? '',
         email: tenantInfo?.email ?? '',
         unit: unitInfo?.unit_number ?? null,
         property: unitInfo?.properties?.[0]?.name ?? null,
-        total_paid: toNumber(item.total_paid),
+        total_paid: toNumber(agg.total_paid),
         rent_amount: toNumber(unitInfo?.rent_amount ?? 0),
-        balance_remaining: toNumber(item.balance_remaining),
+        balance_remaining: toNumber(agg.balance),
         last_payment: null,
       };
     });
 
     // Get all payments for analytics (including those without balance)
-    const { data: rentPaymentsData } = allTenantIds.length > 0
-      ? await supabaseAdmin.from('payments').select('tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type').in('tenant_id', allTenantIds)
+    const { data: rentPaymentsData } = allTenants.length > 0
+      ? await supabaseAdmin.from('payments').select('tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type').in('tenant_id', allTenants.map((t: any) => t.id))
       : { data: [] };
 
     const financialPayments = (rentPaymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
