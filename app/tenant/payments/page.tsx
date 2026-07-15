@@ -220,7 +220,8 @@ const getTypeLabel = (type: string) => {
     page.drawText(`Total Balance: ${formatCurrency(Math.abs(totalBalance))}`, { x: 50, y, size: 14, font: boldFont, color: rgb(0.5, 0.1, 0.1) });
 
     const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const uint8 = new Uint8Array(pdfBytes);
+    const blob = new Blob([uint8], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
