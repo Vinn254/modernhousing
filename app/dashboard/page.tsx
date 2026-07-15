@@ -687,7 +687,7 @@ export default function DashboardPage() {
         </>
       )}
 
-      {!isAgent && stats && (
+{!isAgent && stats && (
         <section className="kpi-row">
           <div className="kpi-tile">
             <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--navy-600), var(--navy-400))' }}>
@@ -711,7 +711,7 @@ export default function DashboardPage() {
           </div>
           <div className="kpi-tile">
             <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-bright))' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
             </span>
             <div className="kpi-tile-body">
               <span className="kpi-tile-value">{stats.tenants}</span>
@@ -727,16 +727,6 @@ export default function DashboardPage() {
               <span className="kpi-tile-value">{formatCurrency(stats.total_payments)}</span>
               <span className="kpi-tile-label">Collections</span>
               <span className="kpi-tile-caption">total payments</span>
-            </div>
-          </div>
-          <div className="kpi-tile">
-            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--rose), #fca5a5)' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/></svg>
-            </span>
-            <div className="kpi-tile-body">
-              <span className="kpi-tile-value" style={{ color: '#b91c1c' }}>{formatCurrency(totalBalance)}</span>
-              <span className="kpi-tile-label">Outstanding</span>
-              <span className="kpi-tile-caption">rent owed</span>
             </div>
           </div>
           <div className="kpi-tile kpi-tile-chart">
@@ -762,13 +752,28 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {!isAgent && stats && (
+      {!isAgent && (
+        <section className="kpi-row">
+          <div className="kpi-tile">
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--rose), #fca5a5)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/><path d="M12 2a10 12 0 0 1 0 20"/></svg>
+            </span>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value" style={{ color: '#b91c1c' }}>{formatCurrency(totalBalance)}</span>
+              <span className="kpi-tile-label">Outstanding</span>
+              <span className="kpi-tile-caption">rent owed</span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!isAgent && (
         <>
           <section style={{ marginTop: 24 }}>
             <div className="card-admin-header" style={{ marginBottom: 16 }}>
               <div><span className="landlord-kicker">Vacant Units</span><h2>Available for Rent</h2></div>
             </div>
-            {stats.vacantUnitsList && stats.vacantUnitsList.length > 0 ? (
+            {stats?.vacantUnitsList && stats.vacantUnitsList.length > 0 ? (
               <div className="table-shell"><table className="landlord-table">
                 <thead><tr><th>Unit</th><th>Property</th><th>Rent Amount</th></tr></thead>
                 <tbody>{stats.vacantUnitsList.map((u, i) => <tr key={i}><td>{u.unit_number}</td><td>{u.property_name}</td><td>{formatCurrency(u.rent_amount)}</td></tr>)}</tbody>
