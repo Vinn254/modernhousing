@@ -247,7 +247,7 @@ export default function DashboardPage() {
       if (NON_PAYMENT_TYPES.includes(p.transaction_type)) return;
       const balance = Number(p.balance_remaining || 0);
       if (balance <= 0) return;
-      const tid = p.tenant_id;
+      const tid = String(p.tenant_id || '');
       if (!tid) return;
       if (!byTenant.has(tid)) {
         const t = tenantMap.get(tid) || {};
