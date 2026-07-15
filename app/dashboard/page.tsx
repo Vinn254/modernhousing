@@ -709,7 +709,7 @@ export default function DashboardPage() {
               <DonutChart data={[
                 { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
                 { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' },
-              ]} centerLabel={String(stats.occupiedUnits) + '/' + String(stats.occupiedUnits + stats.vacantUnits)} size={80} />
+              ]} centerLabel={String(stats.occupiedUnits) + '/' + String(stats.occupiedUnits + stats.vacantUnits)} size={75} />
               <span style={{ color: 'var(--ink-3)', fontSize: '12px', whiteSpace: 'nowrap' }}>Occupied / Vacant</span>
             </div>
           </div>

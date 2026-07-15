@@ -71,7 +71,7 @@ export default function AdminDashboard() {
                   { label: 'Vacant', value: vacantUnits, color: '#9ca3af' },
                 ]} 
                 centerLabel={String(occupiedUnits) + '/' + String(occupiedUnits + vacantUnits)} 
-                size={70}
+                size={75}
               />
               <span style={{ color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</span>
             </div>
