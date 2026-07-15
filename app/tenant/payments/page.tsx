@@ -194,30 +194,49 @@ const getTypeLabel = (type: string) => {
 
   async function generateStatementPDF(billsList: Bill[], title: string, totalBalance: number) {
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([612, 792]);
+    let currentPage = pdfDoc.addPage([612, 792]);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const { height } = page.getSize();
+    const { height } = currentPage.getSize();
 
-    let y = height - 50;
+    let y = height - 60;
 
-    page.drawText(title, { x: 50, y, size: 20, font: boldFont });
-    y -= 30;
-    page.drawText(`Tenant: ${user?.user_metadata?.full_name || user?.email}`, { x: 50, y, size: 12, font });
-    y -= 15;
-    page.drawText(`Generated: ${new Date().toLocaleDateString()}`, { x: 50, y, size: 12, font });
+    // Header with company branding
+    currentPage.drawRectangle({ x: 0, y: y + 10, width: 612, height: 50, color: rgb(0.97, 0.97, 0.99) });
+    currentPage.drawText('SPRINGFIELD SYSTEMS', { x: 50, y, size: 18, font: boldFont, color: rgb(0.1, 0.1, 0.5) });
+    y -= 25;
+    currentPage.drawText(title, { x: 50, y, size: 20, font: boldFont, color: rgb(0.2, 0.2, 0.2) });
     y -= 25;
 
-    y = drawTableRow(page, font, 'Month', 'Description', 'Type', 'Due', 'Paid', y);
+    // Tenant info
+    currentPage.drawText(`Tenant: ${user?.user_metadata?.full_name || user?.email}`, { x: 50, y, size: 11, font });
+    y -= 15;
+    currentPage.drawText(`Generated: ${new Date().toLocaleDateString()}`, { x: 50, y, size: 11, font });
+    y -= 30;
+
+    // Table header with background
+    currentPage.drawRectangle({ x: 45, y: y - 5, width: 520, height: 20, color: rgb(0.92, 0.94, 0.98) });
+    y = drawTableHeader(currentPage, font, y);
     y -= 5;
 
-    billsList.forEach(bill => {
-      y = drawTableRow(page, font, bill.month_due || '-', bill.description.substring(0, 20), bill.transaction_type, String(bill.due_amount), String(bill.paid_amount), y);
-      y -= 5;
+    // Draw horizontal line under header
+    currentPage.drawLine({ start: { x: 45, y: y + 10 }, end: { x: 565, y: y + 10 }, thickness: 1, color: rgb(0.7, 0.7, 0.7) });
+
+    // Table rows
+    billsList.forEach((bill, idx) => {
+      if (y < 60) {
+        currentPage = pdfDoc.addPage([612, 792]);
+        y = height - 60;
+      }
+      const bg = idx % 2 === 0 ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.98);
+      currentPage.drawRectangle({ x: 45, y: y - 5, width: 520, height: 14, color: bg });
+      y = drawTableRow(currentPage, font, bill.month_due || '-', bill.description.substring(0, 25), bill.transaction_type, String(bill.due_amount), String(bill.paid_amount), y);
+      y -= 14;
     });
 
     y -= 10;
-    page.drawText(`Total Balance: ${formatCurrency(Math.abs(totalBalance))}`, { x: 50, y, size: 14, font: boldFont, color: rgb(0.5, 0.1, 0.1) });
+    currentPage.drawText(`Total Balance:`, { x: 400, y, size: 12, font: boldFont });
+    currentPage.drawText(`${formatCurrency(Math.abs(totalBalance))}`, { x: 500, y, size: 14, font: boldFont, color: rgb(0.7, 0.1, 0.1) });
 
     const pdfBytes = await pdfDoc.save();
     const uint8 = new Uint8Array(pdfBytes);
@@ -230,13 +249,22 @@ const getTypeLabel = (type: string) => {
     URL.revokeObjectURL(url);
   }
 
+  function drawTableHeader(page: any, font: any, y: number) {
+    page.drawText('Month', { x: 50, y, size: 10, font });
+    page.drawText('Description', { x: 110, y, size: 10, font });
+    page.drawText('Type', { x: 215, y, size: 10, font });
+    page.drawText('Due', { x: 285, y, size: 10, font });
+    page.drawText('Paid', { x: 355, y, size: 10, font });
+    return y - 18;
+  }
+
   function drawTableRow(page: any, font: any, c1: string, c2: string, c3: string, c4: string, c5: string, y: number) {
-    page.drawText(c1, { x: 50, y, size: 10, font });
-    page.drawText(c2, { x: 110, y, size: 10, font });
-    page.drawText(c3, { x: 210, y, size: 10, font });
-    page.drawText(c4, { x: 280, y, size: 10, font });
-    page.drawText(c5, { x: 350, y, size: 10, font });
-    return y - 15;
+    page.drawText(c1, { x: 50, y, size: 9, font });
+    page.drawText(c2, { x: 110, y, size: 9, font });
+    page.drawText(c3, { x: 215, y, size: 9, font });
+    page.drawText(c4, { x: 285, y, size: 9, font, color: rgb(0.2, 0.2, 0.2) });
+    page.drawText(c5, { x: 355, y, size: 9, font, color: rgb(0.1, 0.5, 0.1) });
+    return y - 14;
   }
 
   const getInvoiceTypeLabel = (type: string) => {
