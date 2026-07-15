@@ -443,19 +443,13 @@ const getTypeLabel = (type: string) => {
               onClick={async () => {
                 await generateStatementPDF(rentBills, 'Rent Payment Statement', totalRentOwed);
               }}
-              className="action-button"
-              style={{ flex: 1, padding: '8px', fontSize: '13px' }}
-            >
-              Download Rent Statement (PDF)
+              className="action-button primary" style={{ flex: 1, padding: "8px", fontSize: "13px", background: "var(--accent)", color: "#fff" }}>Download Rent Statement (PDF)
             </button>
             <button
               onClick={async () => {
                 await generateStatementPDF(utilityBills, 'Utility Payment Statement', totalUtilityOwed);
               }}
-              className="secondary-button"
-              style={{ flex: 1, padding: '8px', fontSize: '13px' }}
-            >
-              Download Utility Statement (PDF)
+              className="secondary-button" style={{ flex: 1, padding: "8px", fontSize: "13px", background: "#0ea5e9", color: "#fff" }}>Download Utility Statement (PDF)
             </button>
           </div>
         </div>
