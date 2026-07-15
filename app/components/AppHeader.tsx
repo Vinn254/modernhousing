@@ -21,7 +21,8 @@ type IconName =
   | 'landlords'
   | 'analytics'
   | 'complaints'
-  | 'notifications';
+  | 'notifications'
+  | 'help';
 
 type NavLink = { label: string; href: string; icon: IconName };
 
@@ -64,6 +65,8 @@ function NavIcon({ name }: { name: IconName }) {
       return <svg {...common}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>;
     case 'notifications':
       return <svg {...common}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>;
+    case 'help':
+      return <svg {...common}><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 6" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>;
     default:
       return null;
   }
@@ -139,7 +142,7 @@ export default function AppHeader() {
     { label: 'Utilities', href: '/agent/utilities', icon: 'utilities' },
     { label: 'Notifications', href: '/agent/notifications', icon: 'notifications' },
     { label: 'Complaints', href: '/agent/complaints', icon: 'complaints' },
-    { label: 'Terms', href: '/terms', icon: 'terms' },
+    { label: 'Help', href: '/help', icon: 'help' },
   ];
 
   const tenantLinks: NavLink[] = [
@@ -148,7 +151,7 @@ export default function AppHeader() {
     { label: 'Documents', href: '/tenant/documents', icon: 'documents' },
     { label: 'Complaints', href: '/tenant/complaints', icon: 'complaints' },
     { label: 'Notifications', href: '/tenant/notifications', icon: 'notifications' },
-    { label: 'Terms', href: '/terms', icon: 'terms' },
+    { label: 'Help', href: '/help', icon: 'help' },
   ];
 
   const landlordPMLinks: NavLink[] = [
@@ -160,7 +163,7 @@ export default function AppHeader() {
     { label: 'Utilities', href: '/admin/utilities', icon: 'utilities' },
     { label: 'Communications', href: '/admin/communications', icon: 'communications' },
     { label: 'Documents', href: '/admin/documents', icon: 'documents' },
-    { label: 'Terms', href: '/terms', icon: 'terms' },
+    { label: 'Help', href: '/help', icon: 'help' },
   ];
 
   const adminLinks: NavLink[] = [
@@ -170,7 +173,7 @@ export default function AppHeader() {
     { label: 'Tenants', href: '/admin/tenants', icon: 'tenants' },
     { label: 'Payments', href: '/admin/payments', icon: 'payments' },
     { label: 'Communications', href: '/admin/communications', icon: 'communications' },
-    { label: 'Terms', href: '/terms', icon: 'terms' },
+    { label: 'Help', href: '/help', icon: 'help' },
   ];
 
   const superAdminLinks: NavLink[] = [
@@ -180,7 +183,7 @@ export default function AppHeader() {
     { label: 'Tenants', href: '/super-admin/tenants', icon: 'tenants' },
     { label: 'Payments', href: '/super-admin/payments', icon: 'payments' },
     { label: 'Analytics', href: '/super-admin/analytics', icon: 'analytics' },
-    { label: 'Terms', href: '/terms', icon: 'terms' },
+    { label: 'Help', href: '/help', icon: 'help' },
   ];
 
   const navLinks = isTenant ? tenantLinks : (isAgent ? agentLinks : (isSuperAdmin ? superAdminLinks : (isAdmin ? adminLinks : landlordPMLinks)));
