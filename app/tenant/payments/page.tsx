@@ -214,29 +214,29 @@ const getTypeLabel = (type: string) => {
     currentPage.drawText(`Generated: ${new Date().toLocaleDateString()}`, { x: 50, y, size: 11, font });
     y -= 30;
 
-    // Table header with background
-    currentPage.drawRectangle({ x: 45, y: y - 5, width: 520, height: 20, color: rgb(0.92, 0.94, 0.98) });
+    // Table header with background - all 9 columns
+    currentPage.drawRectangle({ x: 35, y: y - 5, width: 540, height: 20, color: rgb(0.92, 0.94, 0.98) });
     y = drawTableHeader(currentPage, font, y);
     y -= 5;
 
     // Draw horizontal line under header
-    currentPage.drawLine({ start: { x: 45, y: y + 10 }, end: { x: 565, y: y + 10 }, thickness: 1, color: rgb(0.7, 0.7, 0.7) });
+    currentPage.drawLine({ start: { x: 35, y: y + 10 }, end: { x: 575, y: y + 10 }, thickness: 1, color: rgb(0.7, 0.7, 0.7) });
 
-    // Table rows
+    // Table rows with all fields
     billsList.forEach((bill, idx) => {
       if (y < 60) {
         currentPage = pdfDoc.addPage([612, 792]);
         y = height - 60;
       }
       const bg = idx % 2 === 0 ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.98);
-      currentPage.drawRectangle({ x: 45, y: y - 5, width: 520, height: 14, color: bg });
-      y = drawTableRow(currentPage, font, bill.month_due || '-', bill.description.substring(0, 25), bill.transaction_type, String(bill.due_amount), String(bill.paid_amount), y);
+      currentPage.drawRectangle({ x: 35, y: y - 5, width: 540, height: 14, color: bg });
+      y = drawTableFullRow(currentPage, font, bill, y);
       y -= 14;
     });
 
     y -= 10;
-    currentPage.drawText(`Total Balance:`, { x: 400, y, size: 12, font: boldFont });
-    currentPage.drawText(`${formatCurrency(Math.abs(totalBalance))}`, { x: 500, y, size: 14, font: boldFont, color: rgb(0.7, 0.1, 0.1) });
+    currentPage.drawText(`Total Balance:`, { x: 420, y, size: 12, font: boldFont });
+    currentPage.drawText(`${formatCurrency(Math.abs(totalBalance))}`, { x: 520, y, size: 14, font: boldFont, color: rgb(0.7, 0.1, 0.1) });
 
     const pdfBytes = await pdfDoc.save();
     const uint8 = new Uint8Array(pdfBytes);
@@ -250,20 +250,29 @@ const getTypeLabel = (type: string) => {
   }
 
   function drawTableHeader(page: any, font: any, y: number) {
-    page.drawText('Month', { x: 50, y, size: 10, font });
-    page.drawText('Description', { x: 110, y, size: 10, font });
-    page.drawText('Type', { x: 215, y, size: 10, font });
-    page.drawText('Due', { x: 285, y, size: 10, font });
-    page.drawText('Paid', { x: 355, y, size: 10, font });
+    page.drawText('Month', { x: 40, y, size: 9, font });
+    page.drawText('Description', { x: 75, y, size: 9, font });
+    page.drawText('Type', { x: 155, y, size: 9, font });
+    page.drawText('Due', { x: 210, y, size: 9, font });
+    page.drawText('Paid', { x: 255, y, size: 9, font });
+    page.drawText('Penalty', { x: 300, y, size: 9, font });
+    page.drawText('Bal', { x: 345, y, size: 9, font });
+    page.drawText('Running', { x: 395, y, size: 9, font });
+    page.drawText('Date', { x: 460, y, size: 9, font });
     return y - 18;
   }
 
-  function drawTableRow(page: any, font: any, c1: string, c2: string, c3: string, c4: string, c5: string, y: number) {
-    page.drawText(c1, { x: 50, y, size: 9, font });
-    page.drawText(c2, { x: 110, y, size: 9, font });
-    page.drawText(c3, { x: 215, y, size: 9, font });
-    page.drawText(c4, { x: 285, y, size: 9, font, color: rgb(0.2, 0.2, 0.2) });
-    page.drawText(c5, { x: 355, y, size: 9, font, color: rgb(0.1, 0.5, 0.1) });
+  function drawTableFullRow(page: any, font: any, bill: Bill, y: number) {
+    const billWithBal = calculateWithRunningBalance([bill])[0];
+    page.drawText(bill.month_due || '-', { x: 40, y, size: 8, font });
+    page.drawText(bill.description.substring(0, 20), { x: 75, y, size: 8, font });
+    page.drawText(getTypeLabel(bill.transaction_type).substring(0, 10), { x: 155, y, size: 8, font });
+    page.drawText(String(bill.due_amount), { x: 210, y, size: 8, font, color: rgb(0.2, 0.2, 0.2) });
+    page.drawText(String(bill.paid_amount), { x: 255, y, size: 8, font, color: rgb(0.1, 0.5, 0.1) });
+    page.drawText(String(bill.penalty_fee || 0), { x: 300, y, size: 8, font, color: rgb(0.7, 0.1, 0.1) });
+    page.drawText(String(billWithBal?.bill_balance ?? 0), { x: 345, y, size: 8, font });
+    page.drawText(String(billWithBal?.running_balance ?? 0), { x: 395, y, size: 8, font, color: billWithBal?.running_balance > 0 ? rgb(0.1, 0.5, 0.1) : rgb(0.7, 0.1, 0.1) });
+    page.drawText(bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-', { x: 460, y, size: 8, font });
     return y - 14;
   }
 
