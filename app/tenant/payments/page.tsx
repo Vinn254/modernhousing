@@ -337,7 +337,7 @@ export default function TenantPaymentsPage() {
         )}
       </section>
 
-      <section className="card" style={{ marginTop: 24 }}>
+<section className="card" style={{ marginTop: 24 }}>
         <div className="card-label">BALANCE SUMMARY</div>
         <div style={{ padding: '16px', background: 'var(--line-soft)', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -349,9 +349,95 @@ export default function TenantPaymentsPage() {
             <span style={{ color: totalUtilityOwed < 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(-totalUtilityOwed)}</span>
           </div>
           <hr style={{ margin: '12px 0', borderColor: 'var(--line)' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700, marginBottom: 12 }}>
             <span>Total Outstanding:</span>
             <span style={{ color: totalTenantOwes > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalTenantOwes)}</span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => {
+                const printContent = `
+                  <html>
+                  <head><title>Rent Statement - ${user?.user_metadata?.full_name || user?.email}</title></head>
+                  <body>
+                    <h2>Rent Payment Statement</h2>
+                    <p><strong>Tenant:</strong> ${user?.user_metadata?.full_name || user?.email}</p>
+                    <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
+                    <table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:12px;">
+                      <thead>
+                        <tr><th>Month</th><th>Description</th><th>Type</th><th>Due</th><th>Paid</th><th>Balance</th><th>Date</th></tr>
+                      </thead>
+                      <tbody>
+                        ${rentBills.map(bill => {
+                          const billBalance = bill.due_amount - bill.paid_amount - bill.penalty_fee;
+                          return `<tr>
+                            <td>${bill.month_due || '-'}</td>
+                            <td>${bill.description}</td>
+                            <td>${bill.transaction_type}</td>
+                            <td>${formatCurrency(bill.due_amount)}</td>
+                            <td>${formatCurrency(bill.paid_amount)}</td>
+                            <td>${formatCurrency(billBalance)}</td>
+                            <td>${bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
+                          </tr>`;
+                        }).join('')}
+                      </tbody>
+                    </table>
+                    <p style="margin-top:20px;font-weight:bold;">Total Balance: ${formatCurrency(-totalRentOwed)}</p>
+                  </body>
+                  </html>
+                `;
+                const printWindow = window.open('', '_blank');
+                printWindow?.document.write(printContent);
+                printWindow?.document.close();
+                printWindow?.print();
+              }}
+              className="action-button"
+              style={{ flex: 1, padding: '8px', fontSize: '13px' }}
+            >
+              Download Rent Statement (PDF)
+            </button>
+            <button 
+              onClick={() => {
+                const printContent = `
+                  <html>
+                  <head><title>Utility Statement - ${user?.user_metadata?.full_name || user?.email}</title></head>
+                  <body>
+                    <h2>Utility Payment Statement</h2>
+                    <p><strong>Tenant:</strong> ${user?.user_metadata?.full_name || user?.email}</p>
+                    <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
+                    <table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:12px;">
+                      <thead>
+                        <tr><th>Month</th><th>Description</th><th>Type</th><th>Due</th><th>Paid</th><th>Balance</th><th>Date</th></tr>
+                      </thead>
+                      <tbody>
+                        ${utilityBills.map(bill => {
+                          const billBalance = bill.due_amount - bill.paid_amount - bill.penalty_fee;
+                          return `<tr>
+                            <td>${bill.month_due || '-'}</td>
+                            <td>${bill.description}</td>
+                            <td>${bill.transaction_type}</td>
+                            <td>${formatCurrency(bill.due_amount)}</td>
+                            <td>${formatCurrency(bill.paid_amount)}</td>
+                            <td>${formatCurrency(billBalance)}</td>
+                            <td>${bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
+                          </tr>`;
+                        }).join('')}
+                      </tbody>
+                    </table>
+                    <p style="margin-top:20px;font-weight:bold;">Total Balance: ${formatCurrency(-totalUtilityOwed)}</p>
+                  </body>
+                  </html>
+                `;
+                const printWindow = window.open('', '_blank');
+                printWindow?.document.write(printContent);
+                printWindow?.document.close();
+                printWindow?.print();
+              }}
+              className="secondary-button"
+              style={{ flex: 1, padding: '8px', fontSize: '13px' }}
+            >
+              Download Utility Statement (PDF)
+            </button>
           </div>
         </div>
       </section>
