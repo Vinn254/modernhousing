@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import DonutChart from '../components/DonutChart';
 import { supabase } from '../../lib/supabaseClient';
@@ -28,17 +28,48 @@ export default function AdminDashboard() {
       const name = session?.user?.user_metadata?.full_name || session?.user?.email || '';
       setFirstName(name.split(' ')[0].split('@')[0]);
 
-      fetch('/api/dashboard', { headers })
-        .then(r => r.json())
-        .then(data => {
-          setOccupiedUnits(data.occupiedUnits ?? 0);
-          setVacantUnits(data.vacantUnits ?? 0);
-          setVacantUnitsList(data.vacantUnitsList ?? []);
-          setRentOwedByTenant(data.rentOwedByTenant ?? []);
-          setTotalOwed((data.rentOwedByTenant ?? []).reduce((sum: number, t: any) => sum + (t.balance_remaining ?? 0), 0));
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
+      const [dashboardResponse, paymentsResponse, billsResponse] = await Promise.all([
+        fetch('/api/dashboard', { headers }).catch(() => null),
+        fetch('/api/payments', { headers }).catch(() => null),
+        fetch('/api/bills', { headers }).catch(() => null),
+      ]);
+      
+      const dashboardData = dashboardResponse ? await dashboardResponse.json().catch(() => ({})) : {};
+      const paymentsData = paymentsResponse ? await paymentsResponse.json().catch(() => ({})) : {};
+      const billsData = billsResponse ? await billsResponse.json().catch(() => ({})) : {};
+
+      setOccupiedUnits(dashboardData.occupiedUnits ?? 0);
+      setVacantUnits(dashboardData.vacantUnits ?? 0);
+      setVacantUnitsList(dashboardData.vacantUnitsList ?? []);
+
+      // Merge payments and bills, compute owed tenants locally
+      const mergedPayments = [...(paymentsData.payments ?? []), ...(billsData.bills ?? []).map((b: any) => ({
+        ...b,
+        amount: b.paid_amount ?? b.amount,
+        balance_remaining: b.balance ?? b.balance_remaining,
+      }))];
+      
+      const nonPaymentTypes = ['complaint', 'notification'];
+      const byTenant = new Map<string, any>();
+      mergedPayments.forEach((p: any) => {
+        if (nonPaymentTypes.includes(p.transaction_type)) return;
+        const balance = Number(p.balance_remaining || 0);
+        if (balance <= 0) return;
+        const tid = String(p.tenant_id || '');
+        if (!tid) return;
+        if (!byTenant.has(tid)) {
+          byTenant.set(tid, {
+            id: tid,
+            full_name: p.tenant_name || p.tenant || '',
+            unit: p.unit_number || p.unit || null,
+            balance_remaining: 0,
+          });
+        }
+        byTenant.get(tid).balance_remaining += balance;
+      });
+      const owedTenants = Array.from(byTenant.values());
+      setRentOwedByTenant(owedTenants);
+      setTotalOwed(owedTenants.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0));
     }
     loadData();
   }, []);
