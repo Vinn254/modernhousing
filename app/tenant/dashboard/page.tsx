@@ -59,9 +59,12 @@ export default function TenantDashboardPage() {
     const result = await response.json();
 
     if (response.ok) {
+      setData((prev) => prev ? {
+        ...prev,
+        tenant: { ...prev.tenant, picture_url: (result as any).pictureUrl ?? prev.tenant.picture_url }
+      } : prev);
       setPictureMessage('Profile picture uploaded.');
       setProfilePicture(null);
-      loadDashboard(user);
     } else {
       setPictureMessage(result.message ?? 'Upload failed.');
     }
