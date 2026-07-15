@@ -148,47 +148,24 @@ export async function GET(request: NextRequest) {
       vacantUnitsFiltered = [];
     }
 
-    // Build set of this org/property's tenant IDs (null = no restriction, e.g. super admin)
-    let allowedTenantIds: Set<string> | null = null;
-    if (!isAgent && !isSuperAdmin && authContext.organizationId) {
-      const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
-      const propIds = (orgProps ?? []).map((p: any) => p.id);
-      const { data: unitsInOrg } = propIds.length > 0
-        ? await supabaseAdmin.from('units').select('id').in('property_id', propIds)
-        : { data: [] };
-      const unitIds = (unitsInOrg ?? []).map((u: any) => u.id);
-      const { data: tenantsInUnits } = unitIds.length > 0
-        ? await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)
-        : { data: [] };
-      allowedTenantIds = new Set((tenantsInUnits ?? []).map((t: any) => t.id));
-    } else if (effectivePropertyId) {
-      const { data: unitsInProp } = await supabaseAdmin.from('units').select('id').eq('property_id', effectivePropertyId);
-      const unitIds = (unitsInProp ?? []).map((u: any) => u.id);
-      const { data: tenantsInUnits } = unitIds.length > 0
-        ? await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)
-        : { data: [] };
-      allowedTenantIds = new Set((tenantsInUnits ?? []).map((t: any) => t.id));
-    }
+    // Fetch ALL payments for this account's tenants (uses the same tenant set
+    // that drives the rest of the dashboard, so it always matches)
+    const { data: rentPaymentsData } = allTenants.length > 0
+      ? await supabaseAdmin.from('payments').select('tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type').in('tenant_id', allTenants.map((t: any) => t.id))
+      : { data: [] };
 
-    // Fetch ALL payments that still have a positive balance owed
-    const { data: owedPayments } = await supabaseAdmin
-      .from('payments')
-      .select('tenant_id, amount, balance_remaining, created_at, transaction_type')
-      .gt('balance_remaining', 0);
+    const financialPayments = (rentPaymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
+    const totalPayments = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0);
 
-    // Keep only this org/property's tenants (if scoped)
-    const scopedPayments = (owedPayments ?? []).filter(
-      (p: any) =>
-        !nonPaymentTypes.includes(p.transaction_type) &&
-        (!allowedTenantIds || allowedTenantIds.has(p.tenant_id))
-    );
-
-    // Group balances per tenant
+    // Any payment with a positive balance_remaining = money still owed by that tenant.
+    // Group them per tenant and sum the balances.
     const balanceByTenant = new Map<string, { balance: number; total_paid: number }>();
-    scopedPayments.forEach((p: any) => {
+    financialPayments.forEach((p: any) => {
+      const balance = toNumber(p.balance_remaining);
+      if (balance <= 0) return;
       const tid = String(p.tenant_id);
       const cur = balanceByTenant.get(tid) ?? { balance: 0, total_paid: 0 };
-      cur.balance += toNumber(p.balance_remaining);
+      cur.balance += balance;
       cur.total_paid += toNumber(p.amount);
       balanceByTenant.set(tid, cur);
     });
@@ -220,14 +197,8 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Get all payments for analytics (including those without balance)
-    const { data: rentPaymentsData } = allTenants.length > 0
-      ? await supabaseAdmin.from('payments').select('tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type').in('tenant_id', allTenants.map((t: any) => t.id))
-      : { data: [] };
-
-    const financialPayments = (rentPaymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
-    const totalPayments = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0);
-    const totalBalance = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.balance_remaining), 0);
+    // Total owed = sum of every tenant's balance (this drives the "rent owed" card)
+    const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + toNumber(t.balance_remaining), 0);
 
     const paymentsByTenant = new Map<string, number>();
     financialPayments.forEach((payment: any) => {
