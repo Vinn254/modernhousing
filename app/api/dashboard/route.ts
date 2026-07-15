@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant'),
       supabaseAdmin.from('tenants').select(`
         id, full_name, email, lease_start,
-        units!inner(unit_number, rent_amount, property_id, properties(name))
+        units!left(unit_number, rent_amount, property_id, properties(name))
       `),
     ]);
 
