@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import DonutChart from '../components/DonutChart';
 
@@ -222,6 +222,48 @@ export default function DashboardPage() {
     const interval = window.setInterval(() => loadDashboard(true), 15000);
     return () => window.clearInterval(interval);
   }, [roleLoaded, selectedPropertyId, userRole]);
+
+  // Derive "rent owed" directly from the payments already loaded by the page
+  // (the same data the Payment History table uses and which is confirmed
+  // correct). This avoids any dependency on /api/dashboard scoping.
+  const NON_PAYMENT_TYPES = ['complaint', 'notification'];
+  const rentOwedByTenant = useMemo(() => {
+    if (!payments || payments.length === 0) return [];
+    const tenantMap = new Map<string, any>();
+    (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
+
+    const byTenant = new Map<string, any>();
+    payments.forEach((p: any) => {
+      if (NON_PAYMENT_TYPES.includes(p.transaction_type)) return;
+      const balance = Number(p.balance_remaining || 0);
+      if (balance <= 0) return;
+      const tid = p.tenant_id;
+      if (!tid) return;
+      if (!byTenant.has(tid)) {
+        const t = tenantMap.get(tid) || {};
+        byTenant.set(tid, {
+          id: tid,
+          full_name: t.full_name || p.tenant || '',
+          email: t.email || p.tenant_email || '',
+          unit: t.unit || null,
+          property: t.property || null,
+          total_paid: 0,
+          rent_amount: 0,
+          balance_remaining: 0,
+          last_payment: p.created_at || null,
+        });
+      }
+      const entry = byTenant.get(tid);
+      entry.balance_remaining += balance;
+      entry.total_paid += Number(p.amount || 0);
+      if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
+        entry.last_payment = p.created_at;
+      }
+    });
+    return Array.from(byTenant.values());
+  }, [payments, tenants]);
+
+  const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0);
 
   async function handleAddProperty(event: React.FormEvent) {
     event.preventDefault();
@@ -691,7 +733,7 @@ export default function DashboardPage() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/></svg>
             </span>
             <div className="kpi-tile-body">
-              <span className="kpi-tile-value" style={{ color: '#b91c1c' }}>{formatCurrency(stats.total_balance)}</span>
+              <span className="kpi-tile-value" style={{ color: '#b91c1c' }}>{formatCurrency(totalBalance)}</span>
               <span className="kpi-tile-label">Outstanding</span>
               <span className="kpi-tile-caption">rent owed</span>
             </div>
@@ -737,10 +779,10 @@ export default function DashboardPage() {
             <div className="card-admin-header" style={{ marginBottom: 16 }}>
               <div><span className="landlord-kicker">Rent Owed</span><h2>Tenants with Outstanding Balances</h2></div>
             </div>
-            {stats.rentOwedByTenant && stats.rentOwedByTenant.some(t => t.balance_remaining > 0) ? (
+            {rentOwedByTenant && rentOwedByTenant.some(t => t.balance_remaining > 0) ? (
               <div className="table-shell"><table className="landlord-table">
                 <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Last Payment</th></tr></thead>
-                <tbody>{stats.rentOwedByTenant.filter(t => t.balance_remaining > 0).map(t => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.balance_remaining)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
+                <tbody>{rentOwedByTenant.filter(t => t.balance_remaining > 0).map(t => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.balance_remaining)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
               </table></div>
             ) : <p className="landlord-muted">All tenants have paid.</p>}
           </section>
