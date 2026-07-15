@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     let propertiesQuery: any = supabaseAdmin.from('properties').select('id, name');
     let unitsQuery: any = supabaseAdmin.from('units').select('id, occupancy_status, property_id');
     let tenantsQuery: any = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
-    let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
+    let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, due_amount, balance_remaining, created_at, transaction_type');
     let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status');
 
     // For landlords, filter by organization
@@ -204,20 +204,23 @@ export async function GET(request: NextRequest) {
     }));
 
     const rentOwedByTenant = tenantsForOwedFiltered.map((tenant: any) => {
-      const tenantPayments = (paymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id);
-      const totalPaid = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount), 0);
+      // Only rent and overdue payments
+      const rentPayments = (paymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id && (p.transaction_type === "rent" || p.transaction_type === "overdue"));
+      const totalPaid = rentPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount ?? 0), 0);
       const expectedRent = toNumber(tenant.units?.rent_amount ?? 0);
-      const balance = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.balance_remaining), 0);
+      // Calculate balance as sum of unpaid rent amounts (due_amount - amount for each unpaid)
+      const balance = rentPayments.reduce((sum: number, p: any) => sum + Math.max(0, toNumber(p.due_amount ?? p.amount ?? 0) - toNumber(p.amount ?? 0)), 0);
+
       return {
         id: tenant.id,
         full_name: tenant.full_name,
         email: tenant.email,
-        unit: tenant.units?.unit_number ?? '—',
-        property: tenant.units?.properties?.name ?? '—',
+        unit: tenant.units?.unit_number ?? "—",
+        property: tenant.units?.properties?.name ?? "—",
         total_paid: totalPaid,
         rent_amount: expectedRent,
-        balance_remaining: balance,
-        last_payment: tenantPayments.sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]?.created_at ?? null,
+        balance_remaining: Math.max(0, balance),
+        last_payment: rentPayments.sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]?.created_at ?? null,
       };
     });
 
