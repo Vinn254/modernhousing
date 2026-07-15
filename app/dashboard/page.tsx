@@ -705,10 +705,13 @@ export default function DashboardPage() {
               <span className="kpi-tile-label">Due Dates</span>
               <span className="kpi-tile-caption">payment based</span>
             </div>
-            <DonutChart data={[
-              { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
-              { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' },
-            ]} centerLabel={String(stats.occupiedUnits) + '/' + String(stats.occupiedUnits + stats.vacantUnits)} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <DonutChart data={[
+                { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
+                { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' },
+              ]} centerLabel={String(stats.occupiedUnits) + '/' + String(stats.occupiedUnits + stats.vacantUnits)} size={80} />
+              <span style={{ color: 'var(--ink-3)', fontSize: '12px', whiteSpace: 'nowrap' }}>Occupied / Vacant</span>
+            </div>
           </div>
         </section>
       )}
