@@ -644,37 +644,73 @@ export default function DashboardPage() {
         </>
       )}
 
-      {stats && (
-        <>
-          {isAgent ? (
-            <section className="bento-section" style={{ marginTop: 0, padding: 0 }}>
-              <div className="bento bento-agent">
-                <article className="card"><div className="card-label">Properties</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.properties}</h3><p>Total properties in your portfolio.</p></article>
-                <article className="card"><div className="card-label">Tenants</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.tenants}</h3><p>Active tenant records.</p></article>
-                <article className="card"><div className="card-label">Due Dates</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.tenants_with_analytics.length}</h3><p>Tenants with payment/start-date based due dates.</p></article>
-                <article className="card" style={{ textAlign: 'center' }}>
-                  <div className="card-label">Unit Occupancy</div>
-                  <DonutChart data={[
-                    { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
-                    { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' },
-                  ]} centerLabel={String(stats.occupiedUnits) + '/' + String(stats.occupiedUnits + stats.vacantUnits)} />
-                  <p style={{ color: 'var(--ink-3)', marginTop: 8, fontSize: '13px' }}>Occupied / Vacant Units</p>
-                </article>
-              </div>
-            </section>
-          ) : (
-            <section className="bento-section" style={{ marginTop: 0, padding: 0 }}>
-              <div className="bento">
-                <article className="card" style={{ gridColumn: 'span 3' }}><div className="card-label">Properties</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.properties}</h3><p>Total properties in your portfolio.</p></article>
-                {!isAgent && <article className="card" style={{ gridColumn: 'span 3' }}><div className="card-label">Agents</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.agents}</h3><p>Agents assigned to properties.</p></article>}
-                <article className="card" style={{ gridColumn: 'span 3' }}><div className="card-label">Tenants</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.tenants}</h3><p>Active tenant records.</p></article>
-                {!isAgent && <article className="card" style={{ gridColumn: 'span 3' }}><div className="card-label">Collections</div><h3 style={{ fontSize: '34px', margin: 0 }}>{formatCurrency(stats.total_payments)}</h3><p>Total payments received.</p></article>}
-                {!isAgent && <article className="card" style={{ gridColumn: 'span 6' }}><div className="card-label">Outstanding Balance</div><h3 style={{ fontSize: '34px', margin: 0 }}>{formatCurrency(stats.total_balance)}</h3><p>Rent owed to collect.</p></article>}
-                <article className="card" style={{ gridColumn: 'span 6' }}><div className="card-label">Due Dates</div><h3 style={{ fontSize: '34px', margin: 0 }}>{stats.tenants_with_analytics.length}</h3><p>Tenants with payment/start-date based due dates.</p></article>
-              </div>
-            </section>
-          )}
-        </>
+      {!isAgent && stats && (
+        <section className="kpi-row">
+          <div className="kpi-tile">
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--navy-600), var(--navy-400))' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+            </span>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value">{stats.properties}</span>
+              <span className="kpi-tile-label">Properties</span>
+              <span className="kpi-tile-caption">total</span>
+            </div>
+          </div>
+          <div className="kpi-tile">
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--amber), #fbbf24)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </span>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value">{stats.agents}</span>
+              <span className="kpi-tile-label">Agents</span>
+              <span className="kpi-tile-caption">assigned</span>
+            </div>
+          </div>
+          <div className="kpi-tile">
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-bright))' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
+            </span>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value">{stats.tenants}</span>
+              <span className="kpi-tile-label">Tenants</span>
+              <span className="kpi-tile-caption">active records</span>
+            </div>
+          </div>
+          <div className="kpi-tile">
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+            </span>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value">{formatCurrency(stats.total_payments)}</span>
+              <span className="kpi-tile-label">Collections</span>
+              <span className="kpi-tile-caption">total payments</span>
+            </div>
+          </div>
+          <div className="kpi-tile">
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--rose), #fca5a5)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/></svg>
+            </span>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value" style={{ color: '#b91c1c' }}>{formatCurrency(stats.total_balance)}</span>
+              <span className="kpi-tile-label">Outstanding</span>
+              <span className="kpi-tile-caption">rent owed</span>
+            </div>
+          </div>
+          <div className="kpi-tile kpi-tile-chart">
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--navy-400), var(--navy-300))' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            </span>
+            <div className="kpi-tile-body">
+              <span className="kpi-tile-value">{stats.tenants_with_analytics.length}</span>
+              <span className="kpi-tile-label">Due Dates</span>
+              <span className="kpi-tile-caption">payment based</span>
+            </div>
+            <DonutChart data={[
+              { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
+              { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' },
+            ]} centerLabel={String(stats.occupiedUnits) + '/' + String(stats.occupiedUnits + stats.vacantUnits)} />
+          </div>
+        </section>
       )}
 
       {!isAgent && stats && (
