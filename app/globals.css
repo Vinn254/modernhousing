@@ -395,7 +395,25 @@ body {
 @keyframes floatA { 0%,100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(-10px); } }
 @keyframes floatB { 0%,100% { transform: rotate(2deg) translateY(0); } 50% { transform: rotate(2deg) translateY(-12px); } }
 @media (max-width: 900px) {
-  .float-1, .float-2, .float-3, .float-4, .float-5, .float-6 { left: 50%; transform: translateX(-50%) rotate(2deg); }
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-tile-chart {
+    grid-column: span 1;
+    flex-direction: column;
+    flex-wrap: wrap;
+  }
+
+  .kpi-tile {
+    padding: 16px;
+  }
+
+  .kpi-tile-chart svg {
+    width: 70px;
+    height: 70px;
+  }
+}
   .float-1 { top: 18%; }
   .float-2 { top: 34%; }
   .float-3 { top: 50%; }

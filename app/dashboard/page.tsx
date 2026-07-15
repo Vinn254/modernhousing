@@ -705,7 +705,7 @@ export default function DashboardPage() {
               <span className="kpi-tile-label">Due Dates</span>
               <span className="kpi-tile-caption">payment based</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <DonutChart data={[
                 { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
                 { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' },
@@ -771,7 +771,7 @@ export default function DashboardPage() {
 
             <h3 style={{ marginTop: 24, marginBottom: 12 }}>Assigned Agents</h3>
             {agents.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No agents assigned yet.</p> : agents.map((agent) => (
-              <div key={agent.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+              <div key={agent.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
                 <div>
                   <strong>{agent.full_name}</strong>
                   <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.email}</div>
