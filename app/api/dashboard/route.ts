@@ -148,61 +148,61 @@ export async function GET(request: NextRequest) {
       vacantUnitsFiltered = [];
     }
 
-    // Determine which properties this account is allowed to see
-    let scopePropertyIds: string[] | null = null;
-    if (isAgent || isSuperAdmin) {
-      scopePropertyIds = null; // super admin / agent: no restriction
-    } else if (authContext.organizationId) {
+    // RENT OWED — same proven scoping as /api/payments:
+    // org -> properties -> units -> tenants -> their payments.
+    let owedTenantIds: string[] = [];
+    if (isAgent && effectivePropertyId) {
+      const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', effectivePropertyId);
+      const unitIds = (units ?? []).map((u: any) => u.id);
+      const { data: tenants } = unitIds.length > 0
+        ? await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)
+        : { data: [] };
+      owedTenantIds = (tenants ?? []).map((t: any) => t.id);
+    } else if (!isSuperAdmin && authContext.organizationId) {
       const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
-      scopePropertyIds = (orgProps ?? []).map((p: any) => p.id);
-    } else if (effectivePropertyId) {
-      scopePropertyIds = [effectivePropertyId];
-    } else {
-      scopePropertyIds = [];
+      const propIds = (orgProps ?? []).map((p: any) => p.id);
+      if (propIds.length > 0) {
+        const { data: units } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+        const unitIds = (units ?? []).map((u: any) => u.id);
+        const { data: tenants } = unitIds.length > 0
+          ? await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)
+          : { data: [] };
+        owedTenantIds = (tenants ?? []).map((t: any) => t.id);
+      }
+    } else if (isSuperAdmin) {
+      const { data: tenants } = await supabaseAdmin.from('tenants').select('id');
+      owedTenantIds = (tenants ?? []).map((t: any) => t.id);
     }
 
-    // RENT OWED: fetch payments joined straight to tenant -> unit -> property.
-    // This captures every tenant that belongs to this account's properties,
-    // including those the tenant list (filtered by unit_id) might miss.
-    const { data: owedRaw } = await supabaseAdmin
-      .from('payments')
-      .select(`
-        tenant_id, amount, balance_remaining, transaction_type, created_at,
-        tenants!inner(
-          id, full_name, email,
-          units!inner(unit_number, rent_amount, property_id, properties!inner(name, organization_id))
-        )
-      `)
-      .gt('balance_remaining', 0);
+    const { data: owedRaw } = owedTenantIds.length > 0
+      ? await supabaseAdmin.from('payments').select('tenant_id, amount, balance_remaining, transaction_type, created_at').in('tenant_id', owedTenantIds)
+      : { data: [] };
 
-    const owedPayments = (owedRaw ?? []).filter((p: any) => {
-      if (nonPaymentTypes.includes(p.transaction_type)) return false;
-      if (scopePropertyIds === null) return true; // no restriction
-      const orgOfPayment = p.tenants?.units?.properties?.organization_id;
-      return scopePropertyIds.includes(orgOfPayment);
-    });
+    const owedPayments = (owedRaw ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
 
     // Sum each tenant's positive balances
     const balanceByTenant = new Map<string, { balance: number; total_paid: number }>();
     owedPayments.forEach((p: any) => {
+      const balance = toNumber(p.balance_remaining);
+      if (balance <= 0) return;
       const tid = String(p.tenant_id);
       const cur = balanceByTenant.get(tid) ?? { balance: 0, total_paid: 0 };
-      cur.balance += toNumber(p.balance_remaining);
+      cur.balance += balance;
       cur.total_paid += toNumber(p.amount);
       balanceByTenant.set(tid, cur);
     });
 
-    const owedTenantIds = [...balanceByTenant.keys()];
+    const owedTenantIds2 = [...balanceByTenant.keys()];
 
     // Fetch tenant details (unit + property) for display
-    const { data: tenantsOwedInfo } = owedTenantIds.length > 0
+    const { data: tenantsOwedInfo } = owedTenantIds2.length > 0
       ? await supabaseAdmin.from('tenants').select(`
           id, full_name, email,
           units!left(unit_number, rent_amount, properties(name))
-        `).in('id', owedTenantIds)
+        `).in('id', owedTenantIds2)
       : { data: [] };
 
-    const rentOwedByTenant = owedTenantIds.map((tid: string) => {
+    const rentOwedByTenant = owedTenantIds2.map((tid: string) => {
       const agg = balanceByTenant.get(tid)!;
       const tenantInfo = tenantsOwedInfo?.find((t: any) => t.id === tid);
       const unitInfo = tenantInfo?.units?.[0];
