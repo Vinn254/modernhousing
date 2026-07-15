@@ -468,11 +468,11 @@ export default function AgentTenantsPage() {
               </select>
             </div>
             <div className="field-group">
-              <label>Lease Start Date</label>
+              <label>Lease Start Date <span style="color: var(--ink-3); font-weight: normal;">(Tenant moves in / makes first payment)</span></label>
               <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
             </div>
             <div className="field-group">
-              <label>Payment Due Date</label>
+              <label>Lease End Date <span style="color: var(--ink-3); font-weight: normal;">(Expected payment due date - typically 30 days after start)</span></label>
               <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
               <small style={{ color: 'var(--ink-3)', fontSize: '12px' }}>When tenant is expected to make rent payment</small>
             </div>

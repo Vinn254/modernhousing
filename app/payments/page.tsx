@@ -590,7 +590,7 @@ export default function PaymentsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div className="card-label">Transactions</div>
           {payments.length > 0 && (
-            <button onClick={downloadPaymentStatement} className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px' }}>Download PDF</button>
+            <button onClick={downloadPaymentStatement} className="action-button" style={{ background: "var(--accent)", color: "#fff", padding: "6px 12px", fontSize: "12px" }} style={{ padding: '6px 12px', fontSize: '12px' }}>Download PDF</button>
           )}
         </div>
         <h3 style={{ marginBottom: 16 }}>Payment History</h3>
