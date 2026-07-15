@@ -88,7 +88,7 @@ export default function AdminDashboard() {
           )}
 
           <button type="button" className="kpi-tile clickable" onClick={() => setShowVacantModal(true)}>
-            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #9ca3af, #cbd5e1)' }}>
+            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><path d="M9 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
             </span>
             <div className="kpi-tile-body">
@@ -156,18 +156,18 @@ export default function AdminDashboard() {
           </article>
 
 <article className="card">
-             <div className="feat-icon" style={{ background: '#f59e0b' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-             <h3>Tenant Documents</h3>
-             <p>Review tenant-submitted documents.</p>
-             <Link href="/admin/documents" className="card-cta">View Documents</Link>
-           </article>
+              <div className="feat-icon" style={{ background: '#f59e0b' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+              <h3>Tenant Documents</h3>
+              <p>Review tenant-submitted documents.</p>
+              <Link href="/admin/documents" className="card-cta">View Documents</Link>
+            </article>
 
 <article className="card">
-              <div className="feat-icon" style={{ background: '#6366f1' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
-              <h3>System Audit</h3>
-              <p>Monitor all system activities and security events.</p>
-              <Link href="/admin/audit" className="card-cta">View Audit Logs</Link>
-            </article>
+               <div className="feat-icon" style={{ background: '#6366f1' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+               <h3>System Audit</h3>
+               <p>Monitor all system activities and security events.</p>
+               <Link href="/admin/audit" className="card-cta">View Audit Logs</Link>
+             </article>
           </section>
 
         {showVacantModal && (
