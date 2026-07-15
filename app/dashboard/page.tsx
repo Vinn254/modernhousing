@@ -155,10 +155,11 @@ export default function DashboardPage() {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
 
-      const [statsResponse, tenantsResponse, paymentsResponse, agentsResponse, propertiesResponse, unitsResponse] = await Promise.all([
+      const [statsResponse, tenantsResponse, paymentsResponse, billsResponse, agentsResponse, propertiesResponse, unitsResponse] = await Promise.all([
         fetch('/api/dashboard' + (effectivePropertyId ? `?propertyId=${encodeURIComponent(effectivePropertyId)}` : ''), { headers }).catch(() => null),
         fetch('/api/tenants' + (effectivePropertyId ? `?propertyId=${encodeURIComponent(effectivePropertyId)}` : ''), { headers }).catch(() => null),
         fetch('/api/payments' + (effectivePropertyId ? `?propertyId=${encodeURIComponent(effectivePropertyId)}` : ''), { headers }).catch(() => null),
+        fetch('/api/bills' + (effectivePropertyId ? `?propertyId=${encodeURIComponent(effectivePropertyId)}` : ''), { headers }).catch(() => null),
         fetch('/api/agents', { headers }).catch(() => null),
         fetch('/api/properties', { headers }).catch(() => null),
         fetch('/api/units' + (effectivePropertyId ? `?propertyId=${encodeURIComponent(effectivePropertyId)}` : ''), { headers }).catch(() => null),
@@ -167,13 +168,20 @@ export default function DashboardPage() {
       const statsResult = statsResponse ? await statsResponse.json().catch(() => ({})) : {};
       const tenantsResult = tenantsResponse ? await tenantsResponse.json().catch(() => ({})) : {};
       const paymentsResult = paymentsResponse ? await paymentsResponse.json().catch(() => ({})) : {};
+      const billsResult = billsResponse ? await billsResponse.json().catch(() => ({})) : {};
       const agentsResult = agentsResponse ? await agentsResponse.json().catch(() => ({})) : {};
       const propertiesResult = propertiesResponse ? await propertiesResponse.json().catch(() => ({})) : {};
       const unitsResult = unitsResponse ? await unitsResponse.json().catch(() => ({})) : {};
 
       setStats(statsResult);
       setTenants(tenantsResult.tenants ?? []);
-      setPayments(paymentsResult.payments ?? []);
+      // Merge payments and bills for owed computation (bills already have tenant_id)
+      const mergedPayments = [...(paymentsResult.payments ?? []), ...(billsResult.bills ?? []).map((b: any) => ({
+        ...b,
+        balance_remaining: b.balance ?? b.balance_remaining,
+        created_at: b.created_at,
+      }))];
+      setPayments(mergedPayments);
       setAgents(agentsResult.agents ?? []);
       setProperties(propertiesResult.properties ?? []);
       setUnits(unitsResult.units ?? []);
@@ -244,10 +252,10 @@ export default function DashboardPage() {
         const t = tenantMap.get(tid) || {};
         byTenant.set(tid, {
           id: tid,
-          full_name: t.full_name || p.tenant || '',
+          full_name: t.full_name || p.tenant_name || p.tenant || '',
           email: t.email || p.tenant_email || '',
-          unit: t.unit || null,
-          property: t.property || null,
+          unit: t.unit || p.unit_number || p.unit || null,
+          property: t.property || p.property_name || p.property || null,
           total_paid: 0,
           rent_amount: 0,
           balance_remaining: 0,
