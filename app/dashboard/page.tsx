@@ -275,9 +275,6 @@ export default function DashboardPage() {
 
   const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0);
 
-  // Debug: log the count of payments and owed
-  console.log('[Dashboard owed] payments:', payments?.length, 'tenants:', tenants?.length, 'rentOwedByTenant:', rentOwedByTenant?.length, 'totalBalance:', totalBalance);
-
   async function handleAddProperty(event: React.FormEvent) {
     event.preventDefault();
     setMessage('');
