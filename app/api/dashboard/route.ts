@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
     if (!isAgent && !isSuperAdmin && authContext.organizationId) {
       const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
       const propIds = (orgProps ?? []).map((p: any) => p.id);
-      tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => t.units?.property_id && propIds.includes(t.units.property_id));
+      tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => !t.units?.property_id || propIds.includes(t.units.property_id));
     } else if (!isAgent && !isSuperAdmin && !authContext.organizationId) {
       tenantsForOwedFiltered = [];
     }
@@ -210,8 +210,8 @@ export async function GET(request: NextRequest) {
       const tenantPayments = (rentPaymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id && !nonPaymentTypes.includes(p.transaction_type));
       // Sum all balance_remaining values - these represent the unpaid amounts
       const balance = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.balance_remaining ?? 0), 0);
-      // Total paid = due_amount - balance_remaining for each payment
       const totalPaid = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount ?? 0), 0);
+      const expectedRent = toNumber(tenant.units?.rent_amount ?? 0);
 
       return {
         id: tenant.id,
