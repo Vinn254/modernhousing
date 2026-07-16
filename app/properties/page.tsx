@@ -68,10 +68,13 @@ export default function PropertiesPage() {
       ]);
       const paymentsResult = paymentsResponse.ok ? await paymentsResponse.json() : {};
       const billsResult = billsResponse.ok ? await billsResponse.json() : {};
-      const merged = [...(paymentsResult.payments ?? []), ...(billsResult.bills ?? []).map((b: any) => ({
+      const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
+        ...p,
+        created_at: p.paid_at || p.created_at,
+      })), ...(billsResult.bills ?? []).map((b: any) => ({
         ...b,
         amount: b.paid_amount ?? b.amount,
-        created_at: b.paid_at || b.created_at,
+        created_at: b.payment_date || b.paid_at || b.created_at,
       }))];
       setMonthlyPayments(merged);
     } catch (e) {}
