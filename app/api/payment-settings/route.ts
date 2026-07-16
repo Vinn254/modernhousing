@@ -88,10 +88,27 @@ async function getAuthContext(request: NextRequest) {
 async function getTenantOrganizationId(tenantId: string): Promise<string | null> {
   const { data: tenantData } = await supabaseAdmin
     .from('tenants')
-    .select('units!inner(properties!inner(organization_id))')
+    .select('unit_id')
     .eq('id', tenantId)
     .maybeSingle();
-  return (tenantData as any)?.units?.properties?.organization_id ?? null;
+  
+  if (!tenantData?.unit_id) return null;
+  
+  const { data: unitData } = await supabaseAdmin
+    .from('units')
+    .select('property_id')
+    .eq('id', tenantData.unit_id)
+    .maybeSingle();
+  
+  if (!unitData?.property_id) return null;
+  
+  const { data: propData } = await supabaseAdmin
+    .from('properties')
+    .select('organization_id')
+    .eq('id', unitData.property_id)
+    .maybeSingle();
+  
+  return propData?.organization_id ?? null;
 }
 
 export async function GET(request: NextRequest) {
