@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-const consumerKey = process.env.MPESA_CONSUMER_KEY ?? '';
-const consumerSecret = process.env.MPESA_CONSUMER_SECRET ?? '';
-const passkey = process.env.MPESA_PASSKEY ?? '';
-const shortCode = process.env.MPESA_SHORTCODE ?? '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+
+const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+const defaultConsumerKey = process.env.MPESA_CONSUMER_KEY ?? '';
+const defaultConsumerSecret = process.env.MPESA_CONSUMER_SECRET ?? '';
+const defaultPasskey = process.env.MPESA_PASSKEY ?? '';
+const defaultShortCode = process.env.MPESA_SHORTCODE ?? '';
 const environment = process.env.MPESA_ENVIRONMENT ?? 'sandbox';
 
 function decodeJWT(token: string): any | null {
@@ -23,10 +29,38 @@ function decodeJWT(token: string): any | null {
   }
 }
 
-async function getAccessToken(): Promise<string> {
+async function getOrganizationCredentials(organizationId: string) {
+  if (!organizationId) {
+    return {
+      consumerKey: defaultConsumerKey,
+      consumerSecret: defaultConsumerSecret,
+      passkey: defaultPasskey,
+      shortCode: defaultShortCode
+    };
+  }
+
+  const { data: settings } = await supabaseAdmin
+    .from('payment_settings')
+    .select('consumer_key, consumer_secret, passkey')
+    .eq('organization_id', organizationId)
+    .single();
+
+  return {
+    consumerKey: settings?.consumer_key || defaultConsumerKey,
+    consumerSecret: settings?.consumer_secret || defaultConsumerSecret,
+    passkey: settings?.passkey || defaultPasskey,
+    shortCode: defaultShortCode // Organization shortcode same as default for now
+  };
+}
+
+async function getAccessToken(consumerKey: string, consumerSecret: string): Promise<string> {
   const baseUrl = environment === 'production'
     ? 'https://api.safaricom.co.ke'
     : 'https://sandbox-api.safaricom.co.ke';
+
+  if (!consumerKey || !consumerSecret) {
+    throw new Error('M-Pesa credentials not configured. Set MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET in .env.local or configure in Payment Settings.');
+  }
 
   const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
   const response = await fetch(`${baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
@@ -34,7 +68,8 @@ async function getAccessToken(): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to get M-Pesa access token');
+    const errorText = await response.text();
+    throw new Error(`Failed to get M-Pesa access token: ${errorText}`);
   }
 
   const data = await response.json();
@@ -57,15 +92,23 @@ export async function POST(request: NextRequest) {
 
     const decoded = decodeJWT(authorization.split(' ')[1]);
     const tenantId = decoded?.sub;
+    const organizationId = decoded?.user_metadata?.organization_id;
 
-    const accessToken = await getAccessToken();
+    // Get credentials - prefer organization-specific if available
+    const creds = await getOrganizationCredentials(organizationId);
+
+    const accessToken = await getAccessToken(creds.consumerKey, creds.consumerSecret);
 
     const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
-    const password = Buffer.from(`${shortCode}${passkey}${timestamp}`).toString('base64');
+    const password = Buffer.from(`${creds.shortCode}${creds.passkey}${timestamp}`).toString('base64');
 
     const baseUrl = environment === 'production'
       ? 'https://api.safaricom.co.ke'
       : 'https://sandbox-api.safaricom.co.ke';
+
+    const callbackUrl = process.env.NEXT_PUBLIC_APP_URL 
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/mpesa/callback` 
+      : 'https://webhook.site';
 
     const response = await fetch(`${baseUrl}/mpesa/stkpush/v1/processrequest`, {
       method: 'POST',
@@ -74,24 +117,39 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        BusinessShortCode: shortCode,
+        BusinessShortCode: creds.shortCode,
         Password: password,
         Timestamp: timestamp,
         TransactionType: 'CustomerPayBillOnline',
         Amount: Math.round(amount),
         PartyA: phone,
-        PartyB: shortCode,
+        PartyB: creds.shortCode,
         PhoneNumber: phone,
-        CallBackURL: `${process.env.NEXT_PUBLIC_APP_URL}/api/mpesa/callback`,
+        CallBackURL: callbackUrl,
         AccountReference: tenantId ? `${tenantId}|${transactionType || 'rent'}` : 'SPRINGFIELD',
         TransactionDesc: transactionDesc || 'Rent Payment'
       })
     });
 
     const result = await response.json();
+    
+    if (!response.ok) {
+      console.error('M-Pesa STK push failed:', { 
+        status: response.status, 
+        result, 
+        shortCode: creds.shortCode,
+        environment 
+      });
+      return NextResponse.json({ 
+        message: result.errorMessage ?? result.messageRequestDescription ?? 'Payment initiation failed',
+        requestId: result.requestId,
+        errorCode: result.errorCode
+      }, { status: response.status });
+    }
 
     return NextResponse.json(result);
   } catch (error: any) {
+    console.error('STK push error:', error.message);
     return NextResponse.json({ message: error.message ?? 'Payment initiation failed' }, { status: 500 });
   }
 }
