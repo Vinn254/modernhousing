@@ -346,7 +346,7 @@ export default function PropertiesPage() {
   // Filter payments by month_due format (e.g., "July 2026") matching selected month (YYYY-MM)
   const [selectedYear, selectedMonthNum] = selectedMonth.split('-').map(Number);
   const monthNamesFull = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const selectedMonthNameFull = monthNamesFull[selectedMonthNum] + ' ' + selectedYear;
+  const selectedMonthNameFull = monthNamesFull[selectedMonthNum - 1] + ' ' + selectedYear;
   const filteredPayments = monthlyPayments.filter(p => {
     const monthDue = (p.month_due || '').toLowerCase();
     const selectedMonthLower = selectedMonthNameFull.toLowerCase();
