@@ -343,13 +343,19 @@ export default function PropertiesPage() {
   const rentRoll = properties.reduce((sum, property) => sum + Number(property.rent_roll ?? 0), 0);
   const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
+  // Filter payments by month_due format (e.g., "July 2026") matching selected month (YYYY-MM)
   const [selectedYear, selectedMonthNum] = selectedMonth.split('-').map(Number);
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const selectedMonthName = monthNames[selectedMonthNum] + ' ' + selectedYear;
   const filteredPayments = monthlyPayments.filter(p => {
-    if (!p.created_at) return false;
+    const monthDue = p.month_due || '';
+    const matchesMonthDue = monthDue.includes(selectedMonthName) || monthDue.includes(selectedMonth);
+    if (matchesMonthDue) return true;
+    // Fallback: check created_at date
     const d = new Date(p.created_at);
-    return d.getMonth() === selectedMonthNum && d.getFullYear() === selectedYear;
+    return !isNaN(d.getTime()) && d.getMonth() + 1 === selectedMonthNum && d.getFullYear() === selectedYear;
   }).filter(p => !['complaint', 'notification'].includes(p.transaction_type));
-  const filteredTotal = filteredPayments.reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0);
+  const filteredTotal = filteredPayments.reduce((sum: number, p: any) => sum + Number(p.amount ?? p.paid_amount ?? 0), 0);
 
   // Get units for selected property
   const selectedPropertyUnits = selectedProperty 
@@ -436,10 +442,10 @@ export default function PropertiesPage() {
                       <tbody>
                         {filteredPayments.map(p => (
                           <tr key={p.id}>
-                            <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                            <td>{p.paid_at || p.payment_date ? new Date(p.paid_at || p.payment_date).toLocaleDateString() : new Date(p.created_at).toLocaleDateString()}</td>
                             <td>{p.tenant || p.tenant_name || '—'}</td>
                             <td>{p.transaction_type || 'rent'}</td>
-                            <td style={{ color: 'var(--accent)', fontWeight: 600 }}>{formatCurrency(p.amount || 0)}</td>
+                            <td style={{ color: 'var(--accent)', fontWeight: 600 }}>{formatCurrency(p.amount ?? p.paid_amount ?? 0)}</td>
                           </tr>
                         ))}
                       </tbody>
