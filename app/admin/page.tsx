@@ -103,62 +103,55 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <section className="kpi-row">
-<div className="kpi-tile kpi-tile-chart">
-            <div className="card-label" style={{ justifyContent: 'center' }}><span className="badge badge-pm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>Unit Occupancy</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <DonutChart 
-                data={[
-                  { label: 'Occupied', value: occupiedUnits, color: '#10b981' },
-                  { label: 'Vacant', value: vacantUnits, color: '#9ca3af' },
-                ]} 
-                 
-                size={70}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: '22px', fontWeight: 700 }}>{occupiedUnits}/{occupiedUnits + vacantUnits}</span>
-                <span style={{ color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</span>
-              </div>
+<section className="dashboard-hero-stats">
+        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+          </div>
+          <div>
+            <div className="card-label">Unit Occupancy</div>
+            <h3 style={{ margin: 0 }}>{occupiedUnits}/{occupiedUnits + vacantUnits}</h3>
+            <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
+          </div>
+        </div>
+
+        {!loading && occupiedUnits + vacantUnits > 0 && (
+          <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Occupancy Rate</div>
+              <h3 style={{ margin: 0 }}>{Math.round((occupiedUnits / (occupiedUnits + vacantUnits)) * 100)}%</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>of units occupied</p>
             </div>
           </div>
+        )}
 
-          {!loading && occupiedUnits + vacantUnits > 0 && (
-            <div className="kpi-tile">
-              <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-bright))' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-              </span>
-              <div className="kpi-tile-body">
-                <span className="kpi-tile-value">{Math.round((occupiedUnits / (occupiedUnits + vacantUnits)) * 100)}%</span>
-                <span className="kpi-tile-label">Occupancy Rate</span>
-                <span className="kpi-tile-caption">of units occupied</span>
-              </div>
-            </div>
-          )}
+        <button type="button" className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', cursor: 'pointer' }} onClick={() => setShowVacantModal(true)}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><path d="M9 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
+          </div>
+          <div>
+            <div className="card-label">Vacant Units</div>
+            <h3 style={{ margin: 0 }}>{vacantUnits}</h3>
+            <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Available for rent</p>
+          </div>
+          <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
 
-          <button type="button" className="kpi-tile clickable" onClick={() => setShowVacantModal(true)}>
-            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><path d="M9 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
-            </span>
-            <div className="kpi-tile-body">
-              <span className="kpi-tile-value">{vacantUnits}</span>
-              <span className="kpi-tile-label">Vacant Units</span>
-              <span className="kpi-tile-caption">Available for rent</span>
-            </div>
-            <svg className="kpi-tile-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
-
-          <button type="button" className="kpi-tile clickable" onClick={() => setShowRentOwedModal(true)}>
-            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-            </span>
-            <div className="kpi-tile-body">
-              <span className="kpi-tile-value" style={{ color: '#b91c1c' }}>{formatCurrency(totalOwed)}</span>
-              <span className="kpi-tile-label">Total Rent Owed</span>
-              <span className="kpi-tile-caption">Outstanding balances</span>
-            </div>
-            <svg className="kpi-tile-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
-        </section>
+        <button type="button" className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', cursor: 'pointer' }} onClick={() => setShowRentOwedModal(true)}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+          </div>
+          <div>
+            <div className="card-label">Total Rent Owed</div>
+            <h3 style={{ margin: 0, color: '#dc2626' }}>{formatCurrency(totalOwed)}</h3>
+            <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Outstanding balances</p>
+          </div>
+          <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </section>
 
         <section className="card-grid" style={{ marginBottom: '24px' }}>
           <article className="card">
