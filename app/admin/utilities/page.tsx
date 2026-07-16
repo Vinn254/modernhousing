@@ -112,6 +112,9 @@ const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: 
     { value: 'service_charge', label: 'Service Charge' },
     { value: 'parking', label: 'Parking Fee' },
     { value: 'security', label: 'Security Fee' },
+    { value: 'internet', label: 'Internet' },
+    { value: 'laundry', label: 'Laundry' },
+    { value: 'pet_fees', label: 'Pet Fees' },
     { value: 'other', label: 'Other' },
   ];
 
@@ -144,12 +147,7 @@ setProperties(propsResult.properties ?? []);
       setUnits(unitsResult.units ?? []);
       // Only show utility bills - not rent/overdue/deposit
       const utilityBills = (billsResult.bills ?? []).filter((b: any) => 
-        b.transaction_type === 'water' || 
-        b.transaction_type === 'garbage' || 
-        b.transaction_type === 'service_charge' ||
-        b.transaction_type === 'parking' ||
-        b.transaction_type === 'security' ||
-        b.transaction_type === 'other'
+        ['garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'].includes(b.transaction_type)
       );
       setBills(utilityBills);
     } catch (err: any) {
