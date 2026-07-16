@@ -29,9 +29,9 @@ export default function AdminDashboard() {
       setFirstName(name.split(' ')[0].split('@')[0]);
 
       const [dashboardResponse, paymentsResponse, billsResponse] = await Promise.all([
-        fetch('/api/dashboard', { headers }).catch(() => null),
-        fetch('/api/payments', { headers }).catch(() => null),
-        fetch('/api/bills', { headers }).catch(() => null),
+        fetch('/api/dashboard', { headers, cache: 'no-store' }).catch(() => null),
+        fetch('/api/payments', { headers, cache: 'no-store' }).catch(() => null),
+        fetch('/api/bills', { headers, cache: 'no-store' }).catch(() => null),
       ]);
       
       const dashboardData = dashboardResponse ? await dashboardResponse.json().catch(() => ({})) : {};
