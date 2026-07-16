@@ -67,13 +67,29 @@ async function getAuthContext(request: NextRequest) {
     orgId = profileByEmail?.organization_id ?? null;
   }
 
-  if (!orgId && userMetadata.role === 'tenant' && userMetadata.tenant_id) {
+if (!orgId && userMetadata.role === 'tenant' && userMetadata.tenant_id) {
     const { data: tenantData } = await supabaseAdmin
       .from('tenants')
-      .select('units!inner(properties!inner(organization_id))')
+      .select('unit_id')
       .eq('id', userMetadata.tenant_id)
       .maybeSingle();
-    orgId = (tenantData as any)?.units?.properties?.organization_id ?? null;
+    
+    if (tenantData?.unit_id) {
+      const { data: unitData } = await supabaseAdmin
+        .from('units')
+        .select('property_id')
+        .eq('id', tenantData.unit_id)
+        .maybeSingle();
+      
+      if (unitData?.property_id) {
+        const { data: propData } = await supabaseAdmin
+          .from('properties')
+          .select('organization_id')
+          .eq('id', unitData.property_id)
+          .maybeSingle();
+        orgId = propData?.organization_id ?? null;
+      }
+    }
   }
 
   return {
