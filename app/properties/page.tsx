@@ -337,8 +337,8 @@ export default function PropertiesPage() {
     await loadUnits();
   }
 
-  const totalUnits = properties.reduce((sum, property) => sum + Number(property.unit_count ?? 0), 0);
-  const occupiedUnits = properties.reduce((sum, property) => sum + Number(property.occupied_units ?? 0), 0);
+  const totalUnits = units.length;
+  const occupiedUnits = units.filter((u: any) => u.occupancy_status === 'occupied').length;
   const totalTenants = properties.reduce((sum, property) => sum + Number(property.tenant_count ?? 0), 0);
   const rentRoll = properties.reduce((sum, property) => sum + Number(property.rent_roll ?? 0), 0);
   const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
