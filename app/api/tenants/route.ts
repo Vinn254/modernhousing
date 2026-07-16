@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (e) {
     // Non-fatal - log and continue
-    console.error('Error ensuring property organization assignment for tenant:', e?.message ?? e);
+    console.error('Error ensuring property organization assignment for tenant:', (e as any)?.message ?? e);
   }
 
   if (tenantId && finalUnitId) {
