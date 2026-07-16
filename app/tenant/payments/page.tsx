@@ -145,12 +145,13 @@ export default function TenantPaymentsPage() {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
     setProcessing(true);
-const response = await fetch('/api/mpesa/stk-push', {
+    const response = await fetch('/api/mpesa/stk-push', {
        method: 'POST', headers,
-       body: JSON.stringify({
+      body: JSON.stringify({
          phone: mpesaPhone,
-         amount: Number(mpesaAmount),
-         accountReference: 'SPRINGFIELD',
+        amount: Number(mpesaAmount),
+         transactionType: activeTab === 'payments' ? paymentType : 'utility',
+        accountReference: user?.user_metadata?.tenant_id || 'SPRINGFIELD',
          transactionDesc: activeTab === 'payments' 
            ? (paymentType === 'tenancy_agreement' ? 'Tenancy Agreement Fee' : 'Rent Payment')
            : 'Utility Payment'
