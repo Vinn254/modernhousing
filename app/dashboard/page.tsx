@@ -181,7 +181,7 @@ export default function DashboardPage() {
         created_at: p.paid_at || p.created_at,
       })), ...(billsResult.bills ?? []).map((b: any) => ({
         ...b,
-        amount: b.paid_amount ?? b.amount,
+        amount: b.paid_amount ?? 0,
         balance_remaining: b.balance ?? b.balance_remaining,
         created_at: b.payment_date || b.paid_at || b.created_at,
       }))];
