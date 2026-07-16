@@ -97,33 +97,36 @@ async function getTenantOrganizationId(tenantId: string, userEmail?: string): Pr
 }
 
 async function getOrganizationCredentials(organizationId: string | null) {
-  if (!organizationId) {
-    // Use any payment_settings credentials if defaults not set
-    const { data: anySettings } = await supabaseAdmin
+  // Try to find organization-specific credentials first
+  if (organizationId) {
+    const { data: settings } = await supabaseAdmin
       .from('payment_settings')
       .select('consumer_key, consumer_secret, passkey, shortcode')
-      .limit(1)
+      .eq('organization_id', organizationId)
       .maybeSingle();
-    
-    return {
-      consumerKey: anySettings?.consumer_key || defaultConsumerKey,
-      consumerSecret: anySettings?.consumer_secret || defaultConsumerSecret,
-      passkey: anySettings?.passkey || defaultPasskey,
-      shortCode: anySettings?.shortcode || defaultShortCode
-    };
+
+    if (settings?.consumer_key && settings?.consumer_secret) {
+      return {
+        consumerKey: settings.consumer_key,
+        consumerSecret: settings.consumer_secret,
+        passkey: settings.passkey || defaultPasskey,
+        shortCode: settings.shortcode || defaultShortCode
+      };
+    }
   }
 
-  const { data: settings } = await supabaseAdmin
+  // Fallback: use ANY payment_settings credentials (e.g., default landlord's settings)
+  const { data: anySettings } = await supabaseAdmin
     .from('payment_settings')
     .select('consumer_key, consumer_secret, passkey, shortcode')
-    .eq('organization_id', organizationId)
+    .limit(1)
     .maybeSingle();
 
   return {
-    consumerKey: settings?.consumer_key || defaultConsumerKey,
-    consumerSecret: settings?.consumer_secret || defaultConsumerSecret,
-    passkey: settings?.passkey || defaultPasskey,
-    shortCode: settings?.shortcode || defaultShortCode
+    consumerKey: anySettings?.consumer_key || defaultConsumerKey,
+    consumerSecret: anySettings?.consumer_secret || defaultConsumerSecret,
+    passkey: anySettings?.passkey || defaultPasskey,
+    shortCode: anySettings?.shortcode || defaultShortCode
   };
 }
 
