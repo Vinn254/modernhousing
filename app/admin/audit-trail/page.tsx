@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useSearchParams } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 interface AuditTrail {
   id: string;
   document_id: string;
