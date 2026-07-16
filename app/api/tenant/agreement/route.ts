@@ -121,11 +121,31 @@ export async function POST(request: NextRequest) {
     // Notify landlord
     const { data: tenantWithUnit } = await supabaseAdmin
       .from('tenants')
-      .select('units!inner(properties!inner(organization_id))')
+      .select('unit_id')
       .eq('id', tenant.id)
-      .single();
+      .maybeSingle();
 
-    const orgId = (tenantWithUnit as any)?.units?.properties?.organization_id;
+    if (!tenantWithUnit?.unit_id) {
+      return NextResponse.json({ agreement: data, message: `Agreement ${status}.` });
+    }
+
+    const { data: unitData } = await supabaseAdmin
+      .from('units')
+      .select('property_id')
+      .eq('id', tenantWithUnit.unit_id)
+      .maybeSingle();
+
+    if (!unitData?.property_id) {
+      return NextResponse.json({ agreement: data, message: `Agreement ${status}.` });
+    }
+
+    const { data: propData } = await supabaseAdmin
+      .from('properties')
+      .select('organization_id')
+      .eq('id', unitData.property_id)
+      .maybeSingle();
+
+    const orgId = propData?.organization_id;
     if (orgId) {
       const { data: admin } = await supabaseAdmin
         .from('profiles')
