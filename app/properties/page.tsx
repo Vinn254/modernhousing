@@ -347,15 +347,7 @@ export default function PropertiesPage() {
   const [selectedYear, selectedMonthNum] = selectedMonth.split('-').map(Number);
   const monthNamesFull = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const selectedMonthNameFull = monthNamesFull[selectedMonthNum - 1] + ' ' + selectedYear;
-  const filteredPayments = monthlyPayments.filter(p => {
-    const monthDue = (p.month_due || '').toLowerCase();
-    const selectedMonthLower = selectedMonthNameFull.toLowerCase();
-    const matchesMonthDue = monthDue.includes(selectedMonthLower) || monthDue.includes(selectedMonth);
-    if (matchesMonthDue) return true;
-    // Fallback: check payment date
-    const d = new Date(p.payment_date || p.paid_at || p.created_at);
-    return !isNaN(d.getTime()) && d.getMonth() + 1 === selectedMonthNum && d.getFullYear() === selectedYear;
-  }).filter(p => !['complaint', 'notification'].includes(p.transaction_type));
+  const filteredPayments = monthlyPayments.filter((p: any) => (p.month_due || '').toLowerCase().includes(selectedMonthNameFull.toLowerCase()) || (p.month_due || '').toLowerCase().includes(selectedMonth)).filter(p => !['complaint', 'notification'].includes(p.transaction_type));
   const filteredTotal = filteredPayments.reduce((sum: number, p: any) => sum + Number(p.paid_amount ?? p.amount ?? 0), 0);
 
   // Get units for selected property
