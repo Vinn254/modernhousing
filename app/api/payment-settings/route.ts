@@ -46,6 +46,14 @@ async function getAuthContext(request: NextRequest) {
     } catch (e) {}
   }
 
+  if (!sessionUser && cookie) {
+    try {
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { cookie } } });
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      if (session?.user) sessionUser = session.user;
+    } catch (e) {}
+  }
+
   if (!sessionUser) return { isSuperAdmin: false, isLandlord: false, sessionUser: null, userMetadata: {}, organizationId: null };
 
   const userMetadata = sessionUser.user_metadata || {};

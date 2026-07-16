@@ -33,8 +33,15 @@ async function getUserFromCookie(request: NextRequest) {
   if (!cookie) return null;
   const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { cookie } } });
   try {
-    const { data } = await supabaseAuth.auth.getUser();
-    return data.user;
+    const { data: userData } = await supabaseAuth.auth.getUser();
+    if (userData.user) return userData.user;
+  } catch {
+    // ignore
+  }
+
+  try {
+    const { data: sessionData } = await supabaseAuth.auth.getSession();
+    return sessionData.session?.user ?? null;
   } catch {
     return null;
   }
