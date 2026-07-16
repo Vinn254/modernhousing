@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { useSearchParams } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
 
 interface AuditTrail {
   id: string;
@@ -29,21 +30,15 @@ interface AuditTrail {
 }
 
 export default function AuditTrailPage() {
-  const searchParams = useSearchParams();
-  const documentId = searchParams?.get('documentId');
-  const tenantId = searchParams?.get('tenantId');
-  
   const [auditTrails, setAuditTrails] = useState<AuditTrail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [userRole, setUserRole] = useState('');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserRole(data.user?.user_metadata?.role || '');
-    });
-    loadAuditTrails();
-  }, [documentId, tenantId]);
+    const documentId = new URLSearchParams(window.location.search).get('documentId');
+    const tenantId = new URLSearchParams(window.location.search).get('tenantId');
+    loadAuditTrails(documentId, tenantId);
+  }, []);
 
   async function getAuthHeaders() {
     const { data } = await supabase.auth.getSession();
@@ -52,7 +47,7 @@ export default function AuditTrailPage() {
     return headers;
   }
 
-  async function loadAuditTrails() {
+  async function loadAuditTrails(documentId: string | null, tenantId: string | null) {
     setLoading(true);
     try {
       const params = new URLSearchParams();
