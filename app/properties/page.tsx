@@ -105,7 +105,7 @@ export default function PropertiesPage() {
 
   async function loadUnits() {
     try {
-      const response = await fetch('/api/units?cacheBust=' + Date.now(), { headers: await getAuthHeaders() });
+      const response = await fetch('/api/units', { headers: await getAuthHeaders() });
       const result = await response.json();
       if (response.ok) {
         setUnits(result.units ?? []);
@@ -337,8 +337,8 @@ export default function PropertiesPage() {
     await loadUnits();
   }
 
-  const totalUnits = units.length;
-  const occupiedUnits = units.filter((u: any) => u.occupancy_status === 'occupied').length;
+  const totalUnits = properties.reduce((sum, property) => sum + Number(property.unit_count ?? 0), 0);
+  const occupiedUnits = properties.reduce((sum, property) => sum + Number(property.occupied_units ?? 0), 0);
   const totalTenants = properties.reduce((sum, property) => sum + Number(property.tenant_count ?? 0), 0);
   const rentRoll = properties.reduce((sum, property) => sum + Number(property.rent_roll ?? 0), 0);
   const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
