@@ -99,6 +99,11 @@ export async function POST(request: NextRequest) {
 
     if (profilesErr) return NextResponse.json({ message: profilesErr.message }, { status: 500 });
 
+    const orphanedProperties = await supabaseAdmin
+      .from('properties')
+      .select('id')
+      .eq('organization_id', null);
+
     for (const profile of profiles ?? []) {
       if (!profile.organization_id) {
         const { data: newOrg } = await supabaseAdmin
@@ -112,19 +117,17 @@ export async function POST(request: NextRequest) {
             .from('profiles')
             .update({ organization_id: newOrg.id })
             .eq('id', profile.id);
+          
+          // Assign orphaned properties to this landlord
+          await supabaseAdmin
+            .from('properties')
+            .update({ organization_id: newOrg.id })
+            .eq('organization_id', null);
         }
       }
     }
 
-    const firstLandlord = (profiles ?? [])[0];
-    if (firstLandlord?.organization_id) {
-      await supabaseAdmin
-        .from('properties')
-        .update({ organization_id: firstLandlord.organization_id })
-        .eq('organization_id', null);
-    }
-
-    return NextResponse.json({ message: 'All landlords set up.', count: profiles?.length ?? 0, firstLandlordEmail: firstLandlord?.email });
+    return NextResponse.json({ message: 'All landlords set up with organizations.', count: profiles?.length ?? 0 });
   }
 
   return NextResponse.json({ message: 'Invalid action.' }, { status: 400 });
