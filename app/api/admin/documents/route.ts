@@ -83,26 +83,45 @@ export async function GET(request: NextRequest) {
       .eq('organization_id', authContext.organizationId ?? '');
     const propIds = new Set((orgProps ?? []).map((p: any) => p.id));
 
-    // Get documents with tenant and unit info
+    // Get documents with tenant info
     const { data, error } = await supabaseAdmin
       .from('tenant_documents')
-      .select(`
-        id,
-        tenant_id,
-        document_type,
-        file_path,
-        file_name,
-        created_at,
-        tenants!inner(full_name, unit_id, units!inner(property_id))
-      `)
+      .select('id, tenant_id, document_type, file_path, file_name, created_at, tenants!inner(id, full_name)')
       .order('created_at', { ascending: false });
 
     if (error) {
       return NextResponse.json({ documents: [], message: error.message }, { status: 500 });
     }
 
+    // Join with units to filter by property
+    const { data: unitsData } = await supabaseAdmin
+      .from('units')
+      .select('id, property_id')
+      .in('property_id', propIds.size > 0 ? Array.from(propIds) : ['none']);
+    const unitToTenant: Record<string, string> = {};
+    const tenantIds = new Set<string>();
+    const docs = data ?? [];
+    
+    for (const doc of docs) {
+      if (doc.tenant_id) tenantIds.add(doc.tenant_id);
+    }
+    
+    if (tenantIds.size > 0) {
+      const { data: tenantUnits } = await supabaseAdmin
+        .from('tenants')
+        .select('id, unit_id')
+        .in('id', Array.from(tenantIds));
+      (tenantUnits ?? []).forEach((t: any) => {
+        unitToTenant[t.id] = t.unit_id;
+      });
+    }
+
+    const unitIdsForFiltered = (unitsData ?? []).map((u: any) => u.id);
     const documents = (data ?? [])
-      .filter((d: any) => d.tenant_id && d.tenants && propIds.has(d.tenants.units?.property_id))
+      .filter((d: any) => {
+        const unitId = unitToTenant[d.tenant_id];
+        return unitId && unitIdsForFiltered.includes(unitId);
+      })
       .map((d: any) => ({
         id: d.id,
         tenant_id: d.tenant_id,
