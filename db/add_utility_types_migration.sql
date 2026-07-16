@@ -1,3 +1,6 @@
+-- Add shortcode column to payment_settings table
+ALTER TABLE payment_settings ADD COLUMN IF NOT EXISTS shortcode text;
+
 -- Add new utility types to bills table
 ALTER TABLE bills 
 DROP CONSTRAINT IF EXISTS bills_transaction_type_check;
