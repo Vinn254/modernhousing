@@ -320,6 +320,29 @@ export async function POST(request: NextRequest) {
 
   const tenantId = result.data?.id;
 
+  // Ensure the property's organization_id is set so tenant->unit->property->organization resolution works.
+  try {
+    if (finalUnitId) {
+      const { data: unitRow } = await supabaseAdmin.from('units').select('property_id').eq('id', finalUnitId).maybeSingle();
+      const propertyId = unitRow?.property_id;
+      if (propertyId) {
+        const { data: propRow } = await supabaseAdmin.from('properties').select('organization_id').eq('id', propertyId).maybeSingle();
+        const currentOrg = propRow?.organization_id ?? null;
+        if (!currentOrg) {
+          // Get requester org from auth context and set it if available
+          const authContext = await getAuthContext(request);
+          const requesterOrg = authContext.organizationId;
+          if (requesterOrg) {
+            await supabaseAdmin.from('properties').update({ organization_id: requesterOrg }).eq('id', propertyId);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // Non-fatal - log and continue
+    console.error('Error ensuring property organization assignment for tenant:', e?.message ?? e);
+  }
+
   if (tenantId && finalUnitId) {
     const { data: unitData } = await supabaseAdmin.from('units').select('*, properties!inner(name, address)').eq('id', finalUnitId).single();
     const agreementContent = `TENANCY AGREEMENT
