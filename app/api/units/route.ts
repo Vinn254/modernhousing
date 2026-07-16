@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
     } else if (propertyIds.length > 0) {
       query = query.in('property_id', propertyIds);
     } else {
-      query = query.limit(50);
+      return NextResponse.json({ units: [] });
     }
 
     const { data: units, error } = await query.order('unit_number', { ascending: true });
