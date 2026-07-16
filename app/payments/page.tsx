@@ -74,6 +74,7 @@ export default function PaymentsPage() {
   const [till, setTill] = useState('');
   const [pochi, setPochi] = useState('');
   const [mobile, setMobile] = useState('');
+  const [shortCode, setShortCode] = useState('');
   const [consumerKey, setConsumerKey] = useState('');
   const [consumerSecret, setConsumerSecret] = useState('');
   const [passkey, setPasskey] = useState('');
@@ -185,6 +186,7 @@ export default function PaymentsPage() {
       setMobile(result.mobile ?? '');
       setConsumerKey(result.consumerKey ?? '');
       setConsumerSecret(result.consumerSecret ?? '');
+      setShortCode(result.shortCode ?? '');
       setPasskey(result.passkey ?? '');
     }
   }
@@ -195,7 +197,7 @@ export default function PaymentsPage() {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify({
-        paybill, paybillAccount, till, pochi, mobile, consumerKey, consumerSecret, passkey,
+        paybill, paybillAccount, till, pochi, mobile, shortCode, consumerKey, consumerSecret, passkey,
       }),
     });
 
@@ -524,7 +526,8 @@ export default function PaymentsPage() {
               <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>M-Pesa Daraja Keys</h4>
               <input value={consumerKey} onChange={e => setConsumerKey(e.target.value)} placeholder="Consumer Key" />
               <input value={consumerSecret} onChange={e => setConsumerSecret(e.target.value)} placeholder="Consumer Secret" />
-              <input value={passkey} onChange={e => setPasskey(e.target.value)} placeholder="Passkey" />
+              <input value={shortCode} onChange={e => setShortCode(e.target.value)} placeholder="Business ShortCode (e.g. 174347)" />
+              <input value={passkey} onChange={e => setPasskey(e.target.value)} placeholder="Passkey (Security Key)" />
 
               <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>Payment Method Selection</h4>
               <select value={selectedMethod} onChange={e => setSelectedMethod(e.target.value as any)}>

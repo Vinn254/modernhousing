@@ -42,7 +42,6 @@ export default function AdminDashboard() {
       setVacantUnits(dashboardData.vacantUnits ?? 0);
       setVacantUnitsList(dashboardData.vacantUnitsList ?? []);
 
-      // Merge payments and bills, compute owed tenants locally
       const mergedPayments = [...(paymentsData.payments ?? []).map((p: any) => ({
         ...p,
         created_at: p.paid_at || p.created_at,
@@ -81,6 +80,7 @@ export default function AdminDashboard() {
       const owedTenants = Array.from(byTenant.values());
       setRentOwedByTenant(owedTenants);
       setTotalOwed(owedTenants.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0));
+      setLoading(false);
     }
     loadData();
   }, []);
@@ -103,55 +103,67 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-<section className="dashboard-hero-stats">
-        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-          </div>
-          <div>
-            <div className="card-label">Unit Occupancy</div>
-            <h3 style={{ margin: 0 }}>{occupiedUnits}/{occupiedUnits + vacantUnits}</h3>
-            <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
-          </div>
-        </div>
+        <section className="dashboard-hero-stats">
+          {!loading && occupiedUnits + vacantUnits > 0 && (
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <DonutChart data={occupancyData} size={48}  />
+              <div>
+                <div className="card-label">Unit Occupancy</div>
+                <h3 style={{ margin: 0 }}>{occupiedUnits}/{occupiedUnits + vacantUnits}</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
+              </div>
+            </div>
+          )}
+          {loading && (
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+              </div>
+              <div>
+                <div className="card-label">Unit Occupancy</div>
+                <h3 style={{ margin: 0 }}>—/—</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
+              </div>
+            </div>
+          )}
 
-        {!loading && occupiedUnits + vacantUnits > 0 && (
-          <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          {!loading && occupiedUnits + vacantUnits > 0 && (
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              </div>
+              <div>
+                <div className="card-label">Occupancy Rate</div>
+                <h3 style={{ margin: 0 }}>{Math.round((occupiedUnits / (occupiedUnits + vacantUnits)) * 100)}%</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>of units occupied</p>
+              </div>
+            </div>
+          )}
+
+          <button type="button" className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', cursor: 'pointer' }} onClick={() => setShowVacantModal(true)}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><path d="M9 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
             </div>
             <div>
-              <div className="card-label">Occupancy Rate</div>
-              <h3 style={{ margin: 0 }}>{Math.round((occupiedUnits / (occupiedUnits + vacantUnits)) * 100)}%</h3>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>of units occupied</p>
+              <div className="card-label">Vacant Units</div>
+              <h3 style={{ margin: 0 }}>{vacantUnits}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Available for rent</p>
             </div>
-          </div>
-        )}
+            <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
 
-        <button type="button" className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', cursor: 'pointer' }} onClick={() => setShowVacantModal(true)}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><path d="M9 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
-          </div>
-          <div>
-            <div className="card-label">Vacant Units</div>
-            <h3 style={{ margin: 0 }}>{vacantUnits}</h3>
-            <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Available for rent</p>
-          </div>
-          <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
-
-        <button type="button" className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', cursor: 'pointer' }} onClick={() => setShowRentOwedModal(true)}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-          </div>
-          <div>
-            <div className="card-label">Total Rent Owed</div>
-            <h3 style={{ margin: 0, color: '#dc2626' }}>{formatCurrency(totalOwed)}</h3>
-            <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Outstanding balances</p>
-          </div>
-          <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
-      </section>
+          <button type="button" className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', cursor: 'pointer' }} onClick={() => setShowRentOwedModal(true)}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Total Rent Owed</div>
+              <h3 style={{ margin: 0, color: '#dc2626' }}>{formatCurrency(totalOwed)}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Outstanding balances</p>
+            </div>
+            <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </section>
 
         <section className="card-grid" style={{ marginBottom: '24px' }}>
           <article className="card">
@@ -196,27 +208,27 @@ export default function AdminDashboard() {
             <Link href="/admin/utilities" className="card-cta">Manage Utilities</Link>
           </article>
 
-<article className="card">
-               <div className="feat-icon" style={{ background: '#f59e0b' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-               <h3>Tenant Documents</h3>
-               <p>Review tenant-submitted documents.</p>
-               <Link href="/admin/documents" className="card-cta">View Documents</Link>
-             </article>
+          <article className="card">
+            <div className="feat-icon" style={{ background: '#f59e0b' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <h3>Tenant Documents</h3>
+            <p>Review tenant-submitted documents.</p>
+            <Link href="/admin/documents" className="card-cta">View Documents</Link>
+          </article>
 
-             <article className="card">
-               <div className="feat-icon" style={{ background: '#6366f1' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
-               <h3>System Audit</h3>
-               <p>Monitor all system activities and security events.</p>
-               <Link href="/admin/audit" className="card-cta">View Audit Logs</Link>
-             </article>
+          <article className="card">
+            <div className="feat-icon" style={{ background: '#6366f1' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+            <h3>System Audit</h3>
+            <p>Monitor all system activities and security events.</p>
+            <Link href="/admin/audit" className="card-cta">View Audit Logs</Link>
+          </article>
 
-             <article className="card">
-               <div className="feat-icon" style={{ background: '#8b5cf6' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-               <h3>Document Audit Trail</h3>
-               <p>View signing activity records for tenant documents.</p>
-               <Link href="/admin/audit-trail" className="card-cta">View Audit Trails</Link>
-             </article>
-           </section>
+          <article className="card">
+            <div className="feat-icon" style={{ background: '#8b5cf6' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <h3>Document Audit Trail</h3>
+            <p>View signing activity records for tenant documents.</p>
+            <Link href="/admin/audit-trail" className="card-cta">View Audit Trails</Link>
+          </article>
+        </section>
 
         {showVacantModal && (
           <div className="modal-overlay" onClick={() => setShowVacantModal(false)}>

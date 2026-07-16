@@ -108,14 +108,14 @@ export async function GET(request: NextRequest) {
 
     if (!orgId) {
       return NextResponse.json({
-        paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '',
+        paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '', shortCode: '',
         consumerKey: '', consumerSecret: '', passkey: '',
       });
     }
 
     const { data: settings } = await supabaseAdmin
       .from('payment_settings')
-      .select('paybill, paybill_account, till, pochi, mobile, consumer_key, consumer_secret, passkey')
+      .select('paybill, paybill_account, till, pochi, mobile, shortcode, consumer_key, consumer_secret, passkey')
       .eq('organization_id', orgId)
       .maybeSingle();
 
@@ -125,13 +125,14 @@ export async function GET(request: NextRequest) {
       till: settings?.till ?? '',
       pochi: settings?.pochi ?? '',
       mobile: settings?.mobile ?? '',
+      shortCode: settings?.shortcode ?? '',
       consumerKey: settings?.consumer_key ?? '',
       consumerSecret: settings?.consumer_secret ?? '',
       passkey: settings?.passkey ?? '',
     });
   } catch (error: any) {
     return NextResponse.json({
-      paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '',
+      paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '', shortCode: '',
       consumerKey: '', consumerSecret: '', passkey: '',
     });
   }
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { paybill, paybillAccount, till, pochi, mobile, consumerKey, consumerSecret, passkey } = body;
+    const { paybill, paybillAccount, till, pochi, mobile, shortCode, consumerKey, consumerSecret, passkey } = body;
 
     const { data: existing } = await supabaseAdmin
       .from('payment_settings')
@@ -162,6 +163,7 @@ export async function POST(request: NextRequest) {
       till: till ?? '',
       pochi: pochi ?? '',
       mobile: mobile ?? '',
+      shortcode: shortCode ?? '',
       consumer_key: consumerKey ?? '',
       consumer_secret: consumerSecret ?? '',
       passkey: passkey ?? '',

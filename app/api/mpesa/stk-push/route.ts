@@ -41,15 +41,15 @@ async function getOrganizationCredentials(organizationId: string) {
 
   const { data: settings } = await supabaseAdmin
     .from('payment_settings')
-    .select('consumer_key, consumer_secret, passkey')
+    .select('consumer_key, consumer_secret, passkey, shortcode')
     .eq('organization_id', organizationId)
-    .single();
+    .maybeSingle();
 
   return {
     consumerKey: settings?.consumer_key || defaultConsumerKey,
     consumerSecret: settings?.consumer_secret || defaultConsumerSecret,
     passkey: settings?.passkey || defaultPasskey,
-    shortCode: defaultShortCode // Organization shortcode same as default for now
+    shortCode: settings?.shortcode || defaultShortCode
   };
 }
 
