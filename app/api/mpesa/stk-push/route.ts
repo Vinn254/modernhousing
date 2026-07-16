@@ -30,15 +30,33 @@ function decodeJWT(token: string): any | null {
 }
 
 async function getTenantOrganizationId(tenantId: string): Promise<string | null> {
-  const { data: tenantData } = await supabaseAdmin
+  // First try by tenant ID
+  const { data: tenantDataFromDb } = await supabaseAdmin
     .from('tenants')
     .select('units!inner(properties!inner(organization_id))')
     .eq('id', tenantId)
-    .single();
-  return (tenantData as any)?.units?.properties?.organization_id ?? null;
+    .maybeSingle();
+  
+  const tenantData: any = tenantDataFromDb;
+  
+  if (tenantData?.units?.properties?.[0]?.organization_id) {
+    return tenantData.units.properties[0].organization_id;
+  }
+  
+  // Fallback: try to find organization from any payment_settings if exists (for testing)
+  const { data: anySettings } = await supabaseAdmin
+    .from('payment_settings')
+    .select('organization_id')
+    .limit(1)
+    .maybeSingle();
+  
+  return anySettings?.organization_id ?? null;
 }
 
 async function getOrganizationCredentials(organizationId: string | null) {
+  console.log('getOrganizationCredentials called with orgId:', organizationId);
+  console.log('Default credentials available:', { defaultConsumerKey: !!defaultConsumerKey, defaultConsumerSecret: !!defaultConsumerSecret });
+  
   if (!organizationId) {
     return {
       consumerKey: defaultConsumerKey,
@@ -175,6 +193,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('STK push error:', error.message);
-    return NextResponse.json({ message: error.message ?? 'Payment initiation failed' }, { status: 500 });
+    return NextResponse.json({ message: 'M-Pesa error: ' + (error.message ?? 'Unknown error'), error: error.message }, { status: 500 });
   }
 }
