@@ -98,9 +98,10 @@ export async function GET(request: NextRequest) {
     let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status');
 
     // For landlords, filter by organization
+    let propIds: string[] = [];
     if (!isAgent && !isSuperAdmin && authContext.organizationId) {
       const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
-      const propIds = (orgProps ?? []).map((p: any) => p.id);
+      propIds = (orgProps ?? []).map((p: any) => p.id);
       if (propIds.length > 0) {
         propertiesQuery = propertiesQuery.in('id', propIds);
         unitsQuery = unitsQuery.in('property_id', propIds);
@@ -124,12 +125,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const unitsForVacantQuery = !isAgent && !isSuperAdmin && authContext.organizationId && propIds.length > 0
+      ? supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant').in('property_id', propIds)
+      : (isSuperAdmin
+        ? supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant')
+        : supabaseAdmin.from('units').select('id').eq('property_id', 'none'));
+
     const [{ data: propertiesData }, { data: unitsData }, { data: tenantsData }, { data: subscriptionsData }, { data: unitsForVacant }] = await Promise.all([
       propertiesQuery,
       unitsQuery,
       tenantsQuery,
       subscriptionsQuery,
-      supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant'),
+      unitsForVacantQuery,
     ]);
 
     const allTenants = tenantsData ?? [];
