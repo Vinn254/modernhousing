@@ -422,36 +422,47 @@ const getTypeLabel = (type: string) => {
         )}
       </section>
 
-<section className="card" style={{ marginTop: 24 }}>
-        <div className="card-label">BALANCE SUMMARY</div>
-        <div style={{ padding: '16px', background: 'var(--line-soft)', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span>Rent Balance:</span>
-            <span style={{ color: totalRentOwed < 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(-totalRentOwed)}</span>
+<section className="dashboard-hero-stats" style={{ marginTop: 24 }}>
+        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: totalRentOwed < 0 ? 'var(--accent-soft)' : 'rgba(220,38,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={totalRentOwed < 0 ? 'var(--accent)' : '#dc2626'} strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span>Utility Balance:</span>
-            <span style={{ color: totalUtilityOwed < 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(-totalUtilityOwed)}</span>
+          <div>
+            <div className="card-label">Rent Balance</div>
+            <h3 style={{ margin: 0, color: totalRentOwed < 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(-totalRentOwed)}</h3>
           </div>
-          <hr style={{ margin: '12px 0', borderColor: 'var(--line)' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700, marginBottom: 12 }}>
-            <span>Total Outstanding:</span>
-            <span style={{ color: totalTenantOwes > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalTenantOwes)}</span>
+        </div>
+        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: totalUtilityOwed < 0 ? 'rgba(16,185,129,0.12)' : 'rgba(220,38,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={totalUtilityOwed < 0 ? 'var(--accent)' : '#dc2626'} strokeWidth="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              onClick={async () => {
-                await generateStatementPDF(rentBills, 'Rent Payment Statement', totalRentOwed);
-              }}
-              className="action-button primary" style={{ flex: 1, padding: "8px", fontSize: "13px" }}>Download Rent Statement (PDF)
-            </button>
-            <button
-              onClick={async () => {
-                await generateStatementPDF(utilityBills, 'Utility Payment Statement', totalUtilityOwed);
-              }}
-              className="action-button secondary" style={{ flex: 1, padding: "8px", fontSize: "13px" }}>Download Utility Statement (PDF)
-            </button>
+          <div>
+            <div className="card-label">Utility Balance</div>
+            <h3 style={{ margin: 0, color: totalUtilityOwed < 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(-totalUtilityOwed)}</h3>
           </div>
+        </div>
+        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: totalTenantOwes > 0 ? 'rgba(220,38,38,0.12)' : 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={totalTenantOwes > 0 ? '#dc2626' : 'var(--accent)'} strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div>
+            <div className="card-label">Total Outstanding</div>
+            <h3 style={{ margin: 0, color: totalTenantOwes > 0 ? '#dc2626' : 'var(--accent)' }}>{formatCurrency(totalTenantOwes)}</h3>
+          </div>
+        </div>
+        <div className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}>
+          <button
+            onClick={async () => {
+              await generateStatementPDF(rentBills, 'Rent Payment Statement', totalRentOwed);
+            }}
+            className="action-button primary" style={{ width: '100%', padding: '8px', fontSize: '13px' }}>Rent Statement (PDF)
+          </button>
+          <button
+            onClick={async () => {
+              await generateStatementPDF(utilityBills, 'Utility Payment Statement', totalUtilityOwed);
+            }}
+            className="action-button secondary" style={{ width: '100%', padding: '8px', fontSize: '13px' }}>Utility Statement (PDF)
+          </button>
         </div>
       </section>
     </main>
