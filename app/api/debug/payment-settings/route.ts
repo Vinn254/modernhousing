@@ -53,7 +53,65 @@ async function getAuthOrg(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const orgId = await getAuthOrg(request);
+    // allow tenantId or email query params to lookup org without auth
+    const tenantId = request.nextUrl.searchParams.get('tenantId');
+    const email = request.nextUrl.searchParams.get('email');
+
+    let orgId: string | null = null;
+
+    if (tenantId) {
+      const { data: tenantData } = await supabaseAdmin
+        .from('tenants')
+        .select('unit_id')
+        .eq('id', tenantId)
+        .maybeSingle();
+
+      if (tenantData?.unit_id) {
+        const { data: unitData } = await supabaseAdmin
+          .from('units')
+          .select('property_id')
+          .eq('id', tenantData.unit_id)
+          .maybeSingle();
+
+        if (unitData?.property_id) {
+          const { data: propData } = await supabaseAdmin
+            .from('properties')
+            .select('organization_id')
+            .eq('id', unitData.property_id)
+            .maybeSingle();
+          orgId = propData?.organization_id ?? null;
+        }
+      }
+    } else if (email) {
+      const { data: tenantByEmail } = await supabaseAdmin
+        .from('tenants')
+        .select('unit_id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (tenantByEmail?.unit_id) {
+        const { data: unitData } = await supabaseAdmin
+          .from('units')
+          .select('property_id')
+          .eq('id', tenantByEmail.unit_id)
+          .maybeSingle();
+
+        if (unitData?.property_id) {
+          const { data: propData } = await supabaseAdmin
+            .from('properties')
+            .select('organization_id')
+            .eq('id', unitData.property_id)
+            .maybeSingle();
+          orgId = propData?.organization_id ?? null;
+        }
+      }
+    }
+
+    if (!orgId) {
+      // fallback to auth-based lookup
+      orgId = await getAuthOrg(request);
+    }
+
     if (!orgId) return NextResponse.json({ message: 'organization not found' }, { status: 403 });
 
     const { data: settings, error } = await supabaseAdmin
