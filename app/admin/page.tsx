@@ -83,6 +83,12 @@ export default function AdminDashboard() {
       setLoading(false);
     }
     loadData();
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) loadData();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   const hour = new Date().getHours();
