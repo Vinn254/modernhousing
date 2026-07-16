@@ -151,15 +151,15 @@ export default function TenantPaymentsPage() {
          phone: mpesaPhone,
         amount: Number(mpesaAmount),
          transactionType: activeTab === 'payments' ? paymentType : 'utility',
-        accountReference: user?.user_metadata?.tenant_id || 'SPRINGFIELD',
+        accountReference: user?.id || 'SPRINGFIELD',
          transactionDesc: activeTab === 'payments' 
            ? (paymentType === 'tenancy_agreement' ? 'Tenancy Agreement Fee' : 'Rent Payment')
            : 'Utility Payment'
        }),
      });
-    const result = await response.json();
+    const result = await response.json().catch(() => ({}));
     setProcessing(false);
-    if (!response.ok) { setError(result.message ?? 'Payment failed'); return; }
+    if (!response.ok) { setError(result.message ?? 'Payment failed - check landlord Daraja settings in Payment Settings'); return; }
     setMessage('M-Pesa prompt sent. Complete payment on your phone.');
     setMpesaPhone(''); setMpesaAmount('');
   }
