@@ -105,7 +105,7 @@ export default function PropertiesPage() {
 
   async function loadUnits() {
     try {
-      const response = await fetch('/api/units', { headers: await getAuthHeaders() });
+      const response = await fetch('/api/units?cacheBust=' + Date.now(), { headers: await getAuthHeaders() });
       const result = await response.json();
       if (response.ok) {
         setUnits(result.units ?? []);
