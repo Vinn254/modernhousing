@@ -29,7 +29,7 @@ function decodeJWT(token: string): any | null {
   }
 }
 
-async function getTenantOrganizationId(tenantId: string): Promise<string | null> {
+async function getTenantOrganizationId(tenantId: string, userEmail?: string): Promise<string | null> {
   // First try by tenant ID
   const { data: tenantDataFromDb } = await supabaseAdmin
     .from('tenants')
@@ -39,11 +39,24 @@ async function getTenantOrganizationId(tenantId: string): Promise<string | null>
   
   const tenantData: any = tenantDataFromDb;
   
-  if (tenantData?.units?.properties?.[0]?.organization_id) {
-    return tenantData.units.properties[0].organization_id;
+  if (tenantData?.units?.[0]?.properties?.[0]?.organization_id) {
+    return tenantData.units?.[0]?.properties?.[0]?.organization_id;
   }
   
-  // Fallback: try to find organization from any payment_settings if exists (for testing)
+  // Fallback: try by email if user is a tenant
+  if (userEmail) {
+    const { data: tenantByEmail } = await supabaseAdmin
+      .from('tenants')
+      .select('units!inner(properties!inner(organization_id))')
+      .eq('email', userEmail)
+      .maybeSingle();
+    
+    if (tenantByEmail?.units?.[0]?.properties?.[0]?.organization_id) {
+      return tenantByEmail.units?.[0]?.properties?.[0]?.organization_id;
+    }
+  }
+  
+  // Final fallback: try to find organization from any payment_settings if exists (for testing)
   const { data: anySettings } = await supabaseAdmin
     .from('payment_settings')
     .select('organization_id')
@@ -128,13 +141,13 @@ export async function POST(request: NextRequest) {
     if (!organizationId && userRole === 'tenant') {
       const tenantId = decoded?.user_metadata?.tenant_id ?? userId;
       if (tenantId) {
-        organizationId = await getTenantOrganizationId(tenantId);
+        organizationId = await getTenantOrganizationId(tenantId, decoded?.email);
       }
     }
     
     // If tenant lookup fails, try using user_id directly as fallback
     if (!organizationId && !userRole) {
-      organizationId = await getTenantOrganizationId(userId);
+      organizationId = await getTenantOrganizationId(userId, decoded?.email);
     }
 
     // Get credentials - prefer organization-specific if available
