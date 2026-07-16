@@ -107,13 +107,26 @@ export default function AdminDashboard() {
 
         <section className="dashboard-hero-stats">
           <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 16 }}>
-            <DonutChart data={occupancyData} size={80} centerLabel={`${occupancyRate}%`} />
+            <DonutChart data={occupancyData} size={80} />
             <div>
               <div className="card-label">Unit Occupancy</div>
               <h3 style={{ margin: 0 }}>{loading ? '—' : occupiedUnits}/{loading ? '—' : occupiedUnits + vacantUnits}</h3>
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
             </div>
           </div>
+
+          {!loading && occupiedUnits + vacantUnits > 0 && (
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              </div>
+              <div>
+                <div className="card-label">Occupancy Rate</div>
+                <h3 style={{ margin: 0 }}>{occupancyRate}%</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>of units occupied</p>
+              </div>
+            </div>
+          )}
 
           <button type="button" className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', cursor: 'pointer' }} onClick={() => setShowVacantModal(true)}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

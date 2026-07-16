@@ -29,7 +29,16 @@ function decodeJWT(token: string): any | null {
   }
 }
 
-async function getOrganizationCredentials(organizationId: string) {
+async function getTenantOrganizationId(tenantId: string): Promise<string | null> {
+  const { data: tenantData } = await supabaseAdmin
+    .from('tenants')
+    .select('units!inner(properties!inner(organization_id))')
+    .eq('id', tenantId)
+    .single();
+  return (tenantData as any)?.units?.properties?.organization_id ?? null;
+}
+
+async function getOrganizationCredentials(organizationId: string | null) {
   if (!organizationId) {
     return {
       consumerKey: defaultConsumerKey,
@@ -91,8 +100,18 @@ export async function POST(request: NextRequest) {
     }
 
     const decoded = decodeJWT(authorization.split(' ')[1]);
-    const tenantId = decoded?.sub;
-    const organizationId = decoded?.user_metadata?.organization_id;
+    const userId = decoded?.sub;
+    
+    // Try to get organization_id from user metadata first, then from tenant record
+    let organizationId = decoded?.user_metadata?.organization_id;
+    if (!organizationId) {
+      // Check if this is a tenant user
+      const userRole = decoded?.user_metadata?.role;
+      const tenantId = decoded?.user_metadata?.tenant_id ?? userId; // tenant_id or use user id as tenant id
+      if (tenantId && userRole === 'tenant') {
+        organizationId = await getTenantOrganizationId(tenantId);
+      }
+    }
 
     // Get credentials - prefer organization-specific if available
     const creds = await getOrganizationCredentials(organizationId);
@@ -126,7 +145,7 @@ export async function POST(request: NextRequest) {
         PartyB: creds.shortCode,
         PhoneNumber: phone,
         CallBackURL: callbackUrl,
-        AccountReference: tenantId ? `${tenantId}|${transactionType || 'rent'}` : 'SPRINGFIELD',
+        AccountReference: userId ? `${userId}|${transactionType || 'rent'}` : 'SPRINGFIELD',
         TransactionDesc: transactionDesc || 'Rent Payment'
       })
     });
