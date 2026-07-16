@@ -144,12 +144,21 @@ async function getAccessToken(consumerKey: string, consumerSecret: string): Prom
     headers: { Authorization: `Basic ${auth}` }
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
+  let tokenResponse;
+  try {
+    tokenResponse = response;
+  } catch (err: any) {
+    console.error('Failed to fetch M-Pesa access token. URL:', `${baseUrl}/oauth/v1/generate?grant_type=client_credentials`, 'Error:', err?.message || err);
+    throw new Error('fetch failed');
+  }
+
+  if (!tokenResponse.ok) {
+    const errorText = await tokenResponse.text();
+    console.error('M-Pesa token request returned non-OK status', tokenResponse.status, errorText);
     throw new Error(`Failed to get M-Pesa access token: ${errorText}`);
   }
 
-  const data = await response.json();
+  const data = await tokenResponse.json();
   return data.access_token;
 }
 
@@ -203,35 +212,42 @@ export async function POST(request: NextRequest) {
       ? `${process.env.NEXT_PUBLIC_APP_URL}/api/mpesa/callback` 
       : 'https://webhook.site';
 
-    const response = await fetch(`${baseUrl}/mpesa/stkpush/v1/processrequest`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        BusinessShortCode: creds.shortCode,
-        Password: password,
-        Timestamp: timestamp,
-        TransactionType: 'CustomerPayBillOnline',
-        Amount: Math.round(amount),
-        PartyA: phone,
-        PartyB: creds.shortCode,
-        PhoneNumber: phone,
-        CallBackURL: callbackUrl,
-        AccountReference: userId ? `${userId}|${transactionType || 'rent'}` : 'SPRINGFIELD',
-        TransactionDesc: transactionDesc || 'Rent Payment'
-      })
-    });
-
-    const result = await response.json();
+    let response;
+    let result;
+    try {
+      response = await fetch(`${baseUrl}/mpesa/stkpush/v1/processrequest`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          BusinessShortCode: creds.shortCode,
+          Password: password,
+          Timestamp: timestamp,
+          TransactionType: 'CustomerPayBillOnline',
+          Amount: Math.round(amount),
+          PartyA: phone,
+          PartyB: creds.shortCode,
+          PhoneNumber: phone,
+          CallBackURL: callbackUrl,
+          AccountReference: userId ? `${userId}|${transactionType || 'rent'}` : 'SPRINGFIELD',
+          TransactionDesc: transactionDesc || 'Rent Payment'
+        })
+      });
+      result = await response.json();
+    } catch (err: any) {
+      console.error('Failed to call M-Pesa STK processrequest. URL:', `${baseUrl}/mpesa/stkpush/v1/processrequest`, 'Error:', err?.message || err);
+      throw new Error('fetch failed');
+    }
     
     if (!response.ok) {
-      console.error('M-Pesa STK push failed:', { 
-        status: response.status, 
-        result, 
+      console.error('M-Pesa STK push failed:', {
+        status: response.status,
+        result,
         shortCode: creds.shortCode,
-        environment 
+        environment,
+        url: `${baseUrl}/mpesa/stkpush/v1/processrequest`
       });
       return NextResponse.json({ 
         message: result.errorMessage ?? result.messageRequestDescription ?? 'Payment initiation failed',
