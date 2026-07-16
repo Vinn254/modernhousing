@@ -62,11 +62,18 @@ export default function PropertiesPage() {
 
   async function loadMonthlyPayments() {
     try {
-      const response = await fetch('/api/payments', { headers: await getAuthHeaders() });
-      const result = await response.json();
-      if (response.ok) {
-        setMonthlyPayments(result.payments ?? []);
-      }
+      const [paymentsResponse, billsResponse] = await Promise.all([
+        fetch('/api/payments', { headers: await getAuthHeaders() }),
+        fetch('/api/bills', { headers: await getAuthHeaders() }),
+      ]);
+      const paymentsResult = paymentsResponse.ok ? await paymentsResponse.json() : {};
+      const billsResult = billsResponse.ok ? await billsResponse.json() : {};
+      const merged = [...(paymentsResult.payments ?? []), ...(billsResult.bills ?? []).map((b: any) => ({
+        ...b,
+        amount: b.paid_amount ?? b.amount,
+        created_at: b.paid_at || b.created_at,
+      }))];
+      setMonthlyPayments(merged);
     } catch (e) {}
   }
 
@@ -332,7 +339,15 @@ export default function PropertiesPage() {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const monthlyCollections = monthlyPayments
-    .filter(p => p.created_at && new Date(p.created_at).getMonth() === currentMonth && new Date(p.created_at).getFullYear() === currentYear)
+    .filter(p => {
+      if (!p.created_at) return false;
+      const d = new Date(p.created_at);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
+    .filter(p => {
+      const type = p.transaction_type || p.type;
+      return !['complaint', 'notification'].includes(type);
+    })
     .reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0);
 
   // Get units for selected property
