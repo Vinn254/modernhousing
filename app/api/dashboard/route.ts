@@ -145,16 +145,6 @@ export async function GET(request: NextRequest) {
     const occupiedUnits = (allUnits ?? []).filter((u: any) => u.occupancy_status === 'occupied').length;
     const vacantUnits = (allUnits ?? []).length - occupiedUnits;
 
-    // Filter vacant units by organization if landlord
-    let vacantUnitsFiltered = unitsForVacant ?? [];
-    if (!isAgent && !isSuperAdmin && authContext.organizationId) {
-      const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
-      const propIds = (orgProps ?? []).map((p: any) => p.id);
-      vacantUnitsFiltered = (unitsForVacant ?? []).filter((u: any) => propIds.includes(u.property_id));
-    } else if (!isAgent && !isSuperAdmin && !authContext.organizationId) {
-      vacantUnitsFiltered = [];
-    }
-
     // RENT OWED — same proven scoping as /api/payments:
     // org -> properties -> units -> tenants -> their payments.
     let owedTenantIds: string[] = [];
@@ -262,7 +252,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const vacantUnitsList = vacantUnitsFiltered.map((u: any) => ({
+    const vacantUnitsList = (unitsForVacant ?? []).map((u: any) => ({
       unit_number: u.unit_number,
       property_name: (propertiesData ?? []).find((p: any) => p.id === u.property_id)?.name ?? '—',
       rent_amount: u.rent_amount ?? 0,
