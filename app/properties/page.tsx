@@ -405,7 +405,7 @@ export default function PropertiesPage() {
             <p>Monthly rent from recorded units.</p>
           </article>
           <article className="property-stat clickable" onClick={() => setShowPaymentsModal(true)} style={{ cursor: 'pointer' }}>
-            <span>Collected ({new Date().toLocaleString('en-US', { month: 'short' })})</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Collected per month<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
             <strong>KSH {filteredTotal.toLocaleString()}</strong>
             <p>Total cash collected this month. Click to view details.</p>
           </article>
