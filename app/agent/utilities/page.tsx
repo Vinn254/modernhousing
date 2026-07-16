@@ -21,7 +21,7 @@ interface Unit {
   tenant?: { id: string; full_name: string };
 }
 
-const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'];
+const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'];
 
 export default function AgentUtilitiesPage() {
   const [tenants, setTenants] = useState<any[]>([]);

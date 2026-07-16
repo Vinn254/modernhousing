@@ -161,7 +161,7 @@ export default function TenantPaymentsPage() {
   }
 
   const rentBills = bills.filter(b => ['rent', 'overdue', 'deposit'].includes(b.transaction_type));
-  const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'].includes(b.transaction_type));
+  const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'].includes(b.transaction_type));
 
   const calculateWithRunningBalance = (billsList: Bill[]) => {
     let runningBalance = 0;
@@ -185,9 +185,9 @@ export default function TenantPaymentsPage() {
 
 const getTypeLabel = (type: string) => {
     const map: Record<string, string> = {
-      rent: 'Rent', overdue: 'Overdue', deposit: 'Deposit',
+      rent: 'Rent', overdue: 'Overdue', deposit: 'Deposit', tenancy_agreement: 'Agreement Fee',
       water: 'Water', garbage: 'Garbage', service_charge: 'Service Charge',
-      parking: 'Parking', security: 'Security', other: 'Other',
+      parking: 'Parking', security: 'Security', internet: 'Internet', laundry: 'Laundry', pet_fees: 'Pet Fees', other: 'Other',
     };
     return map[type] || type;
   };
@@ -278,8 +278,8 @@ const getTypeLabel = (type: string) => {
 
   const getInvoiceTypeLabel = (type: string) => {
     const map: Record<string, string> = {
-      rent: 'Rent', water: 'Water', utility: 'Utility', other: 'Other',
-      garbage: 'Garbage', service_charge: 'Service Charge', parking: 'Parking', security: 'Security',
+      rent: 'Rent', water: 'Water', utility: 'Utility', other: 'Other', tenancy_agreement: 'Agreement Fee',
+      garbage: 'Garbage', service_charge: 'Service Charge', parking: 'Parking', security: 'Security', internet: 'Internet', laundry: 'Laundry', pet_fees: 'Pet Fees',
     };
     return map[type] || type;
   };

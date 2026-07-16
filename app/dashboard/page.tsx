@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
-import DonutChart from '../components/DonutChart';
 
 interface DashboardStats {
   properties: number;
@@ -137,7 +137,7 @@ export default function DashboardPage() {
    const [utilityType, setUtilityType] = useState('water');
    const [utilityAmount, setUtilityAmount] = useState('');
    const [utilityDescription, setUtilityDescription] = useState('');
-   const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'other'];
+   const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'];
    const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: string}>({});
    const [waterBills, setWaterBills] = useState<any[]>([]);
    const [waterMonthDue, setWaterMonthDue] = useState('');
@@ -519,45 +519,48 @@ export default function DashboardPage() {
 
       {isAgent && effectivePropertyId && (
         <>
-          <section className="kpi-row" style={{ marginTop: 24 }}>
-            <div className="kpi-tile">
-              <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-bright))' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-              </span>
-              <div className="kpi-tile-body">
-                <span className="kpi-tile-value">{units.length}</span>
-                <span className="kpi-tile-label">Total Units</span>
-                <span className="kpi-tile-caption">in your portfolio</span>
+          <section className="dashboard-hero-stats" style={{ marginTop: 24 }}>
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+              </div>
+              <div>
+                <div className="card-label">Total Units</div>
+                <h3 style={{ margin: 0 }}>{units.length}</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>in your portfolio</p>
               </div>
             </div>
-            <div className="kpi-tile">
-              <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-bright))' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
-              </span>
-              <div className="kpi-tile-body">
-                <span className="kpi-tile-value">{units.filter(u => u.occupancy_status === 'occupied').length}</span>
-                <span className="kpi-tile-label">Occupied</span>
-                <span className="kpi-tile-caption">units with tenants</span>
+
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
+              </div>
+              <div>
+                <div className="card-label">Occupied</div>
+                <h3 style={{ margin: 0 }}>{units.filter(u => u.occupancy_status === 'occupied').length}</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>units with tenants</p>
               </div>
             </div>
-            <div className="kpi-tile">
-              <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              </span>
-              <div className="kpi-tile-body">
-                <span className="kpi-tile-value">{units.filter(u => u.occupancy_status === 'vacant').length}</span>
-                <span className="kpi-tile-label">Vacant</span>
-                <span className="kpi-tile-caption">available for rent</span>
+
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div>
+                <div className="card-label">Vacant</div>
+                <h3 style={{ margin: 0 }}>{units.filter(u => u.occupancy_status === 'vacant').length}</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>available for rent</p>
               </div>
             </div>
-            <div className="kpi-tile">
-              <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-              </span>
-              <div className="kpi-tile-body">
-                <span className="kpi-tile-value">{tenants.length}</span>
-                <span className="kpi-tile-label">Active Tenants</span>
-                <span className="kpi-tile-caption">registered</span>
+
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+              </div>
+              <div>
+                <div className="card-label">Active Tenants</div>
+                <h3 style={{ margin: 0 }}>{tenants.length}</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>registered</p>
               </div>
             </div>
           </section>
@@ -699,85 +702,75 @@ export default function DashboardPage() {
         </>
       )}
 
-{!isAgent && stats && (
-        <section className="kpi-row">
-          <div className="kpi-tile">
-            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--navy-600), var(--navy-400))' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-            </span>
-            <div className="kpi-tile-body">
-              <span className="kpi-tile-value">{stats.properties}</span>
-              <span className="kpi-tile-label">Properties</span>
-              <span className="kpi-tile-caption">total</span>
+      {!isAgent && stats && (
+        <section className="dashboard-hero-stats">
+          <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Properties</div>
+              <h3 style={{ margin: 0 }}>{stats.properties}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>total</p>
             </div>
           </div>
-          <div className="kpi-tile">
-            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--amber), #fbbf24)' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-            </span>
-            <div className="kpi-tile-body">
-              <span className="kpi-tile-value">{stats.agents}</span>
-              <span className="kpi-tile-label">Agents</span>
-              <span className="kpi-tile-caption">assigned</span>
+
+          <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Agents</div>
+              <h3 style={{ margin: 0 }}>{stats.agents}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>assigned</p>
             </div>
           </div>
-          <div className="kpi-tile">
-            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-bright))' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
-            </span>
-            <div className="kpi-tile-body">
-              <span className="kpi-tile-value">{stats.tenants}</span>
-              <span className="kpi-tile-label">Tenants</span>
-              <span className="kpi-tile-caption">active records</span>
+
+          <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Tenants</div>
+              <h3 style={{ margin: 0 }}>{stats.tenants}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>active records</p>
             </div>
           </div>
-          <div className="kpi-tile">
-            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-            </span>
-            <div className="kpi-tile-body">
-              <span className="kpi-tile-value">{formatCurrency(stats.total_payments)}</span>
-              <span className="kpi-tile-label">Collections</span>
-              <span className="kpi-tile-caption">total payments</span>
-            </div>
-          </div>
-          <div className="kpi-tile kpi-tile-chart">
-            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--navy-400), var(--navy-300))' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-            </span>
-            <div className="kpi-tile-body">
-              <span className="kpi-tile-value">{stats.tenants_with_analytics.length}</span>
-              <span className="kpi-tile-label">Due Dates</span>
-              <span className="kpi-tile-caption">payment based</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <DonutChart data={[
-                { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
-                { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' },
-              ]}  size={70} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: '22px', fontWeight: 700 }}>{stats.occupiedUnits}/{stats.occupiedUnits + stats.vacantUnits}</span>
-                <span style={{ color: 'var(--ink-3)', fontSize: '12px' }}>Occupied / Vacant</span>
+
+<div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+              </div>
+              <div>
+                <div className="card-label">Collections</div>
+                <h3 style={{ margin: 0 }}>{formatCurrency(stats.total_payments)}</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>total payments</p>
               </div>
             </div>
-          </div>
-        </section>
-      )}
 
-      {!isAgent && (
-        <section className="kpi-row">
-          <div className="kpi-tile">
-            <span className="kpi-tile-icon" style={{ background: 'linear-gradient(135deg, var(--rose), #fca5a5)' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/><path d="M12 2a10 12 0 0 1 0 20"/></svg>
-            </span>
-            <div className="kpi-tile-body">
-              <span className="kpi-tile-value" style={{ color: '#b91c1c' }}>{formatCurrency(totalBalance)}</span>
-              <span className="kpi-tile-label">Outstanding</span>
-              <span className="kpi-tile-caption">rent owed</span>
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              </div>
+              <div>
+                <div className="card-label">Occupancy</div>
+                <h3 style={{ margin: 0 }}>{stats.occupiedUnits}/{stats.occupiedUnits + stats.vacantUnits}</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(220,38,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/></svg>
+              </div>
+              <div>
+                <div className="card-label">Outstanding</div>
+                <h3 style={{ margin: 0, color: '#b91c1c' }}>{formatCurrency(totalBalance)}</h3>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>rent owed</p>
+              </div>
+            </div>
+          </section>
+        )}
 
       {!isAgent && (
         <>

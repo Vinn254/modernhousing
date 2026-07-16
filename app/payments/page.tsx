@@ -66,6 +66,7 @@ export default function PaymentsPage() {
     { value: 'rent', label: 'Rent' },
     { value: 'overdue', label: 'Overdue' },
     { value: 'deposit', label: 'Deposit' },
+    { value: 'tenancy_agreement', label: 'Tenancy Agreement Fee' },
   ];
 
   const [paybill, setPaybill] = useState('');
@@ -117,7 +118,7 @@ export default function PaymentsPage() {
     if (billsResponse.ok) {
       const billsResult = await billsResponse.json();
       const billsPayments = (billsResult.bills ?? [])
-        .filter((b: any) => b.transaction_type === 'rent' || b.transaction_type === 'overdue' || b.transaction_type === 'deposit')
+        .filter((b: any) => ['rent', 'overdue', 'deposit', 'tenancy_agreement'].includes(b.transaction_type))
         .map((b: any) => ({
           id: b.id,
           tenant: b.tenant_name || '—',
