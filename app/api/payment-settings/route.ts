@@ -54,7 +54,7 @@ async function getAuthContext(request: NextRequest) {
     .from('profiles')
     .select('organization_id, role')
     .eq('user_id', sessionUser.id)
-    .single();
+    .maybeSingle();
 
   let orgId = profile?.organization_id ?? userMetadata.organization_id ?? null;
 
@@ -63,7 +63,7 @@ async function getAuthContext(request: NextRequest) {
       .from('profiles')
       .select('organization_id')
       .eq('email', sessionUser.email)
-      .single();
+      .maybeSingle();
     orgId = profileByEmail?.organization_id ?? null;
   }
 
@@ -72,7 +72,7 @@ async function getAuthContext(request: NextRequest) {
       .from('tenants')
       .select('units!inner(properties!inner(organization_id))')
       .eq('id', userMetadata.tenant_id)
-      .single();
+      .maybeSingle();
     orgId = (tenantData as any)?.units?.properties?.organization_id ?? null;
   }
 
@@ -90,7 +90,7 @@ async function getTenantOrganizationId(tenantId: string): Promise<string | null>
     .from('tenants')
     .select('units!inner(properties!inner(organization_id))')
     .eq('id', tenantId)
-    .single();
+    .maybeSingle();
   return (tenantData as any)?.units?.properties?.organization_id ?? null;
 }
 
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('organization_id', authContext.organizationId ?? '')
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const data = {
       organization_id: authContext.organizationId ?? '',
@@ -176,14 +176,14 @@ export async function POST(request: NextRequest) {
         .update(data)
         .eq('id', existing.id)
         .select()
-        .single();
+        .maybeSingle();
       if (result.error) throw result.error;
     } else {
       const result = await supabaseAdmin
         .from('payment_settings')
         .insert({ ...data, created_at: new Date().toISOString() })
         .select()
-        .single();
+        .maybeSingle();
       if (result.error) throw result.error;
     }
 
