@@ -175,12 +175,15 @@ export default function DashboardPage() {
 
       setStats(statsResult);
       setTenants(tenantsResult.tenants ?? []);
-      // Merge payments and bills for owed computation (bills already have tenant_id)
-      const mergedPayments = [...(paymentsResult.payments ?? []), ...(billsResult.bills ?? []).map((b: any) => ({
+      // Merge payments and bills for owed computation
+      const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
+        ...p,
+        created_at: p.paid_at || p.created_at,
+      })), ...(billsResult.bills ?? []).map((b: any) => ({
         ...b,
         amount: b.paid_amount ?? b.amount,
         balance_remaining: b.balance ?? b.balance_remaining,
-        created_at: b.created_at,
+        created_at: b.payment_date || b.paid_at || b.created_at,
       }))];
       setPayments(mergedPayments);
       setAgents(agentsResult.agents ?? []);

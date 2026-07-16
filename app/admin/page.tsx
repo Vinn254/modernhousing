@@ -43,10 +43,14 @@ export default function AdminDashboard() {
       setVacantUnitsList(dashboardData.vacantUnitsList ?? []);
 
       // Merge payments and bills, compute owed tenants locally
-      const mergedPayments = [...(paymentsData.payments ?? []), ...(billsData.bills ?? []).map((b: any) => ({
+      const mergedPayments = [...(paymentsData.payments ?? []).map((p: any) => ({
+        ...p,
+        created_at: p.paid_at || p.created_at,
+      })), ...(billsData.bills ?? []).map((b: any) => ({
         ...b,
         amount: b.paid_amount ?? b.amount,
         balance_remaining: b.balance ?? b.balance_remaining,
+        created_at: b.payment_date || b.paid_at || b.created_at,
       }))];
       
       const nonPaymentTypes = ['complaint', 'notification'];
