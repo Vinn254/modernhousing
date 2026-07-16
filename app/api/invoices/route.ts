@@ -161,11 +161,18 @@ export async function POST(request: NextRequest) {
     if (!resolvedPropertyId) {
       const { data: tenant } = await client
         .from('tenants')
-        .select('units!inner(property_id)')
+        .select('unit_id')
         .eq('id', tenantId)
-        .single();
+        .maybeSingle();
 
-      resolvedPropertyId = tenant?.units?.[0]?.property_id;
+      if (tenant?.unit_id) {
+        const { data: unit } = await client
+          .from('units')
+          .select('property_id')
+          .eq('id', tenant.unit_id)
+          .maybeSingle();
+        resolvedPropertyId = unit?.property_id;
+      }
 
       if (isAgent && agentPropertyId !== resolvedPropertyId) {
         return NextResponse.json({ message: 'You can only create invoices for your assigned property.' }, { status: 403 });
