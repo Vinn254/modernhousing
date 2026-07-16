@@ -104,13 +104,19 @@ export async function POST(request: NextRequest) {
     
     // Try to get organization_id from user metadata first, then from tenant record
     let organizationId = decoded?.user_metadata?.organization_id;
-    if (!organizationId) {
-      // Check if this is a tenant user
-      const userRole = decoded?.user_metadata?.role;
-      const tenantId = decoded?.user_metadata?.tenant_id ?? userId; // tenant_id or use user id as tenant id
-      if (tenantId && userRole === 'tenant') {
+    const userRole = decoded?.user_metadata?.role;
+    
+    // If no org in metadata, try to look up tenant's organization
+    if (!organizationId && userRole === 'tenant') {
+      const tenantId = decoded?.user_metadata?.tenant_id ?? userId;
+      if (tenantId) {
         organizationId = await getTenantOrganizationId(tenantId);
       }
+    }
+    
+    // If tenant lookup fails, try using user_id directly as fallback
+    if (!organizationId && !userRole) {
+      organizationId = await getTenantOrganizationId(userId);
     }
 
     // Get credentials - prefer organization-specific if available
