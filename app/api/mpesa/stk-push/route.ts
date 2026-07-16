@@ -44,7 +44,7 @@ async function getAccessToken(): Promise<string> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { phone, amount, accountReference, transactionDesc } = body;
+    const { phone, amount, transactionDesc, transactionType } = body;
 
     if (!phone || !amount) {
       return NextResponse.json({ message: 'Phone and amount required' }, { status: 400 });
@@ -54,6 +54,9 @@ export async function POST(request: NextRequest) {
     if (!authorization?.startsWith('Bearer ')) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
+
+    const decoded = decodeJWT(authorization.split(' ')[1]);
+    const tenantId = decoded?.sub;
 
     const accessToken = await getAccessToken();
 
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
         PartyB: shortCode,
         PhoneNumber: phone,
         CallBackURL: `${process.env.NEXT_PUBLIC_APP_URL}/api/mpesa/callback`,
-        AccountReference: accountReference || 'SPRINGFIELD',
+        AccountReference: tenantId ? `${tenantId}|${transactionType || 'rent'}` : 'SPRINGFIELD',
         TransactionDesc: transactionDesc || 'Rent Payment'
       })
     });

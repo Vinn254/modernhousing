@@ -51,6 +51,7 @@ export default function TenantPaymentsPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [paymentSettings, setPaymentSettings] = useState({ paybill: '', till: '', pochi: '', mobile: '', paybillAccount: '' });
+  const [paymentType, setPaymentType] = useState<'rent' | 'tenancy_agreement'>('rent');
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
@@ -144,15 +145,17 @@ export default function TenantPaymentsPage() {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
     setProcessing(true);
-    const response = await fetch('/api/mpesa/stk-push', {
-      method: 'POST', headers,
-      body: JSON.stringify({
-        phone: mpesaPhone,
-        amount: Number(mpesaAmount),
-        accountReference: 'SPRINGFIELD',
-        transactionDesc: 'Rent Payment'
-      }),
-    });
+const response = await fetch('/api/mpesa/stk-push', {
+       method: 'POST', headers,
+       body: JSON.stringify({
+         phone: mpesaPhone,
+         amount: Number(mpesaAmount),
+         accountReference: 'SPRINGFIELD',
+         transactionDesc: activeTab === 'payments' 
+           ? (paymentType === 'tenancy_agreement' ? 'Tenancy Agreement Fee' : 'Rent Payment')
+           : 'Utility Payment'
+       }),
+     });
     const result = await response.json();
     setProcessing(false);
     if (!response.ok) { setError(result.message ?? 'Payment failed'); return; }
@@ -160,7 +163,7 @@ export default function TenantPaymentsPage() {
     setMpesaPhone(''); setMpesaAmount('');
   }
 
-  const rentBills = bills.filter(b => ['rent', 'overdue', 'deposit'].includes(b.transaction_type));
+  const rentBills = bills.filter(b => ['rent', 'overdue', 'deposit', 'tenancy_agreement'].includes(b.transaction_type));
   const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'].includes(b.transaction_type));
 
   const calculateWithRunningBalance = (billsList: Bill[]) => {
@@ -310,14 +313,25 @@ const getTypeLabel = (type: string) => {
             <div className="card-label" style={{ marginBottom: 8 }}>
               {activeTab === 'payments' ? 'Make Rent Payment' : activeTab === 'utilities' ? 'Make Utility Payment' : 'Invoices'}
             </div>
-            {activeTab !== 'invoices' && (
+            {activeTab === 'payments' && (
+              <form onSubmit={handleStkPush} className="form-grid">
+                <select value={paymentType} onChange={e => setPaymentType(e.target.value as any)} style={{ marginBottom: 8 }}>
+                  <option value="rent">Rent Payment</option>
+                  <option value="tenancy_agreement">Tenancy Agreement Fee</option>
+                </select>
+                <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)" />
+                <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
+                <button type="submit" disabled={processing} className="action-button primary">{processing ? 'Processing…' : 'Pay Now'}</button>
+              </form>
+            )}
+            {activeTab === 'utilities' && (
               <form onSubmit={handleStkPush} className="form-grid">
                 <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)" />
                 <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
                 <button type="submit" disabled={processing} className="action-button primary">{processing ? 'Processing…' : 'Pay Now'}</button>
               </form>
             )}
-            {activeTab !== 'invoices' && (
+            {activeTab === 'payments' && (
               <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
                 <strong>Payment Details:</strong>
                 {paymentSettings.paybill && <div>Paybill: {paymentSettings.paybill}{paymentSettings.paybillAccount ? ` (Account: ${paymentSettings.paybillAccount})` : ''}</div>}
