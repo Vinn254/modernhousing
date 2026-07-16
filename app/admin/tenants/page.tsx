@@ -387,8 +387,8 @@ export default function TenantsPage() {
               <input type="date" value={form.leaseStart} onChange={e => setForm(f => ({ ...f, leaseStart: e.target.value }))} required />
               <input type="date" value={form.leaseEnd} onChange={e => setForm(f => ({ ...f, leaseEnd: e.target.value }))} required />
               {!editingTenant && <input type="number" value={form.depositAmount} onChange={e => setForm(f => ({ ...f, depositAmount: e.target.value }))} placeholder="Deposit amount" />}
-              <button type="submit">{editingTenant ? 'Update Tenant' : 'Add Tenant'}</button>
-              {editingTenant && <button type="button" className="secondary-button" onClick={resetForm}>Cancel Edit</button>}
+              <button type="submit" className="action-button primary">{editingTenant ? 'Update Tenant' : 'Add Tenant'}</button>
+              {editingTenant && <button type="button" className="action-button ghost" onClick={resetForm}>Cancel Edit</button>}
             </form>
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
@@ -437,12 +437,12 @@ export default function TenantsPage() {
                           </span>
                         </td>
 <td>
-                           <div className="landlord-actions">
-                             <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleEdit(tenant)}>Edit</button>
-                             <button className="action-button" style={{ padding: '6px 10px', fontSize: '12px', marginLeft: 8 }} onClick={() => handleViewBills(tenant)}>Bills</button>
-                             <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px', marginLeft: 8 }} onClick={() => handleRemove(tenant.id)}>Remove</button>
-                           </div>
-                         </td>
+                          <div className="landlord-actions">
+                            <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleEdit(tenant)}>Edit</button>
+                            <button className="action-button secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleViewBills(tenant)}>Bills</button>
+                            <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRemove(tenant.id)}>Remove</button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -462,7 +462,7 @@ export default function TenantsPage() {
               </div>
               
               <div style={{ marginBottom: 16 }}>
-                <button className="secondary-button" onClick={() => setShowDirectPayment(!showDirectPayment)}>Record Direct Payment</button>
+                <button className="action-button secondary" style={{ padding: '6px 12px' }} onClick={() => setShowDirectPayment(!showDirectPayment)}>Record Direct Payment</button>
               </div>
 
               {showDirectPayment && (
@@ -495,7 +495,7 @@ export default function TenantsPage() {
                       <label>Reference Number</label>
                       <input value={directPaymentForm.referenceNumber} onChange={e => setDirectPaymentForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="e.g., SH31T8MAYN" />
                     </div>
-                    <button type="submit">Record Payment</button>
+                    <button type="submit" className="action-button primary">Record Payment</button>
                   </form>
                 </div>
               )}
@@ -520,8 +520,8 @@ export default function TenantsPage() {
                       <label>Reference Number</label>
                       <input value={payForm.referenceNumber} onChange={e => setPayForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="e.g., SH31T8MAYN" />
                     </div>
-                    <button type="submit">Record Payment</button>
-                    <button type="button" className="secondary-button" onClick={() => setShowPayForm(false)}>Cancel</button>
+                    <button type="submit" className="action-button primary">Record Payment</button>
+                    <button type="button" className="action-button ghost" onClick={() => setShowPayForm(false)}>Cancel</button>
                   </form>
                 </div>
               )}
@@ -560,17 +560,17 @@ export default function TenantsPage() {
                           <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
                           <td>{bill.payment_date || '-'}</td>
 <td>
-                             {bill.balance > 0 && (
-                               <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px', marginRight: 6 }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
-                             )}
-                           </td>
+                              {bill.balance > 0 && (
+                                <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
+                              )}
+                            </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               )}
-              <button type="button" className="secondary-button" onClick={() => setSelectedTenant(null)} style={{ marginTop: 16 }}>Back to Tenants</button>
+              <button type="button" className="action-button ghost" onClick={() => setSelectedTenant(null)} style={{ marginTop: 16 }}>Back to Tenants</button>
             </article>
           </section>
         )}

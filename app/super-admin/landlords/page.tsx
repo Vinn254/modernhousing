@@ -419,12 +419,12 @@ export default function LandlordManagementPage() {
                           </td>
                           <td>
                             <div className="landlord-actions">
-                              <button className="action-button" onClick={() => setSelectedLandlord(landlord)}>View</button>
-                              {subscription && <button className="action-button notify" onClick={() => openNotification(subscription, landlord)}>Notify</button>}
-                              {subscription && <button className="action-button" onClick={() => handleUpgradeSubscription(landlord)}>Upgrade</button>}
-                              {landlord.status !== 'active' && <button className="action-button primary" onClick={() => handleApprove(landlord)}>Approve</button>}
-                              <button className="action-button" onClick={() => handleResetPassword(landlord)}>Reset Password</button>
-                              <button className="action-button danger" onClick={() => handleDeleteLandlord(landlord)}>Delete</button>
+                              <button className="action-button secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => setSelectedLandlord(landlord)}>View</button>
+                              {subscription && <button className="action-button info" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => openNotification(subscription, landlord)}>Notify</button>}
+                              {subscription && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleUpgradeSubscription(landlord)}>Upgrade</button>}
+                              {landlord.status !== 'active' && <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleApprove(landlord)}>Approve</button>}
+                              <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleResetPassword(landlord)}>Reset Password</button>
+                              <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleDeleteLandlord(landlord)}>Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -435,7 +435,7 @@ export default function LandlordManagementPage() {
               </div>
 
               <div style={{ margin: '28px 0 0' }}>
-                <button className="landlord-add-button" onClick={() => setShowAddModal(true)}>
+                <button className="action-button primary" onClick={() => setShowAddModal(true)}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Add Project Manager
                 </button>
@@ -450,7 +450,7 @@ export default function LandlordManagementPage() {
           <div className="modal-card landlord-modal">
             <div className="modal-title-row">
               <h3>Add New Project Manager</h3>
-              <button className="icon-button" onClick={() => setShowAddModal(false)}>×</button>
+              <button className="action-button ghost" onClick={() => setShowAddModal(false)} style={{ padding: '4px 8px' }}>×</button>
             </div>
             {error && <p className="landlord-error">{error}</p>}
             <form onSubmit={handleAddLandlord} className="landlord-form">
@@ -483,8 +483,8 @@ export default function LandlordManagementPage() {
                 </select>
               </div>
               <div className="modal-actions">
-                <button type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create Project Manager'}</button>
-                <button type="button" className="secondary-button" onClick={() => setShowAddModal(false)} disabled={loading}>Cancel</button>
+                <button type="submit" disabled={loading} className="action-button primary">{loading ? 'Creating…' : 'Create Project Manager'}</button>
+                <button type="button" className="action-button ghost" onClick={() => setShowAddModal(false)} disabled={loading}>Cancel</button>
               </div>
             </form>
           </div>
@@ -496,7 +496,7 @@ export default function LandlordManagementPage() {
           <div className="modal-card landlord-modal">
             <div className="modal-title-row">
               <h3>Project Manager Details</h3>
-              <button className="icon-button" onClick={() => setSelectedLandlord(null)}>×</button>
+              <button className="action-button ghost" onClick={() => setSelectedLandlord(null)}>×</button>
             </div>
             <div className="detail-grid">
               <div className="detail-card"><span>Full name</span><strong>{selectedLandlord.full_name}</strong></div>
@@ -515,7 +515,7 @@ export default function LandlordManagementPage() {
           <div className="modal-card landlord-modal">
             <div className="modal-title-row">
               <h3>Send Subscription Notification</h3>
-              <button className="icon-button" onClick={() => (setSelectedLandlord(null), setSelectedSubscription(null))}>×</button>
+              <button className="action-button ghost" onClick={() => (setSelectedLandlord(null), setSelectedSubscription(null))}>×</button>
             </div>
             <div className="notification-composer">
               <div className="composer-card">
@@ -538,8 +538,8 @@ export default function LandlordManagementPage() {
                 </select>
               </div>
               <div className="modal-actions">
-                <button type="button" disabled={notificationLoading} onClick={() => sendNotification(selectedSubscription)}>Send Notification</button>
-                <button type="button" className="secondary-button" onClick={() => (setSelectedLandlord(null), setSelectedSubscription(null))} disabled={notificationLoading}>Cancel</button>
+                <button type="button" disabled={notificationLoading} onClick={() => sendNotification(selectedSubscription)} className="action-button info">Send Notification</button>
+                <button type="button" className="action-button ghost" onClick={() => (setSelectedLandlord(null), setSelectedSubscription(null))} disabled={notificationLoading}>Cancel</button>
               </div>
             </div>
           </div>

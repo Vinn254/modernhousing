@@ -3237,3 +3237,107 @@ footer {
     padding: 16px;
   }
 }
+
+/* ========== ENHANCED ACTION BUTTONS ========== */
+.action-button {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.action-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  transition: width 0.4s, height 0.4s, top 0.4s, left 0.4s;
+  transform: translate(-50%, -50%);
+}
+
+.action-button:active::before {
+  width: 200px;
+  height: 200px;
+}
+
+.action-button.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+  color: #052e1f;
+  box-shadow: 0 4px 12px rgba(16,185,129,0.25);
+}
+
+.action-button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16,185,129,0.35);
+  filter: saturate(1.1);
+}
+
+.action-button.secondary {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.25);
+}
+
+.action-button.secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99,102,241,0.35);
+}
+
+.action-button.danger {
+  background: linear-gradient(135deg, #f43f5e, #fb7185);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(244,63,94,0.25);
+}
+
+.action-button.danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(244,63,94,0.35);
+}
+
+.action-button.warn {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(245,158,11,0.25);
+}
+
+.action-button.warn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(245,158,11,0.35);
+}
+
+.action-button.info {
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(14,165,233,0.25);
+}
+
+.action-button.info:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(14,165,233,0.35);
+}
+
+.action-button.ghost {
+  background: var(--line-soft);
+  color: var(--ink-2);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.action-button.ghost:hover {
+  background: var(--line);
+  transform: translateY(-1px);
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}

@@ -89,7 +89,6 @@ export async function GET(request: NextRequest) {
     const tenantEmail = request.nextUrl.searchParams.get('email');
     const tenantIdParam = request.nextUrl.searchParams.get('tenantId');
 
-    // For tenants - get their own documents
     if (authContext.tenantId || tenantIdParam) {
       const effectiveTenantId = authContext.tenantId || tenantIdParam;
       const { data, error } = await client
@@ -102,7 +101,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ documents: data ?? [] });
     }
 
-    // For agents - get documents for their property's tenants
     const userMetadata = authContext.userMetadata || {};
     const isAgent = userMetadata.role === 'agent';
     const agentPropertyId = isAgent ? userMetadata.property_id : null;
@@ -150,7 +148,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ documents: [] });
     }
 
-    // For landlords - get documents for their tenants (organization-scoped)
     if (!authContext.isSuperAdmin && authContext.organizationId) {
       const { data: orgProps } = await client
         .from('properties')
@@ -202,7 +199,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ documents: [] });
     }
 
-    // Super admin - get all documents
     const { data, error } = await client
       .from('documents')
       .select(`*, tenants(full_name, email, units(unit_number, properties(name)))`)
@@ -238,7 +234,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
   }
 
-  // Handle multipart form data for file uploads
   const contentType = request.headers.get('content-type') || '';
   if (contentType.includes('multipart/form-data')) {
     try {
@@ -252,7 +247,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'File and tenant ID are required.' }, { status: 400 });
       }
 
-      // Verify tenant belongs to landlord's organization
       if (!authContext.isSuperAdmin && authContext.organizationId) {
         const { data: orgProps } = await client
           .from('properties')
@@ -296,7 +290,6 @@ export async function POST(request: NextRequest) {
       const isLandlordUpload = documentType === 'agreement';
       const status = isLandlordUpload ? 'sent' : 'signed';
 
-      // For tenant uploads, create or update bundle
       if (!isLandlordUpload) {
         const bundleResult = await client
           .from('document_bundles')
@@ -318,7 +311,6 @@ export async function POST(request: NextRequest) {
           bundleId = bundleResult.data?.id;
         }
 
-        // Update bundle with document URLs
         const bundleUpdate: any = {};
         if (documentType === 'signed_agreement') bundleUpdate.signed_agreement_url = publicUrl.publicUrl;
         if (documentType === 'id_document' && documentName === 'Passport Photo') bundleUpdate.passport_photo_url = publicUrl.publicUrl;
@@ -348,6 +340,34 @@ export async function POST(request: NextRequest) {
 
       if (result.error) throw result.error;
 
+      if (isLandlordUpload) {
+        const { data: tenantInfo } = await client
+          .from('tenants')
+          .select('full_name, email, national_id')
+          .eq('id', tenantId)
+          .single();
+        
+        const ipAddress = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '';
+        const userAgent = request.headers.get('user-agent') ?? '';
+        let deviceInfo = 'Unknown Device';
+        if (userAgent.includes('Chrome')) deviceInfo = 'Chrome via Desktop';
+        else if (userAgent.includes('Mobile')) deviceInfo = 'Mobile Browser';
+
+        await client.from('audit_trails').insert({
+          document_id: result.data.id,
+          tenant_id: tenantId,
+          tenant_name: tenantInfo?.full_name ?? '',
+          tenant_email: tenantInfo?.email ?? '',
+          tenant_national_id: tenantInfo?.national_id ?? '',
+          ip_address: ipAddress,
+          device: deviceInfo,
+          signature_type: 'Electronic Signature',
+          security_authentication: 'Electronic Signature',
+          audit_events: [{ action: 'sent', timestamp: new Date().toISOString(), ip_address: ipAddress, device: deviceInfo }],
+          sent_at: new Date().toISOString(),
+        });
+      }
+
       if (documentName.toLowerCase().includes('photo')) {
         await client
           .from('tenants')
@@ -361,7 +381,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Handle JSON body for landlord document assignment
   const body = await request.json();
   const {
     tenantId,
@@ -380,7 +399,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Invalid document type.' }, { status: 400 });
   }
 
-  // Verify tenant belongs to landlord's organization
   if (!authContext.isSuperAdmin && authContext.organizationId) {
     const { data: orgProps } = await client
       .from('properties')
@@ -414,7 +432,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: result.error.message }, { status: 500 });
   }
 
-  // If signed agreement, update tenant record
   if (documentType === 'signed_agreement') {
     await client
       .from('tenants')
@@ -440,7 +457,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ message: 'Document ID is required.' }, { status: 400 });
   }
 
-  // Verify document belongs to user's organization
   if (!authContext.isSuperAdmin) {
     const userMetadata = authContext.userMetadata || {};
     const isAgent = userMetadata.role === 'agent';
@@ -492,6 +508,41 @@ export async function PATCH(request: NextRequest) {
     updated_at: new Date().toISOString(),
   };
 
+  const ipAddress = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '';
+  const userAgent = request.headers.get('user-agent') ?? '';
+  let deviceInfo = 'Unknown Device';
+  if (userAgent.includes('Chrome')) deviceInfo = 'Chrome via Desktop';
+  else if (userAgent.includes('Mobile')) deviceInfo = 'Mobile Browser';
+
+  const now = new Date().toISOString();
+
+  if (status === 'downloaded' || status === 'awaiting_signature') {
+    const { data: docData } = await client
+      .from('documents')
+      .select('tenant_id')
+      .eq('id', id)
+      .single();
+    
+    const { data: tenantInfo } = await client
+      .from('tenants')
+      .select('full_name, email')
+      .eq('id', docData?.tenant_id)
+      .single();
+
+    const event = status === 'downloaded' ? 'viewed' : 'signed';
+    
+    await client.from('audit_trails').upsert({
+      document_id: id,
+      tenant_id: docData?.tenant_id,
+      tenant_name: tenantInfo?.full_name ?? '',
+      tenant_email: tenantInfo?.email ?? '',
+      ip_address: ipAddress,
+      device: deviceInfo,
+      audit_events: [{ action: event, timestamp: now, ip_address: ipAddress, device: deviceInfo }],
+      ...(event === 'viewed' ? { viewed_at: now } : { signed_at: now, completed_at: now }),
+    }, { onConflict: 'document_id' });
+  }
+
   const result = await client.from('documents')
     .update(updateData)
     .eq('id', id)
@@ -519,7 +570,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ message: 'Document ID is required.' }, { status: 400 });
   }
 
-  // Verify document belongs to user's organization
   if (!authContext.isSuperAdmin) {
     const userMetadata = authContext.userMetadata || {};
     const isAgent = userMetadata.role === 'agent';
@@ -575,4 +625,3 @@ export async function DELETE(request: NextRequest) {
 
   return NextResponse.json({ message: 'Document deleted.' });
 }
-

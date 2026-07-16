@@ -178,7 +178,7 @@ export default function PropertiesPage() {
                             </td>
                             <td className="landlord-name">KSH {Number(property.rent_roll ?? 0).toLocaleString()}</td>
                             <td>
-                              <button className="action-button primary" onClick={() => handleViewProperty(property)}>View</button>
+                              <button className="action-button secondary" onClick={() => handleViewProperty(property)} style={{ padding: '6px 12px', fontSize: '12px' }}>View</button>
                             </td>
                           </tr>
                         );
@@ -197,7 +197,7 @@ export default function PropertiesPage() {
           <div className="modal-card landlord-modal property-modal">
             <div className="modal-title-row">
               <h3>{selectedProperty.name}</h3>
-              <button className="icon-button" onClick={() => setShowModal(false)}>×</button>
+              <button className="action-button ghost" onClick={() => setShowModal(false)} style={{ padding: '4px 8px', fontSize: '14px' }}>×</button>
             </div>
 
             <div className="detail-grid">
@@ -223,7 +223,7 @@ export default function PropertiesPage() {
               <div className="history-title">
                 <span>Registered Units</span>
                 <strong>{units.length}</strong>
-                <button className="action-button" onClick={() => setShowOccupiedOnly(!showOccupiedOnly)} style={{ marginLeft: 'auto' }}>
+                <button className="action-button warn" onClick={() => setShowOccupiedOnly(!showOccupiedOnly)} style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: '12px' }}>
                   {showOccupiedOnly ? 'Show All Units' : 'Show Occupied Only'}
                 </button>
               </div>
@@ -265,7 +265,7 @@ export default function PropertiesPage() {
       <footer>
         <div className="footer-inner">
           <div className="footer-brand">
-            <span className="logo-mark" style={{width:26,height:26,borderRadius:7}}>
+            <span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
             </span>
             Springfield Systems

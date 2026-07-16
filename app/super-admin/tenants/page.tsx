@@ -88,7 +88,7 @@ export default function TenantsPage() {
                           {tenant.balance > 0 ? `KSH ${tenant.balance.toLocaleString()}` : '—'}
                         </td>
                         <td>
-                          <button className="action-button">View</button>
+                          <button className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>View</button>
                         </td>
                       </tr>
                     ))}

@@ -302,9 +302,9 @@ const getTypeLabel = (type: string) => {
         <section className="card-grid" style={{ marginBottom: 24 }}>
           <article className="card">
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <button onClick={() => setActiveTab('payments')} className={activeTab === 'payments' ? 'action-button primary' : 'secondary-button'} style={{ flex: 1 }}>Rent Payments</button>
-              <button onClick={() => setActiveTab('utilities')} className={activeTab === 'utilities' ? 'action-button primary' : 'secondary-button'} style={{ flex: 1 }}>Utilities</button>
-              <button onClick={() => setActiveTab('invoices')} className={activeTab === 'invoices' ? 'action-button primary' : 'secondary-button'} style={{ flex: 1 }}>Invoices</button>
+              <button onClick={() => setActiveTab('payments')} className={activeTab === 'payments' ? 'action-button primary' : 'action-button ghost'} style={{ flex: 1 }}>Rent Payments</button>
+              <button onClick={() => setActiveTab('utilities')} className={activeTab === 'utilities' ? 'action-button primary' : 'action-button ghost'} style={{ flex: 1 }}>Utilities</button>
+              <button onClick={() => setActiveTab('invoices')} className={activeTab === 'invoices' ? 'action-button primary' : 'action-button ghost'} style={{ flex: 1 }}>Invoices</button>
             </div>
 
             <div className="card-label" style={{ marginBottom: 8 }}>
@@ -314,7 +314,7 @@ const getTypeLabel = (type: string) => {
               <form onSubmit={handleStkPush} className="form-grid">
                 <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)" />
                 <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
-                <button type="submit" disabled={processing}>{processing ? 'Processing…' : 'Pay Now'}</button>
+                <button type="submit" disabled={processing} className="action-button primary">{processing ? 'Processing…' : 'Pay Now'}</button>
               </form>
             )}
             {activeTab !== 'invoices' && (
@@ -367,7 +367,7 @@ const getTypeLabel = (type: string) => {
                       <td><span style={{ textTransform: 'capitalize' }}>{inv.status}</span></td>
                       <td>
                         {inv.file_path ? (
-                          <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
+                          <a href={inv.file_path} target="_blank" rel="noopener noreferrer" className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>Download</a>
                         ) : (
                           <span style={{ color: '#9ca3af', fontSize: '11px' }}>Not generated</span>
                         )}
@@ -443,13 +443,13 @@ const getTypeLabel = (type: string) => {
               onClick={async () => {
                 await generateStatementPDF(rentBills, 'Rent Payment Statement', totalRentOwed);
               }}
-              className="action-button primary" style={{ flex: 1, padding: "8px", fontSize: "13px", background: "var(--accent)", color: "#fff" }}>Download Rent Statement (PDF)
+              className="action-button primary" style={{ flex: 1, padding: "8px", fontSize: "13px" }}>Download Rent Statement (PDF)
             </button>
             <button
               onClick={async () => {
                 await generateStatementPDF(utilityBills, 'Utility Payment Statement', totalUtilityOwed);
               }}
-              className="secondary-button" style={{ flex: 1, padding: "8px", fontSize: "13px", background: "#0ea5e9", color: "#fff" }}>Download Utility Statement (PDF)
+              className="action-button secondary" style={{ flex: 1, padding: "8px", fontSize: "13px" }}>Download Utility Statement (PDF)
             </button>
           </div>
         </div>

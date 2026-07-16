@@ -592,7 +592,7 @@ export default function AgentTenantsPage() {
             </div>
             
             <div style={{ marginBottom: 16 }}>
-              <button className="secondary-button" onClick={() => setShowDirectPayment(!showDirectPayment)}>Record Direct Payment</button>
+              <button className="action-button ghost" onClick={() => setShowDirectPayment(!showDirectPayment)}>Record Direct Payment</button>
             </div>
 
             {showDirectPayment && (
@@ -651,7 +651,7 @@ export default function AgentTenantsPage() {
                     <input value={payForm.referenceNumber} onChange={e => setPayForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="e.g., SH31T8MAYN" />
                   </div>
                   <button type="submit">Record Payment</button>
-                  <button type="button" className="secondary-button" onClick={() => setShowPayForm(false)}>Cancel</button>
+                  <button type="button" className="action-button ghost" onClick={() => setShowPayForm(false)}>Cancel</button>
                 </form>
               </div>
             )}
@@ -695,7 +695,7 @@ export default function AgentTenantsPage() {
                         <td>{bill.payment_date || '-'}</td>
                         <td>
                           {bill.balance > 0 && (
-                            <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
+                            <button className="action-button warn" style={{padding: '6px 12px', fontSize: '12px'}} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
                           )}
                         </td>
                       </tr>
@@ -704,7 +704,7 @@ export default function AgentTenantsPage() {
                 </table>
               </div>
             )}
-            <button type="button" className="secondary-button" onClick={() => setSelectedTenant(null)} style={{ marginTop: 16 }}>Back to Tenants</button>
+            <button type="button" className="action-button ghost" onClick={() => setSelectedTenant(null)} style={{ marginTop: 16 }}>Back to Tenants</button>
           </article>
         </section>
       )}

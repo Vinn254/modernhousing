@@ -102,7 +102,6 @@ export default function LandlordDocumentsPage() {
     setUploading(true);
     const { data: { session } } = await supabase.auth.getSession();
 
-    // Handle "all" tenants - upload to each one
     const targetTenantIds = uploadForm.tenantId === 'all' 
       ? tenants.map(t => t.id) 
       : [uploadForm.tenantId];
@@ -170,6 +169,10 @@ export default function LandlordDocumentsPage() {
     } else {
       setError(result.message ?? 'Unable to delete.');
     }
+  }
+
+  async function viewAuditTrail(docId: string) {
+    window.open(`/admin/audit-trail?documentId=${docId}`, '_blank');
   }
 
   async function handleApproveBundle(bundleId: string) {
@@ -315,7 +318,7 @@ export default function LandlordDocumentsPage() {
           <article className="card" style={{ gridColumn: '1 / -1' }}>
             <div className="card-label">
               <span className="badge badge-agent">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x="1" y="10" x2="23" y2="10"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
               </span>All Documents
             </div>
             <h3 style={{ marginBottom: 16 }}>Agreement Workflow</h3>
@@ -348,19 +351,20 @@ export default function LandlordDocumentsPage() {
                           </span>
                         </td>
                         <td>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}</td>
-                        <td>
+<td>
                           <div className="landlord-actions">
-                            <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }}>Download</a>
+                            <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px' }}>Download</a>
+                            <button className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => viewAuditTrail(doc.id)}>Audit Trail</button>
                             {doc.status === 'downloaded' && (
-                              <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'awaiting_signature')}>Mark as Signed</button>
+                              <button className="action-button warn" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleUpdateStatus(doc.id, 'awaiting_signature')}>Mark as Signed</button>
                             )}
                             {doc.status === 'signed' && (
                               <>
-                                <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#10b981', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'approved')}>Approve</button>
-                                <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#f59e0b', color: '#fff' }} onClick={() => handleUpdateStatus(doc.id, 'rejected')}>Request Re-sign</button>
+                                <button className="action-button info" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleUpdateStatus(doc.id, 'approved')}>Approve</button>
+                                <button className="action-button danger" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleUpdateStatus(doc.id, 'rejected')}>Reject</button>
                               </>
                             )}
-                            <button className="action-button danger" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDelete(doc.id)}>Delete</button>
+                            <button className="action-button danger" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleDelete(doc.id)}>Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -403,9 +407,9 @@ export default function LandlordDocumentsPage() {
                     {bundles.map(bundle => (
                       <tr key={bundle.id}>
                         <td>{bundle.tenant_name || '-'}</td>
-                        <td>{bundle.signed_agreement_url ? <a href={bundle.signed_agreement_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
-                        <td>{bundle.id_document_url ? <a href={bundle.id_document_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
-                        <td>{bundle.passport_photo_url ? <a href={bundle.passport_photo_url} target="_blank" className="action-button" style={{ padding: '4px 8px', fontSize: '11px' }}>View</a> : '-'}</td>
+                        <td>{bundle.signed_agreement_url ? <a href={bundle.signed_agreement_url} target="_blank" className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>View</a> : '-'}</td>
+                        <td>{bundle.id_document_url ? <a href={bundle.id_document_url} target="_blank" className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>View</a> : '-'}</td>
+                        <td>{bundle.passport_photo_url ? <a href={bundle.passport_photo_url} target="_blank" className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>View</a> : '-'}</td>
                         <td>
                           <span className={`status-pill ${bundle.status === 'approved' ? 'status-active' : 'status-pending'}`} style={{ textTransform: 'capitalize' }}>
                             {bundle.status}
@@ -414,8 +418,8 @@ export default function LandlordDocumentsPage() {
 <td>
                           {bundle.status === 'pending' && (
                             <div className="landlord-actions">
-                              <button onClick={() => handleApproveBundle(bundle.id)} className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px' }}>Approve</button>
-                              <button onClick={() => handleRejectBundle(bundle.id)} className="action-button danger" style={{ padding: '4px 8px', fontSize: '11px' }}>Reject</button>
+                              <button onClick={() => handleApproveBundle(bundle.id)} className="action-button warn" style={{ padding: '6px 12px', fontSize: '12px' }}>Approve</button>
+                              <button onClick={() => handleRejectBundle(bundle.id)} className="action-button danger" style={{ padding: '6px 12px', fontSize: '12px' }}>Reject</button>
                             </div>
                           )}
                         </td>

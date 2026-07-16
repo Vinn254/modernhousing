@@ -89,7 +89,7 @@ export default function SuperAdminAgentsPage() {
                           </td>
                           <td>{agent.created_at ? new Date(agent.created_at).toLocaleDateString() : '—'}</td>
                           <td>
-                            <button className="action-button" onClick={() => setSelectedAgent(agent)}>View</button>
+                            <button className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => setSelectedAgent(agent)}>View</button>
                           </td>
                         </tr>
                       ))}
@@ -107,7 +107,7 @@ export default function SuperAdminAgentsPage() {
           <div className="modal-card" style={{ maxWidth: 760, width: '95%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ margin: 0 }}>Agent: {selectedAgent.name}</h3>
-              <button className="action-button" onClick={() => setSelectedAgent(null)} style={{ fontSize: 18 }}>✕</button>
+              <button className="action-button ghost" onClick={() => setSelectedAgent(null)} style={{ fontSize: 18, padding: '4px 8px' }}>✕</button>
             </div>
             <div className="detail-grid">
               <div className="detail-card">
