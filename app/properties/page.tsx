@@ -43,11 +43,15 @@ async function getAuthHeaders() {
   return headers;
 }
 
+const formatCurrency = (value: number) => `KSH ${(value || 0).toLocaleString()}`;
+
 export default function PropertiesPage() {
   const formRef = useRef<HTMLDivElement>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [monthlyPayments, setMonthlyPayments] = useState<any[]>([]);
+  const [showPaymentsModal, setShowPaymentsModal] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [form, setForm] = useState(emptyForm);
   const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumbers: '', rentAmount: '', unitType: '' });
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
@@ -339,19 +343,13 @@ export default function PropertiesPage() {
   const rentRoll = properties.reduce((sum, property) => sum + Number(property.rent_roll ?? 0), 0);
   const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const monthlyCollections = monthlyPayments
-    .filter(p => {
-      if (!p.created_at) return false;
-      const d = new Date(p.created_at);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    })
-    .filter(p => {
-      const type = p.transaction_type || p.type;
-      return !['complaint', 'notification'].includes(type);
-    })
-    .reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0);
+  const [selectedYear, selectedMonthNum] = selectedMonth.split('-').map(Number);
+  const filteredPayments = monthlyPayments.filter(p => {
+    if (!p.created_at) return false;
+    const d = new Date(p.created_at);
+    return d.getMonth() === selectedMonthNum && d.getFullYear() === selectedYear;
+  }).filter(p => !['complaint', 'notification'].includes(p.transaction_type));
+  const filteredTotal = filteredPayments.reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0);
 
   // Get units for selected property
   const selectedPropertyUnits = selectedProperty 
@@ -407,12 +405,51 @@ export default function PropertiesPage() {
             <strong>KSH {rentRoll.toLocaleString()}</strong>
             <p>Monthly rent from recorded units.</p>
           </article>
-          <article className="property-stat">
+          <article className="property-stat clickable" onClick={() => setShowPaymentsModal(true)} style={{ cursor: 'pointer' }}>
             <span>Collected ({new Date().toLocaleString('en-US', { month: 'short' })})</span>
-            <strong>KSH {monthlyCollections.toLocaleString()}</strong>
-            <p>Total cash collected this month.</p>
+            <strong>KSH {filteredTotal.toLocaleString()}</strong>
+            <p>Total cash collected this month. Click to view details.</p>
           </article>
         </div>
+
+        {showPaymentsModal && (
+          <div className="modal-overlay" onClick={() => setShowPaymentsModal(false)}>
+            <div className="modal-card" style={{ minHeight: '60vh', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+              <div className="modal-card-header">
+                <div>
+                  <div className="card-label" style={{ marginBottom: 6 }}>Monthly Payments</div>
+                  <h3 style={{ margin: 0 }}>Payments for {new Date(selectedMonth + '-01').toLocaleString('en-US', { month: 'long', year: 'numeric' })}</h3>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} style={{ padding: '6px 10px', fontSize: '14px' }} />
+                  <button onClick={() => setShowPaymentsModal(false)} className="modal-close" aria-label="Close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div className="modal-card-body" style={{ flex: 1, overflowY: 'auto' }}>
+                <p style={{ marginBottom: 12, color: 'var(--ink-3)' }}>Total collected: <strong>KSH {filteredTotal.toLocaleString()}</strong></p>
+                {filteredPayments.length > 0 ? (
+                  <div className="table-shell">
+                    <table className="landlord-table">
+                      <thead><tr><th>Date</th><th>Tenant</th><th>Type</th><th>Amount</th></tr></thead>
+                      <tbody>
+                        {filteredPayments.map(p => (
+                          <tr key={p.id}>
+                            <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                            <td>{p.tenant || p.tenant_name || '—'}</td>
+                            <td>{p.transaction_type || 'rent'}</td>
+                            <td style={{ color: 'var(--accent)', fontWeight: 600 }}>{formatCurrency(p.amount || 0)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : <p className="table-empty">No payments recorded for this month.</p>}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="property-page-grid">
           <div ref={formRef} className="card property-form-card">
