@@ -30,29 +30,59 @@ function decodeJWT(token: string): any | null {
 }
 
 async function getTenantOrganizationId(tenantId: string, userEmail?: string): Promise<string | null> {
-  // First try by tenant ID
-  const { data: tenantDataFromDb } = await supabaseAdmin
+  // First try: get tenant's unit_id, then find property's organization_id
+  const { data: tenantRow } = await supabaseAdmin
     .from('tenants')
-    .select('units!inner(properties!inner(organization_id))')
+    .select('unit_id')
     .eq('id', tenantId)
     .maybeSingle();
   
-  const tenantData: any = tenantDataFromDb;
-  
-  if (tenantData?.units?.[0]?.properties?.[0]?.organization_id) {
-    return tenantData.units?.[0]?.properties?.[0]?.organization_id;
+  if (tenantRow?.unit_id) {
+    const { data: unitRow } = await supabaseAdmin
+      .from('units')
+      .select('property_id')
+      .eq('id', tenantRow.unit_id)
+      .maybeSingle();
+    
+    if (unitRow?.property_id) {
+      const { data: propRow } = await supabaseAdmin
+        .from('properties')
+        .select('organization_id')
+        .eq('id', unitRow.property_id)
+        .maybeSingle();
+      
+      if (propRow?.organization_id) {
+        return propRow.organization_id;
+      }
+    }
   }
   
-  // Fallback: try by email if user is a tenant
+  // Fallback: try by email if tenant not found by ID
   if (userEmail) {
     const { data: tenantByEmail } = await supabaseAdmin
       .from('tenants')
-      .select('units!inner(properties!inner(organization_id))')
+      .select('unit_id')
       .eq('email', userEmail)
       .maybeSingle();
     
-    if (tenantByEmail?.units?.[0]?.properties?.[0]?.organization_id) {
-      return tenantByEmail.units?.[0]?.properties?.[0]?.organization_id;
+    if (tenantByEmail?.unit_id) {
+      const { data: unitRow } = await supabaseAdmin
+        .from('units')
+        .select('property_id')
+        .eq('id', tenantByEmail.unit_id)
+        .maybeSingle();
+      
+      if (unitRow?.property_id) {
+        const { data: propRow } = await supabaseAdmin
+          .from('properties')
+          .select('organization_id')
+          .eq('id', unitRow.property_id)
+          .maybeSingle();
+        
+        if (propRow?.organization_id) {
+          return propRow.organization_id;
+        }
+      }
     }
   }
   
@@ -67,15 +97,19 @@ async function getTenantOrganizationId(tenantId: string, userEmail?: string): Pr
 }
 
 async function getOrganizationCredentials(organizationId: string | null) {
-  console.log('getOrganizationCredentials called with orgId:', organizationId);
-  console.log('Default credentials available:', { defaultConsumerKey: !!defaultConsumerKey, defaultConsumerSecret: !!defaultConsumerSecret });
-  
   if (!organizationId) {
+    // Use any payment_settings credentials if defaults not set
+    const { data: anySettings } = await supabaseAdmin
+      .from('payment_settings')
+      .select('consumer_key, consumer_secret, passkey, shortcode')
+      .limit(1)
+      .maybeSingle();
+    
     return {
-      consumerKey: defaultConsumerKey,
-      consumerSecret: defaultConsumerSecret,
-      passkey: defaultPasskey,
-      shortCode: defaultShortCode
+      consumerKey: anySettings?.consumer_key || defaultConsumerKey,
+      consumerSecret: anySettings?.consumer_secret || defaultConsumerSecret,
+      passkey: anySettings?.passkey || defaultPasskey,
+      shortCode: anySettings?.shortcode || defaultShortCode
     };
   }
 
