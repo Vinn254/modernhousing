@@ -2359,6 +2359,7 @@ footer {
     border-top: 4px solid var(--accent);
     box-shadow: 0 14px 40px rgba(6, 21, 40, 0.08);
     transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+    padding: 20px;
   }
   .bento-card:hover {
     transform: translateY(-3px);
