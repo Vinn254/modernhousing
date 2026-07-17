@@ -283,6 +283,29 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
 
   const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0);
 
+  const monthlyPayments = useMemo(() => {
+    const months: { label: string; value: number }[] = [];
+    const monthMap = new Map<string, number>();
+    (payments || []).forEach((p: any) => {
+      if (NON_PAYMENT_TYPES.includes(p.transaction_type)) return;
+      const d = p.created_at ? new Date(p.created_at) : new Date();
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      monthMap.set(key, (monthMap.get(key) || 0) + Number(p.amount || 0));
+    });
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      months.push({ label: labels[d.getMonth()], value: monthMap.get(key) || 0 });
+    }
+    return months;
+  }, [payments]);
+
+  const currentMonthPayment = monthlyPayments.length > 0 ? monthlyPayments[monthlyPayments.length - 1].value : 0;
+  const prevMonthPayment = monthlyPayments.length > 1 ? monthlyPayments[monthlyPayments.length - 2].value : 0;
+  const trendPercent = prevMonthPayment > 0 ? ((currentMonthPayment - prevMonthPayment) / prevMonthPayment * 100) : currentMonthPayment > 0 ? 100 : 0;
+
   async function handleAddProperty(event: React.FormEvent) {
     event.preventDefault();
     setMessage('');
@@ -764,17 +787,37 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
             </div>
           </div>
 
-          <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-            </div>
-            <div>
-              <div className="card-label">Collections</div>
-              <h3 style={{ margin: 0 }}>{formatCurrency(stats.total_payments)}</h3>
-              <Sparkline data={[50000, 100000, stats.total_payments]} color="#0ea5e9" w={80} h={24}/>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>total payments</p>
-            </div>
-          </div>
+<div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+             </div>
+             <div>
+               <div className="card-label">Collections</div>
+               <h3 style={{ margin: 0 }}>{formatCurrency(stats.total_payments)}</h3>
+               <Sparkline data={[50000, 100000, stats.total_payments]} color="#0ea5e9" w={80} h={24}/>
+               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>total payments</p>
+             </div>
+           </div>
+
+           <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, flexDirection: 'column', textAlign: 'left' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+               </div>
+               <div>
+                 <div className="card-label">Revenue Trend</div>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                   <span style={{ color: trendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700, fontSize: '14px' }}>{trendPercent >= 0 ? '+' : ''}{trendPercent.toFixed(1)}%</span>
+                   <h3 style={{ margin: 0 }}>{formatCurrency(currentMonthPayment)}</h3>
+                 </div>
+                 <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{monthlyPayments.length > 0 ? monthlyPayments[monthlyPayments.length - 1].label + ' 2024' : 'This month'}</p>
+               </div>
+             </div>
+             <Sparkline data={monthlyPayments.map(m => m.value)} color="var(--accent)" w={300} h={40}/>
+             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: 'var(--ink-3)', fontSize: '11px' }}>
+               {monthlyPayments.map(m => <span key={m.label}>{m.label}</span>)}
+             </div>
+           </div>
 
 <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

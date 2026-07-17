@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import Sparkline from '../components/Sparkline';
 
 interface Unit {
   id: string;
@@ -350,6 +351,29 @@ export default function PropertiesPage() {
   const filteredPayments = monthlyPayments.filter((p: any) => (p.month_due || '').toLowerCase().includes(selectedMonthNameFull.toLowerCase()) || (p.month_due || '').toLowerCase().includes(selectedMonth)).filter(p => !['complaint', 'notification'].includes(p.transaction_type));
   const filteredTotal = filteredPayments.reduce((sum: number, p: any) => sum + Number(p.paid_amount ?? p.amount ?? 0), 0);
 
+  const monthlyData = useMemo(() => {
+    const months: { label: string; value: number }[] = [];
+    const monthMap = new Map<string, number>();
+    (monthlyPayments || []).forEach((p: any) => {
+      if (['complaint', 'notification'].includes(p.transaction_type)) return;
+      const d = p.created_at ? new Date(p.created_at) : new Date();
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      monthMap.set(key, (monthMap.get(key) || 0) + Number(p.amount ?? 0));
+    });
+    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      months.push({ label: labels[d.getMonth()], value: monthMap.get(key) || 0 });
+    }
+    return months;
+  }, [monthlyPayments]);
+
+  const currentMonthVal = monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].value : 0;
+  const prevMonthVal = monthlyData.length > 1 ? monthlyData[monthlyData.length - 2].value : 0;
+  const revenueTrendPercent = prevMonthVal > 0 ? ((currentMonthVal - prevMonthVal) / prevMonthVal * 100) : currentMonthVal > 0 ? 100 : 0;
+
   // Get units for selected property
   const selectedPropertyUnits = selectedProperty 
     ? units.filter(u => u.property_id === selectedProperty.id) 
@@ -404,11 +428,25 @@ export default function PropertiesPage() {
             <strong>KSH {rentRoll.toLocaleString()}</strong>
             <p>Monthly rent from recorded units.</p>
           </article>
-          <article className="property-stat clickable" onClick={() => setShowPaymentsModal(true)} style={{ cursor: 'pointer' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Collected per month<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-            <strong>KSH {filteredTotal.toLocaleString()}</strong>
-            <p>Total cash collected this month. Click to view details.</p>
-          </article>
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12, cursor: 'pointer' }} onClick={() => setShowPaymentsModal(true)}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+               </div>
+               <div>
+                 <div className="card-label">Revenue Trend</div>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                   <span style={{ color: revenueTrendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700, fontSize: '14px' }}>{revenueTrendPercent >= 0 ? '+' : ''}{revenueTrendPercent.toFixed(1)}%</span>
+                   <h3 style={{ margin: 0 }}>{formatCurrency(currentMonthVal)}</h3>
+                 </div>
+                 <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].label + ' 2024' : 'This month'}</p>
+               </div>
+             </div>
+             <Sparkline data={monthlyData.map(m => m.value)} color="var(--accent)" w={300} h={40}/>
+             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: 'var(--ink-3)', fontSize: '11px' }}>
+               {monthlyData.map(m => <span key={m.label}>{m.label}</span>)}
+             </div>
+           </article>
         </div>
 
         {showPaymentsModal && (
