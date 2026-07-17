@@ -63,25 +63,42 @@ export default function AnalyticsPage() {
         </div>
 
         <section className="bento-grid">
-          <article className="bento-card" style={{ textAlign: 'center' }}>
-            <div className="card-label">Units Occupancy</div>
-            <DonutChart data={unitOccupancyData} centerLabel={String(data.occupiedUnits) + '/' + String(data.occupiedUnits + data.vacantUnits)} />
-            <Sparkline data={[data.occupiedUnits - 2, data.occupiedUnits - 1, data.occupiedUnits]} color="#10b981" w={120} h={36}/>
-            <p style={{ color: 'var(--ink-3)', marginTop: 12, fontSize: '13px' }}>Occupied vs Vacant Units</p>
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Units Occupancy</div>
+              <h3 style={{ margin: 0 }}>{loading ? '—' : data.occupiedUnits + data.vacantUnits}</h3>
+              <DonutChart data={unitOccupancyData} centerLabel={String(data.occupiedUnits) + '/' + String(data.occupiedUnits + data.vacantUnits)} />
+              <Sparkline data={[data.occupiedUnits - 2, data.occupiedUnits - 1, data.occupiedUnits]} color="#10b981" w={80} h={24}/>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
+            </div>
           </article>
 
-          <article className="bento-card" style={{ textAlign: 'center' }}>
-            <div className="card-label">Landlord Subscriptions</div>
-            <DonutChart data={subscriptionData} centerLabel={String(data.subscribedLandlords)} />
-            <Sparkline data={[data.subscribedLandlords, data.totalLandlords - data.subscribedLandlords, data.subscribedLandlords + 2]} color="#6366f1" w={120} h={36}/>
-            <p style={{ color: 'var(--ink-3)', marginTop: 12, fontSize: '13px' }}>Active Subscriptions</p>
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Landlord Subscriptions</div>
+              <h3 style={{ margin: 0 }}>{data.subscribedLandlords}</h3>
+              <DonutChart data={subscriptionData} centerLabel={String(data.subscribedLandlords)} />
+              <Sparkline data={[data.subscribedLandlords, data.totalLandlords - data.subscribedLandlords, data.subscribedLandlords + 2]} color="#6366f1" w={80} h={24}/>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Active Subscriptions</p>
+            </div>
           </article>
 
-          <article className="bento-card" style={{ textAlign: 'center' }}>
-            <div className="card-label">Total Payments</div>
-            <h3 style={{ fontSize: '36px', fontWeight: 700, margin: '8px 0 4px' }}>{data.totalPayments}</h3>
-            <Sparkline data={[data.totalPayments - 100, data.totalPayments - 50, data.totalPayments]} color="#f59e0b" w={120} h={36}/>
-            <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '14px' }}>Payment transactions</p>
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Total Payments</div>
+              <h3 style={{ margin: 0 }}>{data.totalPayments}</h3>
+              <Sparkline data={[data.totalPayments - 100, data.totalPayments - 50, data.totalPayments]} color="#f59e0b" w={80} h={24}/>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Payment transactions</p>
+            </div>
           </article>
         </section>
       </main>
