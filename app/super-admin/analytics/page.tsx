@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import DonutChart from '../../../components/DonutChart';
-import Sparkline from '../../../components/Sparkline';
+import DonutChart from '../../components/DonutChart';
+import Sparkline from '../../components/Sparkline';
 import { supabase } from '../../../lib/supabaseClient';
 
 interface AnalyticsData {
