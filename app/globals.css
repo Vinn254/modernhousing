@@ -1045,7 +1045,7 @@ body {
 
 .property-page-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 400px) 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
   align-items: start;
 }
