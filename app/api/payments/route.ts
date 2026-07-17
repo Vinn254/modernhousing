@@ -135,15 +135,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ payments: [] });
     }
 
-    if (!authContext.isSuperAdmin && !authContext.organizationId) {
-      return NextResponse.json({ payments: [] });
+    // Landlords: filter by properties they CREATED (fallback to org_id)
+    let propIds: string[] = [];
+    if (!authContext.isSuperAdmin) {
+      const { data: userProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('created_by', authContext.userId ?? '');
+      propIds = (userProps ?? []).map((p: any) => p.id);
+      
+      // Fallback: organization_id for backwards compatibility
+      if (propIds.length === 0 && authContext.organizationId) {
+        const { data: orgProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('organization_id', authContext.organizationId);
+        propIds = (orgProps ?? []).map((p: any) => p.id);
+      }
+    } else {
+      const { data: allProps } = await supabaseAdmin.from('properties').select('id');
+      propIds = (allProps ?? []).map((p: any) => p.id);
     }
-
-    const { data: orgProps } = await supabaseAdmin
-      .from('properties')
-      .select('id')
-      .eq('organization_id', authContext.organizationId ?? '');
-    const propIds = (orgProps ?? []).map((p: any) => p.id);
 
     if (propIds.length > 0) {
       const { data: orgTenants } = await supabaseAdmin
