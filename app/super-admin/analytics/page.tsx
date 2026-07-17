@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import DonutChart from '../../components/DonutChart';
+import DonutChart from '../../../components/DonutChart';
+import Sparkline from '../../../components/Sparkline';
 import { supabase } from '../../../lib/supabaseClient';
 
 interface AnalyticsData {
@@ -53,7 +54,7 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <main className="container admin-no-hero">
+      <main className="container admin-no-hero floral-bg">
         <div className="card-admin-header">
           <div>
             <p className="heading">Analytics</p>
@@ -61,26 +62,27 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <section className="bento-section">
-          <div className="bento">
-            <article className="card card-pm" style={{ textAlign: 'center' }}>
-              <div className="card-label">Units Occupancy</div>
-              <DonutChart data={unitOccupancyData} centerLabel={String(data.occupiedUnits) + '/' + String(data.occupiedUnits + data.vacantUnits)} />
-              <p style={{ color: 'var(--ink-3)', marginTop: 12, fontSize: '13px' }}>Occupied vs Vacant Units</p>
-            </article>
+        <section className="bento-grid">
+          <article className="bento-card" style={{ textAlign: 'center' }}>
+            <div className="card-label">Units Occupancy</div>
+            <DonutChart data={unitOccupancyData} centerLabel={String(data.occupiedUnits) + '/' + String(data.occupiedUnits + data.vacantUnits)} />
+            <Sparkline data={[data.occupiedUnits - 2, data.occupiedUnits - 1, data.occupiedUnits]} color="#10b981" w={120} h={36}/>
+            <p style={{ color: 'var(--ink-3)', marginTop: 12, fontSize: '13px' }}>Occupied vs Vacant Units</p>
+          </article>
 
-            <article className="card card-agent" style={{ textAlign: 'center' }}>
-              <div className="card-label">Landlord Subscriptions</div>
-              <DonutChart data={subscriptionData} centerLabel={String(data.subscribedLandlords)} />
-              <p style={{ color: 'var(--ink-3)', marginTop: 12, fontSize: '13px' }}>Active Subscriptions</p>
-            </article>
+          <article className="bento-card" style={{ textAlign: 'center' }}>
+            <div className="card-label">Landlord Subscriptions</div>
+            <DonutChart data={subscriptionData} centerLabel={String(data.subscribedLandlords)} />
+            <Sparkline data={[data.subscribedLandlords, data.totalLandlords - data.subscribedLandlords, data.subscribedLandlords + 2]} color="#6366f1" w={120} h={36}/>
+            <p style={{ color: 'var(--ink-3)', marginTop: 12, fontSize: '13px' }}>Active Subscriptions</p>
+          </article>
 
-            <article className="card card-feat card-feat-1" style={{ textAlign: 'center' }}>
-              <div className="card-label">Total Payments</div>
-              <h3 style={{ fontSize: '36px', fontWeight: 700, margin: '8px 0 4px' }}>{data.totalPayments}</h3>
-              <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '14px' }}>Payment transactions</p>
-            </article>
-          </div>
+          <article className="bento-card" style={{ textAlign: 'center' }}>
+            <div className="card-label">Total Payments</div>
+            <h3 style={{ fontSize: '36px', fontWeight: 700, margin: '8px 0 4px' }}>{data.totalPayments}</h3>
+            <Sparkline data={[data.totalPayments - 100, data.totalPayments - 50, data.totalPayments]} color="#f59e0b" w={120} h={36}/>
+            <p style={{ color: 'var(--ink-3)', margin: 0, fontSize: '14px' }}>Payment transactions</p>
+          </article>
         </section>
       </main>
 

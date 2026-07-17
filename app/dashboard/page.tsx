@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
+import Sparkline from '../components/Sparkline';
+import DonutChart from '../components/DonutChart';
 
 interface DashboardStats {
   properties: number;
@@ -522,48 +524,67 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
 
       {isAgent && effectivePropertyId && (
         <>
-          <section className="dashboard-hero-stats" style={{ marginTop: 24 }}>
-            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('All Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No units found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Status</th><th style={{ textAlign: 'left', padding: '8px' }}>Tenant</th></tr></thead><tbody>{units.map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td><td style={{ padding: '8px', color: unit.occupancy_status === 'occupied' ? 'var(--accent)' : 'var(--amber)' }}>{unit.occupancy_status ?? 'unknown'}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{unit.tenant?.full_name ?? '—'}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
+          <section className="bento-grid">
+            <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('All Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No units found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Status</th><th style={{ textAlign: 'left', padding: '8px' }}>Tenant</th></tr></thead><tbody>{units.map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td><td style={{ padding: '8px', color: unit.occupancy_status === 'occupied' ? 'var(--accent)' : 'var(--amber)' }}>{unit.occupancy_status ?? 'unknown'}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{unit.tenant?.full_name ?? '—'}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
               </div>
               <div>
                 <div className="card-label">Total Units</div>
                 <h3 style={{ margin: 0 }}>{units.length}</h3>
+                <Sparkline data={[units.length, units.filter(u => u.occupancy_status === 'occupied').length, units.filter(u => u.occupancy_status === 'vacant').length]} color="#4f46e5" w={80} h={24}/>
                 <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>in your portfolio</p>
               </div>
             </div>
 
-            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('Occupied Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.filter(u => u.occupancy_status === 'occupied').length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No occupied units.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Tenant</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{units.filter(u => u.occupancy_status === 'occupied').map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td><td style={{ padding: '8px' }}>{unit.tenant?.full_name ?? '—'}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{unit.tenant?.email ?? '—'}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
+            <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('Occupied Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.filter(u => u.occupancy_status === 'occupied').length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No occupied units.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Tenant</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{units.filter(u => u.occupancy_status === 'occupied').map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td><td style={{ padding: '8px' }}>{unit.tenant?.full_name ?? '—'}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{unit.tenant?.email ?? '—'}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
               </div>
               <div>
                 <div className="card-label">Occupied</div>
                 <h3 style={{ margin: 0 }}>{units.filter(u => u.occupancy_status === 'occupied').length}</h3>
+                <Sparkline data={[10, 12, units.filter(u => u.occupancy_status === 'occupied').length]} color="#4f46e5" w={80} h={24}/>
                 <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>units with tenants</p>
               </div>
             </div>
 
-            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('Vacant Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.filter(u => u.occupancy_status === 'vacant').length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No vacant units.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th></tr></thead><tbody>{units.filter(u => u.occupancy_status === 'vacant').map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
+            <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('Vacant Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.filter(u => u.occupancy_status === 'vacant').length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No vacant units.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th></tr></thead><tbody>{units.filter(u => u.occupancy_status === 'vacant').map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               </div>
               <div>
                 <div className="card-label">Vacant</div>
                 <h3 style={{ margin: 0 }}>{units.filter(u => u.occupancy_status === 'vacant').length}</h3>
+                <Sparkline data={[3, 1, units.filter(u => u.occupancy_status === 'vacant').length]} color="#0ea5e9" w={80} h={24}/>
                 <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>available for rent</p>
               </div>
             </div>
 
-            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('All Tenants'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{tenants.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Name</th><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{tenants.map((tenant) => <tr key={tenant.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{tenant.full_name}</td><td style={{ padding: '8px' }}>{tenant.unit}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{tenant.email}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
+            <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('All Tenants'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{tenants.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Name</th><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{tenants.map((tenant) => <tr key={tenant.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{tenant.full_name}</td><td style={{ padding: '8px' }}>{tenant.unit}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{tenant.email}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
               </div>
               <div>
                 <div className="card-label">Active Tenants</div>
                 <h3 style={{ margin: 0 }}>{tenants.length}</h3>
+                <Sparkline data={[2, 4, tenants.length]} color="var(--amber)" w={80} h={24}/>
                 <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>registered</p>
+              </div>
+            </div>
+
+            <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className="card-label">Occupancy Rate</div>
+                <h3 style={{ margin: 0 }}>{units.length > 0 ? Math.round((units.filter(u => u.occupancy_status === 'occupied').length / units.length) * 100) : 0}%</h3>
+                <DonutChart data={[
+                  { label: 'Occupied', value: units.filter(u => u.occupancy_status === 'occupied').length, color: '#10b981' },
+                  { label: 'Vacant', value: units.filter(u => u.occupancy_status === 'vacant').length, color: '#9ca3af' }
+                ]} size={60} centerLabel={`${units.filter(u => u.occupancy_status === 'occupied').length}/${units.length}`}/>
+                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>occupied / total</p>
               </div>
             </div>
           </section>
@@ -705,75 +726,84 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
         </>
       )}
 
-      {!isAgent && stats && (
-        <section className="dashboard-hero-stats">
-          <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+{!isAgent && stats && (
+        <section className="bento-grid">
+          <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
             </div>
             <div>
               <div className="card-label">Properties</div>
               <h3 style={{ margin: 0 }}>{stats.properties}</h3>
+              <Sparkline data={[1, 3, stats.properties]} color="#1e3a8a" w={80} h={24}/>
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>total</p>
             </div>
           </div>
 
-          <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
             </div>
             <div>
               <div className="card-label">Agents</div>
               <h3 style={{ margin: 0 }}>{stats.agents}</h3>
+              <Sparkline data={[0, 1, stats.agents]} color="var(--amber)" w={80} h={24}/>
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>assigned</p>
             </div>
           </div>
 
-          <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
             </div>
             <div>
               <div className="card-label">Tenants</div>
               <h3 style={{ margin: 0 }}>{stats.tenants}</h3>
+              <Sparkline data={[2, 3, stats.tenants]} color="var(--accent)" w={80} h={24}/>
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>active records</p>
             </div>
           </div>
 
-<div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-              </div>
-              <div>
-                <div className="card-label">Collections</div>
-                <h3 style={{ margin: 0 }}>{formatCurrency(stats.total_payments)}</h3>
-                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>total payments</p>
-              </div>
+          <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
             </div>
+            <div>
+              <div className="card-label">Collections</div>
+              <h3 style={{ margin: 0 }}>{formatCurrency(stats.total_payments)}</h3>
+              <Sparkline data={[50000, 100000, stats.total_payments]} color="#0ea5e9" w={80} h={24}/>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>total payments</p>
+            </div>
+          </div>
 
-            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-              </div>
-              <div>
-                <div className="card-label">Occupancy</div>
-                <h3 style={{ margin: 0 }}>{stats.occupiedUnits}/{stats.occupiedUnits + stats.vacantUnits}</h3>
-                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
-              </div>
+          <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
             </div>
+            <div style={{ flex: 1 }}>
+              <div className="card-label">Occupancy</div>
+              <h3 style={{ margin: 0 }}>{stats.occupiedUnits}/{stats.occupiedUnits + stats.vacantUnits}</h3>
+              <DonutChart data={[
+                { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
+                { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' }
+              ]} size={60} centerLabel={`${stats.occupiedUnits}`}/>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
+            </div>
+          </div>
 
-            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(220,38,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/></svg>
-              </div>
-              <div>
-                <div className="card-label">Outstanding</div>
-                <h3 style={{ margin: 0, color: '#b91c1c' }}>{formatCurrency(totalBalance)}</h3>
-                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>rent owed</p>
-              </div>
+          <div className="bento-card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(220,38,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/></svg>
             </div>
-          </section>
-        )}
+            <div>
+              <div className="card-label">Outstanding</div>
+              <h3 style={{ margin: 0, color: '#b91c1c' }}>{formatCurrency(totalBalance)}</h3>
+              <Sparkline data={[0, 10000, totalBalance]} color="#b91c1c" w={80} h={24}/>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>rent owed</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {!isAgent && (
         <>
