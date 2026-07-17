@@ -755,9 +755,17 @@ body {
 
 .property-stats {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, 1fr) !important;
   gap: 16px;
   margin-bottom: 16px;
+}
+@media (max-width: 768px) {
+  .property-stats {
+    grid-template-columns: 1fr !important;
+  }
+}
+.property-stats .bento-card:last-child {
+  grid-column: 1 / -1;
 }
 
 .property-stat {

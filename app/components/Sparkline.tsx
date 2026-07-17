@@ -8,6 +8,7 @@ interface SparklineProps {
 }
 
 export default function Sparkline({ data, color, w = 110, h = 36 }: SparklineProps) {
+  if (!data || data.length === 0) return null;
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
