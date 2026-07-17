@@ -1,27 +1,47 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function SessionTimeout() {
   const [showWarning, setShowWarning] = useState(false);
   const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const router = useRouter();
+
+  const handleLogout = useCallback(async () => {
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    await supabase.auth.signOut();
+    router.replace('/login');
+  }, [router]);
+
+  const resetTimers = useCallback(() => {
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    setShowWarning(false);
+
+    warningTimerRef.current = setTimeout(() => {
+      setShowWarning(true);
+      logoutTimerRef.current = setTimeout(async () => {
+        await handleLogout();
+      }, 60000);
+    }, 5 * 60 * 1000); // 5 minutes
+  }, [handleLogout]);
 
   useEffect(() => {
-    const resetTimers = () => {
-      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
-      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
-      setShowWarning(false);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace('/login');
+      }
+    });
 
-      warningTimerRef.current = setTimeout(() => {
-        setShowWarning(true);
-        logoutTimerRef.current = setTimeout(async () => {
-          await supabase.auth.signOut();
-          window.location.href = '/login';
-        }, 60000);
-      }, 5 * 60 * 1000); // 5 minutes
-    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        router.replace('/login');
+      }
+    });
 
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     events.forEach(event => document.addEventListener(event, resetTimers));
@@ -32,8 +52,9 @@ export default function SessionTimeout() {
       events.forEach(event => document.removeEventListener(event, resetTimers));
       if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      subscription.unsubscribe();
     };
-  }, []);
+  }, [resetTimers]);
 
   if (!showWarning) return null;
 
@@ -53,14 +74,12 @@ export default function SessionTimeout() {
       Session expires in 1 minute due to inactivity. 
       <button onClick={() => {
         setShowWarning(false);
-        // Reset timers on activity
         if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
         if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
         warningTimerRef.current = setTimeout(() => {
           setShowWarning(true);
           logoutTimerRef.current = setTimeout(async () => {
-            await supabase.auth.signOut();
-            window.location.href = '/login';
+            await handleLogout();
           }, 60000);
         }, 5 * 60 * 1000);
       }} style={{
