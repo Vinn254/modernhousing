@@ -154,11 +154,10 @@ export async function GET(request: NextRequest) {
       tenantsQuery,
       paymentsQuery,
       subscriptionsQuery,
-      supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant'),
-      supabaseAdmin.from('tenants').select(`
-        id, full_name, email, lease_start,
-        units!inner(unit_number, rent_amount, property_id, properties(name))
-      `),
+      propIds.length > 0 
+        ? supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant').in('property_id', propIds)
+        : supabaseAdmin.from('units').select('id').eq('property_id', 'none'),
+      tenantsQuery.in('unit_id', propIds.length > 0 ? (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map((u: any) => u.id) ?? [] : []),
     ]);
 
     const allTenants = tenantsData ?? [];

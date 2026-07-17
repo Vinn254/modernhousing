@@ -225,9 +225,29 @@ export async function GET(request: NextRequest) {
       } else if (authContext.organizationId) {
         // Project managers see properties in their organization
         query = query.eq('organization_id', authContext.organizationId);
-      } else if (authContext.userId) {
-        // Fallback: filter by user who created properties
-        query = query.eq('created_by', authContext.userId);
+      } else {
+        // Landlords without org_id - check if they have any properties
+        const { data: userProps, error: userPropsErr } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('created_by', authContext.userId);
+        if (userPropsErr || !userProps || userProps.length === 0) {
+          // No properties for this user - return empty
+          // But check if maybe they should see properties without created_by set
+          const { data: allProps } = await supabaseAdmin
+            .from('properties')
+            .select('id, created_by')
+            .is('created_by', null);
+          // If there are orphaned properties, they might belong to this user
+          // Return them for now to avoid complete data loss
+          if (allProps && allProps.length > 0) {
+            query = query.is('created_by', null);
+          } else {
+            return NextResponse.json({ properties: [] });
+          }
+        } else {
+          query = query.eq('created_by', authContext.userId);
+        }
       }
     }
 
