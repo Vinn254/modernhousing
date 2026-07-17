@@ -114,10 +114,13 @@ export default function AdminDashboard() {
 
         <section className="bento-grid">
           <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <DonutChart data={occupancyData} size={80} />
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+            </div>
             <div>
               <div className="card-label">Unit Occupancy</div>
               <h3 style={{ margin: 0 }}>{loading ? '—' : occupiedUnits}/{loading ? '—' : occupiedUnits + vacantUnits}</h3>
+              <DonutChart data={occupancyData} size={80} />
               <Sparkline data={[loading ? 0 : occupiedUnits - 2, loading ? 0 : occupiedUnits - 1, loading ? 0 : occupiedUnits]} color="#10b981" w={80} h={24}/>
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
             </div>
