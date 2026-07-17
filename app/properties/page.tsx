@@ -360,7 +360,7 @@ export default function PropertiesPage() {
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       monthMap.set(key, (monthMap.get(key) || 0) + Number(p.amount ?? 0));
     });
-    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
@@ -407,7 +407,7 @@ export default function PropertiesPage() {
       {error && <p className="landlord-error property-alert">{error}</p>}
 
       <section className="landlord-section property-section">
-<div className="property-stats">
+<div className="bento-grid property-stats">
           <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
@@ -448,20 +448,23 @@ export default function PropertiesPage() {
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Monthly rent from recorded units.</p>
             </div>
           </article>
-          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => setShowPaymentsModal(true)}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div className="card-label">Revenue Trend</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: revenueTrendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700, fontSize: '14px' }}>{revenueTrendPercent >= 0 ? '+' : ''}{revenueTrendPercent.toFixed(1)}%</span>
-                <h3 style={{ margin: 0 }}>{formatCurrency(currentMonthVal)}</h3>
-              </div>
-              <p style={{ margin: '4px 0 0', color: 'var(--ink-3)', fontSize: '13px' }}>{monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].label + ' 2024' : 'This month'}</p>
-            </div>
-            <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </article>
+<article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer' }} onClick={() => setShowPaymentsModal(true)}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+               </div>
+               <div style={{ flex: 1 }}>
+                 <div className="card-label">Revenue Trend</div>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                   <span style={{ color: revenueTrendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700, fontSize: '14px' }}>{revenueTrendPercent >= 0 ? '+' : ''}{revenueTrendPercent.toFixed(1)}%</span>
+                   <h3 style={{ margin: 0 }}>{formatCurrency(currentMonthVal)}</h3>
+                 </div>
+                 <p style={{ margin: '4px 0 0', color: 'var(--ink-3)', fontSize: '13px' }}>Last 6 months</p>
+               </div>
+               <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+             </div>
+             <Sparkline data={monthlyData.map(m => m.value).length > 0 ? monthlyData.map(m => m.value) : [0, 0, 0]} color="#10b981" w={350} h={40}/>
+           </article>
         </div>
 
         {showPaymentsModal && (

@@ -810,13 +810,13 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
                    <span style={{ color: trendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700, fontSize: '14px' }}>{trendPercent >= 0 ? '+' : ''}{trendPercent.toFixed(1)}%</span>
                    <h3 style={{ margin: 0 }}>{formatCurrency(currentMonthPayment)}</h3>
                  </div>
-                 <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{monthlyPayments.length > 0 ? monthlyPayments[monthlyPayments.length - 1].label + ' 2024' : 'This month'}</p>
+                 <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>trend vs last month</p>
                </div>
              </div>
-             <Sparkline data={monthlyPayments.map(m => m.value)} color="var(--accent)" w={300} h={40}/>
-             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: 'var(--ink-3)', fontSize: '11px' }}>
-               {monthlyPayments.map(m => <span key={m.label}>{m.label}</span>)}
-             </div>
+<Sparkline data={monthlyPayments.map(m => m.value).length > 0 ? monthlyPayments.map(m => m.value) : [0, 0, 0]} color="var(--accent)" w={300} h={40}/>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: 'var(--ink-3)', fontSize: '11px' }}>
+                {monthlyPayments.map(m => <span key={m.label}>{m.label}</span>)}
+              </div>
            </div>
 
            <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>

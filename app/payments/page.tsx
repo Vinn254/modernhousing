@@ -595,7 +595,7 @@ export default function PaymentsPage() {
         <div className="card-label">Monthly Revenue</div>
         <h3 style={{ marginBottom: 16 }}>Revenue Trend</h3>
         <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Total collected: <strong>{formatCurrency(payments.reduce((sum, p) => sum + (p.amount || 0), 0))}</strong></p>
-        <Sparkline data={payments.slice(-6).map(p => p.amount || 0)} color="var(--accent)" w={400} h={40}/>
+        <Sparkline data={payments.slice(-6).map(p => p.amount || 0).length > 0 ? payments.slice(-6).map(p => p.amount || 0) : [0, 0, 0]} color="#10b981" w={400} h={40}/>
       </article>
 
       <article className="card" style={{ marginTop: 24 }}>
