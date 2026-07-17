@@ -100,12 +100,22 @@ if (!orgId && userMetadata.role === 'tenant' && userMetadata.tenant_id) {
     }
   }
 
+  if (!orgId && userMetadata.role === 'project_manager' && sessionUser?.id) {
+    const { data: propData } = await supabaseAdmin
+      .from('properties')
+      .select('organization_id')
+      .eq('created_by', sessionUser.id)
+      .maybeSingle();
+    orgId = propData?.organization_id ?? null;
+  }
+
   return {
     isSuperAdmin: userMetadata.role === 'super_admin' || profile?.role === 'super_admin',
     isLandlord: userMetadata.role === 'project_manager' || profile?.role === 'project_manager',
     sessionUser,
     userMetadata,
     organizationId: orgId,
+    userId: sessionUser?.id ?? null,
   };
 }
 
@@ -145,6 +155,14 @@ export async function GET(request: NextRequest) {
     } else {
       const authContext = await getAuthContext(request);
       orgId = authContext.organizationId;
+      if (!orgId && authContext.isLandlord && authContext.userId) {
+        const { data: propData } = await supabaseAdmin
+          .from('properties')
+          .select('organization_id')
+          .eq('created_by', authContext.userId)
+          .maybeSingle();
+        orgId = propData?.organization_id ?? null;
+      }
     }
 
     if (!orgId) {
@@ -183,7 +201,17 @@ export async function POST(request: NextRequest) {
   try {
     const authContext = await getAuthContext(request);
     
-    if (!authContext.isSuperAdmin && !authContext.organizationId) {
+    let orgId = authContext.organizationId;
+    if (!orgId && authContext.isLandlord && authContext.userId) {
+      const { data: propData } = await supabaseAdmin
+        .from('properties')
+        .select('organization_id')
+        .eq('created_by', authContext.userId)
+        .maybeSingle();
+      orgId = propData?.organization_id ?? null;
+    }
+    
+    if (!authContext.isSuperAdmin && !orgId) {
       return NextResponse.json({ message: 'Unable to verify organization access.' }, { status: 403 });
     }
 
@@ -193,12 +221,12 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await supabaseAdmin
       .from('payment_settings')
       .select('id')
-      .eq('organization_id', authContext.organizationId ?? '')
+      .eq('organization_id', orgId ?? '')
       .limit(1)
       .maybeSingle();
 
     const data = {
-      organization_id: authContext.organizationId ?? '',
+      organization_id: orgId ?? '',
       paybill: paybill ?? '',
       paybill_account: paybillAccount ?? '',
       till: till ?? '',
