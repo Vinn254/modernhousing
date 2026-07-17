@@ -129,9 +129,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('property_id', propertyId);
     } else if (propertyIds.length > 0) {
       query = query.in('property_id', propertyIds);
-    } else {
-      return NextResponse.json({ units: [] });
     }
+    // Landlords without org_id and no propertyId see all units (no filter)
 
     const { data: units, error } = await query.order('unit_number', { ascending: true });
 
