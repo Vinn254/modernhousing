@@ -755,14 +755,9 @@ body {
 
 .property-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr;
   gap: 16px;
   margin-bottom: 16px;
-}
-@media (max-width: 768px) {
-  .property-stats {
-    grid-template-columns: 1fr;
-  }
 }
 
 .property-stat {
