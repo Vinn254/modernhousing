@@ -89,7 +89,7 @@ interface Unit {
   unit_number: string;
   current_water_reading?: number;
   previous_water_reading?: number;
-  tenant?: { id: string; full_name: string };
+  tenant?: { id: string; full_name: string; email?: string };
   occupancy_status?: string;
 }
 
@@ -137,10 +137,13 @@ export default function DashboardPage() {
    const [utilityType, setUtilityType] = useState('water');
    const [utilityAmount, setUtilityAmount] = useState('');
    const [utilityDescription, setUtilityDescription] = useState('');
-   const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'];
-   const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: string}>({});
-   const [waterBills, setWaterBills] = useState<any[]>([]);
-   const [waterMonthDue, setWaterMonthDue] = useState('');
+const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'];
+    const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: string}>({});
+    const [waterBills, setWaterBills] = useState<any[]>([]);
+    const [waterMonthDue, setWaterMonthDue] = useState('');
+    const [showModal, setShowModal] = useState(false);
+    const [modalTitle, setModalTitle] = useState('');
+    const [modalContent, setModalContent] = useState<React.ReactNode>(null);
 
   const isAgent = roleLoaded && userRole === 'agent';
   const agentPropertyFromStorage = typeof window !== 'undefined' ? localStorage.getItem('agentPropertyId') || '' : '';
@@ -520,7 +523,7 @@ export default function DashboardPage() {
       {isAgent && effectivePropertyId && (
         <>
           <section className="dashboard-hero-stats" style={{ marginTop: 24 }}>
-            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('All Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No units found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Status</th><th style={{ textAlign: 'left', padding: '8px' }}>Tenant</th></tr></thead><tbody>{units.map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td><td style={{ padding: '8px', color: unit.occupancy_status === 'occupied' ? 'var(--accent)' : 'var(--amber)' }}>{unit.occupancy_status ?? 'unknown'}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{unit.tenant?.full_name ?? '—'}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
               </div>
@@ -531,7 +534,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('Occupied Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.filter(u => u.occupancy_status === 'occupied').length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No occupied units.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Tenant</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{units.filter(u => u.occupancy_status === 'occupied').map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td><td style={{ padding: '8px' }}>{unit.tenant?.full_name ?? '—'}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{unit.tenant?.email ?? '—'}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
               </div>
@@ -542,7 +545,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('Vacant Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.filter(u => u.occupancy_status === 'vacant').length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No vacant units.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th></tr></thead><tbody>{units.filter(u => u.occupancy_status === 'vacant').map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               </div>
@@ -553,7 +556,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('All Tenants'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{tenants.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Name</th><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{tenants.map((tenant) => <tr key={tenant.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{tenant.full_name}</td><td style={{ padding: '8px' }}>{tenant.unit}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{tenant.email}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
               </div>
@@ -834,33 +837,43 @@ export default function DashboardPage() {
                   <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.property_name || 'Unassigned'} · {agent.status}</div>
                 </div>
                 <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: agent.status === 'active' ? 'rgba(220,38,38,0.1)' : 'rgba(16,185,129,0.1)', color: agent.status === 'active' ? '#7f1212' : 'var(--accent)' }} onClick={() => handleRemoveAgent(agent.id)} disabled={agent.status !== 'active'}>{agent.status === 'active' ? 'Remove' : 'Removed'}</button>
-              </div>
-            ))}
-          </div>
+</div>
+              ))}
+            </div>
 
-          <div className="card">
-            <div className="card-label">Portfolio</div>
-            <h3 style={{ marginBottom: 16 }}>Properties</h3>
-            {properties.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No properties added yet.</p> : properties.map((property) => (
-              <div key={property.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                <strong>{property.name}</strong>
-                <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{property.address}</div>
-              </div>
-            ))}
-
-            <h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
-            {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : payments.slice(0, 6).map((payment) => (
-              <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <strong>{payment.tenant}</strong>
-                  <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
+            <div className="card">
+              <div className="card-label">Portfolio</div>
+              <h3 style={{ marginBottom: 16 }}>Properties</h3>
+              {properties.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No properties added yet.</p> : properties.map((property) => (
+                <div key={property.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                  <strong>{property.name}</strong>
+                  <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{property.address}</div>
                 </div>
-                <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {payment.created_at ? new Date(payment.created_at).toLocaleDateString() : ''}</div>
+              ))}
+              <h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
+              {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : payments.slice(0, 6).map((payment) => (
+                <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <strong>{payment.tenant}</strong>
+                    <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
+                  </div>
+                  <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {payment.created_at ? new Date(payment.created_at).toLocaleDateString() : ''}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        {showModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowModal(false)}>
+            <div className="card" style={{ maxWidth: '500px', width: '90%', maxHeight: '400px', overflow: 'auto', padding: 20 }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ margin: 0 }}>{modalTitle}</h3>
+                <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--ink-2)' }}>×</button>
               </div>
-            ))}
+              {modalContent}
+            </div>
           </div>
-        </section>
-      )}
-    </main>
-  );
+        )}
+      </main>
+    );
 }
