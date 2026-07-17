@@ -30,6 +30,7 @@ create table properties (
    ownership_info text,
    unit_count integer default 0,
    water_rate numeric(12,2) default 150,
+   created_by uuid references auth.users(id) on delete set null,
    created_at timestamp with time zone default now()
 );
 
@@ -160,6 +161,7 @@ create table comments (
 );
 
 create index on properties (organization_id);
+create index on properties (created_by);
 create index on units (property_id);
 create index on tenants (unit_id);
 create index on payments (tenant_id);
