@@ -251,13 +251,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ bills: [] });
     }
 
-    // For landlords with organization
-    if (authContext.organizationId) {
-      const { data: orgProps } = await supabaseAdmin
+    // For landlords - filter by properties created_by
+    if (authContext.userId) {
+      const { data: createdProps } = await supabaseAdmin
         .from('properties')
         .select('id')
-        .eq('organization_id', authContext.organizationId ?? '');
-      const propIds = (orgProps ?? []).map((p: any) => p.id);
+        .eq('created_by', authContext.userId);
+      let propIds = (createdProps ?? []).map((p: any) => p.id);
+
+      // Fallback to organization_id if no properties found via created_by
+      if (propIds.length === 0 && authContext.organizationId) {
+        const { data: orgProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('organization_id', authContext.organizationId);
+        propIds = (orgProps ?? []).map((p: any) => p.id);
+      }
 
       if (propIds.length > 0) {
         const { data: propUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
