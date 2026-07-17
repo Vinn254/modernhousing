@@ -200,8 +200,8 @@ async function assertPropertyAccess(propertyId: string, authContext: AuthContext
       if (propertyId !== authContext.userMetadata?.property_id) {
         return forbidden('You can only manage properties assigned to you.');
       }
-    } else if (property.organization_id !== authContext.organizationId) {
-      return forbidden('You can only manage properties in your own landlord workspace.');
+    } else if (property.organization_id !== authContext.organizationId && property.created_by !== authContext.userId) {
+      return forbidden('You can only manage properties you created or belong to your organization.');
     }
   }
 
@@ -222,21 +222,21 @@ export async function GET(request: NextRequest) {
         } else {
           return NextResponse.json({ properties: [] });
         }
-      } else if (authContext.organizationId) {
+} else if (authContext.organizationId) {
         // Project managers see properties in their organization
         query = query.eq('organization_id', authContext.organizationId);
       } else if (authContext.userId) {
         // Fallback: filter by user who created properties
         // If no properties have created_by, user sees nothing (run setup script)
         const { data: userProps } = await supabaseAdmin
-          .from('properties')
-          .select('id')
-          .eq('created_by', authContext.userId);
-        if (userProps && userProps.length > 0) {
-          query = query.eq('created_by', authContext.userId);
-        } else {
-          return NextResponse.json({ properties: [] });
-        }
+            .from('properties')
+            .select('id')
+            .eq('created_by', authContext.userId);
+          if (userProps && userProps.length > 0) {
+            query = query.or(`created_by.eq.${authContext.userId},organization_id.eq.${authContext.organizationId}`);
+          } else {
+            return NextResponse.json({ properties: [] });
+          }
       } else {
         return NextResponse.json({ properties: [] });
       }

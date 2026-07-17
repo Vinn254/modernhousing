@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
       // Verify property exists
       const { data: prop } = await supabaseAdmin
         .from('properties')
-        .select('id, organization_id')
+        .select('id, organization_id, created_by')
         .eq('id', propertyId)
         .maybeSingle();
 
@@ -219,9 +219,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
       }
 
-      // For landlords: check if property belongs to their organization
-      if (authContext.organizationId && prop.organization_id !== authContext.organizationId) {
-        return NextResponse.json({ message: 'You can only add units to properties in your own landlord workspace.' }, { status: 403 });
+      // For landlords: check if property belongs to their organization OR they created it
+      if (authContext.organizationId && prop.organization_id !== authContext.organizationId && prop.created_by !== authContext.userId) {
+        return NextResponse.json({ message: 'You can only add units to properties you created or belong to your organization.' }, { status: 403 });
       }
 
       // For users without organization but with a valid property, allow access
@@ -289,12 +289,22 @@ export async function PATCH(request: NextRequest) {
       if (authContext.organizationId) {
         const { data: unitData } = await supabaseAdmin
           .from('units')
-          .select('property_id, properties!inner(organization_id)')
+          .select('property_id, properties!inner(organization_id, created_by)')
           .eq('id', id)
           .eq('properties.organization_id', authContext.organizationId)
           .maybeSingle();
 
-        if (!unitData) {
+        if (!unitData && authContext.userId) {
+          const { data: unitByCreator } = await supabaseAdmin
+            .from('units')
+            .select('property_id, properties!inner(created_by)')
+            .eq('id', id)
+            .eq('properties.created_by', authContext.userId)
+            .maybeSingle();
+          if (!unitByCreator) {
+            return NextResponse.json({ message: 'You can only manage units in properties you created or belong to your organization.' }, { status: 403 });
+          }
+        } else if (!unitData) {
           return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
         }
       } else if (userMetadata?.property_id) {
@@ -357,12 +367,22 @@ export async function DELETE(request: NextRequest) {
       if (authContext.organizationId) {
         const { data: unitProp } = await supabaseAdmin
           .from('units')
-          .select('property_id, properties!inner(organization_id)')
+          .select('property_id, properties!inner(organization_id, created_by)')
           .eq('id', id)
           .eq('properties.organization_id', authContext.organizationId)
           .maybeSingle();
 
-        if (!unitProp) {
+        if (!unitProp && authContext.userId) {
+          const { data: unitByCreator } = await supabaseAdmin
+            .from('units')
+            .select('property_id, properties!inner(created_by)')
+            .eq('id', id)
+            .eq('properties.created_by', authContext.userId)
+            .maybeSingle();
+          if (!unitByCreator) {
+            return NextResponse.json({ message: 'You can only manage units in properties you created or belong to your organization.' }, { status: 403 });
+          }
+        } else if (!unitProp) {
           return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
         }
       } else if (userMetadata?.property_id) {

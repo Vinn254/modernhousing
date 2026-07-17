@@ -98,36 +98,19 @@ export async function GET(request: NextRequest) {
     let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
     let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status');
 
-    // For landlords, filter by organization
+    // For landlords, filter by properties they created
     let propIds: string[] = [];
-    if (!isAgent && !isSuperAdmin) {
-      if (authContext.organizationId) {
-        const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
-        propIds = (orgProps ?? []).map((p: any) => p.id);
-        if (propIds.length > 0) {
-          propertiesQuery = propertiesQuery.in('id', propIds);
-          unitsQuery = unitsQuery.in('property_id', propIds);
-          const { data: unitsInOrg } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
-          const unitIds = (unitsInOrg ?? []).map((u: any) => u.id);
-          if (unitIds.length > 0) {
-            tenantsQuery = tenantsQuery.in('unit_id', unitIds);
-            paymentsQuery = paymentsQuery.in('tenant_id', (await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)).data?.map((t: any) => t.id) ?? []);
-          }
-        }
-      }
-      // Fallback for landlords without organization_id: filter by user_id
-      if (propIds.length === 0 && authContext.userId) {
-        const { data: userProps } = await supabaseAdmin.from('properties').select('id').eq('created_by', authContext.userId);
-        propIds = (userProps ?? []).map((p: any) => p.id);
-        if (propIds.length > 0) {
-          propertiesQuery = propertiesQuery.in('id', propIds);
-          unitsQuery = unitsQuery.in('property_id', propIds);
-          const { data: unitsInOrg } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
-          const unitIds = (unitsInOrg ?? []).map((u: any) => u.id);
-          if (unitIds.length > 0) {
-            tenantsQuery = tenantsQuery.in('unit_id', unitIds);
-            paymentsQuery = paymentsQuery.in('tenant_id', (await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)).data?.map((t: any) => t.id) ?? []);
-          }
+    if (!isAgent && !isSuperAdmin && authContext.userId) {
+      const { data: userProps } = await supabaseAdmin.from('properties').select('id').eq('created_by', authContext.userId);
+      propIds = (userProps ?? []).map((p: any) => p.id);
+      if (propIds.length > 0) {
+        propertiesQuery = propertiesQuery.in('id', propIds);
+        unitsQuery = unitsQuery.in('property_id', propIds);
+        const { data: unitsInOrg } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+        const unitIds = (unitsInOrg ?? []).map((u: any) => u.id);
+        if (unitIds.length > 0) {
+          tenantsQuery = tenantsQuery.in('unit_id', unitIds);
+          paymentsQuery = paymentsQuery.in('tenant_id', (await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)).data?.map((t: any) => t.id) ?? []);
         }
       }
       // If no properties found for this landlord, return empty
@@ -178,17 +161,11 @@ export async function GET(request: NextRequest) {
     const occupiedUnits = (allUnits ?? []).filter((u: any) => u.occupancy_status === 'occupied').length;
     const vacantUnits = (allUnits ?? []).length - occupiedUnits;
 
-    // Filter vacant units by organization if landlord
-    let vacantUnitsFiltered = unitsForVacant ?? [];
-    if (!isAgent && !isSuperAdmin && propIds.length > 0) {
-      vacantUnitsFiltered = (unitsForVacant ?? []).filter((u: any) => propIds.includes(u.property_id));
-    }
+    // Filter vacant units by properties user created
+    const vacantUnitsFiltered = (unitsForVacant ?? []).filter((u: any) => propIds.includes(u.property_id));
 
-    // Filter tenants for rent owed by organization if landlord
-    let tenantsForOwedFiltered = tenantsForOwed ?? [];
-    if (!isAgent && !isSuperAdmin && propIds.length > 0) {
-      tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => propIds.includes(t.units?.property_id));
-    }
+    // Filter tenants for rent owed by properties user created
+    const tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => propIds.includes(t.units?.property_id));
 
     const propertyCount = effectivePropertyId ? 1 : (propertiesData?.length ?? 0);
     const financialPayments = (paymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));

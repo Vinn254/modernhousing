@@ -130,67 +130,84 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ tenants: [] });
     }
 
-    if (!authContext.isSuperAdmin && !authContext.organizationId && !authContext.userId) {
+    if (!authContext.isSuperAdmin && !authContext.userId) {
       return NextResponse.json({ tenants: [] });
     }
 
-    let propIds: string[] = [];
-    
-    // Try organization_id first
-    if (authContext.organizationId) {
-      const { data: orgProps } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('organization_id', authContext.organizationId);
-      propIds = (orgProps ?? []).map((p: any) => p.id);
-    }
-    
-    // Fallback: filter by created_by user
-    if (propIds.length === 0 && authContext.userId) {
+    // Landlords: only properties they created (not by organization)
+    if (!authContext.isSuperAdmin && authContext.userId) {
       const { data: userProps } = await supabaseAdmin
         .from('properties')
         .select('id')
         .eq('created_by', authContext.userId);
-      propIds = (userProps ?? []).map((p: any) => p.id);
-    }
+      const propIds = (userProps ?? []).map((p: any) => p.id);
 
-    if (propIds.length > 0) {
-      const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
-      const unitIds = (orgUnits ?? []).map((u: any) => u.id);
+      if (propIds.length > 0) {
+        const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+        const unitIds = (orgUnits ?? []).map((u: any) => u.id);
 
-      if (unitIds.length > 0) {
-        const { data, error } = await supabaseAdmin
-          .from('tenants')
-          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, properties(id, name, address))')
-          .in('unit_id', unitIds)
-          .order('created_at', { ascending: false });
+        if (unitIds.length > 0) {
+          const { data, error } = await supabaseAdmin
+            .from('tenants')
+            .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, properties(id, name, address))')
+            .in('unit_id', unitIds)
+            .order('created_at', { ascending: false });
 
-        if (error) throw error;
+          if (error) throw error;
 
-        const tenants = (data ?? []).map((tenant: any) => ({
-          id: tenant.id,
-          full_name: tenant.full_name,
-          email: tenant.email,
-          phone: tenant.phone,
-          unit: tenant.units?.unit_number ?? '',
-          property: tenant.units?.properties?.name ?? '',
-          property_id: tenant.units?.properties?.id ?? '',
-          address: tenant.units?.properties?.address ?? '',
-          lease_start: tenant.lease_start,
-          lease_end: tenant.lease_end,
-          national_id: tenant.national_id,
-          kra_pin: tenant.kra_pin,
-          next_of_kin_name: tenant.next_of_kin_name,
-          next_of_kin_id: tenant.next_of_kin_id,
-          next_of_kin_phone: tenant.next_of_kin_phone,
-          picture_url: tenant.picture_url,
-        }));
+          const tenants = (data ?? []).map((tenant: any) => ({
+            id: tenant.id,
+            full_name: tenant.full_name,
+            email: tenant.email,
+            phone: tenant.phone,
+            unit: tenant.units?.unit_number ?? '',
+            property: tenant.units?.properties?.name ?? '',
+            property_id: tenant.units?.properties?.id ?? '',
+            address: tenant.units?.properties?.address ?? '',
+            lease_start: tenant.lease_start,
+            lease_end: tenant.lease_end,
+            national_id: tenant.national_id,
+            kra_pin: tenant.kra_pin,
+            next_of_kin_name: tenant.next_of_kin_name,
+            next_of_kin_id: tenant.next_of_kin_id,
+            next_of_kin_phone: tenant.next_of_kin_phone,
+            picture_url: tenant.picture_url,
+          }));
 
-        return NextResponse.json({ tenants });
+          return NextResponse.json({ tenants });
+        }
       }
       return NextResponse.json({ tenants: [] });
     }
-    return NextResponse.json({ tenants: [] });
+
+    // Super admin sees all tenants
+    const { data, error } = await supabaseAdmin
+      .from('tenants')
+      .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, properties(id, name, address))')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const tenants = (data ?? []).map((tenant: any) => ({
+      id: tenant.id,
+      full_name: tenant.full_name,
+      email: tenant.email,
+      phone: tenant.phone,
+      unit: tenant.units?.unit_number ?? '',
+      property: tenant.units?.properties?.name ?? '',
+      property_id: tenant.units?.properties?.id ?? '',
+      address: tenant.units?.properties?.address ?? '',
+      lease_start: tenant.lease_start,
+      lease_end: tenant.lease_end,
+      national_id: tenant.national_id,
+      kra_pin: tenant.kra_pin,
+      next_of_kin_name: tenant.next_of_kin_name,
+      next_of_kin_id: tenant.next_of_kin_id,
+      next_of_kin_phone: tenant.next_of_kin_phone,
+      picture_url: tenant.picture_url,
+    }));
+
+    return NextResponse.json({ tenants });
   } catch (error: any) {
     return NextResponse.json({ message: error.message ?? 'Unable to load tenants.' }, { status: 500 });
   }
@@ -248,6 +265,7 @@ export async function POST(request: NextRequest) {
     const isAgent = userMetadata?.role === 'agent';
     
     if (!authContext.isSuperAdmin) {
+      // Agents: can only add tenants to their assigned property
       if (isAgent) {
         if (userMetadata?.property_id !== propertyId) {
           return NextResponse.json({ message: 'You can only add tenants to your assigned property.' }, { status: 403 });
@@ -262,9 +280,29 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: 'You can only assign tenants to units in your assigned property.' }, { status: 403 });
           }
         }
-      } else if (!authContext.organizationId && !authContext.userId) {
-        return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
       }
+      // Landlords: can only add tenants to properties they created
+      else {
+        const { data: propCheck } = await supabaseAdmin
+          .from('properties')
+          .select('created_by')
+          .eq('id', propertyId)
+          .maybeSingle();
+        if (!propCheck || propCheck.created_by !== authContext.userId) {
+          return NextResponse.json({ message: 'You can only add tenants to properties you created.' }, { status: 403 });
+        }
+        if (unitId) {
+          const { data: unitCheck } = await supabaseAdmin
+            .from('units')
+            .select('property_id')
+            .eq('id', unitId)
+            .maybeSingle();
+          if (!unitCheck || unitCheck.property_id !== propertyId) {
+            return NextResponse.json({ message: 'Unit not found in your property.' }, { status: 403 });
+          }
+        }
+      }
+    }
   }
 
   if (propertyId && !finalUnitId && unitNumber) {
@@ -332,8 +370,8 @@ export async function POST(request: NextRequest) {
         const currentOrg = propRow?.organization_id ?? null;
         if (!currentOrg) {
           // Get requester org from auth context and set it if available
-          const authContext = await getAuthContext(request);
-          const requesterOrg = authContext.organizationId;
+          const authContextForOrg = await getAuthContext(request);
+          const requesterOrg = authContextForOrg.organizationId;
           if (requesterOrg) {
             await supabaseAdmin.from('properties').update({ organization_id: requesterOrg }).eq('id', propertyId);
           }
@@ -415,9 +453,8 @@ export async function PATCH(request: NextRequest) {
     );
     
     if (!authContext.isSuperAdmin) {
-      const agentPropertyId = isAgent ? userMetadata?.property_id : null;
-      
-      if (isAgent && agentPropertyId) {
+      // Agents: can only manage tenants in assigned property
+      if (isAgent && userMetadata?.property_id) {
         const { data: tenantCheck } = await supabaseAdmin
           .from('tenants')
           .select('units!inner(property_id)')
@@ -425,27 +462,18 @@ export async function PATCH(request: NextRequest) {
           .maybeSingle();
 
         const tenantPropertyId = tenantCheck?.units?.[0]?.property_id;
-        if (!tenantCheck || tenantPropertyId !== agentPropertyId) {
+        if (!tenantCheck || tenantPropertyId !== userMetadata.property_id) {
           return NextResponse.json({ message: 'You can only manage tenants in your assigned property.' }, { status: 403 });
         }
       }
-      // Landlords need organization_id or created_by to verify property access
-      if (!isAgent) {
-        let propIds: string[] = [];
-        if (authContext.organizationId) {
-          const { data: orgProps } = await supabaseAdmin
-            .from('properties')
-            .select('id')
-            .eq('organization_id', authContext.organizationId);
-          propIds = (orgProps ?? []).map((p: any) => p.id);
-        } else if (authContext.userId) {
-          const { data: userProps } = await supabaseAdmin
-            .from('properties')
-            .select('id')
-            .eq('created_by', authContext.userId);
-          propIds = (userProps ?? []).map((p: any) => p.id);
-        }
-        
+      // Landlords: only properties they created (not by organization)
+      else if (authContext.userId) {
+        const { data: userProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('created_by', authContext.userId);
+        const propIds = (userProps ?? []).map((p: any) => p.id);
+
         if (propIds.length > 0) {
           const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
           const unitIds = (orgUnits ?? []).map((u: any) => u.id);
@@ -457,10 +485,10 @@ export async function PATCH(request: NextRequest) {
             .maybeSingle();
 
           if (!tenantUnit) {
-            return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+            return NextResponse.json({ message: 'You can only manage tenants in properties you created.' }, { status: 403 });
           }
         } else {
-          return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+          return NextResponse.json({ message: 'You can only manage tenants in properties you created.' }, { status: 403 });
         }
       }
     }
@@ -510,9 +538,8 @@ export async function DELETE(request: NextRequest) {
       .maybeSingle();
 
     if (!authContext.isSuperAdmin) {
-      const agentPropertyId = isAgent ? userMetadata?.property_id : null;
-      
-      if (isAgent && agentPropertyId) {
+      // Agents: can only delete tenants in assigned property
+      if (isAgent && userMetadata?.property_id) {
         const { data: tenantCheck } = await supabaseAdmin
           .from('tenants')
           .select('units!inner(property_id)')
@@ -520,27 +547,18 @@ export async function DELETE(request: NextRequest) {
           .maybeSingle();
 
         const tenantPropertyId = tenantCheck?.units?.[0]?.property_id;
-        if (!tenantCheck || tenantPropertyId !== agentPropertyId) {
+        if (!tenantCheck || tenantPropertyId !== userMetadata.property_id) {
           return NextResponse.json({ message: 'You can only manage tenants in your assigned property.' }, { status: 403 });
         }
       }
-      // Landlords need organization_id or created_by to verify property access
-      if (!isAgent) {
-        let propIds: string[] = [];
-        if (authContext.organizationId) {
-          const { data: orgProps } = await supabaseAdmin
-            .from('properties')
-            .select('id')
-            .eq('organization_id', authContext.organizationId);
-          propIds = (orgProps ?? []).map((p: any) => p.id);
-        } else if (authContext.userId) {
-          const { data: userProps } = await supabaseAdmin
-            .from('properties')
-            .select('id')
-            .eq('created_by', authContext.userId);
-          propIds = (userProps ?? []).map((p: any) => p.id);
-        }
-        
+      // Landlords: only properties they created (not by organization)
+      else if (authContext.userId) {
+        const { data: userProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('created_by', authContext.userId);
+        const propIds = (userProps ?? []).map((p: any) => p.id);
+
         if (propIds.length > 0) {
           const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
           const unitIds = (orgUnits ?? []).map((u: any) => u.id);
@@ -552,10 +570,10 @@ export async function DELETE(request: NextRequest) {
             .maybeSingle();
 
           if (!tenantUnit) {
-            return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+            return NextResponse.json({ message: 'You can only manage tenants in properties you created.' }, { status: 403 });
           }
         } else {
-          return NextResponse.json({ message: 'You can only manage tenants in your own landlord workspace.' }, { status: 403 });
+          return NextResponse.json({ message: 'You can only manage tenants in properties you created.' }, { status: 403 });
         }
       }
     }

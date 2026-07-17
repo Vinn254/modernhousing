@@ -73,22 +73,12 @@ export async function POST(request: NextRequest) {
           .update({ organization_id: newOrg.id })
           .eq('email', targetEmail);
 
-        await supabaseAdmin
-          .from('properties')
-          .update({ organization_id: newOrg.id })
-          .eq('organization_id', null);
-
-        return NextResponse.json({ message: `Properties assigned to ${targetEmail}.`, organizationId: newOrg.id });
+        return NextResponse.json({ message: `Organization created for ${targetEmail}.`, organizationId: newOrg.id });
       }
       return NextResponse.json({ message: 'Failed to create organization.' }, { status: 500 });
     }
 
-    await supabaseAdmin
-      .from('properties')
-      .update({ organization_id: targetProfile.organization_id })
-      .eq('organization_id', null);
-
-    return NextResponse.json({ message: `Properties assigned to ${targetEmail}.`, organizationId: targetProfile.organization_id });
+    return NextResponse.json({ message: `Landlord already has organization.`, organizationId: targetProfile.organization_id });
   }
 
   if (action === 'setup-all-landlords') {
@@ -123,31 +113,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Assign all orphaned properties to landlords based on their org
-    const orphanedProperties = await supabaseAdmin
-      .from('properties')
-      .select('id, organization_id')
-      .eq('organization_id', null);
-
-    for (const prop of orphanedProperties.data ?? []) {
-      // Assign to first landlord without properties
-      const { data: firstLandlord } = await supabaseAdmin
-        .from('profiles')
-        .select('id, user_id, organization_id')
-        .eq('role', 'project_manager')
-        .not('organization_id', 'is', null)
-        .limit(1)
-        .single();
-      
-      if (firstLandlord?.organization_id) {
-        await supabaseAdmin
-          .from('properties')
-          .update({ organization_id: firstLandlord.organization_id })
-          .eq('id', prop.id);
-      }
-    }
-
-    return NextResponse.json({ message: 'All landlords set up with organizations.', count: profiles?.length ?? 0 });
+    // Orphaned properties remain unassigned - landlords only see properties they created
+    return NextResponse.json({ message: 'All landlords set up with organizations. Orphaned properties remain unassigned.', count: profiles?.length ?? 0 });
   }
 
   return NextResponse.json({ message: 'Invalid action.' }, { status: 400 });
