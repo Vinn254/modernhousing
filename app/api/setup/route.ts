@@ -99,11 +99,6 @@ export async function POST(request: NextRequest) {
 
     if (profilesErr) return NextResponse.json({ message: profilesErr.message }, { status: 500 });
 
-    const orphanedProperties = await supabaseAdmin
-      .from('properties')
-      .select('id')
-      .eq('organization_id', null);
-
     for (const profile of profiles ?? []) {
       if (!profile.organization_id) {
         const { data: newOrg } = await supabaseAdmin
@@ -118,12 +113,37 @@ export async function POST(request: NextRequest) {
             .update({ organization_id: newOrg.id })
             .eq('id', profile.id);
           
-          // Assign orphaned properties to this landlord
-          await supabaseAdmin
-            .from('properties')
-            .update({ organization_id: newOrg.id })
-            .eq('organization_id', null);
+          // Also update auth user metadata for session consistency
+          if (profile.user_id) {
+            await supabaseAdmin.auth.admin.updateUserById(profile.user_id, {
+              user_metadata: { organization_id: newOrg.id }
+            });
+          }
         }
+      }
+    }
+
+    // Assign all orphaned properties to landlords based on their org
+    const orphanedProperties = await supabaseAdmin
+      .from('properties')
+      .select('id, organization_id')
+      .eq('organization_id', null);
+
+    for (const prop of orphanedProperties.data ?? []) {
+      // Assign to first landlord without properties
+      const { data: firstLandlord } = await supabaseAdmin
+        .from('profiles')
+        .select('id, user_id, organization_id')
+        .eq('role', 'project_manager')
+        .not('organization_id', 'is', null)
+        .limit(1)
+        .single();
+      
+      if (firstLandlord?.organization_id) {
+        await supabaseAdmin
+          .from('properties')
+          .update({ organization_id: firstLandlord.organization_id })
+          .eq('id', prop.id);
       }
     }
 
