@@ -99,7 +99,7 @@ export default function TenantsPage() {
     paymentMethod: 'Cash',
     referenceNumber: '',
   });
-  
+
   const [showPayForm, setShowPayForm] = useState(false);
   const [showDirectPayment, setShowDirectPayment] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
@@ -252,7 +252,8 @@ export default function TenantsPage() {
     setSelectedTenant(tenant);
     setPayForm({ billId: '', amount: '', paymentMethod: 'Cash', referenceNumber: '' });
     setShowPayForm(false);
-    setShowDirectPayment(false);
+    setDirectPaymentForm(f => ({ ...f, tenantId: tenant.id }));
+    setShowDirectPayment(true);
     await loadBills(tenant.id);
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
   }
