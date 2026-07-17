@@ -38,9 +38,19 @@ export default function AgentUtilitiesPage() {
   const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: string}>({});
   const [waterMonthDue, setWaterMonthDue] = useState('');
 
-  const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
+const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
-async function loadData() {
+  function calculateWaterBill(consumption: number): number {
+    if (consumption <= 0) return 0;
+    if (consumption <= 6) return consumption * 88;
+    if (consumption <= 20) return consumption * 132;
+    if (consumption <= 50) return consumption * 137;
+    if (consumption <= 100) return consumption * 148;
+    if (consumption <= 300) return consumption * 165;
+    return consumption * 165;
+  }
+
+  async function loadData() {
     setLoading(true);
     setError('');
     try {
@@ -103,15 +113,21 @@ async function loadData() {
     const reading = waterMeterReadings[unitId];
     if (!reading) return;
 
+    const unit = units.find(u => u.id === unitId);
+    const previousReading = unit?.previous_water_reading ?? 0;
+    const consumption = Number(reading) - previousReading;
+    const amount = calculateWaterBill(consumption);
+    const waterRate = consumption <= 6 ? 88 : consumption <= 20 ? 132 : consumption <= 50 ? 137 : consumption <= 100 ? 148 : consumption <= 300 ? 165 : 165;
+
     const response = await fetch('/api/water', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ unitId, currentReading: Number(reading), monthDue: waterMonthDue, propertyId: agentPropertyId }),
+      body: JSON.stringify({ unitId, currentReading: Number(reading), monthDue: waterMonthDue, propertyId: agentPropertyId, calculatedAmount: amount }),
     });
 
     const result = await response.json();
     if (response.ok) {
-      setMessage(`Water bill: ${result.consumption} units × ${result.waterRate} = ${result.amount.toLocaleString()} KES`);
+      setMessage(`Water bill: ${consumption} units × ${waterRate} = ${amount.toLocaleString()} KES`);
       setWaterMeterReadings((prev) => ({ ...prev, [unitId]: '' }));
       loadData();
     } else {
@@ -130,7 +146,7 @@ async function loadData() {
           <article className="card">
             <div className="card-label">Water Meter Billing</div>
             <h3>Record Water Reading</h3>
-            <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Enter current meter reading. Water billed at KES 150/unit. Consumption = Current - Previous.</p>
+            <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Water rates: 1-6 units = 88 KSH, 7-20 units = 132 KSH, 21-50 units = 137 KSH, 51-100 units = 148 KSH, 101-300 units = 165 KSH.</p>
             <input type="month" value={waterMonthDue} onChange={(event) => setWaterMonthDue(event.target.value)} placeholder="Billing month" style={{ marginBottom: 12 }} />
             {units.length === 0 ? (
               <p style={{ color: 'var(--ink-3)', fontSize: '13px' }}>No units available.</p>
@@ -141,6 +157,9 @@ async function loadData() {
                     <span style={{ width: 100, fontSize: '13px' }}>Unit {unit.unit_number}</span>
                     <span style={{ width: 80, fontSize: '12px', color: 'var(--ink-3)' }}>{unit.previous_water_reading ?? 0} →</span>
                     <input type="number" value={waterMeterReadings[unit.id] || ''} onChange={(e) => setWaterMeterReadings((prev) => ({ ...prev, [unit.id]: e.target.value }))} placeholder="Current" style={{ flex: 1, padding: '6px' }} />
+                    <span style={{ width: 100, fontSize: '12px', color: 'var(--ink-3)', textAlign: 'right' }}>
+                      {waterMeterReadings[unit.id] ? `${calculateWaterBill(Number(waterMeterReadings[unit.id]) - (unit.previous_water_reading ?? 0)).toLocaleString()} KSH` : '\u00A0'}
+                    </span>
                     <button type="button" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id]} style={{ padding: '6px 12px', fontSize: '12px' }}>Bill</button>
                   </div>
                 ))}

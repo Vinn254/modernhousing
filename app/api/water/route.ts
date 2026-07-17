@@ -46,23 +46,37 @@ async function getAuthContext(request: NextRequest) {
     } catch (e) {}
   }
 
-  if (!sessionUser) return { isSuperAdmin: false, sessionUser: null, userMetadata: {} };
+  if (!sessionUser) return { isSuperAdmin: false, sessionUser: null, userMetadata: {}, userId: undefined };
 
   const userMetadata = sessionUser.user_metadata || {};
+  
+  // Get organization_id from profile fallback
+  let orgId = userMetadata.organization_id ?? null;
+  if (!orgId && sessionUser.email) {
+    const { data: profileByEmail } = await supabaseAdmin
+      .from('profiles')
+      .select('organization_id')
+      .eq('email', sessionUser.email)
+      .single();
+    orgId = profileByEmail?.organization_id ?? null;
+  }
+  
   return {
     isSuperAdmin: userMetadata.role === 'super_admin',
     sessionUser,
     userMetadata,
+    userId: sessionUser.id,
+    organizationId: orgId,
   };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { unitId, consumption, monthDue } = body;
+    const { unitId, currentReading, monthDue } = body;
 
-    if (!unitId || consumption === undefined) {
-      return NextResponse.json({ message: 'Unit ID and consumption are required.' }, { status: 400 });
+    if (!unitId || currentReading === undefined) {
+      return NextResponse.json({ message: 'Unit ID and current reading are required.' }, { status: 400 });
     }
 
     const authContext = await getAuthContext(request);
@@ -88,35 +102,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'You can only record meter readings for units in your assigned property.' }, { status: 403 });
     }
 
-    // For landlords with organization - verify unit belongs to their organization
-    if (!isAgent && userMetadata?.organization_id && !authContext.isSuperAdmin) {
-      const { data: unitOrgCheck } = await supabaseAdmin
-        .from('units')
-        .select('id, property_id, properties!inner(organization_id)')
-        .eq('id', unitId)
-        .eq('properties.organization_id', userMetadata.organization_id)
-        .single();
-      if (!unitOrgCheck) {
-        return NextResponse.json({ message: 'You can only record meter readings for units in your landlord workspace.' }, { status: 403 });
+    // For landlords - verify unit belongs to their properties (created_by or organization)
+    if (!isAgent && !authContext.isSuperAdmin) {
+      if (authContext.organizationId) {
+        const { data: unitOrgCheck } = await supabaseAdmin
+          .from('units')
+          .select('id, property_id, properties!inner(organization_id)')
+          .eq('id', unitId)
+          .eq('properties.organization_id', authContext.organizationId)
+          .single();
+        if (!unitOrgCheck) {
+          return NextResponse.json({ message: 'You can only record meter readings for units in your landlord workspace.' }, { status: 403 });
+        }
+      } else if (authContext.userId) {
+        const { data: unitCreatedCheck } = await supabaseAdmin
+          .from('units')
+          .select('id, property_id, properties!inner(created_by)')
+          .eq('id', unitId)
+          .eq('properties.created_by', authContext.userId)
+          .single();
+        if (!unitCreatedCheck) {
+          return NextResponse.json({ message: 'You can only record meter readings for units in properties you created.' }, { status: 403 });
+        }
       }
     }
 
-    const unitsConsumed = Math.max(0, Number(consumption));
+    const consumption = Math.max(0, Number(currentReading) - Number(unit.previous_water_reading || 0));
     
-    if (unitsConsumed === 0) {
+    if (consumption === 0) {
       return NextResponse.json({ message: 'Consumption is 0 - no bill generated.' }, { status: 200 });
     }
 
     let amount: number;
-    if (unitsConsumed <= 6) {
+    if (consumption <= 6) {
       amount = 88;
-    } else if (unitsConsumed <= 20) {
+    } else if (consumption <= 20) {
       amount = 132;
-    } else if (unitsConsumed <= 50) {
+    } else if (consumption <= 50) {
       amount = 137;
-    } else if (unitsConsumed <= 100) {
+    } else if (consumption <= 100) {
       amount = 148;
-    } else if (unitsConsumed <= 300) {
+    } else if (consumption <= 300) {
       amount = 165;
     } else {
       amount = 0;
@@ -126,7 +152,7 @@ export async function POST(request: NextRequest) {
       .from('units')
       .update({
         previous_water_reading: unit.current_water_reading || 0,
-        current_water_reading: (unit.current_water_reading || 0) + unitsConsumed,
+        current_water_reading: Number(currentReading),
         last_meter_update: new Date().toISOString(),
       })
       .eq('id', unitId);
@@ -207,20 +233,51 @@ export async function GET(request: NextRequest) {
     const authContext = await getAuthContext(request);
     const propertyId = request.nextUrl.searchParams.get('propertyId');
 
-    if (!propertyId) {
-      return NextResponse.json({ units: [] });
-    }
-
     const userMetadata = authContext.userMetadata || {};
     const isAgent = userMetadata?.role === 'agent';
-    if (isAgent && userMetadata?.property_id !== propertyId) {
-      return NextResponse.json({ message: 'Access denied to this property.' }, { status: 403 });
+
+    // For agents - check property access
+    if (isAgent) {
+      if (!userMetadata?.property_id) {
+        return NextResponse.json({ units: [] });
+      }
+      if (propertyId && userMetadata.property_id !== propertyId) {
+        return NextResponse.json({ message: 'Access denied to this property.' }, { status: 403 });
+      }
+    }
+
+    let effectivePropertyIds = propertyId ? [propertyId] : [];
+
+    // For landlords without propertyId - filter by properties created_by
+    if (!isAgent && !propertyId && authContext.userId) {
+      const { data: userProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('created_by', authContext.userId);
+      effectivePropertyIds = (userProps ?? []).map((p: any) => p.id);
+    }
+
+    // For landlords - also filter by created_by when propertyId is provided
+    if (!isAgent && propertyId && authContext.userId && !authContext.isSuperAdmin) {
+      const { data: propCheck } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('id', propertyId)
+        .eq('created_by', authContext.userId)
+        .single();
+      if (!propCheck) {
+        return NextResponse.json({ units: [] });
+      }
+    }
+
+    if (effectivePropertyIds.length === 0 && !propertyId) {
+      return NextResponse.json({ units: [] });
     }
 
     const { data: units, error } = await supabaseAdmin
       .from('units')
       .select('id, unit_number, current_water_reading, previous_water_reading, last_meter_update, property_id')
-      .eq('property_id', propertyId)
+      .in('property_id', propertyId ? [propertyId] : effectivePropertyIds)
       .order('unit_number');
 
     if (error) throw error;

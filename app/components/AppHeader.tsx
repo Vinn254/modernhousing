@@ -95,7 +95,7 @@ export default function AppHeader() {
     return name?.split(' ').map((part) => part[0]).join('').toUpperCase() || 'U';
   };
 
-  useEffect(() => {
+  const checkSession = () => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
         setUser(data.session.user);
@@ -103,6 +103,10 @@ export default function AppHeader() {
       }
       setRoleLoaded(true);
     });
+  };
+
+  useEffect(() => {
+    checkSession();
 
     supabase.auth.getUser().then(({ data, error }) => {
       if (!error && data.user) {
@@ -128,7 +132,7 @@ export default function AppHeader() {
 
   const shouldHideHeader = pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/reset-password' || pathname.startsWith('/tenant/register');
 
-  if (shouldHideHeader || !roleLoaded) return null;
+  if (shouldHideHeader || !user || !roleLoaded) return null;
 
   const isTenant = role === 'tenant';
   const isAgent = role === 'agent';
@@ -195,7 +199,7 @@ export default function AppHeader() {
   const hour = new Date().getHours();
   const timeGreeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
-   return (
+  return (
     <>
       {user && (
         <>

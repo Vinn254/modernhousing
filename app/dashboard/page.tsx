@@ -590,7 +590,7 @@ export default function DashboardPage() {
             <div className="card">
               <div className="card-label">Water Meter Billing</div>
               <h3 style={{ marginBottom: 16 }}>Record Water Reading</h3>
-              <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Enter current meter reading. Water is billed at KES 150/unit. Consumption = Current - Previous.</p>
+              <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Enter current meter reading. Water is billed at tiered rates: 0-6m³ (88 KES), 7-20m³ (132 KES), 21-50m³ (137 KES), 51-100m³ (148 KES), 101-300m³ (165 KES), 300+m³ (custom). Consumption = Current - Previous.</p>
               <input type="month" value={waterMonthDue} onChange={(event) => setWaterMonthDue(event.target.value)} placeholder="Billing month" style={{ marginBottom: 12 }} />
               {units.length === 0 ? (
                 <p style={{ color: 'var(--ink-3)', fontSize: '13px' }}>No units available. Add tenants first to create units.</p>
