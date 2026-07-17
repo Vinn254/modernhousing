@@ -407,41 +407,61 @@ export default function PropertiesPage() {
       {error && <p className="landlord-error property-alert">{error}</p>}
 
       <section className="landlord-section property-section">
-        <div className="property-stats">
-          <article className="property-stat">
-            <span>Portfolio</span>
-            <strong>{properties.length}</strong>
-            <p>Active properties in your workspace.</p>
+<div className="property-stats">
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Portfolio</div>
+              <h3 style={{ margin: 0 }}>{properties.length}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Active properties in your workspace.</p>
+            </div>
           </article>
-          <article className="property-stat">
-            <span>Total Units</span>
-            <strong>{totalUnits}</strong>
-            <p>Units recorded across all properties.</p>
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Total Units</div>
+              <h3 style={{ margin: 0 }}>{totalUnits}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Units recorded across all properties.</p>
+            </div>
           </article>
-          <article className={`property-stat ${totalUnits > occupiedUnits ? 'warning' : ''}`}>
-            <span>Vacant Units</span>
-            <strong>{Math.max(totalUnits - occupiedUnits, 0)}</strong>
-            <p>Available units waiting for tenants.</p>
+          <article className={`bento-card ${totalUnits > occupiedUnits ? '' : ''}`} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><path d="M9 3v18"/><path d="M3 9h18"/><path d="M3 15h14"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Vacant Units</div>
+              <h3 style={{ margin: 0 }}>{Math.max(totalUnits - occupiedUnits, 0)}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Available units waiting for tenants.</p>
+            </div>
           </article>
-          <article className="property-stat">
-            <span>Rent Roll</span>
-            <strong>KSH {rentRoll.toLocaleString()}</strong>
-            <p>Monthly rent from recorded units.</p>
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+            </div>
+            <div>
+              <div className="card-label">Rent Roll</div>
+              <h3 style={{ margin: 0 }}>KSH {rentRoll.toLocaleString()}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Monthly rent from recorded units.</p>
+            </div>
           </article>
-<article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => setShowPaymentsModal(true)}>
-             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-             </div>
-             <div style={{ flex: 1 }}>
-               <div className="card-label">Revenue Trend</div>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                 <span style={{ color: revenueTrendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700, fontSize: '14px' }}>{revenueTrendPercent >= 0 ? '+' : ''}{revenueTrendPercent.toFixed(1)}%</span>
-                 <h3 style={{ margin: 0 }}>{formatCurrency(currentMonthVal)}</h3>
-               </div>
-               <p style={{ margin: '4px 0 0', color: 'var(--ink-3)', fontSize: '13px' }}>{monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].label + ' 2024' : 'This month'}</p>
-             </div>
-             <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-           </article>
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => setShowPaymentsModal(true)}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div className="card-label">Revenue Trend</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: revenueTrendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700, fontSize: '14px' }}>{revenueTrendPercent >= 0 ? '+' : ''}{revenueTrendPercent.toFixed(1)}%</span>
+                <h3 style={{ margin: 0 }}>{formatCurrency(currentMonthVal)}</h3>
+              </div>
+              <p style={{ margin: '4px 0 0', color: 'var(--ink-3)', fontSize: '13px' }}>{monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].label + ' 2024' : 'This month'}</p>
+            </div>
+            <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </article>
         </div>
 
         {showPaymentsModal && (
