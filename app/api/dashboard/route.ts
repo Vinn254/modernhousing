@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
     let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status');
 
-    // For landlords, filter by properties they created
+    // For landlords, filter by properties they CREATED
     let propIds: string[] = [];
     if (!isAgent && !isSuperAdmin && authContext.userId) {
       const { data: userProps } = await supabaseAdmin.from('properties').select('id').eq('created_by', authContext.userId);
