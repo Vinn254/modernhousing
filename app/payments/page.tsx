@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import Sparkline from '../components/Sparkline';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 interface TenantOption {
@@ -482,7 +483,7 @@ export default function PaymentsPage() {
               <option value="M-pesa">M-pesa</option>
               <option value="Bank Transfer">Bank Transfer</option>
             </select>
-            <input value={manualTransNumber} onChange={(event) => setManualTransNumber(event.target.value)} required placeholder="Transaction/Receipt Number" />
+            <input value={manualTransNumber} onChange={(event) => setManualTransNumber(event.target.value)} placeholder="Transaction/Receipt Number (optional)" />
             <input value={manualTransCode} onChange={(event) => setManualTransCode(event.target.value)} placeholder="Transaction Code (MPESA code)" />
             <button type="submit" style={{ gridColumn: 'span 2' }}>Record Payment</button>
           </form>
@@ -589,6 +590,13 @@ export default function PaymentsPage() {
           </div>
         </div>
       )}
+
+      <article className="card" style={{ marginTop: 24 }}>
+        <div className="card-label">Monthly Revenue</div>
+        <h3 style={{ marginBottom: 16 }}>Revenue Trend</h3>
+        <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Total collected: <strong>{formatCurrency(payments.reduce((sum, p) => sum + (p.amount || 0), 0))}</strong></p>
+        <Sparkline data={payments.slice(-6).map(p => p.amount || 0)} color="var(--accent)" w={400} h={40}/>
+      </article>
 
       <article className="card" style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
