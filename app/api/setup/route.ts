@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { action, email, password, fullName, targetEmail } = body;
+  const { action, email, password, fullName, targetEmail, propertyId, userId } = body;
 
   if (action === 'create-super-admin') {
     const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
@@ -79,6 +79,36 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ message: `Landlord already has organization.`, organizationId: targetProfile.organization_id });
+  }
+
+  if (action === 'assign-property-to-user') {
+    // Assign a specific property to a user by setting created_by
+    if (!propertyId || !userId) {
+      return NextResponse.json({ message: 'propertyId and userId are required.' }, { status: 400 });
+    }
+
+    // Verify the property exists
+    const { data: property, error: propErr } = await supabaseAdmin
+      .from('properties')
+      .select('id')
+      .eq('id', propertyId)
+      .single();
+
+    if (propErr || !property) {
+      return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
+    }
+
+    // Set created_by on the property
+    const { error } = await supabaseAdmin
+      .from('properties')
+      .update({ created_by: userId })
+      .eq('id', propertyId);
+
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ message: `Property assigned to user.`, propertyId, userId });
   }
 
   if (action === 'setup-all-landlords') {
