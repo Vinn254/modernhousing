@@ -200,8 +200,9 @@ async function assertPropertyAccess(propertyId: string, authContext: AuthContext
       if (propertyId !== authContext.userMetadata?.property_id) {
         return forbidden('You can only manage properties assigned to you.');
       }
-    } else if (property.organization_id !== authContext.organizationId && property.created_by !== authContext.userId) {
-      return forbidden('You can only manage properties you created or belong to your organization.');
+    } else if (property.created_by !== authContext.userId) {
+      // Landlords: only properties they CREATED
+      return forbidden('You can only manage properties you created.');
     }
   }
 
@@ -209,137 +210,100 @@ async function assertPropertyAccess(propertyId: string, authContext: AuthContext
 }
 
 export async function GET(request: NextRequest) {
-    const authContext = await getAuthContext(request);
+  const authContext = await getAuthContext(request);
 
-    let query: any = supabaseAdmin.from('properties').select('*');
+  let query: any = supabaseAdmin.from('properties').select('*');
 
-    if (!authContext.isSuperAdmin) {
-      // Check if user is an agent and should only see their assigned property
-      if (authContext.profile?.role === 'agent' || authContext.userMetadata?.role === 'agent') {
-        const agentPropertyId = authContext.userMetadata?.property_id;
-        if (agentPropertyId) {
-          query = query.eq('id', agentPropertyId);
-        } else {
-          return NextResponse.json({ properties: [] });
-        }
-} else if (authContext.organizationId) {
-        // Project managers see properties in their organization
-        query = query.eq('organization_id', authContext.organizationId);
-      } else if (authContext.userId) {
-        // Fallback: filter by user who created properties
-        // If no properties have created_by, user sees nothing (run setup script)
-        const { data: userProps } = await supabaseAdmin
-            .from('properties')
-            .select('id')
-            .eq('created_by', authContext.userId);
-          if (userProps && userProps.length > 0) {
-            query = query.or(`created_by.eq.${authContext.userId},organization_id.eq.${authContext.organizationId}`);
-          } else {
-            return NextResponse.json({ properties: [] });
-          }
+  if (!authContext.isSuperAdmin) {
+    // Check if user is an agent and should only see their assigned property
+    if (authContext.profile?.role === 'agent' || authContext.userMetadata?.role === 'agent') {
+      const agentPropertyId = authContext.userMetadata?.property_id;
+      if (agentPropertyId) {
+        query = query.eq('id', agentPropertyId);
       } else {
         return NextResponse.json({ properties: [] });
       }
     }
-
-    const { data, error } = await query.order('created_at', { ascending: false });
-
-    if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 });
+    // Landlords: only properties they CREATED
+    else if (authContext.userId) {
+      const { data: userProps } = await supabaseAdmin
+        .from('properties')
+        .select('id')
+        .eq('created_by', authContext.userId);
+      if (!userProps || userProps.length === 0) {
+        return NextResponse.json({ properties: [] });
+      }
+      query = query.eq('created_by', authContext.userId);
+    } else {
+      return NextResponse.json({ properties: [] });
     }
-
-    return NextResponse.json({ properties: await enrichProperties(data ?? []) });
   }
 
+  const { data, error } = await query.order('created_at', { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ message: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ properties: await enrichProperties(data ?? []) });
+}
+
 export async function POST(request: NextRequest) {
-    const body = await request.json();
-    const { name, address, unitCount, amenities, ownershipInfo } = body;
+  const body = await request.json();
+  const { name, address, unitCount, amenities, ownershipInfo } = body;
 
-    if (!name?.trim() || !address?.trim()) {
-      return NextResponse.json({ message: 'Property name and address are required.' }, { status: 400 });
-    }
+  if (!name?.trim() || !address?.trim()) {
+    return NextResponse.json({ message: 'Property name and address are required.' }, { status: 400 });
+  }
 
-    const authContext = await getAuthContext(request);
+  const authContext = await getAuthContext(request);
 
-    // Debug: log auth context for property creation
-    console.log('Property POST authContext:', { 
-      isSuperAdmin: authContext.isSuperAdmin, 
-      userId: authContext.userId, 
-      organizationId: authContext.organizationId 
-    });
+  // Debug: log auth context for property creation
+  console.log('Property POST authContext:', { 
+    isSuperAdmin: authContext.isSuperAdmin, 
+    userId: authContext.userId, 
+    organizationId: authContext.organizationId 
+  });
 
-if (!authContext.isSuperAdmin) {
-      let orgId = authContext.organizationId;
+  if (!authContext.isSuperAdmin) {
+    let orgId = authContext.organizationId;
 
-      // If no org_id, create one and update profile
-      if (!orgId && authContext.userId) {
-        const { data: newOrg } = await supabaseAdmin
-          .from('organizations')
-          .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'PM'}_Organization` })
-          .select('id')
-          .single();
-        orgId = newOrg?.id ?? null;
+    // If no org_id, create one and update profile
+    if (!orgId && authContext.userId) {
+      const { data: newOrg } = await supabaseAdmin
+        .from('organizations')
+        .insert({ name: `${authContext.userEmail?.split('@')[0] ?? 'PM'}_Organization` })
+        .select('id')
+        .single();
+      orgId = newOrg?.id ?? null;
 
-        // Update profile with org
-        const { data: profile } = await supabaseAdmin
-          .from('profiles')
-          .select('id')
-          .eq('user_id', authContext.userId)
-          .single();
-
-        if (profile && orgId && authContext.userId) {
-          await supabaseAdmin
-            .from('profiles')
-            .update({ organization_id: orgId, role: 'project_manager' })
-            .eq('id', profile.id);
-          
-          // Also update auth user metadata for session consistency
-          await supabaseAdmin.auth.admin.updateUserById(authContext.userId, {
-            user_metadata: { 
-              organization_id: orgId,
-              role: 'project_manager'
-            }
-          });
-        }
-      }
-
-      if (!orgId) {
-        return NextResponse.json({ message: 'Unable to create property - no organization assigned. Please contact support.' }, { status: 403 });
-      }
-
-      const result = await supabaseAdmin
-        .from('properties')
-        .insert({
-          name: name.trim(),
-          address: address.trim(),
-          unit_count: unitCount ? Number(unitCount) : 0,
-          amenities,
-          ownership_info: ownershipInfo,
-          organization_id: orgId,
-          created_by: authContext.userId,
-        })
-        .select()
+      // Update profile with org
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('user_id', authContext.userId)
         .single();
 
-      if (result.error) {
-        return NextResponse.json({ message: result.error.message }, { status: 500 });
+      if (profile && orgId && authContext.userId) {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ organization_id: orgId, role: 'project_manager' })
+          .eq('id', profile.id);
+        
+        // Also update auth user metadata for session consistency
+        await supabaseAdmin.auth.admin.updateUserById(authContext.userId, {
+          user_metadata: { 
+            organization_id: orgId,
+            role: 'project_manager'
+          }
+        });
       }
-
-      // Log audit
-      await logAuditEvent(
-        authContext.userId,
-        authContext.userEmail,
-        'create',
-        'property',
-        result.data?.id,
-        { name, address, unitCount, amenities }
-      );
-
-      const enriched = await enrichProperties([result.data]);
-      return NextResponse.json({ message: 'Property created.', property: enriched[0] }, { status: 201 });
     }
 
-    // Super admin can create without organization
+    if (!orgId) {
+      return NextResponse.json({ message: 'Unable to create property - no organization assigned. Please contact support.' }, { status: 403 });
+    }
+
     const result = await supabaseAdmin
       .from('properties')
       .insert({
@@ -348,6 +312,8 @@ if (!authContext.isSuperAdmin) {
         unit_count: unitCount ? Number(unitCount) : 0,
         amenities,
         ownership_info: ownershipInfo,
+        organization_id: orgId,
+        created_by: authContext.userId,
       })
       .select()
       .single();
@@ -370,6 +336,37 @@ if (!authContext.isSuperAdmin) {
     return NextResponse.json({ message: 'Property created.', property: enriched[0] }, { status: 201 });
   }
 
+  // Super admin can create without organization
+  const result = await supabaseAdmin
+    .from('properties')
+    .insert({
+      name: name.trim(),
+      address: address.trim(),
+      unit_count: unitCount ? Number(unitCount) : 0,
+      amenities,
+      ownership_info: ownershipInfo,
+    })
+    .select()
+    .single();
+
+  if (result.error) {
+    return NextResponse.json({ message: result.error.message }, { status: 500 });
+  }
+
+  // Log audit
+  await logAuditEvent(
+    authContext.userId,
+    authContext.userEmail,
+    'create',
+    'property',
+    result.data?.id,
+    { name, address, unitCount, amenities }
+  );
+
+  const enriched = await enrichProperties([result.data]);
+  return NextResponse.json({ message: 'Property created.', property: enriched[0] }, { status: 201 });
+}
+
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
@@ -384,7 +381,7 @@ export async function PATCH(request: NextRequest) {
     const authContext = await getAuthContext(request);
     const property = await assertPropertyAccess(propertyId, authContext);
     if (!property) {
-      return NextResponse.json({ message: 'You can only manage properties in your own landlord workspace.' }, { status: 403 });
+      return NextResponse.json({ message: 'You can only manage properties you created.' }, { status: 403 });
     }
 
     const result = await supabaseAdmin
@@ -431,7 +428,7 @@ export async function DELETE(request: NextRequest) {
     const authContext = await getAuthContext(request);
     const property = await assertPropertyAccess(propertyId, authContext);
     if (!property) {
-      return NextResponse.json({ message: 'You can only manage properties in your own landlord workspace.' }, { status: 403 });
+      return NextResponse.json({ message: 'You can only manage properties you created.' }, { status: 403 });
     }
 
     const { error } = await supabaseAdmin.from('properties').delete().eq('id', propertyId);

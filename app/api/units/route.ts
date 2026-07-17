@@ -101,36 +101,26 @@ export async function GET(request: NextRequest) {
 
     // Get all properties the user owns/assigned to
     let propertyIds: string[] = [];
-    
+
     if (authContext.isSuperAdmin) {
       // Super admin - can see all units
     } else {
-      // For agents, get units from assigned property
       const sessionUser = authContext.sessionUser;
       const userMetadata = sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
-      
+
+      // Agents: get units from assigned property
       if (userMetadata?.property_id) {
         propertyIds.push(userMetadata.property_id);
       }
-      
-      // Fallback for landlords without organization_id: filter by user_id
-      if (propertyIds.length === 0 && authContext.organizationId) {
-        const { data: orgProps } = await supabaseAdmin
-          .from('properties')
-          .select('id')
-          .eq('organization_id', authContext.organizationId);
-        propertyIds = (orgProps ?? []).map((p: any) => p.id);
-      }
-      
-      // Landlords without org: filter by created_by
-      if (propertyIds.length === 0 && authContext.userId) {
+      // Landlords: filter by created_by (only properties they CREATED)
+      else if (authContext.userId) {
         const { data: userProps } = await supabaseAdmin
           .from('properties')
           .select('id')
           .eq('created_by', authContext.userId);
         propertyIds = (userProps ?? []).map((p: any) => p.id);
       }
-      
+
       // If no properties found, return empty
       if (propertyIds.length === 0 && !propertyId) {
         return NextResponse.json({ units: [] });
@@ -153,12 +143,9 @@ export async function GET(request: NextRequest) {
       query = query.eq('property_id', propertyId);
     } else if (propertyIds.length > 0) {
       query = query.in('property_id', propertyIds);
-    } else if (authContext.organizationId || authContext.userId) {
-      // Landlords with org or created properties - already handled above if propertyIds found
-      // If we reach here with no propertyIds, they have no properties yet
+    } else {
       return NextResponse.json({ units: [] });
     }
-    // Super admins and unhandled cases see all units (no filter)
 
     const { data: units, error } = await query.order('unit_number', { ascending: true });
 
@@ -203,15 +190,10 @@ export async function POST(request: NextRequest) {
     const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
 
     if (!authContext.isSuperAdmin) {
-      // For agents without organization: use property_id from user_metadata
-      if (!authContext.organizationId && userMetadata?.property_id && userMetadata.property_id !== propertyId) {
-        return NextResponse.json({ message: 'You can only add units to your assigned property.' }, { status: 403 });
-      }
-
-      // Verify property exists
+      // Verify property exists and belongs to this user (created by them)
       const { data: prop } = await supabaseAdmin
         .from('properties')
-        .select('id, organization_id, created_by')
+        .select('id, created_by')
         .eq('id', propertyId)
         .maybeSingle();
 
@@ -219,24 +201,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Property not found.' }, { status: 404 });
       }
 
-      // For landlords: check if property belongs to their organization OR they created it
-      if (authContext.organizationId && prop.organization_id !== authContext.organizationId && prop.created_by !== authContext.userId) {
-        return NextResponse.json({ message: 'You can only add units to properties you created or belong to your organization.' }, { status: 403 });
+      // Landlords: can only add units to properties they CREATED
+      if (prop.created_by !== authContext.userId) {
+        return NextResponse.json({ message: 'You can only add units to properties you created.' }, { status: 403 });
       }
 
-      // For users without organization but with a valid property, allow access
-      if (!authContext.organizationId && !userMetadata?.property_id) {
-        // Check if user is a landlord/project_manager of this property via profile
-        const { data: userProperty } = await supabaseAdmin
-          .from('profiles')
-          .select('id')
-          .eq('user_id', authContext.sessionUser?.id ?? '')
-          .eq('organization_id', prop.organization_id)
-          .maybeSingle();
-
-        if (!userProperty) {
-          return NextResponse.json({ message: 'Unable to verify property access.' }, { status: 403 });
-        }
+      // Agents: can only add units to their assigned property
+      if (userMetadata?.property_id && userMetadata.property_id !== propertyId) {
+        return NextResponse.json({ message: 'You can only add units to your assigned property.' }, { status: 403 });
       }
     }
 
@@ -286,28 +258,8 @@ export async function PATCH(request: NextRequest) {
     const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
 
     if (!authContext.isSuperAdmin) {
-      if (authContext.organizationId) {
-        const { data: unitData } = await supabaseAdmin
-          .from('units')
-          .select('property_id, properties!inner(organization_id, created_by)')
-          .eq('id', id)
-          .eq('properties.organization_id', authContext.organizationId)
-          .maybeSingle();
-
-        if (!unitData && authContext.userId) {
-          const { data: unitByCreator } = await supabaseAdmin
-            .from('units')
-            .select('property_id, properties!inner(created_by)')
-            .eq('id', id)
-            .eq('properties.created_by', authContext.userId)
-            .maybeSingle();
-          if (!unitByCreator) {
-            return NextResponse.json({ message: 'You can only manage units in properties you created or belong to your organization.' }, { status: 403 });
-          }
-        } else if (!unitData) {
-          return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
-        }
-      } else if (userMetadata?.property_id) {
+      // Check if user is an agent and unit belongs to their assigned property
+      if (userMetadata?.property_id) {
         const { data: unitData } = await supabaseAdmin
           .from('units')
           .select('property_id')
@@ -317,6 +269,19 @@ export async function PATCH(request: NextRequest) {
 
         if (!unitData) {
           return NextResponse.json({ message: 'You can only manage units in your assigned property.' }, { status: 403 });
+        }
+      }
+      // Landlords: can only modify units in properties they CREATED
+      else if (authContext.userId) {
+        const { data: unitData } = await supabaseAdmin
+          .from('units')
+          .select('property_id, properties!inner(created_by)')
+          .eq('id', id)
+          .eq('properties.created_by', authContext.userId)
+          .maybeSingle();
+
+        if (!unitData) {
+          return NextResponse.json({ message: 'You can only manage units in properties you created.' }, { status: 403 });
         }
       }
     }
@@ -364,28 +329,8 @@ export async function DELETE(request: NextRequest) {
     const userMetadata = authContext.sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
 
     if (!authContext.isSuperAdmin) {
-      if (authContext.organizationId) {
-        const { data: unitProp } = await supabaseAdmin
-          .from('units')
-          .select('property_id, properties!inner(organization_id, created_by)')
-          .eq('id', id)
-          .eq('properties.organization_id', authContext.organizationId)
-          .maybeSingle();
-
-        if (!unitProp && authContext.userId) {
-          const { data: unitByCreator } = await supabaseAdmin
-            .from('units')
-            .select('property_id, properties!inner(created_by)')
-            .eq('id', id)
-            .eq('properties.created_by', authContext.userId)
-            .maybeSingle();
-          if (!unitByCreator) {
-            return NextResponse.json({ message: 'You can only manage units in properties you created or belong to your organization.' }, { status: 403 });
-          }
-        } else if (!unitProp) {
-          return NextResponse.json({ message: 'You can only manage units in your own landlord workspace.' }, { status: 403 });
-        }
-      } else if (userMetadata?.property_id) {
+      // Agents: can only delete units in their assigned property
+      if (userMetadata?.property_id) {
         const { data: unitProp } = await supabaseAdmin
           .from('units')
           .select('property_id')
@@ -395,6 +340,19 @@ export async function DELETE(request: NextRequest) {
 
         if (!unitProp) {
           return NextResponse.json({ message: 'You can only manage units in your assigned property.' }, { status: 403 });
+        }
+      }
+      // Landlords: can only delete units in properties they CREATED
+      else if (authContext.userId) {
+        const { data: unitProp } = await supabaseAdmin
+          .from('units')
+          .select('property_id, properties!inner(created_by)')
+          .eq('id', id)
+          .eq('properties.created_by', authContext.userId)
+          .maybeSingle();
+
+        if (!unitProp) {
+          return NextResponse.json({ message: 'You can only manage units in properties you created.' }, { status: 403 });
         }
       }
     }
