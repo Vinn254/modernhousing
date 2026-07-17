@@ -222,8 +222,13 @@ export async function GET(request: NextRequest) {
         } else {
           return NextResponse.json({ properties: [] });
         }
+      } else if (authContext.organizationId) {
+        // Project managers see properties in their organization
+        query = query.eq('organization_id', authContext.organizationId);
+      } else if (authContext.userId) {
+        // Fallback: filter by user who created properties
+        query = query.eq('created_by', authContext.userId);
       }
-      // Landlords (project_managers) see all properties
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
@@ -300,6 +305,7 @@ if (!authContext.isSuperAdmin) {
           amenities,
           ownership_info: ownershipInfo,
           organization_id: orgId,
+          created_by: authContext.userId,
         })
         .select()
         .single();

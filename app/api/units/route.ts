@@ -108,8 +108,32 @@ export async function GET(request: NextRequest) {
       // For agents, get units from assigned property
       const sessionUser = authContext.sessionUser;
       const userMetadata = sessionUser?.user_metadata || authContext.profile?.user_metadata || {};
+      
       if (userMetadata?.property_id) {
         propertyIds.push(userMetadata.property_id);
+      }
+      
+      // Fallback for landlords without organization_id: filter by user_id
+      if (propertyIds.length === 0 && authContext.organizationId) {
+        const { data: orgProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('organization_id', authContext.organizationId);
+        propertyIds = (orgProps ?? []).map((p: any) => p.id);
+      }
+      
+      // Landlords without org: filter by created_by
+      if (propertyIds.length === 0 && authContext.userId) {
+        const { data: userProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('created_by', authContext.userId);
+        propertyIds = (userProps ?? []).map((p: any) => p.id);
+      }
+      
+      // If no properties found, return empty
+      if (propertyIds.length === 0 && !propertyId) {
+        return NextResponse.json({ units: [] });
       }
     }
 
@@ -129,8 +153,12 @@ export async function GET(request: NextRequest) {
       query = query.eq('property_id', propertyId);
     } else if (propertyIds.length > 0) {
       query = query.in('property_id', propertyIds);
+    } else if (authContext.organizationId || authContext.userId) {
+      // Landlords with org or created properties - already handled above if propertyIds found
+      // If we reach here with no propertyIds, they have no properties yet
+      return NextResponse.json({ units: [] });
     }
-    // Landlords without org_id and no propertyId see all units (no filter)
+    // Super admins and unhandled cases see all units (no filter)
 
     const { data: units, error } = await query.order('unit_number', { ascending: true });
 
