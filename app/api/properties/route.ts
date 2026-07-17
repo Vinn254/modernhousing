@@ -222,12 +222,8 @@ export async function GET(request: NextRequest) {
         } else {
           return NextResponse.json({ properties: [] });
         }
-      } else if (authContext.organizationId) {
-        // Project managers see properties in their organization
-        query = query.eq('organization_id', authContext.organizationId);
-      } else {
-        return NextResponse.json({ properties: [] });
       }
+      // Landlords (project_managers) see all properties
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });

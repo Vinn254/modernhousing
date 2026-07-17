@@ -97,24 +97,9 @@ export async function GET(request: NextRequest) {
     let tenantsQuery: any = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
     let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status');
 
-    // For landlords, filter by organization
-    let propIds: string[] = [];
-    if (!isAgent && !isSuperAdmin && authContext.organizationId) {
-      const { data: orgProps } = await supabaseAdmin.from('properties').select('id').eq('organization_id', authContext.organizationId);
-      propIds = (orgProps ?? []).map((p: any) => p.id);
-      if (propIds.length > 0) {
-        propertiesQuery = propertiesQuery.in('id', propIds);
-        unitsQuery = unitsQuery.in('property_id', propIds);
-        const { data: unitsInOrg } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
-        const unitIds = (unitsInOrg ?? []).map((u: any) => u.id);
-        if (unitIds.length > 0) {
-          tenantsQuery = tenantsQuery.in('unit_id', unitIds);
-        }
-      }
-    } else if (!isAgent && !isSuperAdmin && !authContext.organizationId) {
-      propertiesQuery = propertiesQuery.eq('id', 'none');
-      unitsQuery = unitsQuery.eq('property_id', 'none');
-      tenantsQuery = tenantsQuery.eq('unit_id', 'none');
+    // For agents vs landlords vs super admins
+    if (!isAgent && !isSuperAdmin) {
+      // Landlords see all properties and units (no org filtering)
     } else if (effectivePropertyId) {
       propertiesQuery = propertiesQuery.eq('id', effectivePropertyId);
       unitsQuery = unitsQuery.eq('property_id', effectivePropertyId);
@@ -125,16 +110,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // For landlords, filter vacant units by organization
+    // Vacant units - agents see only their property, others see all or based on context
     let unitsForVacantQuery: any;
-    if (!isAgent && !isSuperAdmin && authContext.organizationId) {
-      unitsForVacantQuery = supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant').in('property_id', propIds);
-    } else if (!isAgent && !isSuperAdmin && !authContext.organizationId) {
-      unitsForVacantQuery = supabaseAdmin.from('units').select('id').eq('property_id', 'none');
+    if (isAgent && effectivePropertyId) {
+      unitsForVacantQuery = supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant').eq('property_id', effectivePropertyId);
     } else if (isSuperAdmin) {
       unitsForVacantQuery = supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant');
     } else {
-      unitsForVacantQuery = supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant').eq('property_id', effectivePropertyId);
+      unitsForVacantQuery = supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant');
     }
 
     const [{ data: propertiesData }, { data: unitsData }, { data: tenantsData }, { data: subscriptionsData }, { data: unitsForVacant }] = await Promise.all([
@@ -153,8 +136,7 @@ export async function GET(request: NextRequest) {
 
     let vacantUnitsFiltered = unitsForVacant ?? [];
 
-    // RENT OWED — same proven scoping as /api/payments:
-    // org -> properties -> units -> tenants -> their payments.
+    // RENT OWED
     let owedTenantIds: string[] = [];
     if (isAgent && effectivePropertyId) {
       const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', effectivePropertyId);
@@ -163,15 +145,15 @@ export async function GET(request: NextRequest) {
         ? await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)
         : { data: [] };
       owedTenantIds = (tenants ?? []).map((t: any) => t.id);
-    } else if (!isSuperAdmin && authContext.organizationId && propIds.length > 0) {
-      const { data: units } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+    } else if (isSuperAdmin) {
+      const { data: tenants } = await supabaseAdmin.from('tenants').select('id');
+      owedTenantIds = (tenants ?? []).map((t: any) => t.id);
+    } else {
+      const { data: units } = await supabaseAdmin.from('units').select('id');
       const unitIds = (units ?? []).map((u: any) => u.id);
       const { data: tenants } = unitIds.length > 0
         ? await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds)
         : { data: [] };
-      owedTenantIds = (tenants ?? []).map((t: any) => t.id);
-    } else if (isSuperAdmin) {
-      const { data: tenants } = await supabaseAdmin.from('tenants').select('id');
       owedTenantIds = (tenants ?? []).map((t: any) => t.id);
     }
 
