@@ -776,20 +776,20 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
             </div>
           </div>
 
-          <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div className="card-label">Occupancy</div>
-              <h3 style={{ margin: 0 }}>{stats.occupiedUnits}/{stats.occupiedUnits + stats.vacantUnits}</h3>
-              <DonutChart data={[
-                { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
-                { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' }
-              ]} size={60} centerLabel={`${stats.occupiedUnits}`}/>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
-            </div>
-          </div>
+<div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+             </div>
+             <div style={{ flex: 1 }}>
+               <div className="card-label">Occupancy</div>
+               <h3 style={{ margin: 0 }}>{stats.occupiedUnits}/{stats.occupiedUnits + stats.vacantUnits}</h3>
+               <DonutChart data={[
+                 { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
+                 { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' }
+               ]} size={60} centerLabel={`${stats.occupiedUnits}`}/>
+               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
+             </div>
+           </div>
 
           <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(220,38,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
