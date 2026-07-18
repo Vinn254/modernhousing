@@ -349,23 +349,31 @@ export default function PropertiesPage() {
   const [selectedYear, selectedMonthNum] = selectedMonth.split('-').map(Number);
   const monthNamesFull = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const selectedMonthNameFull = monthNamesFull[selectedMonthNum - 1] + ' ' + selectedYear;
-  const filteredPayments = monthlyPayments.filter((p: any) => (p.month_due || '').toLowerCase().includes(selectedMonthNameFull.toLowerCase()) || (p.month_due || '').toLowerCase().includes(selectedMonth)).filter(p => !['complaint', 'notification'].includes(p.transaction_type));
+  const filteredPayments = monthlyPayments.filter((p: any) => {
+    if (['complaint', 'notification'].includes(p.transaction_type)) return false;
+    const monthDue = (p.month_due || '').toLowerCase();
+    const dueMonth = monthDue.includes(selectedMonthNameFull.toLowerCase()) || monthDue.includes(selectedMonth.toLowerCase());
+    const paidDate = p.paid_at || p.payment_date || p.created_at;
+    const paidMonthMatch = paidDate && new Date(paidDate).toISOString().slice(0, 7) === selectedMonth;
+    return dueMonth || paidMonthMatch;
+  });
   const filteredTotal = filteredPayments.reduce((sum: number, p: any) => sum + Number(p.paid_amount ?? p.amount ?? 0), 0);
 
   const monthlyData = useMemo(() => {
     const months: { label: string; value: number }[] = [];
     const monthMap = new Map<string, number>();
+    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     (monthlyPayments || []).forEach((p: any) => {
       if (['complaint', 'notification'].includes(p.transaction_type)) return;
-      const d = p.created_at ? new Date(p.created_at) : new Date();
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
-      monthMap.set(key, (monthMap.get(key) || 0) + Number(p.amount ?? 0));
+      const d = p.paid_at ? new Date(p.paid_at) : (p.payment_date ? new Date(p.payment_date) : (p.created_at ? new Date(p.created_at) : new Date()));
+      const key = d.toISOString().slice(0, 7);
+      const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
+      monthMap.set(key, (monthMap.get(key) || 0) + paidAmt);
     });
-    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const key = d.toISOString().slice(0, 7);
       months.push({ label: labels[d.getMonth()], value: monthMap.get(key) || 0 });
     }
     return months;
