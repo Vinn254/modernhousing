@@ -623,7 +623,7 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      <article style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', background: '#0D1F2D', borderRadius: '22px', borderTop: '4px solid #14B8A6' }}>
+      <article style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', background: '#0D1F2D', borderRadius: '22px', borderTop: '4px solid #14B8A6', marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#14B8A6" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
