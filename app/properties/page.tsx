@@ -80,7 +80,8 @@ const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
         ...b,
         amount: b.paid_amount ?? b.amount,
         created_at: b.payment_date || b.paid_at || b.created_at,
-        payment_date: b.payment_date, // Ensure payment_date is preserved
+        payment_date: b.payment_date,
+        source: 'bills',
         tenant: b.tenant_name ?? '',
       }))];
      setMonthlyPayments(merged);
