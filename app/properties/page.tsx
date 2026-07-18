@@ -345,29 +345,44 @@ export default function PropertiesPage() {
   const rentRoll = properties.reduce((sum, property) => sum + Number(property.rent_roll ?? 0), 0);
   const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
-  // Filter payments by month_due format (e.g., "July 2026") matching selected month (YYYY-MM)
-  const [selectedYear, selectedMonthNum] = selectedMonth.split('-').map(Number);
-  const monthNamesFull = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const selectedMonthNameFull = monthNamesFull[selectedMonthNum - 1] + ' ' + selectedYear;
-  const filteredPayments = monthlyPayments.filter((p: any) => {
-    if (['complaint', 'notification'].includes(p.transaction_type)) return false;
-    const monthDue = (p.month_due || '').toLowerCase();
-    const dueMonth = monthDue.includes(selectedMonthNameFull.toLowerCase()) || monthDue.includes(selectedMonth.toLowerCase());
-    const paidDate = p.paid_at || p.payment_date || p.created_at;
-    const paidMonthMatch = paidDate && new Date(paidDate).toISOString().slice(0, 7) === selectedMonth;
-    return dueMonth || paidMonthMatch;
-  });
+// Filter payments by month_due format (e.g., "July 2026" or "July") matching selected month (YYYY-MM)
+   const [selectedYear, selectedMonthNum] = selectedMonth.split('-').map(Number);
+   const monthNamesFull = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+   const selectedMonthNameFull = monthNamesFull[selectedMonthNum - 1] + ' ' + selectedYear;
+   const selectedMonthNameShort = monthNamesFull[selectedMonthNum - 1];
+   const filteredPayments = monthlyPayments.filter((p: any) => {
+     if (['complaint', 'notification'].includes(p.transaction_type)) return false;
+     const monthDue = (p.month_due || '').toLowerCase();
+     const dueMonth = monthDue.includes(selectedMonthNameFull.toLowerCase()) || monthDue.includes(selectedMonth.toLowerCase()) || monthDue.includes(selectedMonthNameShort.toLowerCase());
+     const paidDate = p.paid_at || p.payment_date || p.created_at;
+     const paidMonthMatch = paidDate && new Date(paidDate).toISOString().slice(0, 7) === selectedMonth;
+     return dueMonth || paidMonthMatch;
+   });
   const filteredTotal = filteredPayments.reduce((sum: number, p: any) => sum + Number(p.paid_amount ?? p.amount ?? 0), 0);
 
   const monthlyData = useMemo(() => {
     const months: { label: string; value: number }[] = [];
     const monthMap = new Map<string, number>();
     const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     (monthlyPayments || []).forEach((p: any) => {
       if (['complaint', 'notification'].includes(p.transaction_type)) return;
+      const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
+      if (p.month_due) {
+        const monthParts = p.month_due?.split(' ');
+        if (monthParts?.length >= 2) {
+          const monthName = monthParts[0];
+          const year = monthParts[1];
+          const monthIdx = monthNames.indexOf(monthName);
+          if (monthIdx >= 0) {
+            const key = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+            monthMap.set(key, (monthMap.get(key) || 0) + paidAmt);
+            return;
+          }
+        }
+      }
       const d = p.paid_at ? new Date(p.paid_at) : (p.payment_date ? new Date(p.payment_date) : (p.created_at ? new Date(p.created_at) : new Date()));
       const key = d.toISOString().slice(0, 7);
-      const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
       monthMap.set(key, (monthMap.get(key) || 0) + paidAmt);
     });
     for (let i = 5; i >= 0; i--) {

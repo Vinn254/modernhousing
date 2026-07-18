@@ -291,11 +291,25 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
     const months: { label: string; value: number }[] = [];
     const monthMap = new Map<string, number>();
     const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     (payments || []).forEach((p: any) => {
       if (NON_PAYMENT_TYPES.includes(p.transaction_type)) return;
+      const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
+      if (p.month_due) {
+        const monthParts = p.month_due?.split(' ');
+        if (monthParts?.length >= 2) {
+          const monthName = monthParts[0];
+          const year = monthParts[1];
+          const monthIdx = monthNames.indexOf(monthName);
+          if (monthIdx >= 0) {
+            const key = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+            monthMap.set(key, (monthMap.get(key) || 0) + paidAmt);
+            return;
+          }
+        }
+      }
       const d = p.paid_at ? new Date(p.paid_at) : (p.payment_date ? new Date(p.payment_date) : (p.created_at ? new Date(p.created_at) : new Date()));
       const key = d.toISOString().slice(0, 7);
-      const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
       monthMap.set(key, (monthMap.get(key) || 0) + paidAmt);
     });
     for (let i = 5; i >= 0; i--) {

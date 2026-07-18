@@ -85,11 +85,26 @@ export default function PaymentsPage() {
 
   const monthlyRevenue = useMemo(() => {
     const months: Record<string, number> = {};
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     payments.forEach(p => {
       if (['complaint', 'notification'].includes(p.transaction_type)) return;
+      const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
+      if (p.month_due) {
+        const monthParts = p.month_due?.split(' ');
+        if (monthParts?.length >= 2) {
+          const monthName = monthParts[0];
+          const year = monthParts[1];
+          const monthIdx = monthNames.indexOf(monthName);
+          if (monthIdx >= 0) {
+            const key = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+            months[key] = (months[key] || 0) + paidAmt;
+            return;
+          }
+        }
+      }
       const d = p.paid_at ? new Date(p.paid_at) : (p.payment_date ? new Date(p.payment_date) : (p.created_at ? new Date(p.created_at) : new Date()));
       const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      months[month] = (months[month] || 0) + Number(p.paid_amount ?? p.amount ?? 0);
+      months[month] = (months[month] || 0) + paidAmt;
     });
     return { months };
   }, [payments]);
