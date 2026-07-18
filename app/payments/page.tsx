@@ -127,16 +127,20 @@ export default function PaymentsPage() {
   const monthlyData = useMemo(() => monthlyLabels.map(m => monthlyRevenue.months[m] || 0), [monthlyLabels, monthlyRevenue.months]);
 
   const percentageChange = useMemo(() => {
-    if (prevMonthRevenue > 0 && currentMonthRevenue !== prevMonthRevenue) {
+    const currentIdx = monthlyLabels.indexOf(currentMonthLabel);
+    const prevIdx = currentIdx > 0 ? currentIdx - 1 : 11;
+    const currentData = currentIdx >= 0 ? monthlyData[currentIdx] : 0;
+    const prevData = prevIdx >= 0 ? monthlyData[prevIdx] : 0;
+    if (prevData > 0) {
+      const change = (currentData - prevData) / prevData * 100;
+      return { sign: change >= 0 ? '+' : '', value: change.toFixed(1) };
+    }
+    if (prevMonthRevenue > 0) {
       const change = (currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue * 100;
       return { sign: change >= 0 ? '+' : '', value: change.toFixed(1) };
     }
-    if (monthlyData.length >= 2 && monthlyData[monthlyData.length - 1] > 0 && monthlyData[monthlyData.length - 2] > 0) {
-      const change = (monthlyData[monthlyData.length - 1] - monthlyData[monthlyData.length - 2]) / monthlyData[monthlyData.length - 2] * 100;
-      return { sign: change >= 0 ? '+' : '', value: change.toFixed(1) };
-    }
     return { sign: '+', value: '0' };
-  }, [monthlyData, currentMonthRevenue, prevMonthRevenue]);
+  }, [monthlyData, currentMonthRevenue, prevMonthRevenue, currentMonthLabel, monthlyLabels]);
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
