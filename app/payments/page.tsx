@@ -336,13 +336,16 @@ export default function PaymentsPage() {
     setMessage('');
     setError('');
 
+    const year = manualDate ? new Date(manualDate).getFullYear() : new Date().getFullYear();
+    const monthDueWithYear = manualMonth ? `${manualMonth} ${year}` : `${new Date().toLocaleString('en-US', { month: 'long' })} ${year}`;
+
     const response = await fetch('/api/bills', {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         tenantId,
         description: `${manualMonth || 'Rent'} payment`,
-        monthDue: manualMonth,
+        monthDue: monthDueWithYear,
         dueAmount: Number(manualDueAmount) || 0,
         paidAmount: Number(manualPaidAmount) || 0,
         transactionType: manualTransType,
