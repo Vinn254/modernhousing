@@ -86,11 +86,12 @@ export default function PaymentsPage() {
   const monthlyRevenue = useMemo(() => {
     const months: Record<string, number> = {};
     payments.forEach(p => {
-      const month = p.month_due || (p.created_at ? p.created_at.slice(0, 7) : 'unknown');
-      months[month] = (months[month] || 0) + (p.amount || 0);
+      if (['complaint', 'notification'].includes(p.transaction_type)) return;
+      const d = p.paid_at ? new Date(p.paid_at) : (p.payment_date ? new Date(p.payment_date) : (p.created_at ? new Date(p.created_at) : new Date()));
+      const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      months[month] = (months[month] || 0) + Number(p.paid_amount ?? p.amount ?? 0);
     });
-    const sorted = Object.keys(months).sort().slice(-6);
-    return { months, sorted };
+    return { months };
   }, [payments]);
 
   const monthlyLabels = useMemo(() => {
