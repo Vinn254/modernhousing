@@ -638,18 +638,20 @@ export default function PaymentsPage() {
           )}
         </div>
         <Sparkline data={monthlyData.length > 0 && monthlyData.some(d => d > 0) ? monthlyData : [0, 0, 0]} color="#10b981" w={340} h={40}/>
-        <div style={{ display: 'flex', gap: '4px', marginTop: 8, alignItems: 'flex-end', height: 36 }}>
+        <div style={{ display: 'flex', gap: '4px', marginTop: 8, height: 36 }}>
           {monthlyLabels.map((m, i) => {
             const revenue = monthlyRevenue.months[m] || 0;
             const maxVal = Math.max(...monthlyData, 1);
             const pct = maxVal > 0 ? revenue / maxVal : 0;
             const isLatest = i === monthlyLabels.length - 1;
+            const barColors = ['#10b981', '#0d9488', '#0f766e', '#115e59', '#144e59', '#144e59'];
+            const barColor = barColors[i % barColors.length];
             return (
-              <div key={m} onMouseEnter={() => setHoverMonth(m)} onMouseLeave={() => setHoverMonth(null)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', position: 'relative' }}>
+              <div key={m} onMouseEnter={() => setHoverMonth(m)} onMouseLeave={() => setHoverMonth(null)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: 'pointer', position: 'relative' }}>
                 <div style={{ width: '100%', height: 24, display: 'flex', alignItems: 'flex-end' }}>
-                  <div style={{ width: '100%', height: `${Math.max(pct * 100, 8)}%`, background: isLatest ? '#14B8A6' : 'rgba(255,255,255,0.1)', borderRadius: '2px', transition: 'all 0.2s' }} />
+                  <div style={{ width: '100%', height: `${Math.max(pct * 100, 8)}%`, background: isLatest ? barColor : 'rgba(255,255,255,0.1)', borderRadius: '2px', transition: 'all 0.2s' }} />
                 </div>
-                <span style={{ fontSize: '9px', color: isLatest ? '#14B8A6' : 'rgba(255,255,255,0.3)', fontWeight: isLatest ? 600 : 400 }}>{monthlyLabelNames[i] || m}</span>
+                <span style={{ fontSize: '9px', color: isLatest ? barColor : 'rgba(255,255,255,0.3)', fontWeight: isLatest ? 600 : 400 }}>{monthlyLabelNames[i] || m}</span>
                 {hoverMonth === m && (
                   <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%) translateY(-4px)', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', fontSize: '10px', whiteSpace: 'nowrap', zIndex: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
                     KSH {(revenue || 0).toLocaleString()}
