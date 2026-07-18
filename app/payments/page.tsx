@@ -591,11 +591,21 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      <article className="card" style={{ marginTop: 24 }}>
-        <div className="card-label">Monthly Revenue</div>
-        <h3 style={{ marginBottom: 16 }}>Revenue Trend</h3>
-        <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Total collected: <strong>{formatCurrency(payments.reduce((sum, p) => sum + (p.amount || 0), 0))}</strong></p>
-        <Sparkline data={payments.slice(-6).map(p => p.amount || 0).length > 0 ? payments.slice(-6).map(p => p.amount || 0) : [0, 0, 0]} color="#10b981" w={400} h={40}/>
+      <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="card-label">Revenue Trend</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: payments.length > 0 ? 'var(--accent)' : '#71717a', fontWeight: 700, fontSize: '14px' }}>{payments.slice(-6).reduce((s, p) => s + (p.amount || 0), 0) > 0 ? '+' : ''}KSH {payments.slice(-6).reduce((s, p) => s + (p.amount || 0), 0).toLocaleString()}</span>
+              <h3 style={{ margin: 0 }}>{formatCurrency(payments.reduce((sum, p) => sum + (p.amount || 0), 0))}</h3>
+            </div>
+            <p style={{ margin: '4px 0 0', color: 'var(--ink-3)', fontSize: '13px' }}>Total collected</p>
+          </div>
+        </div>
+        <Sparkline data={payments.slice(-6).map(p => p.amount || 0).length > 0 ? payments.slice(-6).map(p => p.amount || 0) : [0, 0, 0]} color="#10b981" w={340} h={36}/>
       </article>
 
       <article className="card" style={{ marginTop: 24 }}>
