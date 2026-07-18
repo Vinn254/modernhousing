@@ -81,7 +81,7 @@ export default function PaymentsPage() {
   const [passkey, setPasskey] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'paybill' | 'till' | 'pochi' | 'mobile'>('paybill');
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [hoverMonth, setHoverMonth] = useState<string | null>(null);
 
   const monthlyRevenue = useMemo(() => {
     const months: Record<string, number> = {};
@@ -613,7 +613,7 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative' }} onMouseLeave={() => setHoverMonth(null)}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
@@ -621,10 +621,9 @@ export default function PaymentsPage() {
           <div style={{ flex: 1 }}>
             <div className="card-label">Revenue Trend</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: payments.length > 0 ? 'var(--accent)' : '#71717a', fontWeight: 700, fontSize: '14px' }}>{monthlyData.length > 0 ? '+' : ''}KSH {monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].toLocaleString() : '0'}</span>
-              <h3 style={{ margin: 0 }}>{formatCurrency(payments.reduce((sum, p) => sum + (p.amount || 0), 0))}</h3>
+              <h3 style={{ margin: 0, color: 'var(--ink-1)' }}>KSH {monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].toLocaleString() : '0'}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{monthlyLabels.length > 0 ? (monthlyLabelNames[monthlyLabels.length - 1] || monthlyLabels[monthlyLabels.length - 1]) + ' 2024' : '—'}</p>
             </div>
-            <p style={{ margin: '4px 0 0', color: 'var(--ink-3)', fontSize: '13px' }}>Total collected</p>
           </div>
           {monthlyData.length > 1 && (
             <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.15)', color: 'var(--accent)' }}>
@@ -632,42 +631,29 @@ export default function PaymentsPage() {
             </span>
           )}
         </div>
-        <Sparkline data={monthlyData.length > 0 ? monthlyData : [0, 0, 0]} color="#10b981" w={140} h={44}/>
-        <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+        <Sparkline data={monthlyData.length > 0 ? monthlyData : [0, 0, 0]} color="#10b981" w={340} h={40}/>
+        <div style={{ display: 'flex', gap: '2px', marginTop: 4, height: 28, alignItems: 'flex-end', position: 'relative' }}>
           {monthlyLabels.map((m, i) => {
             const revenue = monthlyRevenue.months[m] || 0;
-            const label = monthlyLabelNames[i] || m;
-            const colors = ['#10b981', '#0d9488', '#0f766e', '#115e59', '#144e59', '#144e59'];
-            const btnColor = colors[i % colors.length];
+            const maxVal = Math.max(...monthlyData, 1);
+            const pct = revenue / maxVal;
+            const isLatest = i === monthlyLabels.length - 1;
             return (
-              <button key={m} onClick={() => setSelectedMonth(m)} style={{ flex: 1, minWidth: 40, padding: '4px 6px', fontSize: '10px', borderRadius: 6, border: selectedMonth === m ? `2px solid ${btnColor}` : '1px solid var(--border)', background: selectedMonth === m ? `${btnColor}30` : 'var(--card)', color: 'var(--ink-1)', cursor: 'pointer' }}>
-                <div style={{ fontWeight: 600 }}>{label}</div>
-                <div style={{ color: btnColor, fontSize: '9px' }}>KSH {(revenue / 1000).toFixed(0)}k</div>
-              </button>
+              <div key={m} onMouseEnter={() => setHoverMonth(m)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: 'pointer', position: 'relative' }}>
+                <div style={{ width: '100%', height: 20, display: 'flex', alignItems: 'flex-end' }}>
+                  <div style={{ width: '100%', height: `${Math.max(pct * 100, 10)}%`, background: isLatest ? 'var(--accent)' : 'rgba(255,255,255,0.1)', borderRadius: 2, transition: 'height 0.2s' }} />
+                </div>
+                <span style={{ fontSize: '9px', color: isLatest ? 'var(--accent)' : 'rgba(255,255,255,0.3)', fontWeight: isLatest ? 600 : 400 }}>{monthlyLabelNames[i] || m}</span>
+                {hoverMonth === m && (
+                  <div style={{ position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 4, padding: '4px 8px', fontSize: '10px', whiteSpace: 'nowrap', zIndex: 10 }}>
+                    KSH {(revenue || 0).toLocaleString()}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
       </article>
-      {selectedMonth && (
-        <div className="bento-card" style={{ padding: '12px 16px', marginTop: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <h4 style={{ margin: 0, fontSize: '14px' }}>Revenue for {monthlyLabelNames[monthlyLabels.indexOf(selectedMonth)] || selectedMonth}</h4>
-            <button onClick={() => setSelectedMonth(null)} style={{ background: 'none', border: 'none', color: 'var(--ink-3)', cursor: 'pointer', fontSize: '16px' }}>×</button>
-          </div>
-          {payments.filter(p => p.month_due === selectedMonth).length === 0 ? (
-            <p style={{ color: 'var(--ink-3)', fontSize: '13px', margin: 0 }}>No payments for this month</p>
-          ) : (
-            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-              {payments.filter(p => p.month_due === selectedMonth).map(p => (
-                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: '12px' }}>
-                  <span>{p.tenant}</span>
-                  <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{formatCurrency(p.amount)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       <article className="card" style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
