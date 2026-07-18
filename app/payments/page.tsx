@@ -644,7 +644,7 @@ export default function PaymentsPage() {
           )}
         </div>
         <Sparkline data={monthlyData.length > 0 && monthlyData.some(d => d > 0) ? monthlyData : [0, 0, 0]} color="#10b981" w={340} h={40}/>
-        <div style={{ display: 'flex', gap: '6px', marginTop: 8, height: 32 }}>
+        <div style={{ display: 'flex', gap: '4px', marginTop: 8, flexWrap: 'wrap' }}>
           {monthlyLabels.map((m, i) => {
             const revenue = monthlyRevenue.months[m] || 0;
             const label = monthlyLabelNames[i] || m;
@@ -652,7 +652,7 @@ export default function PaymentsPage() {
             const colors = ['#10b981', '#0d9488', '#0f766e', '#115e59', '#144e59', '#144e59', '#0ea5e9', '#0284c7', '#0369a1', '#07598c', '#0c4a6e', '#0b3a56'];
             const monthColor = colors[i % colors.length];
             return (
-              <div key={m} onMouseEnter={() => setHoverMonth(m)} onMouseLeave={() => setHoverMonth(null)} style={{ flex: 1, minWidth: 36, padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, borderRadius: 6, background: isLatest ? 'rgba(16,185,129,0.15)' : 'var(--card)', cursor: 'pointer', position: 'relative', border: `1px solid ${monthColor}30` }}>
+              <div key={m} onMouseEnter={() => setHoverMonth(m)} onMouseLeave={() => setHoverMonth(null)} style={{ flex: '1 0 30px', minWidth: 36, padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, borderRadius: 6, background: isLatest ? 'rgba(16,185,129,0.15)' : 'var(--card)', cursor: 'pointer', position: 'relative', border: `1px solid ${monthColor}30` }}>
                 <div style={{ width: '100%', height: 16, display: 'flex', alignItems: 'flex-end' }}>
                   <div style={{ width: '100%', height: '100%', background: monthColor, borderRadius: '2px', opacity: isLatest ? 1 : 0.3 }} />
                 </div>
