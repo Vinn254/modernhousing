@@ -184,17 +184,19 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
 
       setStats(statsResult);
       setTenants(tenantsResult.tenants ?? []);
-      // Merge payments and bills for owed computation
-      const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
-        ...p,
-        created_at: p.paid_at || p.created_at,
-      })), ...(billsResult.bills ?? []).map((b: any) => ({
-        ...b,
-        amount: b.paid_amount ?? 0,
-        balance_remaining: b.balance ?? b.balance_remaining,
-        created_at: b.payment_date || b.paid_at || b.created_at,
-        tenant: b.tenant_name ?? '',
-      }))];
+// Merge payments and bills for owed computation
+       const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
+         ...p,
+         created_at: p.paid_at || p.created_at,
+       })), ...(billsResult.bills ?? []).map((b: any) => ({
+         ...b,
+         amount: b.paid_amount ?? 0,
+         balance_remaining: b.balance ?? b.balance_remaining,
+         created_at: b.payment_date || b.paid_at || b.created_at,
+         payment_date: b.payment_date,
+         source: 'bills',
+         tenant: b.tenant_name ?? '',
+       }))];
       setPayments(mergedPayments);
       setAgents(agentsResult.agents ?? []);
       setProperties(propertiesResult.properties ?? []);
@@ -955,12 +957,12 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
 <h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
                {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : payments.slice(0, 6).map((payment) => (
                  <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                     <strong>{payment.tenant}</strong>
-                     <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
-                   </div>
-                   <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {(payment as any).month_due || payment.created_at ? new Date(payment.created_at || '').toLocaleDateString() : ''}</div>
-                 </div>
+<div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <strong>{payment.tenant}</strong>
+                      <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
+                    </div>
+                    <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {(payment as any).month_due || ''} {(payment as any).source === 'bills' && (payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '')}</div>
+                  </div>
                ))}
             </div>
           </section>
