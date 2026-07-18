@@ -354,9 +354,9 @@ export default function PropertiesPage() {
      if (['complaint', 'notification'].includes(p.transaction_type)) return false;
      const monthDue = (p.month_due || '').toLowerCase();
      const dueMonth = monthDue.includes(selectedMonthNameFull.toLowerCase()) || monthDue.includes(selectedMonth.toLowerCase()) || monthDue.includes(selectedMonthNameShort.toLowerCase());
-     const paidDate = p.paid_at || p.payment_date;
-     const paidMonthMatch = paidDate && new Date(paidDate).toISOString().slice(0, 7) === selectedMonth;
-     return dueMonth || paidMonthMatch;
+
+
+     return (p.month_due || '').toLowerCase().includes(selectedMonthNameShort.toLowerCase()) || (p.month_due || '').toLowerCase().includes(selectedMonth.toLowerCase());
    });
   const filteredTotal = filteredPayments.reduce((sum: number, p: any) => sum + Number(p.paid_amount ?? p.amount ?? 0), 0);
 
