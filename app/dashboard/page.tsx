@@ -952,16 +952,16 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
                   <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{property.address}</div>
                 </div>
               ))}
-              <h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
-              {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : payments.slice(0, 6).map((payment) => (
-                <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <strong>{payment.tenant}</strong>
-                    <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
-                  </div>
-                  <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {payment.created_at ? new Date(payment.created_at).toLocaleDateString() : ''}</div>
-                </div>
-              ))}
+<h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
+               {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : payments.slice(0, 6).map((payment) => (
+                 <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                     <strong>{payment.tenant}</strong>
+                     <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
+                   </div>
+                   <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {(payment as any).month_due || payment.created_at ? new Date(payment.created_at || '').toLocaleDateString() : ''}</div>
+                 </div>
+               ))}
             </div>
           </section>
         )}
