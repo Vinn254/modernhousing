@@ -637,10 +637,12 @@ export default function PaymentsPage() {
           {monthlyLabels.map((m, i) => {
             const revenue = monthlyRevenue.months[m] || 0;
             const label = monthlyLabelNames[i] || m;
+            const colors = ['#10b981', '#0d9488', '#0f766e', '#115e59', '#144e59', '#144e59'];
+            const btnColor = colors[i % colors.length];
             return (
-              <button key={m} onClick={() => setSelectedMonth(m)} style={{ flex: 1, minWidth: 40, padding: '4px 6px', fontSize: '10px', borderRadius: 6, border: selectedMonth === m ? '2px solid var(--accent)' : '1px solid var(--border)', background: selectedMonth === m ? 'rgba(16,185,129,0.15)' : 'var(--card)', color: 'var(--ink-1)', cursor: 'pointer' }}>
+              <button key={m} onClick={() => setSelectedMonth(m)} style={{ flex: 1, minWidth: 40, padding: '4px 6px', fontSize: '10px', borderRadius: 6, border: selectedMonth === m ? `2px solid ${btnColor}` : '1px solid var(--border)', background: selectedMonth === m ? `${btnColor}30` : 'var(--card)', color: 'var(--ink-1)', cursor: 'pointer' }}>
                 <div style={{ fontWeight: 600 }}>{label}</div>
-                <div style={{ color: 'var(--accent)', fontSize: '9px' }}>KSH {(revenue / 1000).toFixed(0)}k</div>
+                <div style={{ color: btnColor, fontSize: '9px' }}>KSH {(revenue / 1000).toFixed(0)}k</div>
               </button>
             );
           })}
