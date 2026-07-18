@@ -93,13 +93,22 @@ export default function PaymentsPage() {
         const monthParts = p.month_due?.split(' ');
         if (monthParts?.length >= 2) {
           const monthName = monthParts[0];
-          const year = monthParts[1];
+          let year = monthParts[1];
           const monthIdx = monthNames.indexOf(monthName);
           if (monthIdx >= 0) {
+            if (!year || isNaN(Number(year))) {
+              year = String(new Date().getFullYear());
+            }
             const key = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
             months[key] = (months[key] || 0) + paidAmt;
             return;
           }
+        } else if (monthParts?.length === 1 && monthNames.includes(monthParts[0])) {
+          const monthIdx = monthNames.indexOf(monthParts[0]);
+          const year = String(new Date().getFullYear());
+          const key = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+          months[key] = (months[key] || 0) + paidAmt;
+          return;
         }
       }
       const d = p.paid_at ? new Date(p.paid_at) : (p.payment_date ? new Date(p.payment_date) : (p.created_at ? new Date(p.created_at) : new Date()));
