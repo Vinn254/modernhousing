@@ -95,7 +95,11 @@ export default function PaymentsPage() {
 
   const monthlyLabels = useMemo(() => {
     const labels = monthlyRevenue.sorted.length > 0 ? [...monthlyRevenue.sorted] : [];
-    while (labels.length < 6) labels.unshift(`2024-${String(5 - labels.length).padStart(2, '0')}`);
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    while (labels.length < 6) {
+      const monthIdx = (12 - (6 - labels.length)) % 12 || 12;
+      labels.unshift(`2024-${String(monthIdx).padStart(2, '0')}`);
+    }
     return labels;
   }, [monthlyRevenue.sorted]);
 
@@ -643,9 +647,9 @@ export default function PaymentsPage() {
             return (
               <div key={m} onMouseEnter={() => setHoverMonth(m)} onMouseLeave={() => setHoverMonth(null)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', position: 'relative' }}>
                 <div style={{ width: '100%', height: 24, display: 'flex', alignItems: 'flex-end' }}>
-                  <div style={{ width: '100%', height: `${Math.max(pct * 100, 8)}%`, background: isLatest ? 'var(--accent)' : 'rgba(0,0,0,0.12)', borderRadius: '2px', transition: 'all 0.2s' }} />
+                  <div style={{ width: '100%', height: `${Math.max(pct * 100, 8)}%`, background: isLatest ? '#14B8A6' : 'rgba(255,255,255,0.1)', borderRadius: '2px', transition: 'all 0.2s' }} />
                 </div>
-                <span style={{ fontSize: '9px', color: isLatest ? 'var(--accent)' : 'var(--ink-3)', fontWeight: isLatest ? 600 : 400 }}>{monthlyLabelNames[i] || m}</span>
+                <span style={{ fontSize: '9px', color: isLatest ? '#14B8A6' : 'rgba(255,255,255,0.3)', fontWeight: isLatest ? 600 : 400 }}>{monthlyLabelNames[i] || m}</span>
                 {hoverMonth === m && (
                   <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%) translateY(-4px)', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', fontSize: '10px', whiteSpace: 'nowrap', zIndex: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
                     KSH {(revenue || 0).toLocaleString()}
