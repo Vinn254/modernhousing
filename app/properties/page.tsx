@@ -80,6 +80,7 @@ export default function PropertiesPage() {
         ...b,
         amount: b.paid_amount ?? b.amount,
         created_at: b.payment_date || b.paid_at || b.created_at,
+        tenant: b.tenant_name ?? '',
       }))];
       setMonthlyPayments(merged);
     } catch (e) {}

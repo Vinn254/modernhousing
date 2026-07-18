@@ -189,6 +189,7 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
         amount: b.paid_amount ?? 0,
         balance_remaining: b.balance ?? b.balance_remaining,
         created_at: b.payment_date || b.paid_at || b.created_at,
+        tenant: b.tenant_name ?? '',
       }))];
       setPayments(mergedPayments);
       setAgents(agentsResult.agents ?? []);
