@@ -397,10 +397,22 @@ export default function PaymentsPage() {
   }
 
   async function handleShowEditForm(payment: Payment) {
+    // Convert "Month Year" to YYYY-MM format for the month input
+    const monthDueRaw = (payment as any).month_due || '';
+    let monthDueValue = monthDueRaw;
+    if (monthDueRaw && monthDueRaw.includes(' ')) {
+      const [monthName, year] = monthDueRaw.split(' ');
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthIdx = monthNames.indexOf(monthName);
+      if (monthIdx >= 0) {
+        monthDueValue = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+      }
+    }
+    
     setEditForm({
       billId: payment.id,
       tenantId: tenants.find(t => t.full_name === payment.tenant)?.id || '',
-      monthDue: (payment as any).month_due || '',
+      monthDue: monthDueValue,
       dueAmount: String((payment as any).due_amount || payment.amount),
       paidAmount: String(payment.amount),
       penaltyFee: '0',
@@ -421,6 +433,14 @@ export default function PaymentsPage() {
     setMessage('');
     setError('');
 
+    // Convert YYYY-MM to "Month Year" format for API
+    let monthDueValue = editForm.monthDue;
+    if (editForm.monthDue && editForm.monthDue.includes('-')) {
+      const [year, month] = editForm.monthDue.split('-');
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      monthDueValue = `${monthNames[parseInt(month) - 1]} ${year}`;
+    }
+
     const endpoint = editForm.source === 'payments' ? '/api/payments' : '/api/bills';
     const response = await fetch(endpoint, {
       method: 'PUT',
@@ -429,7 +449,7 @@ export default function PaymentsPage() {
         id: editForm.billId,
         tenantId: editForm.tenantId,
         description: editForm.description || `${editForm.transType} payment`,
-        monthDue: editForm.monthDue,
+        monthDue: monthDueValue,
         dueAmount: Number(editForm.dueAmount),
         paidAmount: Number(editForm.paidAmount),
         penaltyFee: Number(editForm.penaltyFee),
