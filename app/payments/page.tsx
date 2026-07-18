@@ -94,7 +94,9 @@ export default function PaymentsPage() {
   }, [payments]);
 
   const monthlyLabels = useMemo(() => {
-    return monthlyRevenue.sorted.length > 0 ? monthlyRevenue.sorted : [];
+    const labels = monthlyRevenue.sorted.length > 0 ? [...monthlyRevenue.sorted] : [];
+    while (labels.length < 6) labels.unshift(`2024-${String(5 - labels.length).padStart(2, '0')}`);
+    return labels;
   }, [monthlyRevenue.sorted]);
 
   const monthlyLabelNames = useMemo(() => {
@@ -631,21 +633,21 @@ export default function PaymentsPage() {
             </span>
           )}
         </div>
-        <Sparkline data={monthlyData.length > 0 ? monthlyData : [0, 0, 0]} color="#10b981" w={340} h={40}/>
-        <div style={{ display: 'flex', gap: '2px', marginTop: 4, height: 28, alignItems: 'flex-end', position: 'relative' }}>
+        <Sparkline data={monthlyData.length > 0 && monthlyData.some(d => d > 0) ? monthlyData : [0, 0, 0]} color="#10b981" w={340} h={40}/>
+        <div style={{ display: 'flex', gap: '4px', marginTop: 8, alignItems: 'flex-end', height: 36 }}>
           {monthlyLabels.map((m, i) => {
             const revenue = monthlyRevenue.months[m] || 0;
             const maxVal = Math.max(...monthlyData, 1);
-            const pct = revenue / maxVal;
+            const pct = maxVal > 0 ? revenue / maxVal : 0;
             const isLatest = i === monthlyLabels.length - 1;
             return (
-              <div key={m} onMouseEnter={() => setHoverMonth(m)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: 'pointer', position: 'relative' }}>
-                <div style={{ width: '100%', height: 20, display: 'flex', alignItems: 'flex-end' }}>
-                  <div style={{ width: '100%', height: `${Math.max(pct * 100, 10)}%`, background: isLatest ? 'var(--accent)' : 'rgba(255,255,255,0.1)', borderRadius: 2, transition: 'height 0.2s' }} />
+              <div key={m} onMouseEnter={() => setHoverMonth(m)} onMouseLeave={() => setHoverMonth(null)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', position: 'relative' }}>
+                <div style={{ width: '100%', height: 24, display: 'flex', alignItems: 'flex-end' }}>
+                  <div style={{ width: '100%', height: `${Math.max(pct * 100, 8)}%`, background: isLatest ? 'var(--accent)' : 'rgba(0,0,0,0.12)', borderRadius: '2px', transition: 'all 0.2s' }} />
                 </div>
-                <span style={{ fontSize: '9px', color: isLatest ? 'var(--accent)' : 'rgba(255,255,255,0.3)', fontWeight: isLatest ? 600 : 400 }}>{monthlyLabelNames[i] || m}</span>
+                <span style={{ fontSize: '9px', color: isLatest ? 'var(--accent)' : 'var(--ink-3)', fontWeight: isLatest ? 600 : 400 }}>{monthlyLabelNames[i] || m}</span>
                 {hoverMonth === m && (
-                  <div style={{ position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 4, padding: '4px 8px', fontSize: '10px', whiteSpace: 'nowrap', zIndex: 10 }}>
+                  <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%) translateY(-4px)', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', fontSize: '10px', whiteSpace: 'nowrap', zIndex: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
                     KSH {(revenue || 0).toLocaleString()}
                   </div>
                 )}
