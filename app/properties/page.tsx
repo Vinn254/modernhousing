@@ -354,7 +354,7 @@ export default function PropertiesPage() {
      if (['complaint', 'notification'].includes(p.transaction_type)) return false;
      const monthDue = (p.month_due || '').toLowerCase();
      const dueMonth = monthDue.includes(selectedMonthNameFull.toLowerCase()) || monthDue.includes(selectedMonth.toLowerCase()) || monthDue.includes(selectedMonthNameShort.toLowerCase());
-     const paidDate = p.paid_at || p.payment_date || p.created_at;
+     const paidDate = p.paid_at || p.payment_date;
      const paidMonthMatch = paidDate && new Date(paidDate).toISOString().slice(0, 7) === selectedMonth;
      return dueMonth || paidMonthMatch;
    });
