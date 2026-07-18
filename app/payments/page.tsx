@@ -418,7 +418,7 @@ export default function PaymentsPage() {
       penaltyFee: '0',
       balanceRemaining: String(payment.balance_remaining),
       description: payment.description,
-      paymentDate: payment.next_payment_date || '',
+      paymentDate: (payment as any).payment_date || payment.next_payment_date || '',
       paymentMethod: manualPaymentMethod,
       referenceNumber: (payment as any).transaction_number || '',
       transactionCode: (payment as any).transaction_code || '',
@@ -793,10 +793,10 @@ export default function PaymentsPage() {
                         </span>
                       )}
                     </td>
-                    <td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
-                    <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
-                    <td>{payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—'}</td>
-                    <td>
+<td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
+                     <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
+                     <td>{(payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—')}</td>
+                     <td>
                       <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(payment)}>Edit</button>
                       <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
                     </td>

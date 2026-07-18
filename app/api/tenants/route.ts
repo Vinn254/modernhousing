@@ -417,8 +417,39 @@ Please acknowledge this agreement by clicking "Accept" in your tenant portal.`;
     });
   }
 
-  // Log audit after tenant creation
-  await logAuditEvent(
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+   // Auto-create bill for the lease month if unit has rent amount
+   if (finalUnitId && leaseStart) {
+     try {
+       const { data: unitData } = await supabaseAdmin.from('units').select('rent_amount').eq('id', finalUnitId).maybeSingle();
+       const { data: propData } = await supabaseAdmin.from('units').select('property_id, properties!inner(organization_id)').eq('id', finalUnitId).maybeSingle();
+       
+       const rentAmount = unitData?.rent_amount || 0;
+       const leaseDate = new Date(leaseStart);
+       const monthDueValue = `${monthNames[leaseDate.getMonth()]} ${leaseDate.getFullYear()}`;
+       
+       if (rentAmount > 0 && propData?.properties) {
+         await supabaseAdmin.from('bills').insert({
+           tenant_id: tenantId,
+           unit_id: finalUnitId,
+           property_id: propData.property_id,
+           description: 'Rent for ' + monthDueValue,
+           month_due: monthDueValue,
+           due_amount: rentAmount,
+           paid_amount: 0,
+           balance: rentAmount,
+           transaction_type: 'rent',
+           payment_date: null,
+         });
+       }
+     } catch (e) {
+       console.error('Error creating initial rent bill:', (e as any)?.message ?? e);
+     }
+   }
+
+   // Log audit after tenant creation
+   await logAuditEvent(
     authContext.userId,
     authContext.userEmail,
     'create',
