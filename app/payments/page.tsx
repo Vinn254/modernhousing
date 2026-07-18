@@ -204,26 +204,27 @@ export default function PaymentsPage() {
 
     if (billsResponse.ok) {
       const billsResult = await billsResponse.json();
-      const billsPayments = (billsResult.bills ?? [])
-        .filter((b: any) => ['rent', 'overdue', 'deposit', 'tenancy_agreement'].includes(b.transaction_type))
-        .map((b: any) => ({
-          id: b.id,
-          tenant: b.tenant_name || '—',
-          tenant_email: '',
-          property: '',
-          unit: b.unit_number || '—',
-          description: b.description,
-          transaction_type: b.transaction_type,
-          amount: b.paid_amount || 0,
-          due_amount: b.due_amount || 0,
-          month_due: b.month_due,
-          balance_remaining: b.balance || 0,
-          status: b.balance === 0 ? 'paid' : 'pending',
-          transaction_number: b.transaction_number,
-          transaction_code: b.transaction_code,
-          created_at: b.created_at,
-          source: 'bills' as const,
-        }));
+const billsPayments = (billsResult.bills ?? [])
+         .filter((b: any) => ['rent', 'overdue', 'deposit', 'tenancy_agreement'].includes(b.transaction_type))
+         .map((b: any) => ({
+           id: b.id,
+           tenant: b.tenant_name || '—',
+           tenant_email: '',
+           property: '',
+           unit: b.unit_number || '—',
+           description: b.description,
+           transaction_type: b.transaction_type,
+           amount: b.paid_amount || 0,
+           due_amount: b.due_amount || 0,
+           month_due: b.month_due,
+           balance_remaining: b.balance || 0,
+           status: b.balance === 0 ? 'paid' : 'pending',
+           transaction_number: b.transaction_number,
+           transaction_code: b.transaction_code,
+           payment_date: b.payment_date,
+           created_at: b.created_at,
+           source: 'bills' as const,
+         }));
       allPayments = [...allPayments, ...billsPayments];
     }
 

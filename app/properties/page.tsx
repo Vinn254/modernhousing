@@ -73,7 +73,7 @@ export default function PropertiesPage() {
       ]);
       const paymentsResult = paymentsResponse.ok ? await paymentsResponse.json() : {};
       const billsResult = billsResponse.ok ? await billsResponse.json() : {};
-      const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
+const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
         ...p,
         created_at: p.paid_at || p.created_at,
       })), ...(billsResult.bills ?? []).map((b: any) => ({
@@ -82,7 +82,7 @@ export default function PropertiesPage() {
         created_at: b.payment_date || b.paid_at || b.created_at,
         tenant: b.tenant_name ?? '',
       }))];
-      setMonthlyPayments(merged);
+     setMonthlyPayments(merged);
     } catch (e) {}
   }
 
