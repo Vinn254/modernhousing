@@ -43,6 +43,7 @@ interface Payment {
   paid_at?: string;
   payment_date?: string;
   paid_amount?: number;
+  month_due?: string;
 }
 
 interface Agent {
