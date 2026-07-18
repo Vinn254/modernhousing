@@ -372,7 +372,7 @@ export default function PropertiesPage() {
         const monthParts = p.month_due?.split(' ');
         if (monthParts?.length >= 2) {
           const monthName = monthParts[0];
-          const year = monthParts[1];
+          let year = monthParts[1]; if (!year || isNaN(Number(year))) { year = String(new Date().getFullYear()); }
           const monthIdx = monthNames.indexOf(monthName);
           if (monthIdx >= 0) {
             const key = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
@@ -483,7 +483,7 @@ export default function PropertiesPage() {
                    <span style={{ color: revenueTrendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700, fontSize: '14px' }}>{revenueTrendPercent >= 0 ? '+' : ''}{revenueTrendPercent.toFixed(1)}%</span>
                    <h3 style={{ margin: 0 }}>{formatCurrency(currentMonthVal)}</h3>
                  </div>
-                 <p style={{ margin: '4px 0 0', color: 'var(--ink-3)', fontSize: '13px' }}>Last 6 months</p>
+                 <p style={{ margin: '4px 0 0', color: 'var(--ink-3)', fontSize: '13px' }}>per month collected</p>
                </div>
                <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
              </div>
@@ -787,3 +787,4 @@ export default function PropertiesPage() {
     </main>
   );
 }
+
