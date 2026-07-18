@@ -40,6 +40,9 @@ interface Payment {
   created_at: string;
   transaction_type: string;
   description: string;
+  paid_at?: string;
+  payment_date?: string;
+  paid_amount?: number;
 }
 
 interface Agent {

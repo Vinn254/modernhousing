@@ -28,10 +28,10 @@ interface Payment {
   created_at: string;
   month_due?: string;
   due_amount?: number;
-  penalty_fee?: number;
-  transaction_number?: string;
-  transaction_code?: string;
-  source: 'bills' | 'payments';
+  paid_at?: string;
+  payment_date?: string;
+  paid_amount?: number;
+  source?: 'bills' | 'payments';
 }
 
 async function getAuthHeaders() {
@@ -384,7 +384,7 @@ export default function PaymentsPage() {
       referenceNumber: (payment as any).transaction_number || '',
       transactionCode: (payment as any).transaction_code || '',
       transType: (payment as any).transaction_type || 'rent',
-      source: payment.source,
+      source: payment.source ?? 'bills',
     });
     setShowEditForm(true);
   }
