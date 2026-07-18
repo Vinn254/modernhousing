@@ -97,19 +97,15 @@ export default function PaymentsPage() {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
-    const labels = monthlyRevenue.sorted.length > 0 ? [...monthlyRevenue.sorted] : [];
-    while (labels.length < 6) {
-      const monthIdx = currentMonth - (labels.length - (monthlyRevenue.sorted.length - 1)) + (6 - labels.length - 1);
-      const adjMonth = monthIdx > 0 ? monthIdx : 12 + monthIdx;
-      const adjYear = monthIdx > 0 ? currentYear : currentYear - 1;
-      labels.unshift(`${adjYear}-${String(adjMonth).padStart(2, '0')}`);
-    }
-    return labels;
-  }, [monthlyRevenue.sorted]);
+    return Array(12).fill(0).map((_, i) => {
+      const month = i + 1;
+      return month <= currentMonth ? `${currentYear}-${String(month).padStart(2, '0')}` : `${currentYear - 1}-${String(month).padStart(2, '0')}`;
+    });
+  }, []);
 
   const monthlyLabelNames = useMemo(() => {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return monthlyLabels.map(m => m.length === 7 ? monthNames[parseInt(m.slice(5, 7)) - 1] || m : m);
+    return monthlyLabels.map(m => monthNames[parseInt(m.slice(5, 7)) - 1] || m);
   }, [monthlyLabels]);
 
   const monthlyData = useMemo(() => monthlyLabels.map(m => monthlyRevenue.months[m] || 0), [monthlyLabels, monthlyRevenue.months]);
