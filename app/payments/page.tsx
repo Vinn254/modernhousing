@@ -96,17 +96,22 @@ export default function PaymentsPage() {
   const monthlyLabels = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
     return Array(12).fill(0).map((_, i) => {
       const month = i + 1;
-      return month <= currentMonth ? `${currentYear}-${String(month).padStart(2, '0')}` : `${currentYear - 1}-${String(month).padStart(2, '0')}`;
+      return `${currentYear}-${String(month).padStart(2, '0')}`;
     });
   }, []);
+
+  const currentMonthLabel = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
   const monthlyLabelNames = useMemo(() => {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return monthlyLabels.map(m => monthNames[parseInt(m.slice(5, 7)) - 1] || m);
   }, [monthlyLabels]);
+
+  const currentMonthRevenue = useMemo(() => {
+    return monthlyRevenue.months[currentMonthLabel] || 0;
+  }, [monthlyRevenue.months, currentMonthLabel]);
 
   const monthlyData = useMemo(() => monthlyLabels.map(m => monthlyRevenue.months[m] || 0), [monthlyLabels, monthlyRevenue.months]);
 
@@ -627,13 +632,14 @@ export default function PaymentsPage() {
           <div style={{ flex: 1 }}>
             <div className="card-label">Revenue Trend</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 700 }}>KSH {monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].toLocaleString() : '0'}</h3>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{monthlyLabels.length > 0 ? monthlyLabelNames[monthlyLabels.length - 1] : '—'}</p>
+              <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 700 }}>KSH {currentMonthRevenue.toLocaleString()}</h3>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{new Date().toLocaleString('en-US', { month: 'long' })}</p>
             </div>
           </div>
-          {monthlyData.length > 1 && (
+          {monthlyData.filter(d => d > 0).length > 1 && (
             <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: 999, background: 'rgba(16,185,129,0.15)', color: 'var(--accent)' }}>
-              {((monthlyData[monthlyData.length - 1] - monthlyData[monthlyData.length - 2]) / monthlyData[monthlyData.length - 2] * 100 >= 0 ? '+' : '')}{((monthlyData[monthlyData.length - 1] - monthlyData[monthlyData.length - 2]) / monthlyData[monthlyData.length - 2] * 100).toFixed(1)}%
+              {currentMonthRevenue > 0 && monthlyData[monthlyData.length - 1] > 0 ? ((monthlyData[monthlyData.length - 1] - monthlyData[monthlyData.length - 2]) / monthlyData[monthlyData.length - 2] * 100 >= 0 ? '+' : '') : '+'}
+              {monthlyData[monthlyData.length - 2] > 0 ? ((monthlyData[monthlyData.length - 1] - monthlyData[monthlyData.length - 2]) / monthlyData[monthlyData.length - 2] * 100).toFixed(1) : '0'}%
             </span>
           )}
         </div>
@@ -642,8 +648,8 @@ export default function PaymentsPage() {
           {monthlyLabels.map((m, i) => {
             const revenue = monthlyRevenue.months[m] || 0;
             const label = monthlyLabelNames[i] || m;
-            const isLatest = i === monthlyLabels.length - 1;
-            const colors = ['#10b981', '#0d9488', '#0f766e', '#115e59', '#144e59', '#144e59'];
+            const isLatest = m === currentMonthLabel;
+            const colors = ['#10b981', '#0d9488', '#0f766e', '#115e59', '#144e59', '#144e59', '#0ea5e9', '#0284c7', '#0369a1', '#07598c', '#0c4a6e', '#0b3a56'];
             const monthColor = colors[i % colors.length];
             return (
               <div key={m} onMouseEnter={() => setHoverMonth(m)} onMouseLeave={() => setHoverMonth(null)} style={{ flex: 1, minWidth: 36, padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, borderRadius: 6, background: isLatest ? 'rgba(16,185,129,0.15)' : 'var(--card)', cursor: 'pointer', position: 'relative', border: `1px solid ${monthColor}30` }}>
