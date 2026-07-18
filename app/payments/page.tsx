@@ -514,7 +514,7 @@ const billsPayments = (billsResult.bills ?? [])
         page.drawRectangle({ x: 48, y: y - 4, width: 504, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
       }
       page.drawText(payment.tenant.substring(0, 18), { x: 50, y, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
-      page.drawText((payment as any).month_due?.substring(0, 12) || payment.description?.substring(0, 12) || '—', { x: 150, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText((payment as any).month_due || payment.description || '—', { x: 150, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
 page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 260, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
        page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 340, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
        page.drawText(formatCurrency(payment.balance_remaining).replace('KES', ''), { x: 420, y, font, size: 9, color: payment.balance_remaining > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.2, 0.2, 0.2) });
