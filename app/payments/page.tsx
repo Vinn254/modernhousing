@@ -113,7 +113,30 @@ export default function PaymentsPage() {
     return monthlyRevenue.months[currentMonthLabel] || 0;
   }, [monthlyRevenue.months, currentMonthLabel]);
 
+  const prevMonthLabel = useMemo(() => {
+    const now = new Date();
+    const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    return `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
+  }, []);
+
+  const prevMonthRevenue = useMemo(() => {
+    return monthlyRevenue.months[prevMonthLabel] || 0;
+  }, [monthlyRevenue.months, prevMonthLabel]);
+
   const monthlyData = useMemo(() => monthlyLabels.map(m => monthlyRevenue.months[m] || 0), [monthlyLabels, monthlyRevenue.months]);
+
+  const percentageChange = useMemo(() => {
+    if (prevMonthRevenue > 0 && currentMonthRevenue !== prevMonthRevenue) {
+      const change = (currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue * 100;
+      return { sign: change >= 0 ? '+' : '', value: change.toFixed(1) };
+    }
+    if (monthlyData.length >= 2 && monthlyData[monthlyData.length - 1] > 0 && monthlyData[monthlyData.length - 2] > 0) {
+      const change = (monthlyData[monthlyData.length - 1] - monthlyData[monthlyData.length - 2]) / monthlyData[monthlyData.length - 2] * 100;
+      return { sign: change >= 0 ? '+' : '', value: change.toFixed(1) };
+    }
+    return { sign: '+', value: '0' };
+  }, [monthlyData, currentMonthRevenue, prevMonthRevenue]);
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
@@ -624,7 +647,7 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', marginBottom: 32 }}>
+<article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
@@ -636,12 +659,9 @@ export default function PaymentsPage() {
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{new Date().toLocaleString('en-US', { month: 'long' })}</p>
             </div>
           </div>
-          {monthlyData.filter(d => d > 0).length > 1 && (
-            <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: 999, background: 'rgba(16,185,129,0.15)', color: 'var(--accent)' }}>
-              {currentMonthRevenue > 0 && monthlyData[monthlyData.length - 1] > 0 ? ((monthlyData[monthlyData.length - 1] - monthlyData[monthlyData.length - 2]) / monthlyData[monthlyData.length - 2] * 100 >= 0 ? '+' : '') : '+'}
-              {monthlyData[monthlyData.length - 2] > 0 ? ((monthlyData[monthlyData.length - 1] - monthlyData[monthlyData.length - 2]) / monthlyData[monthlyData.length - 2] * 100).toFixed(1) : '0'}%
-            </span>
-          )}
+          <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: 999, background: 'rgba(16,185,129,0.15)', color: 'var(--accent)', flexShrink: 0 }}>
+            {percentageChange.sign}{percentageChange.value}%
+          </span>
         </div>
         <Sparkline data={monthlyData.length > 0 && monthlyData.some(d => d > 0) ? monthlyData : [0, 0, 0]} color="#10b981" w={340} h={40}/>
         <div style={{ display: 'flex', gap: '4px', marginTop: 8, flexWrap: 'wrap' }}>
