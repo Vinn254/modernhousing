@@ -80,6 +80,7 @@ const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
         ...b,
         amount: b.paid_amount ?? b.amount,
         created_at: b.payment_date || b.paid_at || b.created_at,
+        payment_date: b.payment_date, // Ensure payment_date is preserved
         tenant: b.tenant_name ?? '',
       }))];
      setMonthlyPayments(merged);
@@ -524,17 +525,22 @@ for (let i = 0; i < 12; i++) {
                 {filteredPayments.length > 0 ? (
                   <div className="table-shell">
                     <table className="landlord-table">
-                      <thead><tr><th>Date</th><th>Tenant</th><th>Type</th><th>Amount</th></tr></thead>
-                      <tbody>
-                        {filteredPayments.map(p => (
-                          <tr key={p.id}>
-                            <td>{p.paid_at || p.payment_date ? new Date(p.paid_at || p.payment_date).toLocaleDateString() : new Date(p.created_at).toLocaleDateString()}</td>
-                            <td>{p.tenant || p.tenant_name || '—'}</td>
-                            <td>{p.transaction_type || 'rent'}</td>
-                            <td style={{ color: 'var(--accent)', fontWeight: 600 }}>{formatCurrency(p.amount ?? p.paid_amount ?? 0)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
+<thead><tr><th>Date</th><th>Tenant</th><th>Type</th><th>Amount</th></tr></thead>
+                       <tbody>
+                         {filteredPayments.map(p => {
+                           const displayDate = p.source === 'bills' 
+                             ? (p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '') 
+                             : (p.paid_at || p.created_at ? new Date(p.paid_at || p.created_at).toLocaleDateString() : '');
+                           return (
+                             <tr key={p.id}>
+                               <td>{displayDate || '—'}</td>
+                               <td>{p.tenant || p.tenant_name || '—'}</td>
+                               <td>{p.transaction_type || 'rent'}</td>
+                               <td style={{ color: 'var(--accent)', fontWeight: 600 }}>{formatCurrency(p.amount ?? p.paid_amount ?? 0)}</td>
+                             </tr>
+                           );
+                         })}
+                       </tbody>
                     </table>
                   </div>
                 ) : <p className="table-empty">No payments recorded for this month.</p>}
