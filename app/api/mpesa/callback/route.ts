@@ -6,6 +6,8 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
 export async function POST(request: NextRequest) {
   try {
     const callbackData = await request.json();
@@ -32,6 +34,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'No tenant ID in callback' }, { status: 200 });
     }
 
+    // Derive month_due from transaction date
+    let monthDue = null;
+    if (transactionDate) {
+      const d = new Date(Number(transactionDate));
+      monthDue = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
     // Create payment record
     const { data: payment, error } = await supabaseAdmin.from('payments').insert({
       tenant_id: tenantId,
@@ -48,6 +57,7 @@ export async function POST(request: NextRequest) {
                    paymentType === 'laundry' ? 'Laundry Payment' :
                    paymentType === 'pet_fees' ? 'Pet Fees Payment' : 'Utility Payment',
       balance_remaining: 0,
+      month_due: monthDue,
       paid_at: transactionDate ? new Date(Number(transactionDate)).toISOString() : new Date().toISOString(),
       transaction_number: `MPESA-${Date.now().toString().slice(-6)}`,
     }).select();
