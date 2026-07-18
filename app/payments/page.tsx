@@ -81,6 +81,28 @@ export default function PaymentsPage() {
   const [passkey, setPasskey] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'paybill' | 'till' | 'pochi' | 'mobile'>('paybill');
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+
+  const monthlyRevenue = useMemo(() => {
+    const months: Record<string, number> = {};
+    payments.forEach(p => {
+      const month = p.month_due || (p.created_at ? p.created_at.slice(0, 7) : 'unknown');
+      months[month] = (months[month] || 0) + (p.amount || 0);
+    });
+    const sorted = Object.keys(months).sort().slice(-6);
+    return { months, sorted };
+  }, [payments]);
+
+  const monthlyLabels = useMemo(() => {
+    return monthlyRevenue.sorted.length > 0 ? monthlyRevenue.sorted : [];
+  }, [monthlyRevenue.sorted]);
+
+  const monthlyLabelNames = useMemo(() => {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return monthlyLabels.map(m => m.length === 7 ? monthNames[parseInt(m.slice(5, 7)) - 1] || m : m);
+  }, [monthlyLabels]);
+
+  const monthlyData = useMemo(() => monthlyLabels.map(m => monthlyRevenue.months[m] || 0), [monthlyLabels, monthlyRevenue.months]);
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
@@ -599,14 +621,51 @@ export default function PaymentsPage() {
           <div style={{ flex: 1 }}>
             <div className="card-label">Revenue Trend</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: payments.length > 0 ? 'var(--accent)' : '#71717a', fontWeight: 700, fontSize: '14px' }}>{payments.slice(-6).reduce((s, p) => s + (p.amount || 0), 0) > 0 ? '+' : ''}KSH {payments.slice(-6).reduce((s, p) => s + (p.amount || 0), 0).toLocaleString()}</span>
+              <span style={{ color: payments.length > 0 ? 'var(--accent)' : '#71717a', fontWeight: 700, fontSize: '14px' }}>{monthlyData.length > 0 ? '+' : ''}KSH {monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].toLocaleString() : '0'}</span>
               <h3 style={{ margin: 0 }}>{formatCurrency(payments.reduce((sum, p) => sum + (p.amount || 0), 0))}</h3>
             </div>
             <p style={{ margin: '4px 0 0', color: 'var(--ink-3)', fontSize: '13px' }}>Total collected</p>
           </div>
+          {monthlyData.length > 1 && (
+            <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.15)', color: 'var(--accent)' }}>
+              {((monthlyData[monthlyData.length - 1] - monthlyData[monthlyData.length - 2]) / monthlyData[monthlyData.length - 2] * 100 >= 0 ? '+' : '')}{((monthlyData[monthlyData.length - 1] - monthlyData[monthlyData.length - 2]) / monthlyData[monthlyData.length - 2] * 100).toFixed(1)}%
+            </span>
+          )}
         </div>
-        <Sparkline data={payments.slice(-6).map(p => p.amount || 0).length > 0 ? payments.slice(-6).map(p => p.amount || 0) : [0, 0, 0]} color="#10b981" w={340} h={36}/>
+        <Sparkline data={monthlyData.length > 0 ? monthlyData : [0, 0, 0]} color="#10b981" w={140} h={44}/>
+        <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+          {monthlyLabels.map((m, i) => {
+            const revenue = monthlyRevenue.months[m] || 0;
+            const label = monthlyLabelNames[i] || m;
+            return (
+              <button key={m} onClick={() => setSelectedMonth(m)} style={{ flex: 1, minWidth: 40, padding: '4px 6px', fontSize: '10px', borderRadius: 6, border: selectedMonth === m ? '2px solid var(--accent)' : '1px solid var(--border)', background: selectedMonth === m ? 'rgba(16,185,129,0.15)' : 'var(--card)', color: 'var(--ink-1)', cursor: 'pointer' }}>
+                <div style={{ fontWeight: 600 }}>{label}</div>
+                <div style={{ color: 'var(--accent)', fontSize: '9px' }}>KSH {(revenue / 1000).toFixed(0)}k</div>
+              </button>
+            );
+          })}
+        </div>
       </article>
+      {selectedMonth && (
+        <div className="bento-card" style={{ padding: '12px 16px', marginTop: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <h4 style={{ margin: 0, fontSize: '14px' }}>Revenue for {monthlyLabelNames[monthlyLabels.indexOf(selectedMonth)] || selectedMonth}</h4>
+            <button onClick={() => setSelectedMonth(null)} style={{ background: 'none', border: 'none', color: 'var(--ink-3)', cursor: 'pointer', fontSize: '16px' }}>×</button>
+          </div>
+          {payments.filter(p => p.month_due === selectedMonth).length === 0 ? (
+            <p style={{ color: 'var(--ink-3)', fontSize: '13px', margin: 0 }}>No payments for this month</p>
+          ) : (
+            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+              {payments.filter(p => p.month_due === selectedMonth).map(p => (
+                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: '12px' }}>
+                  <span>{p.tenant}</span>
+                  <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{formatCurrency(p.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <article className="card" style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
