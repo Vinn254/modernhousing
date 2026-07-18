@@ -94,11 +94,15 @@ export default function PaymentsPage() {
   }, [payments]);
 
   const monthlyLabels = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
     const labels = monthlyRevenue.sorted.length > 0 ? [...monthlyRevenue.sorted] : [];
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     while (labels.length < 6) {
-      const monthIdx = (12 - (6 - labels.length)) % 12 || 12;
-      labels.unshift(`2024-${String(monthIdx).padStart(2, '0')}`);
+      const monthIdx = currentMonth - (labels.length - (monthlyRevenue.sorted.length - 1)) + (6 - labels.length - 1);
+      const adjMonth = monthIdx > 0 ? monthIdx : 12 + monthIdx;
+      const adjYear = monthIdx > 0 ? currentYear : currentYear - 1;
+      labels.unshift(`${adjYear}-${String(adjMonth).padStart(2, '0')}`);
     }
     return labels;
   }, [monthlyRevenue.sorted]);
@@ -628,7 +632,7 @@ export default function PaymentsPage() {
             <div className="card-label">Revenue Trend</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <h3 style={{ margin: 0, color: 'var(--ink-1)' }}>KSH {monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].toLocaleString() : '0'}</h3>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{monthlyLabels.length > 0 ? (monthlyLabelNames[monthlyLabels.length - 1] || monthlyLabels[monthlyLabels.length - 1]) + ' 2024' : '—'}</p>
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{monthlyLabels.length > 0 ? monthlyLabelNames[monthlyLabels.length - 1] : '—'}</p>
             </div>
           </div>
           {monthlyData.length > 1 && (
@@ -644,14 +648,12 @@ export default function PaymentsPage() {
             const maxVal = Math.max(...monthlyData, 1);
             const pct = maxVal > 0 ? revenue / maxVal : 0;
             const isLatest = i === monthlyLabels.length - 1;
-            const barColors = ['#10b981', '#0d9488', '#0f766e', '#115e59', '#144e59', '#144e59'];
-            const barColor = barColors[i % barColors.length];
             return (
               <div key={m} onMouseEnter={() => setHoverMonth(m)} onMouseLeave={() => setHoverMonth(null)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: 'pointer', position: 'relative' }}>
                 <div style={{ width: '100%', height: 24, display: 'flex', alignItems: 'flex-end' }}>
-                  <div style={{ width: '100%', height: `${Math.max(pct * 100, 8)}%`, background: barColor, borderRadius: '2px', transition: 'all 0.2s', opacity: isLatest ? 1 : 0.4 }} />
+                  <div style={{ width: '100%', height: `${Math.max(pct * 100, 8)}%`, background: isLatest ? '#14B8A6' : 'rgba(255,255,255,0.1)', borderRadius: '2px', transition: 'all 0.2s' }} />
                 </div>
-                <span style={{ fontSize: '9px', color: barColor, fontWeight: isLatest ? 600 : 400 }}>{monthlyLabelNames[i] || m}</span>
+                <span style={{ fontSize: '9px', color: isLatest ? '#14B8A6' : 'rgba(255,255,255,0.3)', fontWeight: isLatest ? 600 : 400 }}>{monthlyLabelNames[i] || m}</span>
                 {hoverMonth === m && (
                   <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%) translateY(-4px)', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '4px', padding: '4px 8px', fontSize: '10px', whiteSpace: 'nowrap', zIndex: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
                     KSH {(revenue || 0).toLocaleString()}
