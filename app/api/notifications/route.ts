@@ -160,6 +160,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('recipient', 'project_manager');
     } else if (recipient === 'tenant') {
       query = query.eq('recipient', 'tenant');
+    } else if (recipient === 'agent') {
+      query = query.eq('recipient', 'agent');
     }
 
     if (propertyId) {
@@ -263,8 +265,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (recipient === 'agent') {
+      if (!tenantId) {
+        return badRequest('Tenant is required for agent messages.');
+      }
+
+      await ensureNotificationTable();
+
+      const { data, error } = await supabaseAdmin
+        .from('notifications')
+        .insert({
+          tenant_id: tenantId || null,
+          property_id: propertyId || null,
+          agent_id: agentId || null,
+          recipient: 'agent',
+          admin_id: adminId || null,
+          admin_name: adminName || null,
+          admin_email: adminEmail || '',
+          type,
+          message,
+          status: 'sent',
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      return NextResponse.json({ notification: data, message: 'Agent message sent.' }, { status: 201 });
+    }
+
     if (recipient === 'landlord' || recipient === 'project_manager') {
-      if (!adminId || !adminName || !adminEmail) {
+      const isTenantReply = Boolean(tenantId) && !adminId && !adminName;
+      if (!isTenantReply && (!adminId || !adminName || !adminEmail)) {
         return badRequest('Landlord context required.');
       }
 
@@ -273,13 +305,13 @@ export async function POST(request: NextRequest) {
       const { data, error } = await supabaseAdmin
         .from('notifications')
         .insert({
-          tenant_id: null,
-          property_id: null,
-          agent_id: null,
+          tenant_id: tenantId || null,
+          property_id: propertyId || null,
+          agent_id: agentId || null,
           recipient: 'project_manager',
-          admin_id: adminId,
-          admin_name: adminName,
-          admin_email: adminEmail,
+          admin_id: adminId || null,
+          admin_name: adminName || null,
+          admin_email: adminEmail || '',
           type,
           message,
           status: 'sent',
@@ -288,8 +320,11 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (error) {
-        const fallbackNotification = await insertFallbackLandlordNotification({ adminId, adminName, adminEmail, type, message });
-        return NextResponse.json({ notification: fallbackNotification, message: 'Notification saved.' }, { status: 201 });
+        if (!isTenantReply) {
+          const fallbackNotification = await insertFallbackLandlordNotification({ adminId, adminName, adminEmail, type, message });
+          return NextResponse.json({ notification: fallbackNotification, message: 'Notification saved.' }, { status: 201 });
+        }
+        throw error;
       }
 
       return NextResponse.json({ notification: data, message: 'Notification sent.' }, { status: 201 });
