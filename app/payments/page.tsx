@@ -506,8 +506,8 @@ export default function PaymentsPage() {
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
   const MONTH_ORDER: Record<string, number> = {
-    january: 12, february: 11, march: 10, april: 9, may: 8, june: 7,
-    july: 6, august: 5, september: 4, october: 3, november: 2, december: 1,
+    january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+    july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
   };
 
   async function downloadPaymentStatement() {
