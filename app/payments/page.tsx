@@ -52,6 +52,8 @@ export default function PaymentsPage() {
   const [mpesaAmount, setMpesaAmount] = useState('');
   const [processing, setProcessing] = useState(false);
   const [userRole, setUserRole] = useState('');
+  const [selectedTenantKey, setSelectedTenantKey] = useState<string | null>(null);
+  const [selectedTenantName, setSelectedTenantName] = useState('');
 
   const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 10));
   const [manualMonth, setManualMonth] = useState('');
@@ -166,6 +168,29 @@ export default function PaymentsPage() {
     }
     return { sign: '+', value: '0' };
   }, [monthlyData, currentMonthRevenue, prevMonthRevenue, currentMonthLabel, monthlyLabels]);
+
+  const tenantPaymentGroups = useMemo(() => {
+    const groups = new Map<string, { key: string; name: string; count: number; balance: number }>();
+    payments.forEach((payment) => {
+      const key = payment.tenant_email || payment.tenant || 'unknown';
+      const existing = groups.get(key);
+      if (existing) {
+        existing.count += 1;
+        existing.balance += payment.balance_remaining || 0;
+      } else {
+        groups.set(key, { key, name: payment.tenant || 'Unknown tenant', count: 1, balance: payment.balance_remaining || 0 });
+      }
+    });
+    return Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [payments]);
+
+  const visiblePayments = useMemo(() => {
+    if (!selectedTenantKey) return payments;
+    return payments.filter((payment) => {
+      const tenantKey = payment.tenant_email || payment.tenant || 'unknown';
+      return tenantKey.toLowerCase() === selectedTenantKey.toLowerCase();
+    });
+  }, [payments, selectedTenantKey]);
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
@@ -476,7 +501,8 @@ const billsPayments = (billsResult.bills ?? [])
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
   async function downloadPaymentStatement() {
-    if (payments.length === 0) {
+    const recordsToDownload = visiblePayments.length > 0 ? visiblePayments : payments;
+    if (recordsToDownload.length === 0) {
       setError('No payments to download.');
       return;
     }
@@ -497,8 +523,8 @@ const billsPayments = (billsResult.bills ?? [])
     page.drawText(`Generated: ${dateStr} | Document ID: ${docId}`, { x: 50, y, font, size: 10, color: rgb(0.3, 0.3, 0.3) });
     y -= 40;
 
-    const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-    const totalBal = payments.reduce((sum, p) => sum + (p.balance_remaining || 0), 0);
+    const totalPaid = recordsToDownload.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalBal = recordsToDownload.reduce((sum, p) => sum + (p.balance_remaining || 0), 0);
 
     const headers = ['Tenant', 'Month Due', 'Trans Code', 'Paid', 'Balance', 'Date'];
     const colX = [50, 150, 260, 340, 420, 500];
@@ -509,7 +535,7 @@ const billsPayments = (billsResult.bills ?? [])
     page.drawLine({ start: { x: 50, y }, end: { x: 550, y }, thickness: 1, color: rgb(0.6, 0.6, 0.6) });
     y -= 18;
 
-    payments.forEach((payment, idx) => {
+    recordsToDownload.forEach((payment, idx) => {
       if (idx % 2 === 0) {
         page.drawRectangle({ x: 48, y: y - 4, width: 504, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
       }
@@ -750,11 +776,38 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
             <button onClick={downloadPaymentStatement} className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px' }}>Download PDF</button>
           )}
         </div>
-        <h3 style={{ marginBottom: 16 }}>Payment History</h3>
+        <h3 style={{ marginBottom: 16 }}>{selectedTenantName ? `Payment History for ${selectedTenantName}` : 'Payment History'}</h3>
         {loading ? <p style={{ color: '#111827' }}>Loading payments…</p> : payments.length === 0 ? (
           <p style={{ color: '#111827' }}>No payments recorded yet.</p>
         ) : (
-          <div className="table-shell">
+          <>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {!selectedTenantName ? (
+                tenantPaymentGroups.map((group) => (
+                  <button
+                    key={group.key}
+                    onClick={() => {
+                      setSelectedTenantKey(group.key);
+                      setSelectedTenantName(group.name);
+                    }}
+                    style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                  >
+                    {group.name} ({group.count})
+                  </button>
+                ))
+              ) : (
+                <button
+                  onClick={() => {
+                    setSelectedTenantKey(null);
+                    setSelectedTenantName('');
+                  }}
+                  style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid #d1d5db', background: '#f9fafb', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                >
+                  ← Back to all tenants
+                </button>
+              )}
+            </div>
+            <div className="table-shell">
             <table className="landlord-table">
               <thead>
                 <tr>
@@ -771,7 +824,7 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => {
+                {visiblePayments.map((payment) => {
                   const initials = (payment.tenant || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
                   const colors = ['#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#14b8a6'];
                   const colorIndex = payment.tenant ? payment.tenant.charCodeAt(0) % colors.length : 0;
@@ -782,7 +835,15 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
                       <td className="landlord-name">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 600 }}>{initials}</div>
-                          <span style={{ cursor: 'pointer', color: '#1e3a8a' }} onClick={() => { if (tenantEmail) window.location.href = `/admin/tenants?email=${encodeURIComponent(tenantEmail)}`; }}>{payment.tenant}</span>
+                          <span
+                            style={{ cursor: 'pointer', color: '#1e3a8a' }}
+                            onClick={() => {
+                              setSelectedTenantKey(tenantEmail || payment.tenant);
+                              setSelectedTenantName(payment.tenant);
+                            }}
+                          >
+                            {payment.tenant}
+                          </span>
                         </div>
                       </td>
 <td>{(payment as any).month_due || payment.description}</td>
@@ -819,7 +880,8 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </article>
     </main>
