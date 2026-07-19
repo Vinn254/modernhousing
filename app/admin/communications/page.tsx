@@ -374,8 +374,8 @@ export default function CommunicationsPage() {
             <div style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unreadCount} unread</div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', minHeight: 520 }}>
-            <aside style={{ borderRight: '1px solid var(--line)', background: '#f9fafb' }}>
+          <div className="communications-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', minHeight: 520 }}>
+            <aside className="communications-sidebar" style={{ borderRight: '1px solid var(--line)', background: '#f9fafb' }}>
               {loading && <p className="landlord-muted" style={{ padding: 16 }}>Loading communications…</p>}
               {!loading && messages.length === 0 && <p className="landlord-empty" style={{ padding: 16 }}>No communications yet.</p>}
               {!loading && messages.length > 0 && messages.map((message) => {
