@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 
@@ -28,6 +28,7 @@ export default function TenantDashboardPage() {
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [pictureMessage, setPictureMessage] = useState('');
+  const channelRef = useRef<any>(null);
 
   async function loadDashboard(currentUser: any) {
     if (!currentUser?.email) return;
@@ -81,6 +82,30 @@ export default function TenantDashboardPage() {
       loadDashboard(data.user);
     });
   }, [router]);
+
+  useEffect(() => {
+    if (!user?.id || !data?.tenant?.id) return;
+
+    const channel = supabase.channel(`tenant-dashboard-${user.id}`);
+
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'bills', filter: `tenant_id=eq.${data.tenant.id}` }, () => {
+      loadDashboard(user);
+    });
+
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'payments', filter: `tenant_id=eq.${data.tenant.id}` }, () => {
+      loadDashboard(user);
+    });
+
+    channel.subscribe();
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [user?.id, data?.tenant?.id]);
 
   if (loading) {
     return (

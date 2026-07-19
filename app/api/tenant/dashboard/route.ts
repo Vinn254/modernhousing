@@ -14,14 +14,21 @@ const dayMs = 24 * 60 * 60 * 1000;
 const nonPaymentTypes = ['complaint', 'notification'];
 
 async function getTenantPayments(tenantId: string) {
-  const { data, error } = await supabaseAdmin
-    .from('payments')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false });
+  const billQuery = supabaseAdmin.from('bills').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+  const paymentQuery = supabaseAdmin.from('payments').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
 
-  if (error) throw error;
-  return (data ?? []).filter((payment: any) => !nonPaymentTypes.includes(payment.transaction_type));
+  const [{ data: billData, error: billError }, { data: paymentData, error: paymentError }] = await Promise.all([billQuery, paymentQuery]);
+
+  if (billError && !isMissingTableError(billError, 'bills')) throw billError;
+  if (paymentError && !isMissingTableError(paymentError, 'payments')) throw paymentError;
+
+  const bills = (billData ?? []).filter((payment: any) => !nonPaymentTypes.includes(payment.transaction_type));
+  const legacyPayments = (paymentData ?? []).filter((payment: any) => !nonPaymentTypes.includes(payment.transaction_type));
+
+  return [
+    ...bills.map((item: any) => ({ ...item, source: 'bills' })),
+    ...legacyPayments.map((item: any) => ({ ...item, source: 'payments' })),
+  ].sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime());
 }
 
 async function getTenantNotifications(tenantId: string) {
