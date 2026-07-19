@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { supabase } from '../../../lib/supabaseClient';
@@ -59,7 +59,7 @@ async function getAuthHeaders() {
   return headers;
 }
 
-export default function TenantsPage() {
+function TenantsPageContent() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<any[]>([]);
@@ -85,14 +85,14 @@ export default function TenantsPage() {
   });
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
-  
+
   const [payForm, setPayForm] = useState({
     billId: '',
     amount: '',
     paymentMethod: 'Cash',
     referenceNumber: '',
   });
-  
+
   const [directPaymentForm, setDirectPaymentForm] = useState({
     tenantId: '',
     transactionType: 'rent',
@@ -106,6 +106,7 @@ export default function TenantsPage() {
   const [showDirectPayment, setShowDirectPayment] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
   const formRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
 
   const filteredBills = bills.filter(bill => {
     if (activeFilter === 'All') return true;
@@ -222,23 +223,23 @@ export default function TenantsPage() {
 
   async function handleRemove(tenantId: string) {
     if (!confirm('Remove this tenant? They will be marked as relocated and the unit will be freed.')) return;
-    
+
     const tenant = tenants.find(t => t.id === tenantId);
     const unitId = tenant?.unit_id;
-    
+
     const response = await fetch(`/api/tenants?id=${encodeURIComponent(tenantId)}`, { method: 'DELETE', headers: await getAuthHeaders() });
     const result = await response.json();
     if (!response.ok) {
       setError(result.message ?? 'Unable to remove tenant.');
       return;
     }
-    
+
     setTenants(tenants.filter(t => t.id !== tenantId));
-    
+
     if (unitId) {
       setUnits(units.map(u => u.id === unitId ? { ...u, occupancy_status: 'vacant' } : u));
     }
-    
+
     setMessage('Tenant removed and unit marked as vacant.');
     await loadData();
   }
@@ -354,64 +355,64 @@ export default function TenantsPage() {
       setError(result.message ?? 'Unable to record payment.');
       return;
     }
-setMessage('Direct payment recorded.');
-      setDirectPaymentForm({ tenantId: '', transactionType: 'rent', monthDue: '', amount: '', paymentMethod: 'Cash', referenceNumber: '' });
-      if (selectedTenant) await loadBills(selectedTenant.id);
-    }
+    setMessage('Direct payment recorded.');
+    setDirectPaymentForm({ tenantId: '', transactionType: 'rent', monthDue: '', amount: '', paymentMethod: 'Cash', referenceNumber: '' });
+    if (selectedTenant) await loadBills(selectedTenant.id);
+  }
 
-    async function downloadTenantStatement() {
-      if (!selectedTenant) return;
-      const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([595.28, 841.89]);
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      let y = 800;
+  async function downloadTenantStatement() {
+    if (!selectedTenant) return;
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595.28, 841.89]);
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    let y = 800;
 
-      page.drawText(`Payment Statement - ${selectedTenant.full_name}`, { x: 50, y, font: boldFont, size: 18, color: rgb(0.1, 0.1, 0.1) });
-      y -= 30;
-      page.drawText(`${selectedTenant.property} · Unit ${selectedTenant.unit}`, { x: 50, y, font, size: 11, color: rgb(0.3, 0.3, 0.3) });
-      y -= 16;
-      page.drawText(`Email: ${selectedTenant.email} | Phone: ${selectedTenant.phone || '—'}`, { x: 50, y, font, size: 10, color: rgb(0.4, 0.4, 0.4) });
-      y -= 30;
+    page.drawText(`Payment Statement - ${selectedTenant.full_name}`, { x: 50, y, font: boldFont, size: 18, color: rgb(0.1, 0.1, 0.1) });
+    y -= 30;
+    page.drawText(`${selectedTenant.property} · Unit ${selectedTenant.unit}`, { x: 50, y, font, size: 11, color: rgb(0.3, 0.3, 0.3) });
+    y -= 16;
+    page.drawText(`Email: ${selectedTenant.email} | Phone: ${selectedTenant.phone || '—'}`, { x: 50, y, font, size: 10, color: rgb(0.4, 0.4, 0.4) });
+    y -= 30;
 
-      const headers = ['Date', 'Description', 'Month Due', 'Due (KES)', 'Paid (KES)', 'Balance (KES)'];
-      let x = 50;
-      headers.forEach(h => {
-        page.drawText(h, { x, y, font: boldFont, size: 10, color: rgb(0.2, 0.2, 0.2) });
-        x += 100;
-      });
-      y -= 14;
+    const headers = ['Date', 'Description', 'Month Due', 'Due (KES)', 'Paid (KES)', 'Balance (KES)'];
+    let x = 50;
+    headers.forEach(h => {
+      page.drawText(h, { x, y, font: boldFont, size: 10, color: rgb(0.2, 0.2, 0.2) });
+      x += 100;
+    });
+    y -= 14;
 
-      filteredBills.forEach((bill: any) => {
-        x = 50;
-        page.drawText(new Date(bill.created_at).toLocaleDateString('en-GB'), { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-        x += 100;
-        page.drawText(bill.description || '—', { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-        x += 100;
-        page.drawText(bill.month_due || '—', { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-        x += 100;
-        page.drawText((bill.due_amount || 0).toLocaleString(), { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-        x += 100;
-        page.drawText((bill.paid_amount || 0).toLocaleString(), { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-        x += 100;
-        page.drawText((bill.balance || 0).toLocaleString(), { x, y, font, size: 9, color: bill.balance > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
-        y -= 12;
-      });
-
+    filteredBills.forEach((bill: any) => {
+      x = 50;
+      page.drawText(new Date(bill.created_at).toLocaleDateString('en-GB'), { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      x += 100;
+      page.drawText(bill.description || '—', { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      x += 100;
+      page.drawText(bill.month_due || '—', { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      x += 100;
+      page.drawText((bill.due_amount || 0).toLocaleString(), { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      x += 100;
+      page.drawText((bill.paid_amount || 0).toLocaleString(), { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      x += 100;
+      page.drawText((bill.balance || 0).toLocaleString(), { x, y, font, size: 9, color: bill.balance > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
       y -= 12;
-      page.drawText(`Total Charged: KES ${totalCharged.toLocaleString()}`, { x: 50, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText(`Total Paid: KES ${totalPaidTenant.toLocaleString()}`, { x: 200, y, font: boldFont, size: 11, color: rgb(0.1, 0.4, 0.1) });
-      page.drawText(`Outstanding: KES ${totalOutstanding.toLocaleString()}`, { x: 350, y, font: boldFont, size: 11, color: totalOutstanding > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
-      
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `tenant-statement-${selectedTenant.id}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    });
+
+    y -= 12;
+    page.drawText(`Total Charged: KES ${totalCharged.toLocaleString()}`, { x: 50, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
+    page.drawText(`Total Paid: KES ${totalPaidTenant.toLocaleString()}`, { x: 200, y, font: boldFont, size: 11, color: rgb(0.1, 0.4, 0.1) });
+    page.drawText(`Outstanding: KES ${totalOutstanding.toLocaleString()}`, { x: 350, y, font: boldFont, size: 11, color: totalOutstanding > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
+
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tenant-statement-${selectedTenant.id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const transactionTypes = ['rent', 'water', 'garbage', 'service_charge', 'parking', 'security', 'other', 'deposit'];
 
@@ -442,17 +443,7 @@ setMessage('Direct payment recorded.');
               <input value={form.nextOfKinName} onChange={e => setForm(f => ({ ...f, nextOfKinName: e.target.value }))} placeholder="Next of Kin Name (Optional)" />
               <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Next of Kin ID (Optional)" />
               <input value={form.nextOfKinPhone} onChange={e => setForm(f => ({ ...f, nextOfKinPhone: e.target.value }))} placeholder="Next of Kin Phone (Optional)" />
-              <select value={form.nextOfKinRelationship} onChange={e => setForm(f => ({ ...f, nextOfKinRelationship: e.target.value }))}>
-                <option value="">Relationship (Optional)</option>
-                <option value="partner">Partner</option>
-                <option value="roommate">Room Mate</option>
-                <option value="spouse">Spouse</option>
-                <option value="parent">Parent</option>
-                <option value="sister">Sister</option>
-                <option value="brother">Brother</option>
-                <option value="uncle">Uncle</option>
-                <option value="grandparent">Grandparent</option>
-              </select>
+              <input value={form.nextOfKinRelationship} onChange={e => setForm(f => ({ ...f, nextOfKinRelationship: e.target.value }))} placeholder="Next of Kin Relationship (Optional)" />
               {!editingTenant && (
                 <select value={form.unitId} onChange={e => setForm(f => ({ ...f, unitId: e.target.value }))} required>
                   <option value="">Select unit</option>
@@ -513,7 +504,7 @@ setMessage('Direct payment recorded.');
                             {tenant.status ?? 'Active'}
                           </span>
                         </td>
-<td>
+                        <td>
                           <div className="landlord-actions">
                             <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleEdit(tenant)}>Edit</button>
                             <button className="action-button secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleViewBills(tenant)}>Bills</button>
@@ -529,7 +520,7 @@ setMessage('Direct payment recorded.');
           </article>
         </section>
 
-{selectedTenant && (
+        {selectedTenant && (
           <section className="card-grid-item" style={{ marginTop: 24 }} ref={formRef}>
             <article className="card" style={{ gridColumn: 'span 2' }}>
               <div className="card-label">
@@ -641,7 +632,7 @@ setMessage('Direct payment recorded.');
                 </div>
               )}
 
-              <h3 style={{ marginBottom: 16 }}>Transactions</h3>
+              <h3 style={{ marginBottom: 16 }}>Transactions ({filteredBills.length} records)</h3>
               {loadingBills && <p className="landlord-muted">Loading bills...</p>}
               {!loadingBills && bills.length === 0 && <p className="landlord-empty">No bills recorded yet.</p>}
 
@@ -706,5 +697,13 @@ setMessage('Direct payment recorded.');
         </div>
       </footer>
     </>
+  );
+}
+
+export default function TenantsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>}>
+      <TenantsPageContent />
+    </Suspense>
   );
 }
