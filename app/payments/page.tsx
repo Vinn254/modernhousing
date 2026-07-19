@@ -505,9 +505,19 @@ export default function PaymentsPage() {
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
+  const MONTH_ORDER: Record<string, number> = {
+    january: 12, february: 11, march: 10, april: 9, may: 8, june: 7,
+    july: 6, august: 5, september: 4, october: 3, november: 2, december: 1,
+  };
+
   async function downloadPaymentStatement() {
     const recordsToDownload = [...(visiblePayments.length > 0 ? visiblePayments : payments)];
-    recordsToDownload.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    recordsToDownload.sort((a, b) => {
+      const aMonth = a.month_due ? (MONTH_ORDER[a.month_due.split(' ')[0]?.toLowerCase()] || 0) : 0;
+      const bMonth = b.month_due ? (MONTH_ORDER[b.month_due.split(' ')[0]?.toLowerCase()] || 0) : 0;
+      if (aMonth !== bMonth) return bMonth - aMonth;
+      return (b.month_due || '').localeCompare(a.month_due || '');
+    });
     if (recordsToDownload.length === 0) {
       setError('No payments to download.');
       return;
