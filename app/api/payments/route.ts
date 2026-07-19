@@ -342,7 +342,10 @@ export async function PUT(request: NextRequest) {
   }
 
   // Use provided balance if available, otherwise calculate
-  const finalBalanceRemaining = balance !== undefined ? Number(balance) : (Number(balanceRemaining) || 0);
+const finalBalanceRemaining = balance !== undefined ? Number(balance) : (Number(balanceRemaining) || 0);
+
+  // Convert paymentDate (YYYY-MM-DD) to ISO format for paid_at
+  const paidAtValue = paymentDate ? new Date(paymentDate).toISOString() : new Date().toISOString();
 
   const updateData: any = {
     tenant_id: tenantId || undefined,
@@ -351,7 +354,7 @@ export async function PUT(request: NextRequest) {
     amount: Number(amount || paidAmount) || 0,
     balance_remaining: finalBalanceRemaining,
     transaction_number: transNumber ?? undefined,
-    paid_at: paymentDate || new Date().toISOString(),
+    paid_at: paidAtValue,
     month_due: monthDue ?? null,
     due_amount: Number(dueAmount) || null,
     transaction_code: transCode ?? null,

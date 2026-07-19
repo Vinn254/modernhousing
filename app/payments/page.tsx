@@ -205,13 +205,13 @@ export default function PaymentsPage() {
     if (billsResponse.ok) {
       const billsResult = await billsResponse.json();
 const billsPayments = (billsResult.bills ?? [])
-         .filter((b: any) => ['rent', 'overdue', 'deposit', 'tenancy_agreement'].includes(b.transaction_type))
-         .map((b: any) => ({
-           id: b.id,
-           tenant: b.tenant_name || '—',
-           tenant_email: '',
-           property: '',
-           unit: b.unit_number || '—',
+          .filter((b: any) => ['rent', 'overdue', 'deposit', 'tenancy_agreement'].includes(b.transaction_type))
+          .map((b: any) => ({
+            id: b.id,
+            tenant: b.tenant_name || '—',
+            tenant_email: b.tenant_email || '',
+            property: b.property_name || '',
+            unit: b.unit_number || '—',
            description: b.description,
            transaction_type: b.transaction_type,
            amount: b.paid_amount || 0,

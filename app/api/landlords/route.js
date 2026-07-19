@@ -1,0 +1,219 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { adminRequest, badRequest, createAdminUser, getAllAdminUsers, getUserByEmail, requestError, } from '../../../lib/supabaseAdmin';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase server environment variables');
+}
+const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+function normalizeLandlord(user, profile) {
+    return {
+        id: user?.id ?? profile?.user_id,
+        email: profile?.email ?? user?.email ?? '',
+        full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Project Manager',
+        organization: '',
+        phone: profile?.phone ?? null,
+        status: profile?.status ?? (user?.email_confirmed_at ? 'active' : 'pending'),
+        created_at: profile?.created_at ?? user?.created_at ?? '',
+    };
+}
+async function getProfiles() {
+    const { data, error } = await supabaseAdmin.from('profiles').select('*').eq('role', 'project_manager');
+    if (error)
+        throw error;
+    return (data ?? []);
+}
+async function getProfile(userId) {
+    const { data, error } = await supabaseAdmin.from('profiles').select('*').eq('user_id', userId).single();
+    if (error && error.code !== 'PGRST116')
+        throw error;
+    return (data ?? null);
+}
+async function upsertProfile(userId, fullName, email, organizationId, status, phone) {
+    const existing = await getProfile(userId);
+    const payload = {
+        user_id: userId,
+        full_name: fullName,
+        email,
+        role: 'project_manager',
+        organization_id: organizationId,
+        status,
+        phone,
+    };
+    if (existing) {
+        const { data, error } = await supabaseAdmin.from('profiles').update(payload).eq('user_id', userId).select('*').single();
+        if (error)
+            throw error;
+        return data;
+    }
+    const { data, error } = await supabaseAdmin.from('profiles').insert(payload).select('*').single();
+    if (error)
+        throw error;
+    return data;
+}
+async function findOrCreateOrganization(name) {
+    const { data: existing } = await supabaseAdmin
+        .from('organizations')
+        .select('id')
+        .eq('name', name)
+        .maybeSingle();
+    if (existing?.id)
+        return existing.id;
+    const { data: created, error } = await supabaseAdmin
+        .from('organizations')
+        .insert({ name, details: `Created for ${name}` })
+        .select('id')
+        .single();
+    if (error || !created?.id)
+        throw new Error('Unable to create organization.');
+    return created.id;
+}
+async function updateLandlordMetadata(userId, input) {
+    const users = await getAllAdminUsers();
+    const user = users.find((item) => item.id === userId);
+    if (!user)
+        throw new Error('Landlord not found.');
+    const body = {
+        user_metadata: {
+            ...(user.user_metadata ?? {}),
+            full_name: input.fullName ?? user.user_metadata?.full_name ?? user.email,
+            role: 'project_manager',
+            status: input.status ?? user.user_metadata?.status ?? 'active',
+        },
+    };
+    if (input.organizationId) {
+        body.user_metadata.organization_id = input.organizationId;
+    }
+    if (input.password) {
+        body.password = input.password;
+    }
+    return adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+    });
+}
+export async function GET() {
+    try {
+        const [users, profiles] = await Promise.all([getAllAdminUsers(), getProfiles()]);
+        const profileByUserId = new Map(profiles.map((profile) => [profile.user_id, profile]));
+        const landlordIds = new Set();
+        users.forEach((user) => {
+            if (user.user_metadata?.role === 'project_manager')
+                landlordIds.add(user.id);
+        });
+        profiles.forEach((profile) => landlordIds.add(profile.user_id));
+        // Fetch organization names for all profiles with org_ids
+        const orgIds = [...new Set(profiles.map(p => p.organization_id).filter(Boolean))];
+        const orgMap = new Map();
+        if (orgIds.length > 0) {
+            const { data: orgs } = await supabaseAdmin.from('organizations').select('id, name').in('id', orgIds);
+            orgs?.forEach((org) => orgMap.set(org.id, org.name));
+        }
+        const landlords = Array.from(landlordIds)
+            .map((id) => {
+            const profile = profileByUserId.get(id);
+            const normalized = normalizeLandlord(users.find((user) => user.id === id), profile);
+            // Replace organization_id with actual name
+            if (profile?.organization_id && orgMap.has(profile.organization_id)) {
+                normalized.organization = orgMap.get(profile.organization_id) ?? normalized.organization;
+            }
+            return normalized;
+        })
+            .filter((landlord) => landlord.id);
+        return NextResponse.json({ landlords });
+    }
+    catch (error) {
+        return requestError(error);
+    }
+}
+export async function POST(request) {
+    try {
+        const body = await request.json();
+        const email = String(body.email ?? '').trim();
+        const password = String(body.password ?? '');
+        const fullName = String(body.fullName ?? body.name ?? '').trim();
+        const organization = String(body.organization ?? '').trim();
+        const phone = body.phone ? String(body.phone).trim() : null;
+        const status = body.status ?? 'pending';
+        if (!email || !password || !fullName || !organization) {
+            return badRequest('Email, password, full name, and organization are required.');
+        }
+        const existingUser = await getUserByEmail(email);
+        let user = existingUser;
+        if (user) {
+            user = await updateLandlordMetadata(user.id, { fullName, status });
+        }
+        else {
+            const created = await createAdminUser({ email, password, fullName, role: 'project_manager' });
+            user = created.user;
+        }
+        if (!user)
+            throw new Error('Unable to create landlord.');
+        const organizationId = await findOrCreateOrganization(organization);
+        const profile = await upsertProfile(user.id, fullName, email, organizationId, status, phone);
+        // Update user metadata with organization_id for auth context
+        await updateLandlordMetadata(user.id, { fullName, status, organizationId });
+        return NextResponse.json({
+            landlord: {
+                id: user?.id ?? profile?.user_id,
+                email: profile?.email ?? user?.email ?? '',
+                full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Project Manager',
+                organization: organization,
+                phone: profile?.phone ?? null,
+                status: profile?.status ?? (user?.email_confirmed_at ? 'active' : 'pending'),
+                created_at: profile?.created_at ?? user?.created_at ?? '',
+            }
+        }, { status: existingUser ? 200 : 201 });
+    }
+    catch (error) {
+        return NextResponse.json({ message: error.message ?? 'Unable to save landlord.' }, { status: 500 });
+    }
+}
+export async function PATCH(request) {
+    try {
+        const body = await request.json();
+        const userId = String(body.userId ?? '').trim();
+        const fullName = String(body.fullName ?? '').trim();
+        const status = body.status;
+        const password = body.password ? String(body.password) : '';
+        const phone = body.phone ? String(body.phone).trim() : undefined;
+        const organization = body.organization ? String(body.organization).trim() : undefined;
+        if (!userId || !fullName) {
+            return badRequest('Landlord ID and full name are required.');
+        }
+        const organizationId = organization ? await findOrCreateOrganization(organization) : null;
+        const user = await updateLandlordMetadata(userId, { fullName, status, organizationId, password: password || undefined });
+        const profile = await upsertProfile(userId, fullName, user.email, organizationId, status ?? 'active', phone ?? undefined);
+        return NextResponse.json({
+            landlord: {
+                id: user?.id ?? profile?.user_id,
+                email: profile?.email ?? user?.email ?? '',
+                full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Project Manager',
+                organization: organization ?? '',
+                phone: profile?.phone ?? null,
+                status: profile?.status ?? (user?.email_confirmed_at ? 'active' : 'pending'),
+                created_at: profile?.created_at ?? user?.created_at ?? '',
+            }
+        });
+    }
+    catch (error) {
+        return NextResponse.json({ message: error.message ?? 'Unable to update landlord.' }, { status: 500 });
+    }
+}
+export async function DELETE(request) {
+    try {
+        const userId = request.nextUrl.searchParams.get('id');
+        if (!userId)
+            return badRequest('Landlord ID is required.');
+        await supabaseAdmin.from('notifications').delete().eq('admin_id', userId);
+        await supabaseAdmin.from('payments').delete().eq('tenant_id', null).eq('transaction_type', 'landlord_notification');
+        await supabaseAdmin.from('subscriptions').delete().eq('admin_id', userId);
+        await supabaseAdmin.from('profiles').delete().eq('user_id', userId);
+        await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+        return NextResponse.json({ message: 'Project manager permanently removed.' });
+    }
+    catch (error) {
+        return NextResponse.json({ message: error.message ?? 'Unable to remove project manager.' }, { status: 500 });
+    }
+}

@@ -77,6 +77,30 @@ async function getAuthContext(request: NextRequest) {
   };
 }
 
+function mapBillsWithTenant(data: any[]): any[] {
+  return data.map((bill: any) => ({
+    id: bill.id,
+    tenant_id: bill.tenant_id,
+    tenant_name: bill.tenants?.full_name ?? '',
+    tenant_email: bill.tenants?.email ?? '',
+    unit_number: bill.tenants?.units?.unit_number ?? '',
+    property_name: bill.tenants?.units?.properties?.name ?? '',
+    description: bill.description,
+    month_due: bill.month_due,
+    due_amount: bill.due_amount,
+    paid_amount: bill.paid_amount,
+    penalty_fee: bill.penalty_fee ?? 0,
+    balance: bill.balance,
+    transaction_type: bill.transaction_type,
+    transaction_number: bill.transaction_number,
+    transaction_code: bill.transaction_code,
+    payment_date: bill.payment_date,
+    payment_method: bill.payment_method,
+    reference_number: bill.reference_number,
+    created_at: bill.created_at,
+  }));
+}
+
 export async function GET(request: NextRequest) {
   try {
     const authContext = await getAuthContext(request);
@@ -105,25 +129,7 @@ export async function GET(request: NextRequest) {
 
       if (error) throw error;
 
-      const bills = (data ?? []).map((bill: any) => ({
-        id: bill.id,
-        tenant_id: bill.tenant_id,
-        description: bill.description,
-        month_due: bill.month_due,
-        due_amount: bill.due_amount,
-        paid_amount: bill.paid_amount,
-        penalty_fee: bill.penalty_fee ?? 0,
-        balance: bill.balance,
-        transaction_type: bill.transaction_type,
-        transaction_number: bill.transaction_number,
-        transaction_code: bill.transaction_code,
-        payment_date: bill.payment_date,
-        payment_method: bill.payment_method,
-        reference_number: bill.reference_number,
-        created_at: bill.created_at,
-      }));
-
-      return NextResponse.json({ bills });
+      return NextResponse.json({ bills: data ?? [] });
     }
 
     // For admin/landlord - fetch all bills for their organization or all bills for super_admin
@@ -139,28 +145,7 @@ export async function GET(request: NextRequest) {
 
       if (error) throw error;
 
-      const bills = (data ?? []).map((bill: any) => ({
-        id: bill.id,
-        tenant_id: bill.tenant_id,
-        tenant_name: bill.tenants?.full_name ?? '',
-        unit_number: bill.tenants?.units?.unit_number ?? '',
-        property_name: bill.tenants?.units?.properties?.name ?? '',
-        description: bill.description,
-        month_due: bill.month_due,
-        due_amount: bill.due_amount,
-        paid_amount: bill.paid_amount,
-        penalty_fee: bill.penalty_fee ?? 0,
-        balance: bill.balance,
-        transaction_type: bill.transaction_type,
-        transaction_number: bill.transaction_number,
-        transaction_code: bill.transaction_code,
-        payment_date: bill.payment_date,
-        payment_method: bill.payment_method,
-        reference_number: bill.reference_number,
-        created_at: bill.created_at,
-      }));
-
-      return NextResponse.json({ bills });
+      return NextResponse.json({ bills: mapBillsWithTenant(data ?? []) });
     }
 
     // For agents - filter by their property
@@ -181,28 +166,7 @@ export async function GET(request: NextRequest) {
 
           if (error) throw error;
 
-          const bills = (data ?? []).map((bill: any) => ({
-            id: bill.id,
-            tenant_id: bill.tenant_id,
-            tenant_name: bill.tenants?.full_name ?? '',
-            unit_number: bill.tenants?.units?.unit_number ?? '',
-            property_name: bill.tenants?.units?.properties?.name ?? '',
-            description: bill.description,
-            month_due: bill.month_due,
-            due_amount: bill.due_amount,
-            paid_amount: bill.paid_amount,
-            penalty_fee: bill.penalty_fee ?? 0,
-            balance: bill.balance,
-            transaction_type: bill.transaction_type,
-            transaction_number: bill.transaction_number,
-            transaction_code: bill.transaction_code,
-            payment_date: bill.payment_date,
-            payment_method: bill.payment_method,
-            reference_number: bill.reference_number,
-            created_at: bill.created_at,
-          }));
-
-          return NextResponse.json({ bills });
+          return NextResponse.json({ bills: mapBillsWithTenant(data ?? []) });
         }
         return NextResponse.json({ bills: [] });
       }
@@ -230,6 +194,7 @@ export async function GET(request: NextRequest) {
           id: bill.id,
           tenant_id: bill.tenant_id,
           tenant_name: bill.tenants?.full_name ?? '',
+          tenant_email: bill.tenants?.email ?? '',
           unit_number: bill.tenants?.units?.unit_number ?? '',
           description: bill.description,
           month_due: bill.month_due,
@@ -285,28 +250,7 @@ export async function GET(request: NextRequest) {
 
         if (error) throw error;
 
-        const bills = (data ?? []).map((bill: any) => ({
-          id: bill.id,
-          tenant_id: bill.tenant_id,
-          tenant_name: bill.tenants?.full_name ?? '',
-          unit_number: bill.tenants?.units?.unit_number ?? '',
-          property_name: bill.tenants?.units?.properties?.name ?? '',
-          description: bill.description,
-          month_due: bill.month_due,
-          due_amount: bill.due_amount,
-          paid_amount: bill.paid_amount,
-          penalty_fee: bill.penalty_fee ?? 0,
-          balance: bill.balance,
-          transaction_type: bill.transaction_type,
-          transaction_number: bill.transaction_number,
-          transaction_code: bill.transaction_code,
-          payment_date: bill.payment_date,
-          payment_method: bill.payment_method,
-          reference_number: bill.reference_number,
-          created_at: bill.created_at,
-        }));
-
-        return NextResponse.json({ bills });
+        return NextResponse.json({ bills: mapBillsWithTenant(data ?? []) });
       }
       return NextResponse.json({ bills: [] });
     }
@@ -480,7 +424,7 @@ export async function DELETE(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   const authContext = await getAuthContext(request);
-
+  
   if (!authContext.userId) {
     return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
   }
