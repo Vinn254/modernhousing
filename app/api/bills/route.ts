@@ -377,6 +377,7 @@ export async function POST(request: NextRequest) {
     payment_date: paymentDate || null,
     payment_method: paymentMethod || null,
     reference_number: referenceNumber || null,
+    created_at: paymentDate ? new Date(paymentDate).toISOString() : new Date().toISOString(),
   };
 
   const result = await supabaseAdmin.from('bills').insert(insertData);
@@ -392,41 +393,47 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json();
   const {
     id,
+    tenantId,
+    description,
+    monthDue,
+    dueAmount,
     paidAmount,
+    penaltyFee,
+    transactionType,
     paymentMethod,
     referenceNumber,
-    transactionCode
+    transactionCode,
+    balanceRemaining,
+    paymentDate
   } = body;
 
   if (!id) {
     return NextResponse.json({ message: 'Bill ID is required.' }, { status: 400 });
   }
 
-  // Get existing bill
-  const { data: existingBill } = await supabaseAdmin
-    .from('bills')
-    .select('paid_amount, due_amount')
-    .eq('id', id)
-    .single();
+  // Calculate balance: due_amount - paid_amount (or use provided balance)
+  const calculatedBalance = balanceRemaining !== undefined ? Number(balanceRemaining) : 
+    (Number(dueAmount) || 0) - (Number(paidAmount) || 0);
 
-  if (!existingBill) {
-    return NextResponse.json({ message: 'Bill not found.' }, { status: 404 });
-  }
-
-  // Calculate new balance
-  const newPaidAmount = (Number(existingBill.paid_amount) || 0) + (Number(paidAmount) || 0);
-  const newBalance = (Number(existingBill.due_amount) || 0) - newPaidAmount;
-
+  // Update bill with all provided fields
   const updateData: any = {
-    paid_amount: newPaidAmount,
-    balance: newBalance,
+    tenant_id: tenantId || undefined,
+    description,
+    month_due: monthDue,
+    due_amount: Number(dueAmount) || 0,
+    paid_amount: Number(paidAmount) || 0,
+    penalty_fee: Number(penaltyFee) || 0,
+    balance: calculatedBalance,
+    transaction_type: transactionType || 'rent',
+    transaction_code: transactionCode || null,
     payment_method: paymentMethod || null,
     reference_number: referenceNumber || null,
-    payment_date: new Date().toISOString().split('T')[0]
+    created_at: paymentDate ? new Date(paymentDate).toISOString() : undefined,
   };
 
-  if (transactionCode) {
-    updateData.transaction_code = transactionCode;
+  // Only set payment_date if provided
+  if (paymentDate) {
+    updateData.payment_date = paymentDate;
   }
 
   const result = await supabaseAdmin.from('bills')
