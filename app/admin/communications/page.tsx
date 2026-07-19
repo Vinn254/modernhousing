@@ -274,6 +274,31 @@ export default function CommunicationsPage() {
 
   return (
     <>
+      <style jsx global>{`
+        @media (max-width: 900px) {
+          .communications-shell {
+            grid-template-columns: 1fr !important;
+          }
+          .communications-sidebar {
+            border-right: none !important;
+            border-bottom: 1px solid var(--line) !important;
+          }
+          .card-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 600px) {
+          .card-shell, .table-shell {
+            overflow-x: auto;
+          }
+          table {
+            font-size: 12px;
+          }
+          th, td {
+            padding: 8px 6px !important;
+          }
+        }
+      `}</style>
       <main className="container admin-no-hero">
         <div className="card-admin-header">
           <div>
