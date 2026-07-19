@@ -254,7 +254,7 @@ const getTypeLabel = (type: string) => {
   }
 
   function drawTableHeader(page: any, font: any, y: number) {
-    page.drawText('Date', { x: 40, y, size: 9, font });
+    page.drawText('Month', { x: 40, y, size: 9, font });
     page.drawText('Description', { x: 120, y, size: 9, font });
     page.drawText('Type', { x: 200, y, size: 9, font });
     page.drawText('Due', { x: 260, y, size: 9, font });
@@ -262,12 +262,13 @@ const getTypeLabel = (type: string) => {
     page.drawText('Penalty', { x: 360, y, size: 9, font });
     page.drawText('Bal', { x: 410, y, size: 9, font });
     page.drawText('Running', { x: 460, y, size: 9, font });
+    page.drawText('Date', { x: 520, y, size: 9, font });
     return y - 18;
   }
 
   function drawTableFullRow(page: any, font: any, bill: Bill, y: number) {
     const billWithBal = calculateWithRunningBalance([bill])[0];
-    page.drawText(bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-', { x: 40, y, size: 8, font });
+    page.drawText(bill.month_due || '-', { x: 40, y, size: 8, font });
     page.drawText(bill.description.substring(0, 20), { x: 120, y, size: 8, font });
     page.drawText(getTypeLabel(bill.transaction_type).substring(0, 10), { x: 200, y, size: 8, font });
     page.drawText(String(bill.due_amount), { x: 260, y, size: 8, font, color: rgb(0.2, 0.2, 0.2) });
@@ -275,6 +276,7 @@ const getTypeLabel = (type: string) => {
     page.drawText(String(bill.penalty_fee || 0), { x: 360, y, size: 8, font, color: rgb(0.7, 0.1, 0.1) });
     page.drawText(String(billWithBal?.bill_balance ?? 0), { x: 410, y, size: 8, font });
     page.drawText(String(billWithBal?.running_balance ?? 0), { x: 460, y, size: 8, font, color: billWithBal?.running_balance > 0 ? rgb(0.1, 0.5, 0.1) : rgb(0.7, 0.1, 0.1) });
+    page.drawText(bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-', { x: 520, y, size: 8, font });
     return y - 14;
   }
 
@@ -399,7 +401,7 @@ const getTypeLabel = (type: string) => {
               <table className="landlord-table" style={{ fontSize: '12px' }}>
 <thead>
                      <tr>
-                       <th>Date</th>
+                       <th>Month</th>
                        <th>Description</th>
                        <th>Type</th>
                        <th>Due Amount</th>
@@ -407,12 +409,13 @@ const getTypeLabel = (type: string) => {
                        <th>Penalty</th>
                        <th>Balance</th>
                        <th>Running Balance</th>
+                       <th>Date</th>
                      </tr>
                    </thead>
                    <tbody>
                      {(activeTab === 'payments' ? rentWithBalance : utilityWithBalance).map(bill => (
                        <tr key={bill.id}>
-                         <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
+                         <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
                          <td>{bill.description}</td>
                          <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
                          <td>{formatCurrency(bill.due_amount)}</td>
@@ -421,17 +424,16 @@ const getTypeLabel = (type: string) => {
                          <td style={{ color: bill.bill_balance > 0 ? '#dc2626' : (bill.bill_balance < 0 ? 'var(--accent)' : 'var(--ink-3)'), fontWeight: bill.bill_balance !== 0 ? 600 : 400 }}>
                            {formatCurrency(bill.bill_balance)}
                          </td>
-                         <td style={{ color: bill.running_balance > 0 ? 'var(--accent)' : (bill.running_balance < 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: 600 }}>
-                           {formatCurrency(bill.running_balance)}
-                         </td>
-                       </tr>
-                     ))}
-                   </tbody>
-              </table>
-            </div>
-          )
-        )}
-      </section>
+<td>{formatCurrency(bill.running_balance)}</td>
+                          <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            )}
+          </section>
 
 <section className="dashboard-hero-stats" style={{ marginTop: 24 }}>
         <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
