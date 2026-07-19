@@ -321,7 +321,13 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         if (!isTenantReply) {
-          const fallbackNotification = await insertFallbackLandlordNotification({ adminId, adminName, adminEmail, type, message });
+          const fallbackNotification = await insertFallbackLandlordNotification({
+            adminId: adminId ?? '',
+            adminName: adminName || '',
+            adminEmail: adminEmail || '',
+            type,
+            message,
+          });
           return NextResponse.json({ notification: fallbackNotification, message: 'Notification saved.' }, { status: 201 });
         }
         throw error;
