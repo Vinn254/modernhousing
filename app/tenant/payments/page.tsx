@@ -400,31 +400,33 @@ const getTypeLabel = (type: string) => {
             <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
               <table className="landlord-table" style={{ fontSize: '12px' }}>
 <thead>
-                     <tr>
-                       <th>Month</th>
-                       <th>Description</th>
-                       <th>Type</th>
-                       <th>Due Amount</th>
-                       <th>Paid</th>
-                       <th>Penalty</th>
-                       <th>Balance</th>
-                       <th>Running Balance</th>
-                       <th>Date</th>
-                     </tr>
-                   </thead>
-                   <tbody>
-                     {(activeTab === 'payments' ? rentWithBalance : utilityWithBalance).map(bill => (
-                       <tr key={bill.id}>
-                         <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
-                         <td>{bill.description}</td>
-                         <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
-                         <td>{formatCurrency(bill.due_amount)}</td>
-                         <td>{formatCurrency(bill.paid_amount)}</td>
-                         <td>{formatCurrency(bill.penalty_fee || 0)}</td>
-                         <td style={{ color: bill.bill_balance > 0 ? '#dc2626' : (bill.bill_balance < 0 ? 'var(--accent)' : 'var(--ink-3)'), fontWeight: bill.bill_balance !== 0 ? 600 : 400 }}>
-                           {formatCurrency(bill.bill_balance)}
-                         </td>
-<td>{formatCurrency(bill.running_balance)}</td>
+                      <tr>
+                        <th>Month</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Due Amount</th>
+                        <th>Paid</th>
+                        <th>Penalty</th>
+                        <th>Balance</th>
+                        <th>Running Balance</th>
+                        <th>Payment Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(activeTab === 'payments' ? rentWithBalance : utilityWithBalance).map(bill => (
+                        <tr key={bill.id}>
+                          <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
+                          <td>{bill.description}</td>
+                          <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
+                          <td>{formatCurrency(bill.due_amount)}</td>
+                          <td>{formatCurrency(bill.paid_amount)}</td>
+                          <td>{formatCurrency(bill.penalty_fee || 0)}</td>
+                          <td style={{ color: bill.bill_balance > 0 ? '#dc2626' : (bill.bill_balance < 0 ? 'var(--accent)' : 'var(--ink-3)'), fontWeight: bill.bill_balance !== 0 ? 600 : 400 }}>
+                            {formatCurrency(bill.bill_balance)}
+                          </td>
+                          <td style={{ color: bill.running_balance > 0 ? 'var(--accent)' : (bill.running_balance < 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: 600 }}>
+                            {formatCurrency(bill.running_balance)}
+                          </td>
                           <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
                         </tr>
                       ))}
