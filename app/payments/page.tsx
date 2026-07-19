@@ -518,9 +518,9 @@ const billsPayments = (billsResult.bills ?? [])
 page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 260, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
        page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 340, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
        page.drawText(formatCurrency(payment.balance_remaining).replace('KES', ''), { x: 420, y, font, size: 9, color: payment.balance_remaining > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.2, 0.2, 0.2) });
-       page.drawText((payment as any).source === 'bills' 
+       page.drawText((payment as any).source === 'bills'
          ? ((payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString('en-GB') : '—')
-         : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 500, y, font: font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+         : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 500, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
        y -= 16;
     });
 
@@ -702,7 +702,7 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
         </div>
       )}
 
-<article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', marginBottom: 32 }}>
+      <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
@@ -740,7 +740,7 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
               </div>
             );
           })}
-        </div>
+</div>
       </article>
 
       <article className="card" style={{ marginTop: 24 }}>
@@ -771,40 +771,52 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.id}>
-                    <td className="landlord-name">{payment.tenant}</td>
-                    <td>{(payment as any).month_due || payment.description}</td>
-                    <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
-                    <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
-                    <td>{formatCurrency(payment.amount)}</td>
-                    <td style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>
-                      {editingBalanceId === payment.id ? (
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editingBalanceValue}
-                          onChange={e => setEditingBalanceValue(e.target.value)}
-                          onBlur={() => handleInlineBalanceSave(payment)}
-                          onKeyDown={e => e.key === 'Enter' && handleInlineBalanceSave(payment)}
-                          style={{ width: '80px', padding: '2px 4px' }}
-                          autoFocus
-                        />
-                      ) : (
-                        <span onClick={() => { setEditingBalanceId(payment.id); setEditingBalanceValue(String(payment.balance_remaining)); }} style={{ cursor: 'pointer' }}>
-                          {formatCurrency(payment.balance_remaining)}
-                        </span>
-                      )}
-                    </td>
-<td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
-                     <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
-                     <td>{(payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—')}</td>
-                     <td>
-                      <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(payment)}>Edit</button>
-                      <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
+                {payments.map((payment) => {
+                  const initials = (payment.tenant || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
+                  const colors = ['#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#14b8a6'];
+                  const colorIndex = payment.tenant ? payment.tenant.charCodeAt(0) % colors.length : 0;
+                  const avatarColor = colors[colorIndex];
+                  const tenantEmail = payment.tenant_email || '';
+                  return (
+                    <tr key={payment.id}>
+                      <td className="landlord-name">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ width: 28, height: 28, borderRadius: '50%', background: avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 600 }}>{initials}</div>
+                          <span style={{ cursor: 'pointer', color: '#1e3a8a' }} onClick={() => { if (tenantEmail) window.location.href = `/admin/tenants?email=${encodeURIComponent(tenantEmail)}`; }}>{payment.tenant}</span>
+                        </div>
+                      </td>
+<td>{(payment as any).month_due || payment.description}</td>
+                      <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
+                      <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
+                      <td>{formatCurrency(payment.amount)}</td>
+                      <td style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>
+                        {editingBalanceId === payment.id ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editingBalanceValue}
+                            onChange={e => setEditingBalanceValue(e.target.value)}
+                            onBlur={() => handleInlineBalanceSave(payment)}
+                            onKeyDown={e => e.key === 'Enter' && handleInlineBalanceSave(payment)}
+                            style={{ width: '80px', padding: '2px 4px' }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span onClick={() => { setEditingBalanceId(payment.id); setEditingBalanceValue(String(payment.balance_remaining)); }} style={{ cursor: 'pointer' }}>
+                            {formatCurrency(payment.balance_remaining)}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
+                      <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
+                      <td>{(payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—')}</td>
+                      <td>
+                        <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(payment)}>Edit</button>
+                        <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
