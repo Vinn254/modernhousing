@@ -66,10 +66,10 @@ export default function SuperAdminPaymentsPage() {
   return (
     <>
       <main className="container admin-no-hero" style={{ paddingBottom: 32 }}>
-        <div className="card-admin-header" style={{ marginBottom: 20, padding: '24px 28px', borderRadius: 24, background: 'linear-gradient(135deg, #f8fff9 0%, #eefdf5 100%)', border: '1px solid rgba(16, 185, 129, 0.16)', boxShadow: '0 18px 45px rgba(15, 23, 42, 0.05)' }}>
+        <div className="card-admin-header" style={{ marginBottom: 20, padding: '24px 28px', borderRadius: 24, background: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)', border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 18px 45px rgba(15, 23, 42, 0.12)', color: '#fff' }}>
           <div>
             <p className="heading">Payments</p>
-            <p className="subheading">Review subscriptions, renewals, overdue access payments, and revenue in one clean overview.</p>
+            <p className="subheading" style={{ color: 'rgba(255,255,255,0.9)' }}>Review subscriptions, renewals, overdue access payments, and revenue in one clean overview.</p>
           </div>
         </div>
 
