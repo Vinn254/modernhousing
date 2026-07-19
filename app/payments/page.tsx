@@ -276,7 +276,14 @@ export default function PaymentsPage() {
       allPayments = [...allPayments, ...legacyPayments];
     }
 
-    allPayments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    allPayments.sort((a, b) => {
+      const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+      const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+      const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+      if (aMonth !== bMonth) return bMonth - aMonth;
+      if (a.month_due !== b.month_due) return (b.month_due || '').localeCompare(a.month_due || '');
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
     setPayments(allPayments);
     setLoading(false);
   }
