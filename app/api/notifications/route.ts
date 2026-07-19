@@ -150,10 +150,11 @@ export async function GET(request: NextRequest) {
     const recipient = request.nextUrl.searchParams.get('recipient');
     const propertyId = request.nextUrl.searchParams.get('propertyId');
     const adminEmail = request.nextUrl.searchParams.get('adminEmail');
+    const agentId = request.nextUrl.searchParams.get('agentId') ?? request.nextUrl.searchParams.get('agent_id');
 
     let query: any = supabaseAdmin
       .from('notifications')
-      .select('*')
+      .select('*, tenants(full_name, email)')
       .order('created_at', { ascending: false });
 
     if (recipient === 'landlord' || recipient === 'project_manager') {
@@ -162,9 +163,14 @@ export async function GET(request: NextRequest) {
       query = query.eq('recipient', 'tenant');
     } else if (recipient === 'agent') {
       query = query.eq('recipient', 'agent');
+    } else if (agentId) {
+      const orClause = propertyId
+        ? `recipient.eq.agent,and(agent_id.eq.${agentId}),recipient.eq.tenant,and(agent_id.eq.${agentId},property_id.eq.${propertyId})`
+        : `recipient.eq.agent,and(agent_id.eq.${agentId})`;
+      query = query.or(orClause);
     }
 
-    if (propertyId) {
+    if (propertyId && recipient !== 'agent' && !agentId) {
       query = query.eq('property_id', propertyId);
     }
 

@@ -109,11 +109,11 @@ export default function TenantPaymentsPage() {
     allBills.sort((a, b) => {
       const aOrder = getMonthSortValue(a.month_due);
       const bOrder = getMonthSortValue(b.month_due);
-      if (aOrder !== bOrder) return aOrder - bOrder;
+      if (aOrder !== bOrder) return bOrder - aOrder;
       const isOverdueA = a.transaction_type === 'overdue';
       const isOverdueB = b.transaction_type === 'overdue';
       if (isOverdueA !== isOverdueB) return isOverdueA ? 1 : -1;
-      return (a.created_at || '').localeCompare(b.created_at || '');
+      return (b.created_at || '').localeCompare(a.created_at || '');
     });
     setBills(allBills);
 
@@ -368,11 +368,11 @@ const getTypeLabel = (type: string) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.sort((a, b) => {
-                    const aOrder = getMonthSortValue(a.month_due);
-                    const bOrder = getMonthSortValue(b.month_due);
-                    return aOrder - bOrder || (a.month_due || '').localeCompare(b.month_due || '');
-                  }).map(inv => (
+{invoices.sort((a, b) => {
+                     const aOrder = getMonthSortValue(a.month_due);
+                     const bOrder = getMonthSortValue(b.month_due);
+                     return bOrder - aOrder || (b.month_due || '').localeCompare(a.month_due || '');
+                   }).map(inv => (
                     <tr key={inv.id}>
                       <td style={{ textTransform: 'capitalize' }}>{inv.month_due || '-'}</td>
                       <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getInvoiceTypeLabel(inv.invoice_type)}</span></td>
