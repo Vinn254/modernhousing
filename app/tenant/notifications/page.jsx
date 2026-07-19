@@ -24,10 +24,17 @@ export default function TenantNotificationsPage() {
             }
         });
     }, []);
-    return (<main className="container page-layout">
-      <div className="card-admin-header">
-        <div><p className="heading">Notifications</p><p className="subheading">Messages and notices from your agent or landlord.</p></div>
-      </div>
+    return (<>
+      <style jsx global>{`
+        @media (max-width: 600px) {
+          th, td { padding: 8px 6px !important; font-size: 12px !important; }
+          .table-shell { overflow-x: auto; }
+        }
+      `}</style>
+      <main className="container page-layout">
+        <div className="card-admin-header">
+          <div><p className="heading">Notifications</p><p className="subheading">Messages and notices from your agent or landlord.</p></div>
+        </div>
 
       <section className="card-grid-item">
         <div className="card">

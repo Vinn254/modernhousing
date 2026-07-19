@@ -28,10 +28,17 @@ export default function AgentNotificationsPage() {
             setNotifications(notifications.filter(n => n.id !== notificationId));
         }
     }
-    return (<main className="container admin-no-hero">
-      <div className="card-admin-header">
-        <div><p className="heading">Notifications</p><p className="subheading">View and manage tenant notifications and notices.</p></div>
-      </div>
+    return (<>
+      <style jsx global>{`
+        @media (max-width: 600px) {
+          th, td { padding: 8px 6px !important; font-size: 12px !important; }
+          .table-shell { overflow-x: auto; }
+        }
+      `}</style>
+      <main className="container admin-no-hero">
+        <div className="card-admin-header">
+          <div><p className="heading">Notifications</p><p className="subheading">View and manage tenant notifications and notices.</p></div>
+        </div>
 
     <section className="card-grid">
         <div className="card">

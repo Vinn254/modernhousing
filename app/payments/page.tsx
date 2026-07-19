@@ -52,8 +52,6 @@ export default function PaymentsPage() {
   const [mpesaAmount, setMpesaAmount] = useState('');
   const [processing, setProcessing] = useState(false);
   const [userRole, setUserRole] = useState('');
-  const [selectedTenantKey, setSelectedTenantKey] = useState<string | null>(null);
-  const [selectedTenantName, setSelectedTenantName] = useState('');
 
   const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 10));
   const [manualMonth, setManualMonth] = useState('');
@@ -169,29 +167,6 @@ export default function PaymentsPage() {
     return { sign: '+', value: '0' };
   }, [monthlyData, currentMonthRevenue, prevMonthRevenue, currentMonthLabel, monthlyLabels]);
 
-  const tenantPaymentGroups = useMemo(() => {
-    const groups = new Map<string, { key: string; name: string; count: number; balance: number }>();
-    payments.forEach((payment) => {
-      const key = payment.tenant_email || payment.tenant || 'unknown';
-      const existing = groups.get(key);
-      if (existing) {
-        existing.count += 1;
-        existing.balance += payment.balance_remaining || 0;
-      } else {
-        groups.set(key, { key, name: payment.tenant || 'Unknown tenant', count: 1, balance: payment.balance_remaining || 0 });
-      }
-    });
-    return Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [payments]);
-
-  const visiblePayments = useMemo(() => {
-    if (!selectedTenantKey) return payments;
-    return payments.filter((payment) => {
-      const tenantKey = payment.tenant_email || payment.tenant || 'unknown';
-      return tenantKey.toLowerCase() === selectedTenantKey.toLowerCase();
-    });
-  }, [payments, selectedTenantKey]);
-
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
   const [editingBalanceValue, setEditingBalanceValue] = useState('');
@@ -230,13 +205,13 @@ export default function PaymentsPage() {
     if (billsResponse.ok) {
       const billsResult = await billsResponse.json();
 const billsPayments = (billsResult.bills ?? [])
-          .filter((b: any) => ['rent', 'overdue', 'deposit', 'tenancy_agreement'].includes(b.transaction_type))
-          .map((b: any) => ({
-            id: b.id,
-            tenant: b.tenant_name || '—',
-            tenant_email: b.tenant_email || '',
-            property: b.property_name || '',
-            unit: b.unit_number || '—',
+         .filter((b: any) => ['rent', 'overdue', 'deposit', 'tenancy_agreement'].includes(b.transaction_type))
+         .map((b: any) => ({
+           id: b.id,
+           tenant: b.tenant_name || '—',
+           tenant_email: '',
+           property: '',
+           unit: b.unit_number || '—',
            description: b.description,
            transaction_type: b.transaction_type,
            amount: b.paid_amount || 0,
@@ -501,8 +476,7 @@ const billsPayments = (billsResult.bills ?? [])
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
   async function downloadPaymentStatement() {
-    const recordsToDownload = visiblePayments.length > 0 ? visiblePayments : payments;
-    if (recordsToDownload.length === 0) {
+    if (payments.length === 0) {
       setError('No payments to download.');
       return;
     }
@@ -523,8 +497,8 @@ const billsPayments = (billsResult.bills ?? [])
     page.drawText(`Generated: ${dateStr} | Document ID: ${docId}`, { x: 50, y, font, size: 10, color: rgb(0.3, 0.3, 0.3) });
     y -= 40;
 
-    const totalPaid = recordsToDownload.reduce((sum, p) => sum + (p.amount || 0), 0);
-    const totalBal = recordsToDownload.reduce((sum, p) => sum + (p.balance_remaining || 0), 0);
+    const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalBal = payments.reduce((sum, p) => sum + (p.balance_remaining || 0), 0);
 
     const headers = ['Tenant', 'Month Due', 'Trans Code', 'Paid', 'Balance', 'Date'];
     const colX = [50, 150, 260, 340, 420, 500];
@@ -535,7 +509,7 @@ const billsPayments = (billsResult.bills ?? [])
     page.drawLine({ start: { x: 50, y }, end: { x: 550, y }, thickness: 1, color: rgb(0.6, 0.6, 0.6) });
     y -= 18;
 
-    recordsToDownload.forEach((payment, idx) => {
+    payments.forEach((payment, idx) => {
       if (idx % 2 === 0) {
         page.drawRectangle({ x: 48, y: y - 4, width: 504, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
       }
@@ -544,9 +518,9 @@ const billsPayments = (billsResult.bills ?? [])
 page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 260, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
        page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 340, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
        page.drawText(formatCurrency(payment.balance_remaining).replace('KES', ''), { x: 420, y, font, size: 9, color: payment.balance_remaining > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.2, 0.2, 0.2) });
-       page.drawText((payment as any).source === 'bills'
+       page.drawText((payment as any).source === 'bills' 
          ? ((payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString('en-GB') : '—')
-         : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 500, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+         : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 500, y, font: font, size: 9, color: rgb(0.2, 0.2, 0.2) });
        y -= 16;
     });
 
@@ -589,36 +563,13 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
   }
 
   return (
-    <>
-      <style jsx global>{`
-        @media (max-width: 600px) {
-          th, td {
-            padding: 8px 6px !important;
-            font-size: 12px !important;
-          }
-          .table-shell {
-            overflow-x: auto;
-          }
-          .landlord-name > div {
-            flex-wrap: wrap;
-          }
-          .landlord-name span {
-            font-size: 12px !important;
-          }
-          .landlord-name div[style*="width: 28"] {
-            width: 24px !important;
-            height: 24px !important;
-            font-size: 10px !important;
-          }
-        }
-      `}</style>
-      <main className="container">
-        <div className="card-admin-header">
-          <p className="heading">Rent Payments</p>
-          <p className="subheading">Record rent transactions, track balances, and view payment history.</p>
-        </div>
+    <main className="container">
+      <div className="card-admin-header">
+        <p className="heading">Rent Payments</p>
+        <p className="subheading">Record rent transactions, track balances, and view payment history.</p>
+      </div>
 
-        {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
+      {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
       {error && <p style={{ color: '#dc2626', fontWeight: 700, marginBottom: 16 }}>{error}</p>}
 
       <section className="card-grid">
@@ -751,7 +702,7 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
         </div>
       )}
 
-      <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', marginBottom: 32 }}>
+<article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
@@ -789,68 +740,21 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
               </div>
             );
           })}
-</div>
+        </div>
       </article>
 
-      <article
-        className="card"
-        style={{
-          marginTop: 24,
-          border: '1px solid rgba(16, 185, 129, 0.35)',
-          boxShadow: '0 0 0 1px rgba(16, 185, 129, 0.12), 0 0 22px rgba(16, 185, 129, 0.18)',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(240,253,244,0.95))',
-        }}
-      >
+      <article className="card" style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div className="card-label">Transactions</div>
           {payments.length > 0 && (
             <button onClick={downloadPaymentStatement} className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px' }}>Download PDF</button>
           )}
         </div>
-        <h3 style={{ marginBottom: 16 }}>{selectedTenantName ? `Payment History for ${selectedTenantName}` : 'Payment History'}</h3>
+        <h3 style={{ marginBottom: 16 }}>Payment History</h3>
         {loading ? <p style={{ color: '#111827' }}>Loading payments…</p> : payments.length === 0 ? (
           <p style={{ color: '#111827' }}>No payments recorded yet.</p>
         ) : (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              <label htmlFor="tenant-filter" style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                Filter by tenant
-              </label>
-              <select
-                id="tenant-filter"
-                value={selectedTenantKey ?? ''}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  if (!value) {
-                    setSelectedTenantKey(null);
-                    setSelectedTenantName('');
-                    return;
-                  }
-                  const selectedGroup = tenantPaymentGroups.find((group) => group.key === value);
-                  setSelectedTenantKey(value);
-                  setSelectedTenantName(selectedGroup?.name ?? '');
-                }}
-                style={{
-                  minWidth: 220,
-                  padding: '8px 12px',
-                  borderRadius: 999,
-                  border: '1px solid #c7d2fe',
-                  background: 'linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%)',
-                  color: '#1e3a8a',
-                  fontWeight: 700,
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
-                  outline: 'none',
-                }}
-              >
-                <option value="">All tenants</option>
-                {tenantPaymentGroups.map((group) => (
-                  <option key={group.key} value={group.key}>
-                    {group.name} ({group.count})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="table-shell">
+          <div className="table-shell">
             <table className="landlord-table">
               <thead>
                 <tr>
@@ -867,64 +771,43 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
                 </tr>
               </thead>
               <tbody>
-                {visiblePayments.map((payment) => {
-                  const initials = (payment.tenant || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
-                  const colors = ['#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#14b8a6'];
-                  const colorIndex = payment.tenant ? payment.tenant.charCodeAt(0) % colors.length : 0;
-                  const avatarColor = colors[colorIndex];
-                  const tenantEmail = payment.tenant_email || '';
-                  return (
-                    <tr key={payment.id}>
-                      <td className="landlord-name" style={{ minWidth: 140, maxWidth: 180, padding: '8px 6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
-                          <div style={{ width: 24, height: 24, borderRadius: '50%', background: avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 700, flexShrink: 0 }}>{initials}</div>
-                          <span
-                            style={{ cursor: 'pointer', color: '#1e3a8a', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}
-                            onClick={() => {
-                              setSelectedTenantKey(tenantEmail || payment.tenant);
-                              setSelectedTenantName(payment.tenant);
-                            }}
-                          >
-                            {payment.tenant}
-                          </span>
-                        </div>
-                      </td>
-<td>{(payment as any).month_due || payment.description}</td>
-                      <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
-                      <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
-                      <td>{formatCurrency(payment.amount)}</td>
-                      <td style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>
-                        {editingBalanceId === payment.id ? (
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={editingBalanceValue}
-                            onChange={e => setEditingBalanceValue(e.target.value)}
-                            onBlur={() => handleInlineBalanceSave(payment)}
-                            onKeyDown={e => e.key === 'Enter' && handleInlineBalanceSave(payment)}
-                            style={{ width: '80px', padding: '2px 4px' }}
-                            autoFocus
-                          />
-                        ) : (
-                          <span onClick={() => { setEditingBalanceId(payment.id); setEditingBalanceValue(String(payment.balance_remaining)); }} style={{ cursor: 'pointer' }}>
-                            {formatCurrency(payment.balance_remaining)}
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
-                      <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
-                      <td>{(payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—')}</td>
-                      <td>
-                        <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(payment)}>Edit</button>
-                        <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {payments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td className="landlord-name">{payment.tenant}</td>
+                    <td>{(payment as any).month_due || payment.description}</td>
+                    <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
+                    <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
+                    <td>{formatCurrency(payment.amount)}</td>
+                    <td style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>
+                      {editingBalanceId === payment.id ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editingBalanceValue}
+                          onChange={e => setEditingBalanceValue(e.target.value)}
+                          onBlur={() => handleInlineBalanceSave(payment)}
+                          onKeyDown={e => e.key === 'Enter' && handleInlineBalanceSave(payment)}
+                          style={{ width: '80px', padding: '2px 4px' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span onClick={() => { setEditingBalanceId(payment.id); setEditingBalanceValue(String(payment.balance_remaining)); }} style={{ cursor: 'pointer' }}>
+                          {formatCurrency(payment.balance_remaining)}
+                        </span>
+                      )}
+                    </td>
+<td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
+                     <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
+                     <td>{(payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—')}</td>
+                     <td>
+                      <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(payment)}>Edit</button>
+                      <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-            </div>
-          </>
+          </div>
         )}
       </article>
     </main>
