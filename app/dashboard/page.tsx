@@ -955,7 +955,14 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
                 </div>
               ))}
 <h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
-               {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : payments.slice(0, 6).map((payment) => (
+                {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : [...payments].sort((a, b) => {
+                  const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+                  const aMonth = (a as any).month_due?.split(' ')[0]?.toLowerCase() || '';
+                  const bMonth = (b as any).month_due?.split(' ')[0]?.toLowerCase() || '';
+                  const aOrder = monthNames.indexOf(aMonth) + 1;
+                  const bOrder = monthNames.indexOf(bMonth) + 1;
+                  return bOrder - aOrder;
+                }).slice(0, 6).map((payment) => (
                  <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <strong>{payment.tenant}</strong>
