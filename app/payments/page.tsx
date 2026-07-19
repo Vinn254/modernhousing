@@ -589,8 +589,30 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
   }
 
   return (
-    <main className="container">
-      <div className="card-admin-header">
+    <>
+      <style jsx global>{`
+        @media (max-width: 600px) {
+          th, td {
+            padding: 8px 6px !important;
+            font-size: 12px !important;
+          }
+          .table-shell {
+            overflow-x: auto;
+          }
+          .landlord-name > div {
+            flex-wrap: wrap;
+          }
+          .landlord-name span {
+            font-size: 12px !important;
+          }
+          .landlord-name div[style*="width: 28"] {
+            width: 24px !important;
+            height: 24px !important;
+            font-size: 10px !important;
+          }
+        }
+      `}</style>
+      <main className="container">
         <p className="heading">Rent Payments</p>
         <p className="subheading">Record rent transactions, track balances, and view payment history.</p>
       </div>
@@ -852,11 +874,11 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
                   const tenantEmail = payment.tenant_email || '';
                   return (
                     <tr key={payment.id}>
-                      <td className="landlord-name">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ width: 28, height: 28, borderRadius: '50%', background: avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 600 }}>{initials}</div>
+                      <td className="landlord-name" style={{ minWidth: 140, maxWidth: 180, padding: '8px 6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
+                          <div style={{ width: 24, height: 24, borderRadius: '50%', background: avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 700, flexShrink: 0 }}>{initials}</div>
                           <span
-                            style={{ cursor: 'pointer', color: '#1e3a8a' }}
+                            style={{ cursor: 'pointer', color: '#1e3a8a', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}
                             onClick={() => {
                               setSelectedTenantKey(tenantEmail || payment.tenant);
                               setSelectedTenantName(payment.tenant);
