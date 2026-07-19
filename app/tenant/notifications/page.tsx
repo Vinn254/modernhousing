@@ -145,8 +145,19 @@ export default function TenantNotificationsPage() {
     <>
       <style jsx global>{`
         @media (max-width: 760px) {
-          .tenant-inbox-layout { grid-template-columns: 1fr !important; }
-          .tenant-inbox-sidebar { border-right: none !important; border-bottom: 1px solid var(--line) !important; }
+          .tenant-inbox-layout {
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .tenant-inbox-compose { order: 1 !important; }
+          .tenant-inbox-sidebar {
+            order: 2 !important;
+            border-right: none !important;
+            border-bottom: 1px solid var(--line) !important;
+            grid-column: auto !important;
+            grid-row: auto !important;
+          }
+          .tenant-inbox-thread { order: 3 !important; grid-column: auto !important; grid-row: auto !important; }
         }
       `}</style>
       <main className="container page-layout">
@@ -161,7 +172,7 @@ export default function TenantNotificationsPage() {
           </div>
 
           <div className="tenant-inbox-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', minHeight: 560 }}>
-            <aside className="tenant-inbox-sidebar" style={{ borderRight: '1px solid var(--line)', background: '#f9fafb' }}>
+            <aside className="tenant-inbox-sidebar" style={{ borderRight: '1px solid var(--line)', background: '#f9fafb', gridColumn: 1, gridRow: '1 / span 2' }}>
             {loading && <p className="landlord-muted" style={{ padding: 16 }}>Loading communications…</p>}
             {!loading && notifications.length === 0 && <p className="landlord-empty" style={{ padding: 16 }}>No messages yet.</p>}
             {!loading && notifications.length > 0 && notifications.map((item) => {
@@ -184,7 +195,7 @@ export default function TenantNotificationsPage() {
             })}
           </aside>
 
-          <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="tenant-inbox-compose" style={{ padding: 18, gridColumn: 2, gridRow: 1 }}>
             <div style={{ padding: 12, borderRadius: 12, border: '1px solid #d1fae5', background: '#f0fdf4' }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#047857', marginBottom: 8 }}>Start a direct message</label>
               <select value={recipientTarget} onChange={(event) => setRecipientTarget(event.target.value as 'landlord' | 'agent')} style={{ width: '100%', borderRadius: 10, border: '1px solid #a7f3d0', padding: '10px 12px', marginBottom: 8 }}>
@@ -205,6 +216,7 @@ export default function TenantNotificationsPage() {
               </div>
             </div>
 
+            <div className="tenant-inbox-thread" style={{ padding: '0 18px 18px', gridColumn: 2, gridRow: 2 }}>
             {selectedMessage ? (
               <>
                 <div style={{ padding: 14, borderRadius: 12, background: '#f8fafc', border: '1px solid #e5e7eb' }}>
@@ -233,6 +245,7 @@ export default function TenantNotificationsPage() {
             ) : (
               <p className="landlord-empty">Select a message to reply.</p>
             )}
+            </div>
           </div>
         </div>
       </section>
