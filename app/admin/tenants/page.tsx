@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { supabase } from '../../../lib/supabaseClient';
 
@@ -157,6 +158,16 @@ export default function TenantsPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    const email = searchParams.get('email');
+    if (email && tenants.length > 0) {
+      const tenant = tenants.find((t: Tenant) => t.email === email);
+      if (tenant) {
+        handleViewBills(tenant);
+      }
+    }
+  }, [tenants, searchParams]);
 
   function scrollToForm() {
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
