@@ -40,7 +40,7 @@ export default function AgentNotificationsPage() {
           <div><p className="heading">Notifications</p><p className="subheading">View and manage tenant notifications and notices.</p></div>
         </div>
 
-    <section className="card-grid">
+<section className="card-grid" style={{ gridTemplateColumns: '1fr' }}>
         <div className="card">
           <div className="card-label">Tenant Notifications</div>
           <h3 style={{ marginBottom: 16 }}>Notification History</h3>
@@ -62,6 +62,6 @@ export default function AgentNotificationsPage() {
             </div>)}
           {error && <p className="landlord-error">{error}</p>}
         </div>
-      </section>
+        </section>
     </main>);
 }

@@ -36,7 +36,7 @@ export default function TenantNotificationsPage() {
           <div><p className="heading">Notifications</p><p className="subheading">Messages and notices from your agent or landlord.</p></div>
         </div>
 
-      <section className="card-grid-item">
+      <section className="card-grid" style={{ gridTemplateColumns: '1fr' }}>
         <div className="card">
           {loading && <p className="landlord-muted">Loading notifications…</p>}
           {!loading && notifications.length === 0 && <p>No notices from your agent yet.</p>}
@@ -52,6 +52,6 @@ export default function TenantNotificationsPage() {
               </table>
             </div>)}
         </div>
-      </section>
+        </section>
     </main>);
 }
