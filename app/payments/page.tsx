@@ -769,7 +769,15 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
 </div>
       </article>
 
-      <article className="card" style={{ marginTop: 24 }}>
+      <article
+        className="card"
+        style={{
+          marginTop: 24,
+          border: '1px solid rgba(16, 185, 129, 0.35)',
+          boxShadow: '0 0 0 1px rgba(16, 185, 129, 0.12), 0 0 22px rgba(16, 185, 129, 0.18)',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(240,253,244,0.95))',
+        }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div className="card-label">Transactions</div>
           {payments.length > 0 && (
