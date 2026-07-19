@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { supabase } from '../../../lib/supabaseClient';
 
 interface Property {
@@ -102,7 +103,17 @@ export default function TenantsPage() {
 
   const [showPayForm, setShowPayForm] = useState(false);
   const [showDirectPayment, setShowDirectPayment] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('All');
   const formRef = useRef<HTMLDivElement>(null);
+
+  const filteredBills = bills.filter(bill => {
+    if (activeFilter === 'All') return true;
+    return bill.transaction_type?.toLowerCase() === activeFilter.toLowerCase();
+  });
+
+  const totalCharged = bills.reduce((sum, bill) => sum + (bill.due_amount || 0), 0);
+  const totalPaidTenant = bills.reduce((sum, bill) => sum + (bill.paid_amount || 0), 0);
+  const totalOutstanding = bills.reduce((sum, bill) => sum + (bill.balance || 0), 0);
 
   async function loadData() {
     setLoading(true);
@@ -332,10 +343,64 @@ export default function TenantsPage() {
       setError(result.message ?? 'Unable to record payment.');
       return;
     }
-    setMessage('Direct payment recorded.');
-    setDirectPaymentForm({ tenantId: '', transactionType: 'rent', monthDue: '', amount: '', paymentMethod: 'Cash', referenceNumber: '' });
-    if (selectedTenant) await loadBills(selectedTenant.id);
-  }
+setMessage('Direct payment recorded.');
+      setDirectPaymentForm({ tenantId: '', transactionType: 'rent', monthDue: '', amount: '', paymentMethod: 'Cash', referenceNumber: '' });
+      if (selectedTenant) await loadBills(selectedTenant.id);
+    }
+
+    async function downloadTenantStatement() {
+      if (!selectedTenant) return;
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([595.28, 841.89]);
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      let y = 800;
+
+      page.drawText(`Payment Statement - ${selectedTenant.full_name}`, { x: 50, y, font: boldFont, size: 18, color: rgb(0.1, 0.1, 0.1) });
+      y -= 30;
+      page.drawText(`${selectedTenant.property} · Unit ${selectedTenant.unit}`, { x: 50, y, font, size: 11, color: rgb(0.3, 0.3, 0.3) });
+      y -= 16;
+      page.drawText(`Email: ${selectedTenant.email} | Phone: ${selectedTenant.phone || '—'}`, { x: 50, y, font, size: 10, color: rgb(0.4, 0.4, 0.4) });
+      y -= 30;
+
+      const headers = ['Date', 'Description', 'Month Due', 'Due (KES)', 'Paid (KES)', 'Balance (KES)'];
+      let x = 50;
+      headers.forEach(h => {
+        page.drawText(h, { x, y, font: boldFont, size: 10, color: rgb(0.2, 0.2, 0.2) });
+        x += 100;
+      });
+      y -= 14;
+
+      filteredBills.forEach((bill: any) => {
+        x = 50;
+        page.drawText(new Date(bill.created_at).toLocaleDateString('en-GB'), { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+        x += 100;
+        page.drawText(bill.description || '—', { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+        x += 100;
+        page.drawText(bill.month_due || '—', { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+        x += 100;
+        page.drawText((bill.due_amount || 0).toLocaleString(), { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+        x += 100;
+        page.drawText((bill.paid_amount || 0).toLocaleString(), { x, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+        x += 100;
+        page.drawText((bill.balance || 0).toLocaleString(), { x, y, font, size: 9, color: bill.balance > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
+        y -= 12;
+      });
+
+      y -= 12;
+      page.drawText(`Total Charged: KES ${totalCharged.toLocaleString()}`, { x: 50, y, font: boldFont, size: 11, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText(`Total Paid: KES ${totalPaidTenant.toLocaleString()}`, { x: 200, y, font: boldFont, size: 11, color: rgb(0.1, 0.4, 0.1) });
+      page.drawText(`Outstanding: KES ${totalOutstanding.toLocaleString()}`, { x: 350, y, font: boldFont, size: 11, color: totalOutstanding > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
+      
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tenant-statement-${selectedTenant.id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
 
   const transactionTypes = ['rent', 'water', 'garbage', 'service_charge', 'parking', 'security', 'other', 'deposit'];
 
@@ -453,17 +518,55 @@ export default function TenantsPage() {
           </article>
         </section>
 
-        {selectedTenant && (
+{selectedTenant && (
           <section className="card-grid-item" style={{ marginTop: 24 }} ref={formRef}>
             <article className="card" style={{ gridColumn: 'span 2' }}>
               <div className="card-label">
                 <span className="badge badge-pm" style={{ background: 'var(--accent)' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                </span>Bills & Payments - {selectedTenant.full_name}
+                </span>Payment History
               </div>
-              
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, padding: 16, background: 'var(--surface)', borderRadius: 8 }}>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#1e3a8a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '24px', fontWeight: 700 }}>
+                  {(selectedTenant.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: '#111827' }}>{selectedTenant.full_name}</h2>
+                  <p style={{ margin: '4px 0', color: '#6b7280' }}>{selectedTenant.property} · Unit {selectedTenant.unit}</p>
+                  <p style={{ margin: '4px 0', color: '#6b7280' }}>{selectedTenant.email} · {selectedTenant.phone}</p>
+                  <p style={{ margin: '4px 0', color: '#6b7280' }}>Lease: {selectedTenant.lease_start} → {selectedTenant.lease_end}</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 24, marginBottom: 24 }}>
+                <div style={{ flex: 1, padding: 16, background: 'var(--card)', borderRadius: 8, textAlign: 'center' }}>
+                  <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: 4 }}>Monthly Rent</div>
+                  <div style={{ fontSize: '24px', fontWeight: 600, color: '#111827' }}>KES {selectedTenant.deposit_amount ? Number(selectedTenant.deposit_amount).toLocaleString() : '0'}</div>
+                </div>
+                <div style={{ flex: 1, padding: 16, background: 'var(--card)', borderRadius: 8, textAlign: 'center' }}>
+                  <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: 4 }}>Total Charged</div>
+                  <div style={{ fontSize: '24px', fontWeight: 600, color: '#111827' }}>KES {totalCharged.toLocaleString()}</div>
+                </div>
+                <div style={{ flex: 1, padding: 16, background: 'var(--card)', borderRadius: 8, textAlign: 'center' }}>
+                  <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: 4 }}>Total Paid</div>
+                  <div style={{ fontSize: '24px', fontWeight: 600, color: '#111827' }}>KES {totalPaidTenant.toLocaleString()}</div>
+                </div>
+                <div style={{ flex: 1, padding: 16, background: 'var(--card)', borderRadius: 8, textAlign: 'center' }}>
+                  <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: 4 }}>Outstanding</div>
+                  <div style={{ fontSize: '24px', fontWeight: 600, color: totalOutstanding > 0 ? '#dc2626' : '#111827' }}>KES {totalOutstanding.toLocaleString()}</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                {['All', 'Deposit', 'Rent', 'Water'].map(type => (
+                  <button key={type} className={`action-button ${activeFilter === type ? 'primary' : 'secondary'}`} style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => setActiveFilter(type)}>{type}</button>
+                ))}
+                <button onClick={downloadTenantStatement} className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px', marginLeft: 'auto' }}>Download PDF</button>
+              </div>
+
               <div style={{ marginBottom: 16 }}>
-                <button className="action-button secondary" style={{ padding: '6px 12px' }} onClick={() => setShowDirectPayment(!showDirectPayment)}>Record Direct Payment</button>
+                <button className="action-button secondary" style={{ padding: '6px 12px' }} onClick={() => setShowDirectPayment(!showDirectPayment)}>Record Payment</button>
               </div>
 
               {showDirectPayment && (
@@ -527,7 +630,7 @@ export default function TenantsPage() {
                 </div>
               )}
 
-              <h3 style={{ marginBottom: 16 }}>Transaction Statement</h3>
+              <h3 style={{ marginBottom: 16 }}>Transactions</h3>
               {loadingBills && <p className="landlord-muted">Loading bills...</p>}
               {!loadingBills && bills.length === 0 && <p className="landlord-empty">No bills recorded yet.</p>}
 
@@ -536,35 +639,42 @@ export default function TenantsPage() {
                   <table className="landlord-table" style={{ fontSize: '12px' }}>
                     <thead>
                       <tr>
-                        <th>Date</th>
-                        <th>Description</th>
+                        <th>Tenant</th>
                         <th>Month Due</th>
-                        <th>Due Amount</th>
-                        <th>Amount Paid</th>
-                        <th>Penalty Fee</th>
-                        <th>Balance</th>
+                        <th>Trans Code</th>
+                        <th>Due (KES)</th>
+                        <th>Paid (KES)</th>
+                        <th>Balance (KES)</th>
                         <th>Type</th>
-                        <th>Payment Date</th>
-                        <th>Action</th>
+                        <th>Trans #</th>
+                        <th>Date</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {bills.map(bill => (
+                      {filteredBills.map(bill => (
                         <tr key={bill.id}>
-                          <td>{new Date(bill.created_at).toLocaleDateString('en-GB')}</td>
-                          <td>{bill.description}</td>
+                          <td className="landlord-name">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#1e3a8a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 600 }}>
+                                {(selectedTenant.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                              </div>
+                              <span>{selectedTenant.full_name}</span>
+                            </div>
+                          </td>
                           <td>{bill.month_due || '-'}</td>
+                          <td style={{ fontSize: '12px' }}>{bill.transaction_code || '-'}</td>
                           <td>{bill.due_amount.toLocaleString()}</td>
-                          <td>{bill.paid_amount.toLocaleString() || '-'}</td>
-                          <td>{(bill.penalty_fee || 0).toLocaleString()}</td>
-                          <td style={{ color: bill.balance > 0 ? 'var(--error)' : 'var(--accent)' }}>{bill.balance.toLocaleString()}</td>
+                          <td>{bill.paid_amount?.toLocaleString() || '-'}</td>
+                          <td style={{ color: bill.balance > 0 ? 'var(--error)' : 'var(--accent)' }}>{bill.balance?.toLocaleString() ?? '0'}</td>
                           <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
-                          <td>{bill.payment_date || '-'}</td>
-<td>
-                              {bill.balance > 0 && (
-                                <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
-                              )}
-                            </td>
+                          <td style={{ fontSize: '12px' }}>{bill.transaction_number || '-'}</td>
+                          <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString('en-GB') : '-'}</td>
+                          <td>
+                            {bill.balance > 0 && (
+                              <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleShowPayForm(bill.id, bill.balance ?? 0)}>Pay</button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
