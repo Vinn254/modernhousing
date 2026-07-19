@@ -799,7 +799,17 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
                   setSelectedTenantKey(value);
                   setSelectedTenantName(selectedGroup?.name ?? '');
                 }}
-                style={{ minWidth: 220, padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff' }}
+                style={{
+                  minWidth: 220,
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid #c7d2fe',
+                  background: 'linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%)',
+                  color: '#1e3a8a',
+                  fontWeight: 700,
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
+                  outline: 'none',
+                }}
               >
                 <option value="">All tenants</option>
                 {tenantPaymentGroups.map((group) => (
