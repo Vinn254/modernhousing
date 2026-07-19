@@ -781,31 +781,33 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
           <p style={{ color: '#111827' }}>No payments recorded yet.</p>
         ) : (
           <>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-              {!selectedTenantName ? (
-                tenantPaymentGroups.map((group) => (
-                  <button
-                    key={group.key}
-                    onClick={() => {
-                      setSelectedTenantKey(group.key);
-                      setSelectedTenantName(group.name);
-                    }}
-                    style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
-                  >
-                    {group.name} ({group.count})
-                  </button>
-                ))
-              ) : (
-                <button
-                  onClick={() => {
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              <label htmlFor="tenant-filter" style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
+                Filter by tenant
+              </label>
+              <select
+                id="tenant-filter"
+                value={selectedTenantKey ?? ''}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (!value) {
                     setSelectedTenantKey(null);
                     setSelectedTenantName('');
-                  }}
-                  style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid #d1d5db', background: '#f9fafb', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
-                >
-                  ← Back to all tenants
-                </button>
-              )}
+                    return;
+                  }
+                  const selectedGroup = tenantPaymentGroups.find((group) => group.key === value);
+                  setSelectedTenantKey(value);
+                  setSelectedTenantName(selectedGroup?.name ?? '');
+                }}
+                style={{ minWidth: 220, padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff' }}
+              >
+                <option value="">All tenants</option>
+                {tenantPaymentGroups.map((group) => (
+                  <option key={group.key} value={group.key}>
+                    {group.name} ({group.count})
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="table-shell">
             <table className="landlord-table">
