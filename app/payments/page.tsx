@@ -613,11 +613,12 @@ page.drawText((payment as any).transaction_code ? String((payment as any).transa
         }
       `}</style>
       <main className="container">
-        <p className="heading">Rent Payments</p>
-        <p className="subheading">Record rent transactions, track balances, and view payment history.</p>
-      </div>
+        <div className="card-admin-header">
+          <p className="heading">Rent Payments</p>
+          <p className="subheading">Record rent transactions, track balances, and view payment history.</p>
+        </div>
 
-      {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
+        {message && <p style={{ color: 'var(--accent)', fontWeight: 700, marginBottom: 16 }}>{message}</p>}
       {error && <p style={{ color: '#dc2626', fontWeight: 700, marginBottom: 16 }}>{error}</p>}
 
       <section className="card-grid">

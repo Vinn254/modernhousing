@@ -31,6 +31,11 @@ export default function AnalyticsPage() {
     }, []);
     const formatCurrency = (value) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
     return (<>
+      <style jsx global>{`
+        @media (max-width: 600px) {
+          .bento-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
       <main className="container admin-no-hero floral-bg">
         <div className="card-admin-header">
           <div>
