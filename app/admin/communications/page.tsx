@@ -286,6 +286,10 @@ export default function CommunicationsPage() {
           .card-grid {
             grid-template-columns: 1fr !important;
           }
+          .communications-inbox-grid {
+            grid-template-columns: 1fr !important;
+            min-height: auto !important;
+          }
         }
         @media (max-width: 600px) {
           .card-shell, .table-shell {
@@ -297,6 +301,9 @@ export default function CommunicationsPage() {
           th, td {
             padding: 8px 6px !important;
           }
+          .communications-form-row {
+            grid-template-columns: 1fr !important;
+          }
         }
       `}</style>
       <main className="container admin-no-hero">
@@ -307,8 +314,8 @@ export default function CommunicationsPage() {
           </div>
         </div>
 
-        <section className="card-grid" style={{ gap: 20 }}>
-          <article className="card" style={{ minHeight: 260 }}>
+        <section className="card-grid" style={{ gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+          <article className="card">
             <div className="card-label">
               <span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z" /></svg>
@@ -316,7 +323,7 @@ export default function CommunicationsPage() {
               Send Notification
             </div>
             <h3>Create a message</h3>
-            <form onSubmit={handleSendNotification} className="form-grid">
+            <form onSubmit={handleSendNotification} className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
               <select value={notificationForm.type} onChange={(event) => setNotificationForm((current) => ({ ...current, type: event.target.value }))} required>
                 {notificationTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
               </select>
@@ -324,7 +331,7 @@ export default function CommunicationsPage() {
                 <option value="">All tenants (broadcast)</option>
                 {tenants.map((tenant) => (
                   <option key={tenant.id} value={tenant.id}>
-                    {tenant.full_name} - {tenant.unit} ({tenant.property})
+                    {tenant.full_name}
                   </option>
                 ))}
               </select>
@@ -334,14 +341,15 @@ export default function CommunicationsPage() {
                 required
                 placeholder="Write a notice, reminder, or update..."
                 rows={4}
+                style={{ gridColumn: '1 / -1' }}
               />
-              <button type="submit" disabled={sending}>{sending ? 'Sending…' : 'Send Notification'}</button>
+              <button type="submit" disabled={sending} style={{ gridColumn: '1 / -1' }}>{sending ? 'Sending…' : 'Send Notification'}</button>
             </form>
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </article>
 
-          <article className="card" style={{ minHeight: 260 }}>
+          <article className="card">
             <div className="card-label">
               <span className="badge badge-agent">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z" /></svg>
@@ -352,21 +360,21 @@ export default function CommunicationsPage() {
             {overdueTenants.length === 0 ? (
               <p className="landlord-muted">No tenants with leases ending soon.</p>
             ) : (
-              <div className="table-shell">
+              <div className="table-shell" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                 <table className="landlord-table">
                   <thead>
                     <tr>
-                      <th>Tenant</th>
-                      <th>Lease End</th>
-                      <th>Status</th>
+                      <th style={{ padding: '8px 6px' }}>Tenant</th>
+                      <th style={{ padding: '8px 6px' }}>Lease End</th>
+                      <th style={{ padding: '8px 6px' }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {overdueTenants.map((tenant) => (
                       <tr key={tenant.id}>
-                        <td className="landlord-name">{tenant.full_name}</td>
-                        <td>{tenant.lease_end}</td>
-                        <td>
+                        <td className="landlord-name" style={{ padding: '8px 6px' }}>{tenant.full_name}</td>
+                        <td style={{ padding: '8px 6px' }}>{tenant.lease_end}</td>
+                        <td style={{ padding: '8px 6px' }}>
                           <span className={`status-pill ${tenant.lease_end < today ? 'status-active' : 'status-pending'}`}>
                             {tenant.lease_end < today ? 'Overdue' : 'Ending Soon'}
                           </span>
@@ -389,8 +397,8 @@ export default function CommunicationsPage() {
             <div style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unreadCount} unread</div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', minHeight: 520 }}>
-            <aside style={{ borderRight: '1px solid var(--line)', background: '#f9fafb' }}>
+          <div className="communications-inbox-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', minHeight: 400 }}>
+            <aside style={{ borderRight: '1px solid var(--line)', background: '#f9fafb', maxHeight: '400px', overflowY: 'auto' }}>
               {loading && <p className="landlord-muted" style={{ padding: 16 }}>Loading communications…</p>}
               {!loading && messages.length === 0 && <p className="landlord-empty" style={{ padding: 16 }}>No communications yet.</p>}
               {!loading && messages.length > 0 && messages.map((message) => {
@@ -408,55 +416,53 @@ export default function CommunicationsPage() {
                       textAlign: 'left',
                       border: 'none',
                       borderBottom: '1px solid #e5e7eb',
-                      padding: '14px 16px',
+                      padding: '12px 14px',
                       background: isSelected ? '#eefdf3' : 'transparent',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 6,
+                      gap: 4,
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <strong style={{ fontSize: '13px' }}>{message.roleLabel}</strong>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: '12px' }}>{message.roleLabel}</strong>
                       <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(message.created_at).toLocaleDateString()}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '12px', color: '#111827', fontWeight: message.isUnread ? 700 : 500 }}>{message.preview.slice(0, 70)}{message.preview.length > 70 ? '…' : ''}</span>
-                      {message.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />}
-                    </div>
+                    <span style={{ fontSize: '12px', color: '#111827', fontWeight: message.isUnread ? 700 : 500 }}>{message.preview.slice(0, 50)}{message.preview.length > 50 ? '…' : ''}</span>
+                    {message.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', alignSelf: 'flex-start' }} />}
                   </button>
                 );
               })}
             </aside>
 
-            <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {selectedMessage ? (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                     <div>
                       <div style={{ fontSize: '12px', color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Conversation</div>
-                      <h4 style={{ margin: '4px 0 2px' }}>{selectedMessage.roleLabel} update</h4>
+                      <h4 style={{ margin: '4px 0 2px' }}>{selectedMessage.roleLabel}</h4>
                       <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{selectedMessage.type}</p>
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="button" onClick={() => handleToggleStar(selectedMessage.id)} style={{ border: '1px solid #d1d5db', borderRadius: 999, padding: '6px 10px', background: starredIds.includes(selectedMessage.id) ? '#fef3c7' : '#fff', cursor: 'pointer' }}>
-                        {starredIds.includes(selectedMessage.id) ? '★ Starred' : '☆ Star'}
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button type="button" onClick={() => handleToggleStar(selectedMessage.id)} style={{ border: '1px solid #d1d5db', borderRadius: 999, padding: '6px 10px', background: starredIds.includes(selectedMessage.id) ? '#fef3c7' : '#fff', cursor: 'pointer', fontSize: '12px' }}>
+                        {starredIds.includes(selectedMessage.id) ? '★' : '☆'}
                       </button>
-                      <button type="button" onClick={() => handleDeleteNotification(selectedMessage.id)} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '6px 10px', background: '#fff1f2', color: '#b91c1c', cursor: 'pointer' }}>
+                      <button type="button" onClick={() => handleDeleteNotification(selectedMessage.id)} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '6px 10px', background: '#fff1f2', color: '#b91c1c', cursor: 'pointer', fontSize: '12px' }}>
                         Delete
                       </button>
                     </div>
                   </div>
 
-                  <div style={{ padding: 14, background: '#f8fafc', borderRadius: 12, border: '1px solid #e5e7eb' }}>
+                  <div style={{ padding: 12, background: '#f8fafc', borderRadius: 12, border: '1px solid #e5e7eb' }}>
                     <div style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', marginBottom: 6 }}>Message</div>
                     <p style={{ margin: 0, lineHeight: 1.6, color: '#111827' }}>{selectedMessage.message}</p>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {selectedMessage.thread.map((entry) => (
-                      <div key={entry.id} style={{ padding: 12, borderRadius: 12, background: entry.role === 'You' ? '#ecfdf5' : '#ffffff', border: entry.role === 'You' ? '1px solid #a7f3d0' : '1px solid #e5e7eb' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <div key={entry.id} style={{ padding: 10, borderRadius: 10, background: entry.role === 'You' ? '#ecfdf5' : '#ffffff', border: entry.role === 'You' ? '1px solid #a7f3d0' : '1px solid #e5e7eb' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' }}>
                           <strong style={{ fontSize: '12px', color: '#111827' }}>{entry.role}</strong>
                           <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(entry.createdAt).toLocaleString()}</span>
                         </div>
@@ -472,15 +478,15 @@ export default function CommunicationsPage() {
                       onChange={(event) => setReplyDrafts((current) => ({ ...current, [selectedMessage.id]: event.target.value }))}
                       onKeyDown={(event) => handleKeyDown(event, selectedMessage.id)}
                       placeholder="Reply with a quick follow-up…"
-                      rows={4}
-                      style={{ width: '100%', borderRadius: 10, border: '1px solid #a7f3d0', padding: '10px 12px', resize: 'vertical' }}
+                      rows={3}
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid #a7f3d0', padding: '10px 12px', resize: 'vertical', fontSize: '14px' }}
                     />
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                      <button type="button" onClick={() => handleSendReply(selectedMessage.id)} style={{ padding: '8px 14px', borderRadius: 999, border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+                      <button type="button" onClick={() => handleSendReply(selectedMessage.id)} style={{ padding: '8px 14px', borderRadius: 999, border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}>
                         Send reply
                       </button>
                     </div>
-                    <p style={{ margin: '8px 0 0', fontSize: '11px', color: 'var(--ink-3)' }}>Tip: press ⌘/Ctrl + Enter to send instantly.</p>
+                    <p style={{ margin: '8px 0 0', fontSize: '11px', color: 'var(--ink-3)' }}>Tip: press ⌘/Ctrl + Enter to send.</p>
                   </div>
                 </>
               ) : (
@@ -501,5 +507,3 @@ export default function CommunicationsPage() {
     </>
   );
 }
-
-
