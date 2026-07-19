@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 
 interface Tenant {
@@ -14,21 +14,43 @@ interface Tenant {
 
 interface Notification {
   id: string;
-  admin_id: string;
-  admin_name: string;
-  admin_email: string;
+  admin_id?: string;
+  admin_name?: string;
+  admin_email?: string;
+  agent_id?: string;
   type: string;
   message: string;
   status: string;
   created_at: string;
+  recipient?: string;
+  tenant_id?: string;
+  tenant_name?: string;
+  tenant_email?: string;
+}
+
+interface ReplyItem {
+  id: string;
+  role: 'You' | 'Landlord' | 'Agent' | 'Tenant' | 'System';
+  text: string;
+  createdAt: string;
+}
+
+interface MessageItem extends Notification {
+  roleLabel: 'Landlord' | 'Agent' | 'Tenant';
+  preview: string;
+  isUnread: boolean;
+  thread: ReplyItem[];
 }
 
 export default function CommunicationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [messages, setMessages] = useState<MessageItem[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [selectedMessageId, setSelectedMessageId] = useState('');
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [starredIds, setStarredIds] = useState<string[]>([]);
   const [notificationForm, setNotificationForm] = useState({
     type: 'announcement',
     messageText: '',
@@ -41,6 +63,32 @@ export default function CommunicationsPage() {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
     return headers;
+  }
+
+  function resolveRole(item: Notification): MessageItem['roleLabel'] {
+    if (item.recipient === 'tenant' || item.tenant_id) return 'Tenant';
+    if (item.agent_id) return 'Agent';
+    return 'Landlord';
+  }
+
+  function buildMessageItem(item: Notification, fallbackSelectedId?: string): MessageItem {
+    const roleLabel = resolveRole(item);
+    const thread: ReplyItem[] = [
+      {
+        id: `${item.id}-seed`,
+        role: roleLabel,
+        text: item.message,
+        createdAt: item.created_at || new Date().toISOString(),
+      },
+    ];
+
+    return {
+      ...item,
+      roleLabel,
+      preview: item.message,
+      isUnread: item.id !== fallbackSelectedId,
+      thread,
+    };
   }
 
   async function loadNotifications() {
@@ -59,7 +107,19 @@ export default function CommunicationsPage() {
       }
 
       const result = await response.json();
-      setNotifications(result.notifications ?? []);
+      const incoming = (result.notifications ?? []) as Notification[];
+      const firstId = incoming[0]?.id || '';
+      const nextMessages = incoming.map((item) => buildMessageItem(item, firstId));
+
+      setMessages(nextMessages);
+      setSelectedMessageId((current) => (current && nextMessages.some((message) => message.id === current) ? current : firstId));
+      setReplyDrafts((prev) => {
+        const draftMap: Record<string, string> = { ...prev };
+        nextMessages.forEach((message) => {
+          if (!draftMap[message.id]) draftMap[message.id] = '';
+        });
+        return draftMap;
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -79,7 +139,10 @@ export default function CommunicationsPage() {
     Promise.all([loadNotifications(), loadTenants()]);
   }, []);
 
-  async function handleSendNotification(event: React.FormEvent<HTMLFormElement>) {
+  const selectedMessage = useMemo(() => messages.find((message) => message.id === selectedMessageId) ?? messages[0] ?? null, [messages, selectedMessageId]);
+  const unreadCount = messages.filter((message) => message.isUnread).length;
+
+  async function handleSendNotification(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
     setError('');
@@ -98,11 +161,7 @@ export default function CommunicationsPage() {
       Authorization: session?.access_token ? `Bearer ${session.access_token}` : '',
     };
 
-    // If tenant selected, send to tenant
     if (notificationForm.tenantId) {
-      const tenant = tenants.find(t => t.id === notificationForm.tenantId);
-      const unit = tenant?.unit || '';
-
       const response = await fetch('/api/notifications', {
         method: 'POST',
         headers: authHeaders,
@@ -125,7 +184,6 @@ export default function CommunicationsPage() {
 
       setMessage('Tenant notification sent successfully.');
     } else {
-      // Send to all landlords
       const response = await fetch('/api/notifications', {
         method: 'POST',
         headers: authHeaders,
@@ -154,11 +212,49 @@ export default function CommunicationsPage() {
     await loadNotifications();
   }
 
-  async function handleDeleteNotification(notificationId: string) {
-    const response = await fetch(`/api/notifications?id=${notificationId}`, { method: 'DELETE' });
-    const result = await response.json();
-    if (response.ok) {
-      setNotifications(notifications.filter(n => n.id !== notificationId));
+  function handleDeleteNotification(messageId: string) {
+    setMessages((current) => current.filter((message) => message.id !== messageId));
+    setStarredIds((current) => current.filter((id) => id !== messageId));
+    if (selectedMessageId === messageId) {
+      const remaining = messages.filter((message) => message.id !== messageId);
+      setSelectedMessageId(remaining[0]?.id || '');
+    }
+  }
+
+  function handleToggleStar(messageId: string) {
+    setStarredIds((current) => (current.includes(messageId) ? current.filter((id) => id !== messageId) : [...current, messageId]));
+  }
+
+  function handleSendReply(messageId: string) {
+    const draft = (replyDrafts[messageId] || '').trim();
+    if (!draft) return;
+
+    setMessages((current) => current.map((message) => message.id === messageId
+      ? {
+          ...message,
+          isUnread: false,
+          preview: draft,
+          thread: [
+            ...message.thread,
+            {
+              id: `${message.id}-reply-${Date.now()}`,
+              role: 'You',
+              text: draft,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        }
+      : message));
+
+    setReplyDrafts((current) => ({ ...current, [messageId]: '' }));
+    setSelectedMessageId(messageId);
+    setMessage('Reply sent to the thread.');
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>, messageId: string) {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+      event.preventDefault();
+      handleSendReply(messageId);
     }
   }
 
@@ -170,46 +266,48 @@ export default function CommunicationsPage() {
     { value: 'lease_ending', label: 'Lease Ending' },
   ];
 
-  // Get overdue tenants (lease ended or ending within 7 days)
   const today = new Date().toISOString().slice(0, 10);
   const nextWeek = new Date();
   nextWeek.setDate(nextWeek.getDate() + 7);
   const nextWeekStr = nextWeek.toISOString().slice(0, 10);
-  const overdueTenants = tenants.filter(t => t.lease_end <= nextWeekStr);
+  const overdueTenants = tenants.filter((tenant) => tenant.lease_end <= nextWeekStr);
 
-return (
+  return (
     <>
       <main className="container admin-no-hero">
         <div className="card-admin-header">
           <div>
             <p className="heading">Communications</p>
-            <p className="subheading">Send announcements and manage tenant communications.</p>
+            <p className="subheading">A shared inbox for landlord, agent, and tenant conversations.</p>
           </div>
         </div>
 
-        <section className="card-grid">
-          <article className="card">
-            <div className="card-label"><span className="badge badge-pm">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
-            </span>Send Notification</div>
-            <h3>Create Announcement or Send to Tenant</h3>
+        <section className="card-grid" style={{ gap: 20 }}>
+          <article className="card" style={{ minHeight: 260 }}>
+            <div className="card-label">
+              <span className="badge badge-pm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z" /></svg>
+              </span>
+              Send Notification
+            </div>
+            <h3>Create a message</h3>
             <form onSubmit={handleSendNotification} className="form-grid">
-              <select value={notificationForm.type} onChange={e => setNotificationForm(f => ({ ...f, type: e.target.value }))} required>
-                {notificationTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              <select value={notificationForm.type} onChange={(event) => setNotificationForm((current) => ({ ...current, type: event.target.value }))} required>
+                {notificationTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
               </select>
-              <select value={notificationForm.tenantId} onChange={e => setNotificationForm(f => ({ ...f, tenantId: e.target.value }))}>
+              <select value={notificationForm.tenantId} onChange={(event) => setNotificationForm((current) => ({ ...current, tenantId: event.target.value }))}>
                 <option value="">All tenants (broadcast)</option>
-                {tenants.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.full_name} - {t.unit} ({t.property})
+                {tenants.map((tenant) => (
+                  <option key={tenant.id} value={tenant.id}>
+                    {tenant.full_name} - {tenant.unit} ({tenant.property})
                   </option>
                 ))}
               </select>
               <textarea
                 value={notificationForm.messageText}
-                onChange={e => setNotificationForm(f => ({ ...f, messageText: e.target.value }))}
+                onChange={(event) => setNotificationForm((current) => ({ ...current, messageText: event.target.value }))}
                 required
-                placeholder="Enter your message..."
+                placeholder="Write a notice, reminder, or update..."
                 rows={4}
               />
               <button type="submit" disabled={sending}>{sending ? 'Sending…' : 'Send Notification'}</button>
@@ -218,12 +316,14 @@ return (
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </article>
 
-          <article className="card">
-            <div className="card-label"><span className="badge badge-agent">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
-            </span>Overdue Tenants</div>
-            <h3>Tenants Needing Attention</h3>
-
+          <article className="card" style={{ minHeight: 260 }}>
+            <div className="card-label">
+              <span className="badge badge-agent">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z" /></svg>
+              </span>
+              Follow-up Queue
+            </div>
+            <h3>Tenants needing attention</h3>
             {overdueTenants.length === 0 ? (
               <p className="landlord-muted">No tenants with leases ending soon.</p>
             ) : (
@@ -237,13 +337,13 @@ return (
                     </tr>
                   </thead>
                   <tbody>
-                    {overdueTenants.map(t => (
-                      <tr key={t.id}>
-                        <td className="landlord-name">{t.full_name}</td>
-                        <td>{t.lease_end}</td>
+                    {overdueTenants.map((tenant) => (
+                      <tr key={tenant.id}>
+                        <td className="landlord-name">{tenant.full_name}</td>
+                        <td>{tenant.lease_end}</td>
                         <td>
-                          <span className={`status-pill ${t.lease_end < today ? 'status-active' : 'status-pending'}`}>
-                            {t.lease_end < today ? 'Overdue' : 'Ending Soon'}
+                          <span className={`status-pill ${tenant.lease_end < today ? 'status-active' : 'status-pending'}`}>
+                            {tenant.lease_end < today ? 'Overdue' : 'Ending Soon'}
                           </span>
                         </td>
                       </tr>
@@ -255,50 +355,114 @@ return (
           </article>
         </section>
 
-        <section className="card-grid" style={{ marginTop: 24 }}>
-          <article className="card" style={{ gridColumn: "1 / -1" }}>
-            <div className="card-label"><span className="badge badge-agent">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
-            </span>Message History</div>
-            <h3>Sent Communications</h3>
+        <section className="card" style={{ marginTop: 24, padding: 0, overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.2)', boxShadow: '0 0 20px rgba(16, 185, 129, 0.10)' }}>
+          <div style={{ padding: 16, borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(240,253,244,0.95), rgba(255,255,255,0.98))' }}>
+            <div>
+              <div className="card-label">Inbox</div>
+              <h3 style={{ margin: '4px 0 0' }}>Shared communications</h3>
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unreadCount} unread</div>
+          </div>
 
-            {loading && <p className="landlord-muted">Loading communications...</p>}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', minHeight: 520 }}>
+            <aside style={{ borderRight: '1px solid var(--line)', background: '#f9fafb' }}>
+              {loading && <p className="landlord-muted" style={{ padding: 16 }}>Loading communications…</p>}
+              {!loading && messages.length === 0 && <p className="landlord-empty" style={{ padding: 16 }}>No communications yet.</p>}
+              {!loading && messages.length > 0 && messages.map((message) => {
+                const isSelected = selectedMessage?.id === message.id;
+                return (
+                  <button
+                    key={message.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedMessageId(message.id);
+                      setMessages((current) => current.map((item) => item.id === message.id ? { ...item, isUnread: false } : item));
+                    }}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      border: 'none',
+                      borderBottom: '1px solid #e5e7eb',
+                      padding: '14px 16px',
+                      background: isSelected ? '#eefdf3' : 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <strong style={{ fontSize: '13px' }}>{message.roleLabel}</strong>
+                      <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(message.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: '12px', color: '#111827', fontWeight: message.isUnread ? 700 : 500 }}>{message.preview.slice(0, 70)}{message.preview.length > 70 ? '…' : ''}</span>
+                      {message.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />}
+                    </div>
+                  </button>
+                );
+              })}
+            </aside>
 
-            {!loading && notifications.length === 0 && (
-              <p className="landlord-empty">No communications sent yet.</p>
-            )}
+            <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {selectedMessage ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: '12px', color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Conversation</div>
+                      <h4 style={{ margin: '4px 0 2px' }}>{selectedMessage.roleLabel} update</h4>
+                      <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{selectedMessage.type}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" onClick={() => handleToggleStar(selectedMessage.id)} style={{ border: '1px solid #d1d5db', borderRadius: 999, padding: '6px 10px', background: starredIds.includes(selectedMessage.id) ? '#fef3c7' : '#fff', cursor: 'pointer' }}>
+                        {starredIds.includes(selectedMessage.id) ? '★ Starred' : '☆ Star'}
+                      </button>
+                      <button type="button" onClick={() => handleDeleteNotification(selectedMessage.id)} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '6px 10px', background: '#fff1f2', color: '#b91c1c', cursor: 'pointer' }}>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
 
-            {!loading && notifications.length > 0 && (
-              <div className="table-shell">
-                <table className="landlord-table">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Message</th>
-                      <th>Status</th>
-                      <th>Date</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {notifications.map(n => (
-                      <tr key={n.id}>
-                        <td>{n.type}</td>
-                        <td style={{ whiteSpace: "normal", wordBreak: "break-word", maxWidth: "300px" }}>{n.message}</td>
-                        <td>
-                          <span className={`renewal-pill ${n.status === 'sent' ? 'status-active' : 'status-pending'}`}>
-                            {n.status}
-                          </span>
-                        </td>
-                        <td>{n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</td>
-                        <td><button className="action-button danger" onClick={() => handleDeleteNotification(n.id)} style={{ padding: '4px 8px', fontSize: '12px' }}>Delete</button></td>
-                      </tr>
+                  <div style={{ padding: 14, background: '#f8fafc', borderRadius: 12, border: '1px solid #e5e7eb' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', marginBottom: 6 }}>Message</div>
+                    <p style={{ margin: 0, lineHeight: 1.6, color: '#111827' }}>{selectedMessage.message}</p>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {selectedMessage.thread.map((entry) => (
+                      <div key={entry.id} style={{ padding: 12, borderRadius: 12, background: entry.role === 'You' ? '#ecfdf5' : '#ffffff', border: entry.role === 'You' ? '1px solid #a7f3d0' : '1px solid #e5e7eb' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <strong style={{ fontSize: '12px', color: '#111827' }}>{entry.role}</strong>
+                          <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(entry.createdAt).toLocaleString()}</span>
+                        </div>
+                        <p style={{ margin: 0, color: '#374151', lineHeight: 1.5 }}>{entry.text}</p>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </article>
+                  </div>
+
+                  <div style={{ padding: 12, border: '1px solid #d1fae5', borderRadius: 12, background: '#f0fdf4' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#047857', marginBottom: 8 }}>Reply</label>
+                    <textarea
+                      value={replyDrafts[selectedMessage.id] || ''}
+                      onChange={(event) => setReplyDrafts((current) => ({ ...current, [selectedMessage.id]: event.target.value }))}
+                      onKeyDown={(event) => handleKeyDown(event, selectedMessage.id)}
+                      placeholder="Reply with a quick follow-up…"
+                      rows={4}
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid #a7f3d0', padding: '10px 12px', resize: 'vertical' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                      <button type="button" onClick={() => handleSendReply(selectedMessage.id)} style={{ padding: '8px 14px', borderRadius: 999, border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+                        Send reply
+                      </button>
+                    </div>
+                    <p style={{ margin: '8px 0 0', fontSize: '11px', color: 'var(--ink-3)' }}>Tip: press ⌘/Ctrl + Enter to send instantly.</p>
+                  </div>
+                </>
+              ) : (
+                <p className="landlord-empty">Select a message to view the details.</p>
+              )}
+            </div>
+          </div>
         </section>
       </main>
 
