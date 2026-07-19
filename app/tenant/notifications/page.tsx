@@ -142,19 +142,26 @@ export default function TenantNotificationsPage() {
   }
 
   return (
-    <main className="container page-layout">
-      <div className="card-admin-header">
-        <div><p className="heading">Communications</p><p className="subheading">Send direct messages to your landlord or agent and keep every reply in one place.</p></div>
-      </div>
-
-      <section className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.18)', boxShadow: '0 0 20px rgba(16, 185, 129, 0.08)' }}>
-        <div style={{ padding: 16, borderBottom: '1px solid var(--line)', background: 'linear-gradient(135deg, rgba(240,253,244,0.95), rgba(255,255,255,0.98))' }}>
-          <div className="card-label">Inbox</div>
-          <h3 style={{ margin: '4px 0' }}>Your messages</h3>
+    <>
+      <style jsx global>{`
+        @media (max-width: 760px) {
+          .tenant-inbox-layout { grid-template-columns: 1fr !important; }
+          .tenant-inbox-sidebar { border-right: none !important; border-bottom: 1px solid var(--line) !important; }
+        }
+      `}</style>
+      <main className="container page-layout">
+        <div className="card-admin-header">
+          <div><p className="heading">Communications</p><p className="subheading">Send direct messages to your landlord or agent and keep every reply in one place.</p></div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', minHeight: 560 }}>
-          <aside style={{ borderRight: '1px solid var(--line)', background: '#f9fafb' }}>
+        <section className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.18)', boxShadow: '0 0 20px rgba(16, 185, 129, 0.08)' }}>
+          <div style={{ padding: 16, borderBottom: '1px solid var(--line)', background: 'linear-gradient(135deg, rgba(240,253,244,0.95), rgba(255,255,255,0.98))' }}>
+            <div className="card-label">Inbox</div>
+            <h3 style={{ margin: '4px 0' }}>Your messages</h3>
+          </div>
+
+          <div className="tenant-inbox-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 340px) 1fr', minHeight: 560 }}>
+            <aside className="tenant-inbox-sidebar" style={{ borderRight: '1px solid var(--line)', background: '#f9fafb' }}>
             {loading && <p className="landlord-muted" style={{ padding: 16 }}>Loading communications…</p>}
             {!loading && notifications.length === 0 && <p className="landlord-empty" style={{ padding: 16 }}>No messages yet.</p>}
             {!loading && notifications.length > 0 && notifications.map((item) => {
@@ -230,5 +237,6 @@ export default function TenantNotificationsPage() {
         </div>
       </section>
     </main>
+    </>
   );
 }
