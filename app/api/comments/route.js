@@ -72,6 +72,10 @@ export async function POST(request) {
         const recipientRole = String(body.recipientRole ?? body.recipient_role ?? 'landlord').trim();
         const recipientId = String(body.recipientId ?? body.recipient_id ?? '').trim() || null;
         const message = String(body.message ?? '').trim();
+        const category = String(body.category ?? 'maintenance').trim();
+        const priority = String(body.priority ?? 'medium').trim();
+        const attachmentType = String(body.attachmentType ?? body.attachment_type ?? 'none').trim();
+        const attachmentLabel = String(body.attachmentLabel ?? body.attachment_label ?? '').trim();
         if (!tenantId || !propertyId || !message) {
             return badRequest('Tenant, property, and message are required.');
         }
@@ -86,6 +90,10 @@ export async function POST(request) {
             recipient_role: recipientRole,
             recipient_id: recipientId,
             message,
+            category,
+            priority,
+            attachment_type: attachmentType,
+            attachment_label: attachmentLabel,
             status: 'open',
         })
             .select('*, tenants(full_name, email)')
