@@ -254,29 +254,27 @@ const getTypeLabel = (type: string) => {
   }
 
   function drawTableHeader(page: any, font: any, y: number) {
-    page.drawText('Month', { x: 40, y, size: 9, font });
-    page.drawText('Description', { x: 75, y, size: 9, font });
-    page.drawText('Type', { x: 155, y, size: 9, font });
-    page.drawText('Due', { x: 210, y, size: 9, font });
-    page.drawText('Paid', { x: 255, y, size: 9, font });
-    page.drawText('Penalty', { x: 300, y, size: 9, font });
-    page.drawText('Bal', { x: 345, y, size: 9, font });
-    page.drawText('Running', { x: 395, y, size: 9, font });
-    page.drawText('Date', { x: 460, y, size: 9, font });
+    page.drawText('Date', { x: 40, y, size: 9, font });
+    page.drawText('Description', { x: 120, y, size: 9, font });
+    page.drawText('Type', { x: 200, y, size: 9, font });
+    page.drawText('Due', { x: 260, y, size: 9, font });
+    page.drawText('Paid', { x: 310, y, size: 9, font });
+    page.drawText('Penalty', { x: 360, y, size: 9, font });
+    page.drawText('Bal', { x: 410, y, size: 9, font });
+    page.drawText('Running', { x: 460, y, size: 9, font });
     return y - 18;
   }
 
   function drawTableFullRow(page: any, font: any, bill: Bill, y: number) {
     const billWithBal = calculateWithRunningBalance([bill])[0];
-    page.drawText(bill.month_due || '-', { x: 40, y, size: 8, font });
-    page.drawText(bill.description.substring(0, 20), { x: 75, y, size: 8, font });
-    page.drawText(getTypeLabel(bill.transaction_type).substring(0, 10), { x: 155, y, size: 8, font });
-    page.drawText(String(bill.due_amount), { x: 210, y, size: 8, font, color: rgb(0.2, 0.2, 0.2) });
-    page.drawText(String(bill.paid_amount), { x: 255, y, size: 8, font, color: rgb(0.1, 0.5, 0.1) });
-    page.drawText(String(bill.penalty_fee || 0), { x: 300, y, size: 8, font, color: rgb(0.7, 0.1, 0.1) });
-    page.drawText(String(billWithBal?.bill_balance ?? 0), { x: 345, y, size: 8, font });
-    page.drawText(String(billWithBal?.running_balance ?? 0), { x: 395, y, size: 8, font, color: billWithBal?.running_balance > 0 ? rgb(0.1, 0.5, 0.1) : rgb(0.7, 0.1, 0.1) });
-    page.drawText(bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-', { x: 460, y, size: 8, font });
+    page.drawText(bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-', { x: 40, y, size: 8, font });
+    page.drawText(bill.description.substring(0, 20), { x: 120, y, size: 8, font });
+    page.drawText(getTypeLabel(bill.transaction_type).substring(0, 10), { x: 200, y, size: 8, font });
+    page.drawText(String(bill.due_amount), { x: 260, y, size: 8, font, color: rgb(0.2, 0.2, 0.2) });
+    page.drawText(String(bill.paid_amount), { x: 310, y, size: 8, font, color: rgb(0.1, 0.5, 0.1) });
+    page.drawText(String(bill.penalty_fee || 0), { x: 360, y, size: 8, font, color: rgb(0.7, 0.1, 0.1) });
+    page.drawText(String(billWithBal?.bill_balance ?? 0), { x: 410, y, size: 8, font });
+    page.drawText(String(billWithBal?.running_balance ?? 0), { x: 460, y, size: 8, font, color: billWithBal?.running_balance > 0 ? rgb(0.1, 0.5, 0.1) : rgb(0.7, 0.1, 0.1) });
     return y - 14;
   }
 
@@ -399,38 +397,36 @@ const getTypeLabel = (type: string) => {
           ) : (
             <div className="table-shell" style={{ maxHeight: '500px', overflowY: 'auto' }}>
               <table className="landlord-table" style={{ fontSize: '12px' }}>
-                <thead>
-                  <tr>
-                    <th>Month</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th>Due Amount</th>
-                    <th>Paid</th>
-                    <th>Penalty</th>
-                    <th>Balance</th>
-                    <th>Running Balance</th>
-                    <th>Payment Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(activeTab === 'payments' ? rentWithBalance : utilityWithBalance).map(bill => (
-                    <tr key={bill.id}>
-                      <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
-                      <td>{bill.description}</td>
-                      <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
-                      <td>{formatCurrency(bill.due_amount)}</td>
-                      <td>{formatCurrency(bill.paid_amount)}</td>
-                      <td>{formatCurrency(bill.penalty_fee || 0)}</td>
-                      <td style={{ color: bill.bill_balance > 0 ? '#dc2626' : (bill.bill_balance < 0 ? 'var(--accent)' : 'var(--ink-3)'), fontWeight: bill.bill_balance !== 0 ? 600 : 400 }}>
-                        {formatCurrency(bill.bill_balance)}
-                      </td>
-                      <td style={{ color: bill.running_balance > 0 ? 'var(--accent)' : (bill.running_balance < 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: 600 }}>
-                        {formatCurrency(bill.running_balance)}
-                      </td>
-                      <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
+<thead>
+                     <tr>
+                       <th>Date</th>
+                       <th>Description</th>
+                       <th>Type</th>
+                       <th>Due Amount</th>
+                       <th>Paid</th>
+                       <th>Penalty</th>
+                       <th>Balance</th>
+                       <th>Running Balance</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {(activeTab === 'payments' ? rentWithBalance : utilityWithBalance).map(bill => (
+                       <tr key={bill.id}>
+                         <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
+                         <td>{bill.description}</td>
+                         <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
+                         <td>{formatCurrency(bill.due_amount)}</td>
+                         <td>{formatCurrency(bill.paid_amount)}</td>
+                         <td>{formatCurrency(bill.penalty_fee || 0)}</td>
+                         <td style={{ color: bill.bill_balance > 0 ? '#dc2626' : (bill.bill_balance < 0 ? 'var(--accent)' : 'var(--ink-3)'), fontWeight: bill.bill_balance !== 0 ? 600 : 400 }}>
+                           {formatCurrency(bill.bill_balance)}
+                         </td>
+                         <td style={{ color: bill.running_balance > 0 ? 'var(--accent)' : (bill.running_balance < 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: 600 }}>
+                           {formatCurrency(bill.running_balance)}
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
               </table>
             </div>
           )
