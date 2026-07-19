@@ -8,6 +8,7 @@ interface AnalyticsData {
   properties: number;
   occupiedUnits: number;
   vacantUnits: number;
+  totalRentOwed: number;
   subscribedLandlords: number;
   totalLandlords: number;
   totalPayments: number;
@@ -29,6 +30,7 @@ export default function AnalyticsPage() {
     properties: 0,
     occupiedUnits: 0,
     vacantUnits: 0,
+    totalRentOwed: 0,
     subscribedLandlords: 0,
     totalLandlords: 0,
     totalPayments: 0,
@@ -57,7 +59,7 @@ export default function AnalyticsPage() {
   const totalUnits = data.occupiedUnits + data.vacantUnits;
   const occupancyRate = totalUnits > 0 ? Math.round((data.occupiedUnits / totalUnits) * 100) : 0;
   const vacantUnits = Math.max(data.vacantUnits, 0);
-  const totalRentOwed = Math.max(0, 1200 * vacantUnits + 950 * data.occupiedUnits);
+  const totalRentOwed = Math.max(0, data.totalRentOwed || 0);
 
   const kpis = useMemo(() => [
     {

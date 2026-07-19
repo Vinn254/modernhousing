@@ -80,7 +80,7 @@ export async function GET(request) {
         const effectivePropertyId = urlPropertyId || agentPropertyId;
         const isAgent = userMetadata?.role === 'agent';
         const isSuperAdmin = authContext.isSuperAdmin;
-        let propertiesQuery = supabaseAdmin.from('properties').select('id, name');
+        let propertiesQuery = supabaseAdmin.from('properties').select('id, name, created_by');
         let unitsQuery = supabaseAdmin.from('units').select('id, occupancy_status, property_id');
         let tenantsQuery = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
         let paymentsQuery = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
@@ -221,6 +221,7 @@ export async function GET(request) {
             total_balance: 0,
             occupiedUnits: 0,
             vacantUnits: 0,
+            totalRentOwed: 0,
             subscribedLandlords: 0,
             totalLandlords: 0,
             totalPayments: 0,

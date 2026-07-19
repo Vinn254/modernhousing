@@ -92,11 +92,11 @@ export async function GET(request: NextRequest) {
     const isAgent = userMetadata?.role === 'agent';
     const isSuperAdmin = authContext.isSuperAdmin;
 
-    let propertiesQuery: any = supabaseAdmin.from('properties').select('id, name');
-    let unitsQuery: any = supabaseAdmin.from('units').select('id, occupancy_status, property_id');
+    let propertiesQuery: any = supabaseAdmin.from('properties').select('id, name, created_by');
+    let unitsQuery: any = supabaseAdmin.from('units').select('id, occupancy_status, property_id, rent_amount');
     let tenantsQuery: any = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
     let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
-    let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status');
+    let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status, email, plan').eq('status', 'paid');
 
     // For landlords, filter by properties they CREATED
     let propIds: string[] = [];
@@ -157,17 +157,31 @@ export async function GET(request: NextRequest) {
 
     const allTenants = tenantsData ?? [];
     const allUnits = unitsData ?? [];
+    const activeSubscriptions = (subscriptionsData ?? []).filter((item: any) => item.status === 'paid' || item.status === 'active');
+    const subscribedAdminIds = activeSubscriptions.map((item: any) => item.admin_id).filter(Boolean);
 
-    const occupiedUnits = (allUnits ?? []).filter((u: any) => u.occupancy_status === 'occupied').length;
-    const vacantUnits = (allUnits ?? []).length - occupiedUnits;
+    const relevantPropertyIds = isSuperAdmin
+      ? (propertiesData ?? [])
+          .filter((property: any) => subscribedAdminIds.includes(property.created_by))
+          .map((property: any) => property.id)
+      : (effectivePropertyId ? [effectivePropertyId] : propIds);
 
-    // Filter vacant units by properties user created
-    const vacantUnitsFiltered = (unitsForVacant ?? []).filter((u: any) => propIds.includes(u.property_id));
+    const relevantUnits = (allUnits ?? []).filter((unit: any) => relevantPropertyIds.includes(unit.property_id));
+    const occupiedUnits = relevantUnits.filter((u: any) => u.occupancy_status === 'occupied').length;
+    const vacantUnits = relevantUnits.length - occupiedUnits;
+    const totalRentOwed = relevantUnits
+      .filter((u: any) => u.occupancy_status === 'occupied')
+      .reduce((sum: number, unit: any) => sum + toNumber(unit.rent_amount), 0);
 
-    // Filter tenants for rent owed by properties user created
-    const tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => propIds.includes(t.units?.property_id));
+    // Filter vacant units by the relevant properties only
+    const vacantUnitsFiltered = (unitsForVacant ?? []).filter((u: any) => relevantPropertyIds.includes(u.property_id));
 
-    const propertyCount = effectivePropertyId ? 1 : (propertiesData?.length ?? 0);
+    // Filter tenants for rent owed by the relevant properties only
+    const tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => relevantPropertyIds.includes(t.units?.property_id));
+
+    const propertyCount = effectivePropertyId ? 1 : (relevantPropertyIds.length || (propertiesData?.length ?? 0));
+    const subscribedLandlords = activeSubscriptions.length;
+    const totalLandlords = isSuperAdmin ? subscribedLandlords : (propertiesData?.length ?? 0) || subscribedLandlords;
     const financialPayments = (paymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
     const totalPayments = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0);
     const totalBalance = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.balance_remaining), 0);
@@ -228,10 +242,11 @@ export async function GET(request: NextRequest) {
       total_balance: totalBalance,
       occupiedUnits,
       vacantUnits,
+      totalRentOwed,
       vacantUnitsList,
       rentOwedByTenant,
-      subscribedLandlords: 0,
-      totalLandlords: 0,
+      subscribedLandlords,
+      totalLandlords,
       totalPayments: paymentsData?.length ?? 0,
       tenants_with_analytics: tenantsWithAnalytics,
     });
@@ -244,6 +259,7 @@ export async function GET(request: NextRequest) {
       total_balance: 0,
       occupiedUnits: 0,
       vacantUnits: 0,
+      totalRentOwed: 0,
       subscribedLandlords: 0,
       totalLandlords: 0,
       totalPayments: 0,
