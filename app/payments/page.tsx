@@ -543,27 +543,27 @@ export default function PaymentsPage() {
     const totalBal = recordsToDownload.reduce((sum, p) => sum + (p.balance_remaining || 0), 0);
 
     const headers = ['Tenant', 'Month Due', 'Trans Code', 'Due', 'Paid', 'Balance', 'Date'];
-    const colX = [50, 150, 260, 310, 380, 460, 500];
+    const colX = [50, 130, 230, 320, 400, 470, 530];
     headers.forEach((h, i) => {
       page.drawText(h, { x: colX[i], y, font: boldFont, size: 10, color: rgb(0.25, 0.25, 0.25) });
     });
     y -= 22;
-    page.drawLine({ start: { x: 50, y }, end: { x: 550, y }, thickness: 1, color: rgb(0.6, 0.6, 0.6) });
+    page.drawLine({ start: { x: 50, y }, end: { x: 580, y }, thickness: 1, color: rgb(0.6, 0.6, 0.6) });
     y -= 18;
 
     recordsToDownload.forEach((payment, idx) => {
       if (idx % 2 === 0) {
-        page.drawRectangle({ x: 48, y: y - 4, width: 504, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
+        page.drawRectangle({ x: 48, y: y - 4, width: 532, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
       }
       page.drawText(payment.tenant.substring(0, 18), { x: 50, y, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
-      page.drawText((payment as any).month_due || payment.description || '—', { x: 150, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 260, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
-      page.drawText(formatCurrency((payment as any).due_amount || payment.amount).replace('KES', ''), { x: 310, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 380, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
+      page.drawText((payment as any).month_due || payment.description || '—', { x: 130, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 230, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
+      page.drawText(formatCurrency((payment as any).due_amount || payment.amount).replace('KES', ''), { x: 320, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 400, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
       page.drawText(formatCurrency(payment.balance_remaining).replace('KES', ''), { x: 460, y, font, size: 9, color: payment.balance_remaining > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.2, 0.2, 0.2) });
       page.drawText((payment as any).source === 'bills'
         ? ((payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString('en-GB') : '—')
-        : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 500, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+        : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 530, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
       y -= 16;
     });
 
