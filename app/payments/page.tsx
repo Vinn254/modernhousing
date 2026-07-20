@@ -524,7 +524,7 @@ export default function PaymentsPage() {
     }
 
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595.28, 841.89]);
+    const page = pdfDoc.addPage([700, 841.89]);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
@@ -548,12 +548,12 @@ export default function PaymentsPage() {
       page.drawText(h, { x: colX[i], y, font: boldFont, size: 10, color: rgb(0.25, 0.25, 0.25) });
     });
     y -= 22;
-    page.drawLine({ start: { x: 50, y }, end: { x: 580, y }, thickness: 1, color: rgb(0.6, 0.6, 0.6) });
+    page.drawLine({ start: { x: 50, y }, end: { x: 650, y }, thickness: 1, color: rgb(0.6, 0.6, 0.6) });
     y -= 18;
 
     recordsToDownload.forEach((payment, idx) => {
       if (idx % 2 === 0) {
-        page.drawRectangle({ x: 48, y: y - 4, width: 532, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
+        page.drawRectangle({ x: 48, y: y - 4, width: 604, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
       }
       page.drawText(payment.tenant.substring(0, 12), { x: 50, y, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
       page.drawText((payment as any).month_due || payment.description || '—', { x: 160, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
