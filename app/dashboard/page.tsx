@@ -250,11 +250,11 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
     return () => window.clearInterval(interval);
   }, [roleLoaded, selectedPropertyId, userRole]);
 
-  // Derive "rent owed" directly from the payments already loaded by the page
-  // (the same data the Payment History table uses and which is confirmed
-  // correct). This avoids any dependency on /api/dashboard scoping.
-  const NON_PAYMENT_TYPES = ['complaint', 'notification'];
-  const calculateWithRunningBalance = (paymentsList: any[]) => {
+// Derive "rent owed" directly from the payments already loaded by the page
+   // (the same data the Payment History table uses and which is confirmed
+   // correct). This avoids any dependency on /api/dashboard scoping.
+   const VALID_RENT_TYPES = ['rent', 'overdue', 'deposit', 'tenancy_agreement'];
+   const calculateWithRunningBalance = (paymentsList: any[]) => {
     let runningBalance = 0;
     return paymentsList.map((p: any) => {
       const isOverdue = p.transaction_type === 'overdue';
@@ -275,8 +275,8 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
 
     const byTenant = new Map<string, any>();
     payments.forEach((p: any) => {
-      if (NON_PAYMENT_TYPES.includes(p.transaction_type)) return;
-      const tid = String(p.tenant_id || '');
+      if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
+      const tid = String(p.tenant_id || p.tenant_email || p.tenant || '');
       if (!tid) return;
       if (!byTenant.has(tid)) {
         const t = tenantMap.get(tid) || {};
@@ -326,7 +326,7 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
     const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     (payments || []).forEach((p: any) => {
-      if (NON_PAYMENT_TYPES.includes(p.transaction_type)) return;
+      if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
       const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
       if (p.month_due) {
         const monthParts = p.month_due?.split(' ');
