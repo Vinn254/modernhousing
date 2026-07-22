@@ -312,7 +312,10 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
       const withBalance = calculateWithRunningBalance(sorted);
       const finalBalance = withBalance.length > 0 ? withBalance[withBalance.length - 1].running_balance : 0;
       return { ...entry, balance_remaining: finalBalance, payments: withBalance };
-    }).filter((t: any) => t.balance_remaining > 0);
+    }).filter((t: any) => t.balance_remaining < 0).map((t: any) => ({
+      ...t,
+      balance_remaining: Math.abs(t.balance_remaining || 0),
+    }));
   }, [payments, tenants]);
 
   const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0);
