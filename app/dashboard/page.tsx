@@ -961,7 +961,7 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
                   const bMonth = (b as any).month_due?.split(' ')[0]?.toLowerCase() || '';
                   const aOrder = monthNames.indexOf(aMonth) + 1;
                   const bOrder = monthNames.indexOf(bMonth) + 1;
-                  return bOrder - aOrder;
+                  return aOrder - bOrder;
                 }).slice(0, 6).map((payment) => (
                  <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
 <div style={{ display: 'flex', justifyContent: 'space-between' }}>

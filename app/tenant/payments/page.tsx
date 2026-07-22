@@ -109,7 +109,7 @@ export default function TenantPaymentsPage() {
     allBills.sort((a, b) => {
       const aOrder = getMonthSortValue(a.month_due);
       const bOrder = getMonthSortValue(b.month_due);
-      if (aOrder !== bOrder) return bOrder - aOrder;
+      if (aOrder !== bOrder) return aOrder - bOrder;
       const isOverdueA = a.transaction_type === 'overdue';
       const isOverdueB = b.transaction_type === 'overdue';
       if (isOverdueA !== isOverdueB) return isOverdueA ? 1 : -1;
@@ -371,7 +371,7 @@ const getTypeLabel = (type: string) => {
 {invoices.sort((a, b) => {
                      const aOrder = getMonthSortValue(a.month_due);
                      const bOrder = getMonthSortValue(b.month_due);
-                     return bOrder - aOrder || (b.month_due || '').localeCompare(a.month_due || '');
+                     return aOrder - bOrder || (a.month_due || '').localeCompare(a.month_due || '');
                    }).map(inv => (
                     <tr key={inv.id}>
                       <td style={{ textTransform: 'capitalize' }}>{inv.month_due || '-'}</td>

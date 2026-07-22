@@ -280,9 +280,9 @@ export default function PaymentsPage() {
       const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
       const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
       const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-      if (aMonth !== bMonth) return bMonth - aMonth;
-      if (a.month_due !== b.month_due) return (b.month_due || '').localeCompare(a.month_due || '');
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (aMonth !== bMonth) return aMonth - bMonth;
+      if (a.month_due !== b.month_due) return (a.month_due || '').localeCompare(a.month_due || '');
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
     setPayments(allPayments);
     setLoading(false);
@@ -515,8 +515,8 @@ export default function PaymentsPage() {
     recordsToDownload.sort((a, b) => {
       const aMonth = a.month_due ? (MONTH_ORDER[a.month_due.split(' ')[0]?.toLowerCase()] || 0) : 0;
       const bMonth = b.month_due ? (MONTH_ORDER[b.month_due.split(' ')[0]?.toLowerCase()] || 0) : 0;
-      if (aMonth !== bMonth) return bMonth - aMonth;
-      return (b.month_due || '').localeCompare(a.month_due || '');
+      if (aMonth !== bMonth) return aMonth - bMonth;
+      return (a.month_due || '').localeCompare(a.month_due || '');
     });
     if (recordsToDownload.length === 0) {
       setError('No payments to download.');
