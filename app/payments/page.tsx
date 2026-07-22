@@ -223,11 +223,34 @@ export default function PaymentsPage() {
     return calculateWithRunningBalance(sorted);
   }, [visiblePayments]);
 
+  const paymentsWithPerTenantBalance = useMemo(() => {
+    const byTenant = new Map<string, any[]>();
+    paymentsWithBalance.forEach(p => {
+      const key = p.tenant_email || p.tenant || 'unknown';
+      const arr = byTenant.get(key) || [];
+      arr.push(p);
+      byTenant.set(key, arr);
+    });
+    const result: any[] = [];
+    byTenant.forEach((tenantPayments, key) => {
+      let runningBalance = 0;
+      tenantPayments.forEach(p => {
+        const isOverdue = p.transaction_type === 'overdue';
+        const contribution = isOverdue
+          ? (p.amount || 0)
+          : (p.amount || 0) - ((p as any).due_amount || p.amount || 0) - ((p as any).penalty_fee || 0);
+        runningBalance += contribution;
+        result.push({ ...p, running_balance: runningBalance });
+      });
+    });
+    return result;
+  }, [paymentsWithBalance]);
+
   const monthRowColors = useMemo(() => {
     const seen = new Map<string, string>();
     const lightColors = ['#fef3c7','#dbeafe','#d1fae5','#fce7f3','#ede9fe','#ffedd5','#e0f2fe','#f0fdf4','#fef2f2','#f5f5f4','#ecfeff','#fff7ed'];
     let idx = 0;
-    paymentsWithBalance.forEach((payment) => {
+    paymentsWithPerTenantBalance.forEach((payment) => {
       const monthKey = (payment.month_due || '').split(' ')[0]?.toLowerCase() || '';
       if (monthKey && !seen.has(monthKey)) {
         seen.set(monthKey, lightColors[idx % lightColors.length]);
@@ -235,7 +258,7 @@ export default function PaymentsPage() {
       }
     });
     return seen;
-  }, [paymentsWithBalance]);
+  }, [paymentsWithPerTenantBalance]);
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
@@ -561,7 +584,7 @@ export default function PaymentsPage() {
   };
 
   async function downloadPaymentStatement() {
-    const recordsToDownload = paymentsWithBalance.length > 0 ? [...paymentsWithBalance] : [...(visiblePayments.length > 0 ? visiblePayments : payments)];
+    const recordsToDownload = paymentsWithPerTenantBalance.length > 0 ? [...paymentsWithPerTenantBalance] : [...(visiblePayments.length > 0 ? visiblePayments : payments)];
     if (recordsToDownload.length === 0) {
       setError('No payments to download.');
       return;
@@ -604,7 +627,7 @@ export default function PaymentsPage() {
       page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 250, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
       page.drawText(formatCurrency((payment as any).due_amount || payment.amount).replace('KES', ''), { x: 340, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
       page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 420, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
-      page.drawText(formatCurrency((payment as any).running_balance ?? payment.balance_remaining).replace('KES', ''), { x: 500, y, font, size: 9, color: ((payment as any).running_balance ?? payment.balance_remaining) > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.2, 0.2, 0.2) });
+      page.drawText(formatCurrency((payment as any).running_balance ?? payment.balance_remaining).replace('KES', ''), { x: 500, y, font, size: 9, color: ((payment as any).running_balance ?? payment.balance_remaining) < 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
       page.drawText((payment as any).source === 'bills'
         ? ((payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString('en-GB') : '—')
         : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 570, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
@@ -928,7 +951,7 @@ export default function PaymentsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paymentsWithBalance.map((payment) => {
+                    {paymentsWithPerTenantBalance.map((payment) => {
                       const monthKey = (payment.month_due || '').split(' ')[0]?.toLowerCase() || '';
                       const rowColor = monthRowColors.get(monthKey) || '#ffffff';
                       const initials = ((payment.tenant || '').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '?');
