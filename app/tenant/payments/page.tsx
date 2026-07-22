@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { supabase } from '../../../lib/supabaseClient';
 
@@ -45,6 +45,20 @@ export default function TenantPaymentsPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'payments' | 'utilities' | 'invoices'>('payments');
+  const monthRowColors = useMemo(() => {
+    const seen = new Map<string, string>();
+    const lightColors = ['#fef3c7','#dbeafe','#d1fae5','#fce7f3','#ede9fe','#ffedd5','#e0f2fe','#f0fdf4','#fef2f2','#f5f5f4','#ecfeff','#fff7ed'];
+    let idx = 0;
+    bills.forEach(b => {
+      const monthKey = (b.month_due || '').split(' ')[0]?.toLowerCase() || '';
+      if (monthKey && !seen.has(monthKey)) {
+        seen.set(monthKey, lightColors[idx % lightColors.length]);
+        idx++;
+      }
+    });
+    return seen;
+  }, [bills]);
+
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [mpesaAmount, setMpesaAmount] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -116,20 +130,6 @@ export default function TenantPaymentsPage() {
       return (b.created_at || '').localeCompare(a.created_at || '');
     });
     setBills(allBills);
-
-    const monthRowColors = (() => {
-      const seen = new Map<string, string>();
-      const lightColors = ['#fef3c7','#dbeafe','#d1fae5','#fce7f3','#ede9fe','#ffedd5','#e0f2fe','#f0fdf4','#fef2f2','#f5f5f4','#ecfeff','#fff7ed'];
-      let idx = 0;
-      allBills.forEach(b => {
-        const monthKey = (b.month_due || '').split(' ')[0]?.toLowerCase() || '';
-        if (monthKey && !seen.has(monthKey)) {
-          seen.set(monthKey, lightColors[idx % lightColors.length]);
-          idx++;
-        }
-      });
-      return seen;
-    })();
 
     if (invoicesResponse?.ok) {
       const invoicesResult = await invoicesResponse.json();
