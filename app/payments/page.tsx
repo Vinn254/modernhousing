@@ -292,6 +292,7 @@ export default function PaymentsPage() {
           transaction_number: b.transaction_number,
           transaction_code: b.transaction_code,
           payment_date: b.payment_date,
+          tenant_id: b.tenant_id,
           created_at: b.created_at,
           source: 'bills' as const,
         }));
@@ -955,7 +956,7 @@ export default function PaymentsPage() {
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
                           <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
                           <td>{formatCurrency(payment.amount)}</td>
-                          <td style={{ color: ((payment as any).running_balance ?? 0) > 0 ? '#dc2626' : 'var(--accent)' }}>
+                          <td style={{ color: ((payment as any).running_balance ?? 0) < 0 ? '#dc2626' : 'var(--accent)' }}>
                             {editingBalanceId === payment.id ? (
                               <input
                                 type="number"
