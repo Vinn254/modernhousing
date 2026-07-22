@@ -32,6 +32,7 @@ interface Payment {
   payment_date?: string;
   paid_amount?: number;
   source?: 'bills' | 'payments';
+  running_balance?: number;
 }
 
 async function getAuthHeaders() {
@@ -202,7 +203,7 @@ export default function PaymentsPage() {
     const seen = new Map<string, string>();
     const lightColors = ['#fef3c7','#dbeafe','#d1fae5','#fce7f3','#ede9fe','#ffedd5','#e0f2fe','#f0fdf4','#fef2f2','#f5f5f4','#ecfeff','#fff7ed'];
     let idx = 0;
-    visiblePayments.forEach((payment) => {
+    paymentsWithBalance.forEach((payment) => {
       const monthKey = (payment.month_due || '').split(' ')[0]?.toLowerCase() || '';
       if (monthKey && !seen.has(monthKey)) {
         seen.set(monthKey, lightColors[idx % lightColors.length]);
@@ -210,6 +211,30 @@ export default function PaymentsPage() {
       }
     });
     return seen;
+  }, [visiblePayments]);
+
+  const calculateWithRunningBalance = (paymentsList: any[]) => {
+    let runningBalance = 0;
+    return paymentsList.map(payment => {
+      const isOverdue = (payment as any).transaction_type === 'overdue';
+      const billBalance = isOverdue ? 0 : ((payment as any).due_amount || payment.amount || 0) - (payment.amount || 0) - ((payment as any).penalty_fee || 0);
+      const contribution = isOverdue
+        ? (payment.amount || 0)
+        : (payment.amount || 0) - ((payment as any).due_amount || payment.amount || 0) - ((payment as any).penalty_fee || 0);
+      runningBalance += contribution;
+      return { ...payment, running_balance: runningBalance };
+    });
+  };
+
+  const paymentsWithBalance = useMemo(() => {
+    const sorted = [...visiblePayments].sort((a, b) => {
+      const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+      const aMonth = (a as any).month_due ? monthNames.indexOf((a as any).month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+      const bMonth = (b as any).month_due ? monthNames.indexOf((b as any).month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+      if (aMonth !== bMonth) return aMonth - bMonth;
+      return (a as any).month_due?.localeCompare((b as any).month_due || '') || 0;
+    });
+    return calculateWithRunningBalance(sorted);
   }, [visiblePayments]);
 
   const [showEditForm, setShowEditForm] = useState(false);
@@ -584,7 +609,7 @@ export default function PaymentsPage() {
       page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 250, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
       page.drawText(formatCurrency((payment as any).due_amount || payment.amount).replace('KES', ''), { x: 340, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
       page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 420, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
-      page.drawText(formatCurrency(payment.balance_remaining).replace('KES', ''), { x: 490, y, font, size: 9, color: payment.balance_remaining > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.2, 0.2, 0.2) });
+      page.drawText(formatCurrency((payment as any).running_balance ?? payment.balance_remaining).replace('KES', ''), { x: 490, y, font, size: 9, color: payment.balance_remaining > 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.2, 0.2, 0.2) });
       page.drawText((payment as any).source === 'bills'
         ? ((payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString('en-GB') : '—')
         : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 550, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
@@ -908,10 +933,10 @@ export default function PaymentsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visiblePayments.map((payment) => {
+                    {paymentsWithBalance.map((payment) => {
                       const monthKey = (payment.month_due || '').split(' ')[0]?.toLowerCase() || '';
                       const rowColor = monthRowColors.get(monthKey) || '#ffffff';
-                      const initials = (payment.tenant || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
+                      const initials = ((payment.tenant || '').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '?');
                       const colors = ['#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#14b8a6'];
                       const colorIndex = payment.tenant ? payment.tenant.charCodeAt(0) % colors.length : 0;
                       const avatarColor = colors[colorIndex];
@@ -936,7 +961,7 @@ export default function PaymentsPage() {
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
                           <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
                           <td>{formatCurrency(payment.amount)}</td>
-                          <td style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)' }}>
+                          <td style={{ color: ((payment as any).running_balance ?? 0) > 0 ? '#dc2626' : 'var(--accent)' }}>
                             {editingBalanceId === payment.id ? (
                               <input
                                 type="number"
@@ -949,8 +974,8 @@ export default function PaymentsPage() {
                                 autoFocus
                               />
                             ) : (
-                              <span onClick={() => { setEditingBalanceId(payment.id); setEditingBalanceValue(String(payment.balance_remaining)); }} style={{ cursor: 'pointer' }}>
-                                {formatCurrency(payment.balance_remaining)}
+                              <span onClick={() => { setEditingBalanceId(payment.id); setEditingBalanceValue(String((payment as any).running_balance ?? payment.balance_remaining)); }} style={{ cursor: 'pointer' }}>
+                                {formatCurrency((payment as any).running_balance ?? payment.balance_remaining)}
                               </span>
                             )}
                           </td>

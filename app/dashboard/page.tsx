@@ -252,6 +252,20 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
   // (the same data the Payment History table uses and which is confirmed
   // correct). This avoids any dependency on /api/dashboard scoping.
   const NON_PAYMENT_TYPES = ['complaint', 'notification'];
+  const calculateWithRunningBalance = (paymentsList: any[]) => {
+    let runningBalance = 0;
+    return paymentsList.map((p: any) => {
+      const isOverdue = p.transaction_type === 'overdue';
+      const due = Number(p.due_amount || p.amount || 0);
+      const paid = Number(p.amount || 0);
+      const penalty = Number(p.penalty_fee || 0);
+      const billBalance = isOverdue ? 0 : due - paid - penalty;
+      const contribution = isOverdue ? paid : paid - due - penalty;
+      runningBalance += contribution;
+      return { ...p, running_balance: runningBalance, bill_balance: billBalance };
+    });
+  };
+
   const rentOwedByTenant = useMemo(() => {
     if (!payments || payments.length === 0) return [];
     const tenantMap = new Map<string, any>();
@@ -260,8 +274,6 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
     const byTenant = new Map<string, any>();
     payments.forEach((p: any) => {
       if (NON_PAYMENT_TYPES.includes(p.transaction_type)) return;
-      const balance = Number(p.balance_remaining || 0);
-      if (balance <= 0) return;
       const tid = String(p.tenant_id || '');
       if (!tid) return;
       if (!byTenant.has(tid)) {
@@ -276,16 +288,29 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
           rent_amount: 0,
           balance_remaining: 0,
           last_payment: p.created_at || null,
+          payments: [] as any[],
         });
       }
       const entry = byTenant.get(tid);
-      entry.balance_remaining += balance;
+      entry.payments.push(p);
       entry.total_paid += Number(p.amount || 0);
       if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
         entry.last_payment = p.created_at;
       }
     });
-    return Array.from(byTenant.values());
+
+    return Array.from(byTenant.values()).map((entry: any) => {
+      const sorted = entry.payments.sort((a: any, b: any) => {
+        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+        const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+        const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+        if (aMonth !== bMonth) return aMonth - bMonth;
+        return (a.month_due || '').localeCompare(b.month_due || '');
+      });
+      const withBalance = calculateWithRunningBalance(sorted);
+      const finalBalance = withBalance.length > 0 ? withBalance[withBalance.length - 1].running_balance : 0;
+      return { ...entry, balance_remaining: finalBalance, payments: withBalance };
+    }).filter((t: any) => t.balance_remaining > 0);
   }, [payments, tenants]);
 
   const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0);
