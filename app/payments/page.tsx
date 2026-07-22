@@ -199,20 +199,6 @@ export default function PaymentsPage() {
     september: '#fef2f2', october: '#f5f5f4', november: '#ecfeff', december: '#fff7ed',
   };
 
-  const monthRowColors = useMemo(() => {
-    const seen = new Map<string, string>();
-    const lightColors = ['#fef3c7','#dbeafe','#d1fae5','#fce7f3','#ede9fe','#ffedd5','#e0f2fe','#f0fdf4','#fef2f2','#f5f5f4','#ecfeff','#fff7ed'];
-    let idx = 0;
-    paymentsWithBalance.forEach((payment) => {
-      const monthKey = (payment.month_due || '').split(' ')[0]?.toLowerCase() || '';
-      if (monthKey && !seen.has(monthKey)) {
-        seen.set(monthKey, lightColors[idx % lightColors.length]);
-        idx++;
-      }
-    });
-    return seen;
-  }, [visiblePayments]);
-
   const calculateWithRunningBalance = (paymentsList: any[]) => {
     let runningBalance = 0;
     return paymentsList.map(payment => {
@@ -236,6 +222,20 @@ export default function PaymentsPage() {
     });
     return calculateWithRunningBalance(sorted);
   }, [visiblePayments]);
+
+  const monthRowColors = useMemo(() => {
+    const seen = new Map<string, string>();
+    const lightColors = ['#fef3c7','#dbeafe','#d1fae5','#fce7f3','#ede9fe','#ffedd5','#e0f2fe','#f0fdf4','#fef2f2','#f5f5f4','#ecfeff','#fff7ed'];
+    let idx = 0;
+    paymentsWithBalance.forEach((payment) => {
+      const monthKey = (payment.month_due || '').split(' ')[0]?.toLowerCase() || '';
+      if (monthKey && !seen.has(monthKey)) {
+        seen.set(monthKey, lightColors[idx % lightColors.length]);
+        idx++;
+      }
+    });
+    return seen;
+  }, [paymentsWithBalance]);
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
