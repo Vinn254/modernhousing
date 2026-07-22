@@ -389,16 +389,20 @@ export default function PaymentsPage() {
     setMessage('');
     setError('');
 
-    const year = manualDate ? new Date(manualDate).getFullYear() : new Date().getFullYear();
-    const monthDueWithYear = manualMonth ? `${manualMonth} ${year}` : `${new Date().toLocaleString('en-US', { month: 'long' })} ${year}`;
+    let monthDueValue = manualMonth;
+    if (manualMonth && manualMonth.includes('-')) {
+      const [year, month] = manualMonth.split('-');
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      monthDueValue = `${monthNames[parseInt(month) - 1]} ${year}`;
+    }
 
     const response = await fetch('/api/bills', {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         tenantId,
-        description: `${manualMonth || 'Rent'} payment`,
-        monthDue: monthDueWithYear,
+        description: manualMonth ? `${new Date(manualMonth + '-01').toLocaleString('en-US', { month: 'long' })} payment` : 'Rent payment',
+        monthDue: monthDueValue,
         dueAmount: Number(manualDueAmount) || 0,
         paidAmount: Number(manualPaidAmount) || 0,
         transactionType: manualTransType,
@@ -668,7 +672,7 @@ export default function PaymentsPage() {
                 {tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} — {tenant.property} · Unit {tenant.unit}</option>)}
               </select>
               <input type="date" value={manualDate} onChange={(event) => setManualDate(event.target.value)} required placeholder="Payment Date" />
-              <input value={manualMonth} onChange={(event) => setManualMonth(event.target.value)} placeholder="Month Due (e.g., January 2024)" />
+              <input type="month" value={manualMonth} onChange={(event) => setManualMonth(event.target.value)} placeholder="Month Due" />
               <select value={manualTransType} onChange={(event) => setManualTransType(event.target.value)}>
                 {transactionTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
