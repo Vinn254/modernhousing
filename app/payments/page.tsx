@@ -192,6 +192,26 @@ export default function PaymentsPage() {
     });
   }, [payments, selectedTenantKey]);
 
+  const MONTH_COLORS: Record<string, string> = {
+    january: '#fef3c7', february: '#dbeafe', march: '#d1fae5', april: '#fce7f3',
+    may: '#ede9fe', june: '#ffedd5', july: '#e0f2fe', august: '#f0fdf4',
+    september: '#fef2f2', october: '#f5f5f4', november: '#ecfeff', december: '#fff7ed',
+  };
+
+  const monthRowColors = useMemo(() => {
+    const seen = new Map<string, string>();
+    const lightColors = ['#fef3c7','#dbeafe','#d1fae5','#fce7f3','#ede9fe','#ffedd5','#e0f2fe','#f0fdf4','#fef2f2','#f5f5f4','#ecfeff','#fff7ed'];
+    let idx = 0;
+    visiblePayments.forEach((payment) => {
+      const monthKey = (payment.month_due || '').split(' ')[0]?.toLowerCase() || '';
+      if (monthKey && !seen.has(monthKey)) {
+        seen.set(monthKey, lightColors[idx % lightColors.length]);
+        idx++;
+      }
+    });
+    return seen;
+  }, [visiblePayments]);
+
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null);
   const [editingBalanceValue, setEditingBalanceValue] = useState('');
@@ -885,13 +905,15 @@ export default function PaymentsPage() {
                   </thead>
                   <tbody>
                     {visiblePayments.map((payment) => {
+                      const monthKey = (payment.month_due || '').split(' ')[0]?.toLowerCase() || '';
+                      const rowColor = monthRowColors.get(monthKey) || '#ffffff';
                       const initials = (payment.tenant || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
                       const colors = ['#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#14b8a6'];
                       const colorIndex = payment.tenant ? payment.tenant.charCodeAt(0) % colors.length : 0;
                       const avatarColor = colors[colorIndex];
                       const tenantEmail = payment.tenant_email || '';
                       return (
-                        <tr key={payment.id}>
+                        <tr key={payment.id} style={{ backgroundColor: rowColor }}>
                           <td className="landlord-name" style={{ minWidth: 140, maxWidth: 180, padding: '8px 6px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
                               <div style={{ width: 24, height: 24, borderRadius: '50%', background: avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 700, flexShrink: 0 }}>{initials}</div>
