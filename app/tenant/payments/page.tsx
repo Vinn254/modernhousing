@@ -35,7 +35,7 @@ const MONTH_ORDER: Record<string, number> = {
 };
 
 function getMonthSortValue(month: string): number {
-  const normalized = (month || '').toLowerCase();
+  const normalized = (month?.split(' ')[0] || '').toLowerCase();
   return MONTH_ORDER[normalized] || 0;
 }
 
@@ -388,7 +388,7 @@ const getTypeLabel = (type: string) => {
                      return aOrder - bOrder || (a.month_due || '').localeCompare(a.month_due || '');
                    }).map(inv => (
                     <tr key={inv.id} style={{ backgroundColor: (() => { const mk = (inv.month_due || '').split(' ')[0]?.toLowerCase() || ''; return monthRowColors.get(mk) || ''; })() }}>
-                      <td style={{ textTransform: 'capitalize' }}>{inv.month_due || '-'}</td>
+                      <td style={{ textTransform: 'capitalize' }}>{(() => { const parts = (inv.month_due || '').trim().split(' '); return parts.length > 2 ? parts.slice(0, 2).join(' ') : inv.month_due; })() || '-'}</td>
                       <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getInvoiceTypeLabel(inv.invoice_type)}</span></td>
                       <td>{inv.description}</td>
                       <td>{formatCurrency(inv.amount)}</td>
@@ -429,7 +429,7 @@ const getTypeLabel = (type: string) => {
                     <tbody>
                       {(activeTab === 'payments' ? rentWithBalance : utilityWithBalance).map(bill => (
                         <tr key={bill.id} style={{ backgroundColor: (() => { const mk = (bill.month_due || '').split(' ')[0]?.toLowerCase() || ''; return monthRowColors.get(mk) || ''; })() }}>
-                          <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
+                          <td style={{ textTransform: 'capitalize' }}>{(() => { const parts = (bill.month_due || '').trim().split(' '); return parts.length > 2 ? parts.slice(0, 2).join(' ') : bill.month_due; })() || '-'}</td>
                           <td>{bill.description}</td>
                           <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
                           <td>{formatCurrency(bill.due_amount)}</td>
