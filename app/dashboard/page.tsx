@@ -185,18 +185,20 @@ const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security
       setStats(statsResult);
       setTenants(tenantsResult.tenants ?? []);
 // Merge payments and bills for owed computation
-       const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
-         ...p,
-         created_at: p.paid_at || p.created_at,
-       })), ...(billsResult.bills ?? []).map((b: any) => ({
-         ...b,
-         amount: b.paid_amount ?? 0,
-         balance_remaining: b.balance ?? b.balance_remaining,
-         created_at: b.payment_date || b.paid_at || b.created_at,
-         payment_date: b.payment_date,
-         source: 'bills',
-         tenant: b.tenant_name ?? '',
-       }))];
+const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
+          ...p,
+          tenant_id: p.tenant_id,
+          created_at: p.paid_at || p.created_at,
+        })), ...(billsResult.bills ?? []).map((b: any) => ({
+          ...b,
+          tenant_id: b.tenant_id,
+          amount: b.paid_amount ?? 0,
+          balance_remaining: b.balance ?? b.balance_remaining,
+          created_at: b.payment_date || b.paid_at || b.created_at,
+          payment_date: b.payment_date,
+          source: 'bills',
+          tenant: b.tenant_name ?? '',
+        }))];
       setPayments(mergedPayments);
       setAgents(agentsResult.agents ?? []);
       setProperties(propertiesResult.properties ?? []);
