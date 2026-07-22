@@ -954,7 +954,7 @@ export default function PaymentsPage() {
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
                           <td>{(payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—')}</td>
                           <td>
-                            <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(payment)}>Edit</button>
+                            <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 8, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(payment)}>Edit</button>
                             <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
                           </td>
                         </tr>

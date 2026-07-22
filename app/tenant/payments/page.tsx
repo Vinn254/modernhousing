@@ -117,6 +117,20 @@ export default function TenantPaymentsPage() {
     });
     setBills(allBills);
 
+    const monthRowColors = (() => {
+      const seen = new Map<string, string>();
+      const lightColors = ['#fef3c7','#dbeafe','#d1fae5','#fce7f3','#ede9fe','#ffedd5','#e0f2fe','#f0fdf4','#fef2f2','#f5f5f4','#ecfeff','#fff7ed'];
+      let idx = 0;
+      allBills.forEach(b => {
+        const monthKey = (b.month_due || '').split(' ')[0]?.toLowerCase() || '';
+        if (monthKey && !seen.has(monthKey)) {
+          seen.set(monthKey, lightColors[idx % lightColors.length]);
+          idx++;
+        }
+      });
+      return seen;
+    })();
+
     if (invoicesResponse?.ok) {
       const invoicesResult = await invoicesResponse.json();
       setInvoices(invoicesResult.invoices ?? []);
@@ -373,7 +387,7 @@ const getTypeLabel = (type: string) => {
                      const bOrder = getMonthSortValue(b.month_due);
                      return aOrder - bOrder || (a.month_due || '').localeCompare(a.month_due || '');
                    }).map(inv => (
-                    <tr key={inv.id}>
+                    <tr key={inv.id} style={{ backgroundColor: (() => { const mk = (inv.month_due || '').split(' ')[0]?.toLowerCase() || ''; return monthRowColors.get(mk) || ''; })() }}>
                       <td style={{ textTransform: 'capitalize' }}>{inv.month_due || '-'}</td>
                       <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getInvoiceTypeLabel(inv.invoice_type)}</span></td>
                       <td>{inv.description}</td>
@@ -414,7 +428,7 @@ const getTypeLabel = (type: string) => {
                     </thead>
                     <tbody>
                       {(activeTab === 'payments' ? rentWithBalance : utilityWithBalance).map(bill => (
-                        <tr key={bill.id}>
+                        <tr key={bill.id} style={{ backgroundColor: (() => { const mk = (bill.month_due || '').split(' ')[0]?.toLowerCase() || ''; return monthRowColors.get(mk) || ''; })() }}>
                           <td style={{ textTransform: 'capitalize' }}>{bill.month_due || '-'}</td>
                           <td>{bill.description}</td>
                           <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
