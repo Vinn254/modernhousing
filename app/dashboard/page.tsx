@@ -257,85 +257,102 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
    // correct). This avoids any dependency on /api/dashboard scoping.
    const VALID_RENT_TYPES = ['rent', 'overdue'];
    
-   const rentOwedByTenant = useMemo(() => {
-     if (!payments || payments.length === 0) return [];
-     const tenantMap = new Map<string, any>();
-     (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
+const rentOwedByTenant = useMemo(() => {
+      if (!payments || payments.length === 0) return [];
+      const tenantMap = new Map<string, any>();
+      (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
 
-     const byTenant = new Map<string, any>();
-     payments.forEach((p: any) => {
-       if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
-       // Skip paid overdue payments - they are already cleared
-       if (p.transaction_type === 'overdue' && p.status === 'paid') return;
-       // Skip bills that are fully paid
-       if ((p.transaction_type === 'rent' || p.source === 'bills') && p.balance_remaining === 0) return;
-       const tid = String(p.tenant_id || p.tenant_email || p.tenant || '');
-       if (!tid) return;
-       if (!byTenant.has(tid)) {
-         const t = tenantMap.get(tid) || {};
-         byTenant.set(tid, {
-           id: tid,
-           full_name: t.full_name || p.tenant_name || p.tenant || '',
-           email: t.email || p.tenant_email || '',
-           unit: t.unit || p.unit_number || p.unit || null,
-           property: t.property || p.property_name || p.property || null,
-           total_paid: 0,
-           balance_remaining: 0,
-           last_payment: p.created_at || null,
-           payments: [] as any[],
-         });
-       }
-       const entry = byTenant.get(tid);
-       entry.payments.push(p);
-       // Track total unpaid amount
-       const unpaidAmount = Number(p.due_amount || p.amount || p.balance_remaining || 0);
-       const paidAmount = Number(p.paid_amount || p.amount || 0);
-       entry.balance_remaining += (unpaidAmount - paidAmount);
-       entry.total_paid += paidAmount;
-       if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
-         entry.last_payment = p.created_at;
-       }
-     });
+      const byTenant = new Map<string, any>();
+      // Track paid overdue amounts per tenant to offset balances
+      const paidOverdueAmounts: {[tenantId: string]: number} = {};
+      
+      // First pass: calculate paid overdue amounts per tenant
+      payments.forEach((p: any) => {
+        if (p.transaction_type === 'overdue' && p.status === 'paid') {
+          const tid = String(p.tenant_id || p.tenant_email || p.tenant || '');
+          if (tid) {
+            paidOverdueAmounts[tid] = (paidOverdueAmounts[tid] || 0) + Number(p.amount || 0);
+          }
+        }
+      });
 
-     // Calculate rent owed by tenant
-     return Array.from(byTenant.values())
-       .map((entry: any) => {
-         // Sort payments by month
-         const sorted = entry.payments.sort((a: any, b: any) => {
-           const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-           const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-           const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-           if (aMonth !== bMonth) return aMonth - bMonth;
-           return (a.month_due || '').localeCompare(b.month_due || '');
-         });
-         
-         const finalBalance = entry.balance_remaining;
-         
-         // Track settlements for notifications
-         const previousBalance = previousBalances[entry.id] || 0;
-         setPreviousBalances(prev => ({
-           ...prev,
-           [entry.id]: finalBalance
-         }));
-         
-         if (previousBalance > 0 && finalBalance <= 0) {
-           setRecentSettlements(prev => [...prev, {
-             tenant: entry.full_name,
-             unit: entry.unit,
-             amount: previousBalance,
-             settlementDate: new Date()
-           }]);
-         }
-         
-         return {
-           ...entry,
-           balance_remaining: Math.abs(finalBalance),
-           payments: sorted
-         };
-       })
-       // Only show truly outstanding (positive) balances
-       .filter((t: any) => t.balance_remaining > 0);
-   }, [payments, tenants]);
+      payments.forEach((p: any) => {
+        if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
+        // Skip paid overdue payments - they will be used for offset instead
+        if (p.transaction_type === 'overdue' && p.status === 'paid') return;
+        // Skip bills that are fully paid
+        if ((p.transaction_type === 'rent' || p.source === 'bills') && p.balance_remaining === 0) return;
+        const tid = String(p.tenant_id || p.tenant_email || p.tenant || '');
+        if (!tid) return;
+        if (!byTenant.has(tid)) {
+          const t = tenantMap.get(tid) || {};
+          byTenant.set(tid, {
+            id: tid,
+            full_name: t.full_name || p.tenant_name || p.tenant || '',
+            email: t.email || p.tenant_email || '',
+            unit: t.unit || p.unit_number || p.unit || null,
+            property: t.property || p.property_name || p.property || null,
+            total_paid: 0,
+            balance_remaining: 0,
+            last_payment: p.created_at || null,
+            payments: [] as any[],
+          });
+        }
+        const entry = byTenant.get(tid);
+        entry.payments.push(p);
+        // Track total unpaid amount
+        const dueAmount = Number(p.due_amount || p.amount || p.balance_remaining || 0);
+        const paidAmount = Number(p.paid_amount || p.amount || 0);
+        entry.balance_remaining += (dueAmount - paidAmount);
+        entry.total_paid += paidAmount;
+        if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
+          entry.last_payment = p.created_at;
+        }
+      });
+
+      // Calculate rent owed by tenant
+      return Array.from(byTenant.values())
+        .map((entry: any) => {
+          // Sort payments by month
+          const sorted = entry.payments.sort((a: any, b: any) => {
+            const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+            const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+            const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+            if (aMonth !== bMonth) return aMonth - bMonth;
+            return (a.month_due || '').localeCompare(b.month_due || '');
+          });
+          
+          // Apply paid overdue amounts as offset
+          const paidOverdue = paidOverdueAmounts[entry.id] || 0;
+          const adjustedBalance = entry.balance_remaining - paidOverdue;
+          
+          const finalBalance = adjustedBalance;
+          
+          // Track settlements for notifications
+          const previousBalance = previousBalances[entry.id] || 0;
+          setPreviousBalances(prev => ({
+            ...prev,
+            [entry.id]: finalBalance
+          }));
+          
+          if (previousBalance > 0 && finalBalance <= 0) {
+            setRecentSettlements(prev => [...prev, {
+              tenant: entry.full_name,
+              unit: entry.unit,
+              amount: previousBalance,
+              settlementDate: new Date()
+            }]);
+          }
+          
+          return {
+            ...entry,
+            balance_remaining: Math.abs(finalBalance),
+            payments: sorted
+          };
+        })
+        // Only show truly outstanding (positive) balances
+        .filter((t: any) => t.balance_remaining > 0);
+    }, [payments, tenants]);
 
   const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0);
 
