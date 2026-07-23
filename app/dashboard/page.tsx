@@ -260,27 +260,17 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
 const rentOwedByTenant = useMemo(() => {
       if (!payments || payments.length === 0) return [];
       const tenantMap = new Map<string, any>();
-      (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
-
-      const byTenant = new Map<string, any>();
-      // Track paid overdue amounts per tenant to offset balances
-      const paidOverdueAmounts: {[tenantId: string]: number} = {};
-      
-      // First pass: calculate paid overdue amounts per tenant
-      payments.forEach((p: any) => {
-        if (p.transaction_type === 'overdue' && p.status === 'paid') {
-          const tid = String(p.tenant_id || p.tenant_email || p.tenant || '');
-          if (tid) {
-            paidOverdueAmounts[tid] = (paidOverdueAmounts[tid] || 0) + Number(p.amount || 0);
-          }
-        }
+      (tenants || []).forEach((t: any) => {
+        tenantMap.set(t.id, t);
+        // Also index by email for matching
+        if (t.email) tenantMap.set(t.email, t);
       });
 
+      const byTenant = new Map<string, any>();
+      
       payments.forEach((p: any) => {
         if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
-        // Skip paid overdue payments - they will be used for offset instead
-        if (p.transaction_type === 'overdue' && p.status === 'paid') return;
-        const tid = String(p.tenant_id || p.tenant_email || p.tenant || '');
+        const tid = String(p.tenant_id || p.tenant_email || '');
         if (!tid) return;
         if (!byTenant.has(tid)) {
           const t = tenantMap.get(tid) || {};
@@ -298,21 +288,31 @@ const rentOwedByTenant = useMemo(() => {
         }
         const entry = byTenant.get(tid);
         entry.payments.push(p);
-        // Sum up positive balance_remaining values (what's owed)
-        const currentBalance = Number(p.balance_remaining || 0);
-        if (currentBalance > 0) {
-          entry.balance_remaining += currentBalance;
+        
+        // Check if this payment is fully paid (balance_remaining is 0 or negative)
+        const isPaid = (p.balance_remaining || 0) <= 0;
+        
+        // For unpaid payments, add to outstanding balance
+        if (!isPaid) {
+          const currentBalance = Number(p.balance_remaining || 0);
+          if (currentBalance > 0) {
+            entry.balance_remaining += currentBalance;
+          }
         }
-        // Track total paid amount
+        
+        // Track total paid amount for all non-fully-paid items
         entry.total_paid += Number(p.paid_amount || p.amount || 0);
+        
         if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
           entry.last_payment = p.created_at;
         }
       });
 
-      // Calculate rent owed by tenant: sum positive balances, subtract paid overdue amounts
+      // Calculate rent owed by tenant
       return Array.from(byTenant.values())
         .map((entry: any) => {
+          const tid = entry.id; // Get the tenant ID for state tracking
+          
           // Sort payments by month
           const sorted = entry.payments.sort((a: any, b: any) => {
             const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -322,17 +322,13 @@ const rentOwedByTenant = useMemo(() => {
             return (a.month_due || '').localeCompare(b.month_due || '');
           });
           
-          // Apply paid overdue amounts as offset
-          const paidOverdue = paidOverdueAmounts[entry.id] || 0;
-          const adjustedBalance = entry.balance_remaining - paidOverdue;
-          
-          const finalBalance = adjustedBalance;
+          const finalBalance = entry.balance_remaining;
           
           // Track settlements for notifications
-          const previousBalance = previousBalances[entry.id] || 0;
+          const previousBalance = previousBalances[tid] || 0;
           setPreviousBalances(prev => ({
             ...prev,
-            [entry.id]: finalBalance
+            [tid]: finalBalance
           }));
           
           if (previousBalance > 0 && finalBalance <= 0) {
