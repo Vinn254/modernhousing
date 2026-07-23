@@ -137,19 +137,21 @@ export default function DashboardPage() {
    const [landlordId, setLandlordId] = useState('');
    const [userRole, setUserRole] = useState('');
    const [roleLoaded, setRoleLoaded] = useState(false);
-   const [message, setMessage] = useState('');
-   const [assignedPropertyParam, setAssignedPropertyParam] = useState('');
-   const [utilityTenantId, setUtilityTenantId] = useState('');
-   const [utilityType, setUtilityType] = useState('water');
-   const [utilityAmount, setUtilityAmount] = useState('');
-   const [utilityDescription, setUtilityDescription] = useState('');
-const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'];
-    const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: string}>({});
-    const [waterBills, setWaterBills] = useState<any[]>([]);
-    const [waterMonthDue, setWaterMonthDue] = useState('');
-    const [showModal, setShowModal] = useState(false);
-    const [modalTitle, setModalTitle] = useState('');
-    const [modalContent, setModalContent] = useState<React.ReactNode>(null);
+const [message, setMessage] = useState('');
+  const [assignedPropertyParam, setAssignedPropertyParam] = useState('');
+  const [utilityTenantId, setUtilityTenantId] = useState('');
+  const [utilityType, setUtilityType] = useState('water');
+  const [utilityAmount, setUtilityAmount] = useState('');
+  const [utilityDescription, setUtilityDescription] = useState('');
+  const utilityTypes = ['water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'];
+  const [waterMeterReadings, setWaterMeterReadings] = useState<{[unitId: string]: string}>({});
+  const [waterBills, setWaterBills] = useState<any[]>([]);
+  const [waterMonthDue, setWaterMonthDue] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalContent, setModalContent] = useState<React.ReactNode>(null);
+  const [previousBalances, setPreviousBalances] = useState<{[id: string]: number}>({});
+  const [recentSettlements, setRecentSettlements] = useState<Array<{tenant: string, unit: string, amount: number, settlementDate: Date}>>([]);
 
   const isAgent = roleLoaded && userRole === 'agent';
   const agentPropertyFromStorage = typeof window !== 'undefined' ? localStorage.getItem('agentPropertyId') || '' : '';
@@ -310,6 +312,7 @@ const calculateWithRunningBalance = (paymentsList: any[]) => {
       }
     });
 
+    // Calculate rent owed by tenant
     return Array.from(byTenant.values()).map((entry: any) => {
       const sorted = entry.payments.sort((a: any, b: any) => {
         const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
