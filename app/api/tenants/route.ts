@@ -236,18 +236,23 @@ export async function POST(request: NextRequest) {
   if (nationalIdCheck.data) return NextResponse.json({ message: 'National ID already exists in tenant records.' }, { status: 409 });
   if (kraPinCheck.data) return NextResponse.json({ message: 'KRA PIN already exists in tenant records.' }, { status: 409 });
 
-  // Check if next_of_kin_id or next_of_kin_phone is already used
-  if (nextOfKinId) {
+  // Check if next_of_kin fields are provided - all required fields must be present together
+  const hasNextOfKinInfo = nextOfKinName || nextOfKinId || nextOfKinPhone;
+  if (hasNextOfKinInfo) {
+    // All next of kin fields are required together
+    if (!nextOfKinName || !nextOfKinId || !nextOfKinPhone) {
+      return NextResponse.json({ message: 'Next of Kin requires Name, ID, and Phone number to be provided together.' }, { status: 400 });
+    }
+    
+    // Check if next_of_kin_id or next_of_kin_phone is already used
     const [kinIdCheck, kinPhoneCheck] = await Promise.all([
       supabaseAdmin.from('tenants').select('id').eq('next_of_kin_id', nextOfKinId).maybeSingle(),
-      nextOfKinPhone ? supabaseAdmin.from('tenants').select('id').eq('next_of_kin_phone', nextOfKinPhone).maybeSingle() : { data: null },
+      supabaseAdmin.from('tenants').select('id').eq('next_of_kin_phone', nextOfKinPhone).maybeSingle(),
     ]);
     if (kinIdCheck.data) return NextResponse.json({ message: 'Next of Kin ID is already registered.' }, { status: 409 });
     if (kinPhoneCheck.data) return NextResponse.json({ message: 'Next of Kin Phone is already registered.' }, { status: 409 });
-  }
-
-  // Check if person being added as next_of_kin is already a tenant
-  if (nextOfKinId || nextOfKinPhone || (nextOfKinName && nextOfKinName.toLowerCase() === fullName.toLowerCase())) {
+    
+    // Check if person being added as next_of_kin is already a tenant
     const existingTenant = await supabaseAdmin
       .from('tenants')
       .select('id')
