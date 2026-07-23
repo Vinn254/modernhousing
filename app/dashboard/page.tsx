@@ -312,8 +312,9 @@ const calculateWithRunningBalance = (paymentsList: any[]) => {
       }
     });
 
-    // Calculate rent owed by tenant
-    return Array.from(byTenant.values()).map((entry: any) => {
+// Calculate rent owed by tenant
+  return Array.from(byTenant.values())
+    .map((entry: any) => {
       const sorted = entry.payments.sort((a: any, b: any) => {
         const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
         const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
@@ -321,13 +322,41 @@ const calculateWithRunningBalance = (paymentsList: any[]) => {
         if (aMonth !== bMonth) return aMonth - bMonth;
         return (a.month_due || '').localeCompare(b.month_due || '');
       });
+      
       const withBalance = calculateWithRunningBalance(sorted);
       const finalBalance = withBalance.length > 0 ? withBalance[withBalance.length - 1].running_balance : 0;
-      return { ...entry, balance_remaining: finalBalance, payments: withBalance };
-    }).filter((t: any) => t.balance_remaining < 0).map((t: any) => ({
-      ...t,
-      balance_remaining: Math.abs(t.balance_remaining || 0),
-    }));
+      
+      // Store previous balance for settlement tracking
+      const previousBalance = previousBalances[entry.id] || 0;
+      setPreviousBalances(prev => ({
+        ...prev,
+        [entry.id]: finalBalance
+      }));
+      
+      // Check if this balance transitioned from settled to unpaid (or vice versa)
+      const wasSettled = previousBalance >= 0;
+      const isNowSettled = finalBalance >= 0;
+      
+      // Track settlements
+      if (wasSettled === false && isNowSettled === true && finalBalance === 0) {
+        // Balance transitioned from negative (owed) to positive (settled) → now settled
+        setRecentSettlements(prev => [...prev, {
+          tenant: entry.full_name,
+          unit: entry.unit,
+          amount: Math.abs(previousBalance),
+          settlementDate: new Date()
+        }]);
+      }
+      
+      return {
+        ...entry,
+        balance_remaining: Math.abs(finalBalance),
+        // Add flag to indicate if this balance represents settled amounts
+        _isSettled: finalBalance >= 0
+      };
+    })
+    // Filter to only include truly outstanding (unpaid) balances
+    .filter((t: any) => t.balance_remaining > 0 && t._isSettled === false);
   }, [payments, tenants]);
 
   const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0);
