@@ -253,24 +253,23 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
 // Derive "rent owed" directly from the payments already loaded by the page
    // (the same data the Payment History table uses and which is confirmed
    // correct). This avoids any dependency on /api/dashboard scoping.
-   const VALID_RENT_TYPES = ['rent', 'overdue', 'deposit', 'tenancy_agreement'];
+   const VALID_RENT_TYPES = ['rent', 'overdue'];
 const calculateWithRunningBalance = (paymentsList: any[]) => {
     return paymentsList.map((p: any, index, array) => {
       const isOverdue = p.transaction_type === 'overdue';
       const due = Number(p.due_amount || p.amount || 0);
       const paid = Number(p.amount || 0);
-      const penalty = Number(p.penalty_fee || 0);
       
-      // First transaction: balance = due - paid - penalty
+      // First transaction: balance = due - paid
       // Subsequent transactions: balance = due - (paid - previous_balance)
       if (index === 0) {
-        const balance = due - paid - penalty;
+        const balance = due - paid;
         return { ...p, running_balance: balance };
       } else {
         const prevPayment = array[index - 1];
         const prevBalance = prevPayment.running_balance || 0;
         // Use the user's formula: balance = due - (paid - prevBalance)
-        const balance = due - (paid - prevBalance) - penalty;
+        const balance = due - (paid - prevBalance);
         return { ...p, running_balance: balance };
       }
     });
