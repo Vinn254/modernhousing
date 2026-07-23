@@ -491,11 +491,23 @@ const calculateWithRunningBalance = (paymentsList: any[]) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
 
-    const response = await fetch('/api/tenants', {
+const response = await fetch('/api/tenants', {
        method: 'POST',
        headers,
-       body: JSON.stringify({ propertyId: effectivePropertyId, fullName: agentTenantName, email: agentTenantEmail, phone: agentTenantPhone, unitId: agentTenantUnitId || undefined, leaseStart: agentLeaseStart, leaseEnd: agentLeaseEnd, depositAmount: Number(agentDeposit), nextOfKinName: agentNextOfKinName, nextOfKinId: agentNextOfKinId, nextOfKinPhone: agentNextOfKinPhone }),
-     });
+       body: JSON.stringify({ 
+         propertyId: effectivePropertyId, 
+         fullName: agentTenantName, 
+         email: agentTenantEmail, 
+         phone: agentTenantPhone, 
+         unitId: agentTenantUnitId || undefined, 
+         leaseStart: agentLeaseStart, 
+         leaseEnd: agentLeaseEnd, 
+         depositAmount: Number(agentDeposit), 
+         nextOfKinName: agentNextOfKinName || null, 
+         nextOfKinId: agentNextOfKinId || null, 
+         nextOfKinPhone: agentNextOfKinPhone || null 
+       }),
+      });
 
     const result = await response.json();
 
