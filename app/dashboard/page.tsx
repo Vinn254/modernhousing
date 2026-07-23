@@ -263,10 +263,22 @@ const rentOwedByTenant = useMemo(() => {
       (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
 
       const byTenant = new Map<string, any>();
+      // Track paid overdue amounts per tenant to offset balances
+      const paidOverdueAmounts: {[tenantId: string]: number} = {};
       
+      // First pass: calculate paid overdue amounts per tenant
+      payments.forEach((p: any) => {
+        if (p.transaction_type === 'overdue' && p.status === 'paid') {
+          const tid = String(p.tenant_id || p.tenant_email || p.tenant || '');
+          if (tid) {
+            paidOverdueAmounts[tid] = (paidOverdueAmounts[tid] || 0) + Number(p.amount || 0);
+          }
+        }
+      });
+
       payments.forEach((p: any) => {
         if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
-        // Skip paid overdue payments - they don't contribute to outstanding balance
+        // Skip paid overdue payments - they will be used for offset instead
         if (p.transaction_type === 'overdue' && p.status === 'paid') return;
         const tid = String(p.tenant_id || p.tenant_email || p.tenant || '');
         if (!tid) return;
@@ -286,7 +298,7 @@ const rentOwedByTenant = useMemo(() => {
         }
         const entry = byTenant.get(tid);
         entry.payments.push(p);
-        // Sum up the actual balance_remaining values (positive means owed)
+        // Sum up positive balance_remaining values (what's owed)
         const currentBalance = Number(p.balance_remaining || 0);
         if (currentBalance > 0) {
           entry.balance_remaining += currentBalance;
@@ -298,7 +310,7 @@ const rentOwedByTenant = useMemo(() => {
         }
       });
 
-      // Calculate rent owed by tenant
+      // Calculate rent owed by tenant: sum positive balances, subtract paid overdue amounts
       return Array.from(byTenant.values())
         .map((entry: any) => {
           // Sort payments by month
@@ -310,7 +322,11 @@ const rentOwedByTenant = useMemo(() => {
             return (a.month_due || '').localeCompare(b.month_due || '');
           });
           
-          const finalBalance = entry.balance_remaining;
+          // Apply paid overdue amounts as offset
+          const paidOverdue = paidOverdueAmounts[entry.id] || 0;
+          const adjustedBalance = entry.balance_remaining - paidOverdue;
+          
+          const finalBalance = adjustedBalance;
           
           // Track settlements for notifications
           const previousBalance = previousBalances[entry.id] || 0;
