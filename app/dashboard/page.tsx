@@ -283,6 +283,8 @@ const calculateWithRunningBalance = (paymentsList: any[]) => {
     const byTenant = new Map<string, any>();
     payments.forEach((p: any) => {
       if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
+      // Skip overdue payments that have been paid
+      if (p.transaction_type === 'overdue' && p.status === 'paid') return;
       const tid = String(p.tenant_id || p.tenant_email || p.tenant || '');
       if (!tid) return;
       if (!byTenant.has(tid)) {
