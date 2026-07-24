@@ -201,12 +201,12 @@ export async function GET(request: NextRequest) {
     let agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
 
     if (!authContext.isSuperAdmin) {
-      // Landlords: only see agents assigned to properties they CREATED
-      if (authContext.userId) {
+      // Landlords/Project Managers: see agents assigned to properties they CREATED or own via organization
+      if (authContext.userId || authContext.organizationId) {
         const { data: userProps } = await client
           .from('properties')
           .select('id')
-          .eq('created_by', authContext.userId);
+          .or(`created_by.eq.${authContext.userId ?? ''},organization_id.eq.${authContext.organizationId ?? ''}`);
         const validPropertyIds = new Set((userProps ?? []).map((p: any) => p.id));
 
         agents = agents.filter((agent) => {
@@ -247,16 +247,16 @@ export async function POST(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin) {
-      // Landlords: can only assign agents to properties they CREATED
+      // Landlords/Project Managers: can only assign agents to properties they created or own via organization
       const { data: prop } = await client
         .from('properties')
-        .select('id, created_by')
+        .select('id, created_by, organization_id')
         .eq('id', propertyId)
-        .eq('created_by', authContext.userId ?? '')
+        .or(`created_by.eq.${authContext.userId ?? ''},organization_id.eq.${authContext.organizationId ?? ''}`)
         .maybeSingle();
 
       if (!prop) {
-        return NextResponse.json({ message: 'You can only assign agents to properties you created.' }, { status: 403 });
+        return NextResponse.json({ message: 'You can only assign agents to properties you created or manage.' }, { status: 403 });
       }
     }
 
@@ -300,16 +300,16 @@ export async function PATCH(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin && propertyId) {
-      // Landlords: can only modify agents assigned to properties they CREATED
+      // Landlords/Project Managers: can only modify agents assigned to properties they created or own
       const { data: prop } = await client
         .from('properties')
-        .select('id, created_by')
+        .select('id, created_by, organization_id')
         .eq('id', propertyId)
-        .eq('created_by', authContext.userId ?? '')
+        .or(`created_by.eq.${authContext.userId ?? ''},organization_id.eq.${authContext.organizationId ?? ''}`)
         .maybeSingle();
 
       if (!prop) {
-        return NextResponse.json({ message: 'You can only assign agents to properties you created.' }, { status: 403 });
+        return NextResponse.json({ message: 'You can only assign agents to properties you created or manage.' }, { status: 403 });
       }
     }
 
@@ -348,24 +348,24 @@ export async function DELETE(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin) {
-      // Landlords: can only delete agents assigned to properties they CREATED
+      // Landlords/Project Managers: can only delete agents assigned to properties they CREATED or own
       const users = await getAllAdminUsers();
       const agent = users.find((item) => item.id === userId);
       const agentPropertyId = agent?.user_metadata?.property_id;
 
-      if (agentPropertyId && authContext.userId) {
+      if (agentPropertyId) {
         const { data: prop } = await client
           .from('properties')
           .select('id')
           .eq('id', agentPropertyId)
-          .eq('created_by', authContext.userId)
+          .or(`created_by.eq.${authContext.userId ?? ''},organization_id.eq.${authContext.organizationId ?? ''}`)
           .maybeSingle();
 
         if (!prop) {
-          return NextResponse.json({ message: 'You can only manage agents assigned to properties you created.' }, { status: 403 });
+          return NextResponse.json({ message: 'You can only manage agents assigned to properties you created or manage.' }, { status: 403 });
         }
       } else {
-        return NextResponse.json({ message: 'You can only manage agents assigned to properties you created.' }, { status: 403 });
+        return NextResponse.json({ message: 'You can only manage agents assigned to properties you created or manage.' }, { status: 403 });
       }
     }
 
