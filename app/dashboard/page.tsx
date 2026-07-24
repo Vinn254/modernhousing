@@ -296,9 +296,9 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
         entry.balance_remaining += Math.abs(balanceRem);
       }
 
-      if (p.transaction_type === 'overdue') {
-        entry.paid_overdue_amount += balanceRem <= 0 && paidAmt > 0 ? paidAmt : 0;
-      }
+if (p.transaction_type === 'overdue') {
+         entry.paid_overdue_amount += paidAmt > 0 ? paidAmt : 0;
+       }
 
       if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
         entry.last_payment = p.created_at;
@@ -951,8 +951,8 @@ const response = await fetch('/api/tenants', {
             </div>
 {rentOwedByTenant && rentOwedByTenant.some(t => t.net_balance > 0) ? (
                <div className="table-shell"><table className="landlord-table">
-                 <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Outstanding Balance</th><th>Last Payment</th></tr></thead>
-                 <tbody>{rentOwedByTenant.filter(t => t.net_balance > 0).map(t => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td>{formatCurrency(t.balance_remaining)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
+                 <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Paid Overdue</th><th>Balance</th><th>Outstanding Balance</th><th>Last Payment</th></tr></thead>
+                 <tbody>{rentOwedByTenant.filter(t => t.net_balance > 0).map(t => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td>{t.paid_overdue_amount ? formatCurrency(t.paid_overdue_amount) : '—'}</td><td>{formatCurrency(t.balance_remaining)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
                </table></div>
              ) : <p className="landlord-muted">All tenants have paid.</p>}
           </section>
