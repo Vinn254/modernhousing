@@ -277,7 +277,8 @@ const rentOwedByTenant = useMemo(() => {
             email: t.email || p.tenant_email || '',
             unit: t.unit || p.unit_number || p.unit || null,
             property: t.property || p.property_name || p.property || null,
-            outstanding_rent: 0,
+            balance_remaining: 0,
+            total_paid: 0,
             paid_overdue: 0,
             last_payment: p.created_at || null,
             payments: [] as any[],
@@ -288,16 +289,22 @@ const rentOwedByTenant = useMemo(() => {
         
         const amount = Number(p.amount || 0);
         const balanceRem = Number(p.balance_remaining || 0);
-        const isPaid = balanceRem <= 0;
         
-        // Only unpaid rent payments count toward outstanding balance
-        if (p.transaction_type === 'rent' && !isPaid) {
-          entry.outstanding_rent += balanceRem;
+        // Unpaid payments (balance_remaining > 0) add to the balance owed
+        if (balanceRem > 0) {
+          entry.balance_remaining += balanceRem;
         }
         
         // Paid overdue payments reduce the outstanding rent owed
-        if (p.transaction_type === 'overdue' && isPaid) {
+        // (overdue payments typically cover previous rent arrears)
+        if (p.transaction_type === 'overdue' && balanceRem <= 0) {
           entry.paid_overdue += amount;
+        }
+        
+        // Track total paid (amount - balance_remaining, only positive)
+        if (balanceRem < amount) {
+          const paid = amount - balanceRem;
+          if (paid > 0) entry.total_paid += paid;
         }
         
         // Track last payment date
@@ -313,17 +320,15 @@ const rentOwedByTenant = useMemo(() => {
             const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
             const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
             const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-            if (aMonth !== bMonth) return aMonth - bMonth;
-            return (a.month_due || '').localeCompare(b.month_due || '');
+            if (aMonth !== bMonth) return aMonth - bMonth; return (a.month_due || '').localeCompare(b.month_due || '');
           });
           
-          // Net rent owed = outstanding rent minus paid overdue payments
-          const netBalance = Math.max(entry.outstanding_rent - entry.paid_overdue, 0);
+          // Net rent owed = outstanding rent - paid overdue payments
+          const netBalance = Math.max(entry.balance_remaining - entry.paid_overdue, 0);
           
           return {
             ...entry,
             net_balance: netBalance,
-            balance_remaining: netBalance,
             sorted_payments: sorted
           };
         })
