@@ -623,7 +623,7 @@ const response = await fetch('/api/tenants', {
             <p className="heading">{isAgent ? 'Agent Dashboard' : 'Landlord Dashboard'}</p>
             <p className="subheading">Overview of properties, agents, tenants, payments, balances, and due dates.</p>
           </div>
-          <button type="button" className="btn btn-ghost" style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)' }} onClick={() => loadDashboard(true)} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
+          <button type="button" className="btn btn-ghost" style={{ color: 'var(--ink)', border: '1px solid var(--line)', background: 'var(--line-soft)' }} onClick={() => loadDashboard(true)} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
         </div>
       </div>
 
@@ -633,7 +633,7 @@ const response = await fetch('/api/tenants', {
       {message && <p style={{ color: 'var(--accent)' }}>{message}</p>}
 
       {isAgent && !effectivePropertyId && (
-        <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: '#92400e', marginBottom: 16 }}>No property assigned. Please contact your landlord to assign a property.</p>
+        <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: 'var(--amber)', marginBottom: 16 }}>No property assigned. Please contact your landlord to assign a property.</p>
       )}
 
       {isAgent && effectivePropertyId && (
@@ -772,7 +772,7 @@ const response = await fetch('/api/tenants', {
                           <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.unit}</td>
                           <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.lease_start} → {tenant.lease_end}</td>
                           <td style={{ padding: '14px 12px' }}>
-                            <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(220,38,38,0.1)', color: '#7f1212' }} onClick={() => handleAgentTenantRemove(tenant.id)}>Mark Relocated</button>
+                            <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(220,38,38,0.1)', color: 'var(--rose)' }} onClick={() => handleAgentTenantRemove(tenant.id)}>Mark Relocated</button>
                           </td>
                         </tr>
                       ))}
@@ -931,8 +931,8 @@ const response = await fetch('/api/tenants', {
             </div>
             <div>
               <div className="card-label">Outstanding</div>
-              <h3 style={{ margin: 0, color: '#b91c1c' }}>{formatCurrency(totalBalance)}</h3>
-              <Sparkline data={[0, 10000, totalBalance]} color="#b91c1c" w={80} h={24}/>
+               <h3 style={{ margin: 0, color: 'var(--error)' }}>{formatCurrency(totalBalance)}</h3>
+               <Sparkline data={[0, 10000, totalBalance]} color="#b91c1c" w={80} h={24}/>
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>rent owed</p>
             </div>
           </div>
@@ -980,7 +980,7 @@ const response = await fetch('/api/tenants', {
             </form>
 
             <h3 style={{ marginBottom: 16 }}>Add Agent</h3>
-            {properties.length === 0 ? <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: '#92400e', marginBottom: 16 }}>Add a property first, then assign an agent to that property.</p> : null}
+            {properties.length === 0 ? <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: 'var(--amber)', marginBottom: 16 }}>Add a property first, then assign an agent to that property.</p> : null}
             <form onSubmit={handleAddAgent} className="form-grid">
               <input value={agentName} onChange={(event) => setAgentName(event.target.value)} required placeholder="Agent full name" />
               <input type="email" value={agentEmail} onChange={(event) => setAgentEmail(event.target.value)} required placeholder="Agent email" />
@@ -1000,7 +1000,7 @@ const response = await fetch('/api/tenants', {
                   <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.email}</div>
                   <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.property_name || 'Unassigned'} · {agent.status}</div>
                 </div>
-                <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: agent.status === 'active' ? 'rgba(220,38,38,0.1)' : 'rgba(16,185,129,0.1)', color: agent.status === 'active' ? '#7f1212' : 'var(--accent)' }} onClick={() => handleRemoveAgent(agent.id)} disabled={agent.status !== 'active'}>{agent.status === 'active' ? 'Remove' : 'Removed'}</button>
+                <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: agent.status === 'active' ? 'rgba(220,38,38,0.1)' : 'rgba(16,185,129,0.1)', color: agent.status === 'active' ? 'var(--rose)' : 'var(--accent)' }} onClick={() => handleRemoveAgent(agent.id)} disabled={agent.status !== 'active'}>{agent.status === 'active' ? 'Remove' : 'Removed'}</button>
 </div>
               ))}
             </div>

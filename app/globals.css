@@ -2298,6 +2298,40 @@ footer {
   color: var(--ink);
 }
 
+[data-theme="dark"] .nav-login,
+[data-theme="dark"] .form-grid button,
+[data-theme="dark"] .landlord-add-button,
+[data-theme="dark"] .modal-actions button,
+[data-theme="dark"] .card-cta.accent {
+  color: #fff;
+}
+
+[data-theme="dark"] .nav-login {
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+  border-color: rgba(52,211,153,0.35);
+}
+
+[data-theme="dark"] .form-grid button {
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+  border: none;
+}
+
+[data-theme="dark"] .landlord-add-button {
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+  border: none;
+}
+
+[data-theme="dark"] .modal-actions button {
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+  color: #fff;
+  border: none;
+}
+
+[data-theme="dark"] .card-cta.accent {
+  background: var(--accent);
+  color: #fff;
+}
+
 .sidebar {
    position: fixed;
    inset: 0 auto 0 0;
@@ -3535,6 +3569,37 @@ footer {
 
 [data-theme="dark"] .nav-logout:hover {
   background: rgba(244,63,94,0.15);
+}
+
+[data-theme="dark"] .nav-login {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright)) !important;
+  border-color: rgba(52,211,153,0.35) !important;
+}
+
+[data-theme="dark"] .btn-primary {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright)) !important;
+}
+
+[data-theme="dark"] .form-grid button {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright)) !important;
+}
+
+[data-theme="dark"] .landlord-add-button {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright)) !important;
+}
+
+[data-theme="dark"] .modal-actions button {
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright)) !important;
+}
+
+[data-theme="dark"] .card-cta.accent {
+  color: #fff !important;
+  background: var(--accent) !important;
 }
 
 
