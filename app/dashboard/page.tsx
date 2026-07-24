@@ -255,86 +255,78 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
   }, [roleLoaded, selectedPropertyId, userRole]);
 
 // Derive "rent owed" directly from the payments already loaded by the page
-   // (the same data the Payment History table uses and which is confirmed
-   // correct). This avoids any dependency on /api/dashboard scoping.
-   const VALID_RENT_TYPES = ['rent', 'overdue'];
-   
-const rentOwedByTenant = useMemo(() => {
-      if (!payments || payments.length === 0) return [];
-      const tenantMap = new Map<string, any>();
-      (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
+    // (the same data the Payment History table uses and which is confirmed
+    // correct). This avoids any dependency on /api/dashboard scoping.
+    const paidSum = (payments: any[]) => payments.reduce((sum, p) => sum + Number(p.paid_amount ?? p.amount ?? 0), 0);
+    const VALID_RENT_TYPES = ['rent', 'overdue', 'deposit'];
 
-      const byTenant = new Map<string, any>();
-      
-      payments.forEach((p: any) => {
-        if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
-        const tid = String(p.tenant_id || p.tenant_email || '');
-        if (!tid) return;
-        
-        if (!byTenant.has(tid)) {
-          const t = tenantMap.get(tid) || {};
-          byTenant.set(tid, {
-            id: tid,
-            full_name: t.full_name || p.tenant_name || p.tenant || '',
-            email: t.email || p.tenant_email || '',
-            unit: t.unit || p.unit_number || p.unit || null,
-            property: t.property || p.property_name || p.property || null,
-            balance_remaining: 0,
-            paid_amount: 0,
-            paid_overdue_amount: 0,
-            last_payment: p.created_at || null,
-            payments: [] as any[],
-          });
-        }
-        const entry = byTenant.get(tid);
-        entry.payments.push(p);
-        
+  const rentOwedByTenant = useMemo(() => {
+    if (!payments || payments.length === 0) return [];
+    const tenantMap = new Map<string, any>();
+    (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
 
-const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
-         const balanceRem = Number(p.balance_remaining || 0);
-         
-         // Unpaid payments add to the outstanding balance (negative balance_remaining means still owed)
-          if (balanceRem !== 0) {
-            entry.balance_remaining += Math.abs(balanceRem);
-          }
-         
-         // Paid overdue payments offset what the tenant owes
-          if (p.transaction_type === 'overdue' && Number(p.paid_amount ?? p.amount ?? 0) > 0 && balanceRem <= 0) {
-            entry.paid_overdue_amount += paidAmt;
-          }
-         
-         // Track all payments made
-         entry.paid_amount += paidAmt;
-        
-        
-        // Track last payment date
-        if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
-          entry.last_payment = p.created_at;
-        }
-      });
+    const byTenant = new Map<string, any>();
 
-      return Array.from(byTenant.values())
-        .map((entry: any) => {
-          // Sort payments by due date for presentation
-          const sorted = entry.payments.sort((a: any, b: any) => {
-            const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-            const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-            const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-            if (aMonth !== bMonth) return aMonth - bMonth; return (a.month_due || '').localeCompare(b.month_due || '');
-          });
-          
-          // Net rent owed = outstanding balance - paid overdue payments (cannot go negative)
-          const netBalance = Math.max(entry.balance_remaining - entry.paid_overdue_amount, 0);
-          
-          return {
-            ...entry,
-            net_balance: netBalance,
-            total_paid: entry.paid_amount,
-            sorted_payments: sorted
-          };
-        })
-        .filter((t: any) => t.net_balance > 0);
-    }, [payments, tenants]);
+    payments.forEach((p: any) => {
+      if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
+      const tid = String(p.tenant_id || p.tenant_email || '');
+      if (!tid) return;
+
+      if (!byTenant.has(tid)) {
+        const t = tenantMap.get(tid) || {};
+        byTenant.set(tid, {
+          id: tid,
+          full_name: t.full_name || p.tenant_name || p.tenant || '',
+          email: t.email || p.tenant_email || '',
+          unit: t.unit || p.unit_number || p.unit || null,
+          property: t.property || p.property_name || p.property || null,
+          balance_remaining: 0,
+          paid_overdue_amount: 0,
+          last_payment: p.created_at || null,
+          payments: [] as any[],
+        });
+      }
+      const entry = byTenant.get(tid);
+      entry.payments.push(p);
+
+      const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
+      const balanceRem = Number(p.balance_remaining || 0);
+
+      if (p.transaction_type === 'rent' || p.transaction_type === 'deposit') {
+        entry.balance_remaining += Math.abs(balanceRem);
+      }
+
+      if (p.transaction_type === 'overdue') {
+        entry.paid_overdue_amount += balanceRem <= 0 && paidAmt > 0 ? paidAmt : 0;
+      }
+
+      if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
+        entry.last_payment = p.created_at;
+      }
+    });
+
+    return Array.from(byTenant.values())
+      .map((entry: any) => {
+        const sorted = entry.payments.sort((a: any, b: any) => {
+          const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+          const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+          const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+          if (aMonth !== bMonth) return aMonth - bMonth; return (a.month_due || '').localeCompare(b.month_due || '');
+        });
+
+        const total_paid = paidSum(entry.payments);
+        const netBalance = Math.max(entry.balance_remaining - entry.paid_overdue_amount, 0);
+
+        return {
+          ...entry,
+          total_paid,
+          balance_remaining: entry.balance_remaining,
+          net_balance: netBalance,
+          sorted_payments: sorted
+        };
+      })
+      .filter((t: any) => t.net_balance > 0);
+  }, [payments, tenants]);
 
   const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.net_balance || 0), 0);
 

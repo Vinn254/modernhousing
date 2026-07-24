@@ -3582,16 +3582,8 @@ footer {
   background: linear-gradient(135deg, var(--accent), var(--accent-bright)) !important;
 }
 
-[data-theme="dark"] .form-grid button {
-  color: #fff !important;
-  background: linear-gradient(135deg, var(--accent), var(--accent-bright)) !important;
-}
-
-[data-theme="dark"] .landlord-add-button {
-  color: #fff !important;
-  background: linear-gradient(135deg, var(--accent), var(--accent-bright)) !important;
-}
-
+[data-theme="dark"] .form-grid button,
+[data-theme="dark"] .landlord-add-button,
 [data-theme="dark"] .modal-actions button {
   color: #fff !important;
   background: linear-gradient(135deg, var(--accent), var(--accent-bright)) !important;
@@ -3600,6 +3592,30 @@ footer {
 [data-theme="dark"] .card-cta.accent {
   color: #fff !important;
   background: var(--accent) !important;
+}
+
+[data-theme="dark"] .landlord-table th,
+[data-theme="dark"] .landlord-table td,
+[data-theme="dark"] .table-card th,
+[data-theme="dark"] .table-card td,
+[data-theme="dark"] .landlord-name,
+[data-theme="dark"] .landlord-muted,
+[data-theme="dark"] .table-empty,
+[data-theme="dark"] .modal-title-row h3,
+[data-theme="dark"] .renewal-pill,
+[data-theme="dark"] .status-pill,
+[data-theme="dark"] .pill {
+  color: #000 !important;
+}
+
+[data-theme="dark"] .menu-toggle {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .theme-toggle {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--line-soft);
 }
 
 
