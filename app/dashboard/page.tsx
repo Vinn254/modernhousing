@@ -294,14 +294,14 @@ const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
          const balanceRem = Number(p.balance_remaining || 0);
          
          // Unpaid payments add to the outstanding balance (negative balance_remaining means still owed)
-         if (balanceRem < 0) {
-           entry.balance_remaining += Math.abs(balanceRem);
-         }
+          if (balanceRem !== 0) {
+            entry.balance_remaining += Math.abs(balanceRem);
+          }
          
          // Paid overdue payments offset what the tenant owes
-         if (p.transaction_type === 'overdue' && balanceRem <= 0) {
-           entry.paid_overdue_amount += paidAmt;
-         }
+          if (p.transaction_type === 'overdue' && Number(p.paid_amount ?? p.amount ?? 0) > 0 && balanceRem <= 0) {
+            entry.paid_overdue_amount += paidAmt;
+          }
          
          // Track all payments made
          entry.paid_amount += paidAmt;
