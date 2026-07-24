@@ -287,7 +287,8 @@ const rentOwedByTenant = useMemo(() => {
         const entry = byTenant.get(tid);
         entry.payments.push(p);
         
-const amount = Number(p.amount || 0);
+
+         const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
          const balanceRem = Number(p.balance_remaining || 0);
          
          // Unpaid payments add to the outstanding balance (negative balance_remaining means still owed)
@@ -297,12 +298,12 @@ const amount = Number(p.amount || 0);
          
          // Paid overdue payments offset what the tenant owes
          if (p.transaction_type === 'overdue' && balanceRem <= 0) {
-           entry.paid_overdue_amount += amount;
+           entry.paid_overdue_amount += paidAmt;
          }
+         
+         // Track all payments made
+         entry.paid_amount += paidAmt;
         
-        // Track all payments made
-        const paid = Math.max(0, amount - balanceRem);
-        entry.paid_amount += paid;
         
         // Track last payment date
         if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
@@ -1045,3 +1046,16 @@ const response = await fetch('/api/tenants', {
       </main>
     );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
