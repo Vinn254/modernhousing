@@ -3618,6 +3618,28 @@ footer {
   background: var(--line-soft);
 }
 
+[data-theme="dark"] .card,
+[data-theme="dark"] .bento-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+[data-theme="dark"] .card > *,
+[data-theme="dark"] .bento-card > * {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .btn-ghost {
+  background: var(--line-soft);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .btn-ghost:hover {
+  background: var(--line);
+}
+
 
 
 
