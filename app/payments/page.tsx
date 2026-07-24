@@ -696,7 +696,7 @@ export default function PaymentsPage() {
           }
         }
       `}</style>
-      <main className="container">
+      <main className="container auth-bg">
         <div className="card-admin-header">
           <p className="heading">Rent Payments</p>
           <p className="subheading">Record rent transactions, track balances, and view payment history.</p>
@@ -1014,6 +1014,14 @@ export default function PaymentsPage() {
           )}
         </article>
       </main>
+
+      <footer>
+        <div className="footer-inner">
+          <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
+          <div className="footer-links"></div>
+          <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
+        </div>
+      </footer>
     </>
   );
 }

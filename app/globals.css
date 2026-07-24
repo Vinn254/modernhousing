@@ -3747,11 +3747,30 @@ footer {
 [data-theme="dark"] .card-feat-3 { 
   background: linear-gradient(135deg, #92400e 0%, #78350f 100%) !important;
 }
-[data-theme="dark"] .card-feat-4 { 
+[data-theme="dark"] .card-feat-4 {
   background: linear-gradient(135deg, #5b21b6 0%, #4c1d95 100%) !important;
 }
-  background: var(--line);
-}
+
+
+ 
+
+
+ 
+
+
+ 
+
+
+ 
+
+
+ 
+
+
+ 
+
+
+
 
 
 
