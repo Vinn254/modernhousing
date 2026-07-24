@@ -6,12 +6,10 @@ import { supabase } from '../../../lib/supabaseClient';
 
 interface AnalyticsData {
   properties: number;
-  occupiedUnits: number;
-  vacantUnits: number;
-  totalRentOwed: number;
   subscribedLandlords: number;
   totalLandlords: number;
-  totalPayments: number;
+  totalSubscriptions: number;
+  subscriptionOwed: number;
 }
 
 interface PropertyRow {
@@ -28,12 +26,10 @@ type PeriodKey = (typeof periodOptions)[number];
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData>({
     properties: 0,
-    occupiedUnits: 0,
-    vacantUnits: 0,
-    totalRentOwed: 0,
     subscribedLandlords: 0,
     totalLandlords: 0,
-    totalPayments: 0,
+    totalSubscriptions: 0,
+    subscriptionOwed: 0,
   });
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodKey>('3M');
@@ -56,41 +52,36 @@ export default function AnalyticsPage() {
     return () => window.clearInterval(interval);
   }, []);
 
-  const totalUnits = data.occupiedUnits + data.vacantUnits;
-  const occupancyRate = totalUnits > 0 ? Math.round((data.occupiedUnits / totalUnits) * 100) : 0;
-  const vacantUnits = Math.max(data.vacantUnits, 0);
-  const totalRentOwed = Math.max(0, data.totalRentOwed || 0);
-
-  const kpis = useMemo(() => [
+const kpis = useMemo(() => [
     {
-      title: 'Unit Occupancy',
-      value: `${data.occupiedUnits}/${totalUnits}`,
+      title: 'Property Registered',
+      value: String(data.properties),
       change: '+4.2%',
       trend: 'up' as const,
       tone: '#10b981',
     },
     {
-      title: 'Occupancy Rate',
-      value: `${occupancyRate}%`,
+      title: 'Subscription Owed',
+      value: `KSH ${Math.max(0, data.subscriptionOwed || 0).toLocaleString()}`,
       change: '+2.1%',
       trend: 'up' as const,
       tone: '#2563eb',
     },
     {
-      title: 'Total Rent Owed',
-      value: `KSH ${totalRentOwed.toLocaleString()}`,
+      title: 'Total Subscriptions',
+      value: `KSH ${data.totalSubscriptions.toLocaleString()}`,
       change: '+6.4%',
       trend: 'up' as const,
       tone: '#7c3aed',
     },
     {
-      title: 'Total Payments',
-      value: `KSH ${data.totalPayments.toLocaleString()}`,
+      title: 'Active Landlords',
+      value: `${data.subscribedLandlords}/${data.totalLandlords}`,
       change: '+8.1%',
       trend: 'up' as const,
       tone: '#0ea5e9',
     },
-  ], [data.occupiedUnits, occupancyRate, totalRentOwed, totalUnits, data.totalPayments]);
+  ], [data.properties, data.subscriptionOwed, data.totalSubscriptions, data.subscribedLandlords, data.totalLandlords]);
 
   const revenueSeries = [42, 58, 64, 73, 81, 89];
   const occupancySeries = [72, 74, 76, 79, 81, 85];

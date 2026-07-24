@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
     let unitsQuery: any = supabaseAdmin.from('units').select('id, occupancy_status, property_id, rent_amount');
     let tenantsQuery: any = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
     let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
-    let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status, email, plan').eq('status', 'paid');
+    let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status, email, plan, amount').eq('status', 'paid');
 
     // For landlords, filter by properties they CREATED
     let propIds: string[] = [];
@@ -131,28 +131,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const [{ data: propertiesData }, { data: unitsData }, { data: tenantsData }, { data: paymentsData }, { data: subscriptionsData }, { data: unitsForVacant }, { data: tenantsForOwed }] = await Promise.all([
+    const [{ data: propertiesData }, { data: unitsData }, { data: tenantsData }, { data: paymentsData }, { data: subscriptionsData }] = await Promise.all([
       propertiesQuery,
       unitsQuery,
       tenantsQuery,
       paymentsQuery,
       subscriptionsQuery,
-      propIds.length > 0 
-        ? supabaseAdmin.from('units').select('id, unit_number, occupancy_status, rent_amount, property_id').eq('occupancy_status', 'vacant').in('property_id', propIds)
-        : supabaseAdmin.from('units').select('id').eq('property_id', 'none'),
-      supabaseAdmin.from('tenants').select(`
-        id, full_name, email, lease_start,
-        units!inner(unit_number, rent_amount, property_id)
-      `).then(async (result) => {
-        if (propIds.length > 0) {
-          const unitIds = (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map((u: any) => u.id) ?? [];
-          return await supabaseAdmin.from('tenants').select(`
-            id, full_name, email, lease_start,
-            units!inner(unit_number, rent_amount, property_id)
-          `).in('unit_id', unitIds);
-        }
-        return { data: [] };
-      }),
     ]);
 
     const allTenants = tenantsData ?? [];
@@ -166,25 +150,16 @@ export async function GET(request: NextRequest) {
           .map((property: any) => property.id)
       : (effectivePropertyId ? [effectivePropertyId] : propIds);
 
-    const relevantUnits = (allUnits ?? []).filter((unit: any) => relevantPropertyIds.includes(unit.property_id));
-    const occupiedUnits = relevantUnits.filter((u: any) => u.occupancy_status === 'occupied').length;
-    const vacantUnits = relevantUnits.length - occupiedUnits;
-    const totalRentOwed = relevantUnits
-      .filter((u: any) => u.occupancy_status === 'occupied')
-      .reduce((sum: number, unit: any) => sum + toNumber(unit.rent_amount), 0);
-
-    // Filter vacant units by the relevant properties only
-    const vacantUnitsFiltered = (unitsForVacant ?? []).filter((u: any) => relevantPropertyIds.includes(u.property_id));
-
-    // Filter tenants for rent owed by the relevant properties only
-    const tenantsForOwedFiltered = (tenantsForOwed ?? []).filter((t: any) => relevantPropertyIds.includes(t.units?.property_id));
-
     const propertyCount = effectivePropertyId ? 1 : (relevantPropertyIds.length || (propertiesData?.length ?? 0));
     const subscribedLandlords = activeSubscriptions.length;
-    const totalLandlords = isSuperAdmin ? subscribedLandlords : (propertiesData?.length ?? 0) || subscribedLandlords;
+    const totalLandlords = (propertiesData?.length ?? 0) || subscribedLandlords;
     const financialPayments = (paymentsData ?? []).filter((p: any) => !nonPaymentTypes.includes(p.transaction_type));
-    const totalPayments = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0);
-    const totalBalance = financialPayments.reduce((sum: number, payment: any) => sum + toNumber(payment.balance_remaining), 0);
+    const totalPayments = financialPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount), 0);
+    const totalBalance = financialPayments.reduce((sum: number, p: any) => sum + toNumber(p.balance_remaining), 0);
+    const totalSubscriptions = activeSubscriptions.reduce((sum: number, s: any) => sum + toNumber(s.amount ?? s.plan?.amount ?? 0), 0);
+    const subscriptionOwed = (propertiesData ?? [])
+      .filter((p: any) => !subscribedAdminIds.includes(p.created_by))
+      .reduce((sum: number, prop: any) => sum + 5000, 0);
 
     const paymentsByTenant = new Map<string, number>();
     financialPayments.forEach((payment: any) => {
@@ -210,44 +185,16 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const vacantUnitsList = vacantUnitsFiltered.map((u: any) => ({
-      unit_number: u.unit_number,
-      property_name: (propertiesData ?? []).find((p: any) => p.id === u.property_id)?.name ?? '—',
-      rent_amount: u.rent_amount ?? 0,
-    }));
-
-    const rentOwedByTenant = tenantsForOwedFiltered.map((tenant: any) => {
-      const tenantPayments = (paymentsData ?? []).filter((p: any) => p.tenant_id === tenant.id);
-      const totalPaid = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.amount), 0);
-      const expectedRent = toNumber(tenant.units?.rent_amount ?? 0);
-      const balance = tenantPayments.reduce((sum: number, p: any) => sum + toNumber(p.balance_remaining), 0);
-      return {
-        id: tenant.id,
-        full_name: tenant.full_name,
-        email: tenant.email,
-        unit: tenant.units?.unit_number ?? '—',
-        property: tenant.units?.properties?.name ?? '—',
-        total_paid: totalPaid,
-        rent_amount: expectedRent,
-        balance_remaining: balance,
-        last_payment: tenantPayments.sort((a: any, b: any) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0]?.created_at ?? null,
-      };
-    });
-
     return NextResponse.json({
       properties: propertyCount,
       agents: 0,
       tenants: allTenants.length,
       total_payments: totalPayments,
       total_balance: totalBalance,
-      occupiedUnits,
-      vacantUnits,
-      totalRentOwed,
-      vacantUnitsList,
-      rentOwedByTenant,
       subscribedLandlords,
       totalLandlords,
-      totalPayments: paymentsData?.length ?? 0,
+      totalSubscriptions,
+      subscriptionOwed,
       tenants_with_analytics: tenantsWithAnalytics,
     });
   } catch (error) {
@@ -257,12 +204,10 @@ export async function GET(request: NextRequest) {
       tenants: 0,
       total_payments: 0,
       total_balance: 0,
-      occupiedUnits: 0,
-      vacantUnits: 0,
-      totalRentOwed: 0,
       subscribedLandlords: 0,
       totalLandlords: 0,
-      totalPayments: 0,
+      totalSubscriptions: 0,
+      subscriptionOwed: 0,
       tenants_with_analytics: [],
       message: error instanceof Error ? error.message : 'Unable to load dashboard',
     });

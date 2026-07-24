@@ -2156,8 +2156,20 @@ body {
 footer {
   background: linear-gradient(90deg, var(--navy-900), var(--navy-800));
   color: var(--navy-300);
-  padding: 40px 28px 32px;
+  padding: 24px 28px;
+  margin-top: auto;
 }
+
+main {
+  flex: 1;
+}
+
+body, #__next, .page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .footer-inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -2173,10 +2185,8 @@ footer {
   color: #fff;
 }
 .footer-links {
-  display: flex; gap: 24px;
-  font-size: 13px;
+  display: none;
 }
-.footer-links a:hover { color: #fff; }
 .footer-copy {
   font-size: 12.5px;
   color: var(--navy-400);
