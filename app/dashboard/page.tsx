@@ -257,58 +257,7 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
    // correct). This avoids any dependency on /api/dashboard scoping.
    const VALID_RENT_TYPES = ['rent', 'overdue'];
    
-const rentOwedByTenant = useMemo(() => {
-      if (!payments || payments.length === 0) return [];
-      const tenantMap = new Map<string, any>();
-      (tenants || []).forEach((t: any) => {
-        tenantMap.set(t.id, t);
-        // Also index by email for matching
-        if (t.email) tenantMap.set(t.email, t);
-      });
-
-      const byTenant = new Map<string, any>();
-      
-      payments.forEach((p: any) => {
-        if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
-        const tid = String(p.tenant_id || p.tenant_email || '');
-        if (!tid) return;
-        if (!byTenant.has(tid)) {
-          const t = tenantMap.get(tid) || {};
-          byTenant.set(tid, {
-            id: tid,
-            full_name: t.full_name || p.tenant_name || p.tenant || '',
-            email: t.email || p.tenant_email || '',
-            unit: t.unit || p.unit_number || p.unit || null,
-            property: t.property || p.property_name || p.property || null,
-            total_paid: 0,
-            balance_remaining: 0,
-            last_payment: p.created_at || null,
-            payments: [] as any[],
-          });
-        }
-        const entry = byTenant.get(tid);
-        entry.payments.push(p);
-        
-        // Check if this payment is fully paid (balance_remaining is 0 or negative)
-        const isPaid = (p.balance_remaining || 0) <= 0;
-        
-        // For unpaid payments, add to outstanding balance
-        if (!isPaid) {
-          const currentBalance = Number(p.balance_remaining || 0);
-          if (currentBalance > 0) {
-            entry.balance_remaining += currentBalance;
-          }
-        }
-        
-        // Track total paid amount for all non-fully-paid items
-        entry.total_paid += Number(p.paid_amount || p.amount || 0);
-        
-        if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
-          entry.last_payment = p.created_at;
-        }
-      });
-
-      const rentOwedByTenant = useMemo(() => {
+   const rentOwedByTenant = useMemo(() => {
       if (!payments || payments.length === 0) return [];
       const tenantMap = new Map<string, any>();
       (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
@@ -360,7 +309,7 @@ const rentOwedByTenant = useMemo(() => {
           }
           
           // For all processes, track how much was paid toward balances
-          entry.total_paid += PaymentAmount;
+          entry.total_paid += paymentAmount;
         }
       });
 
