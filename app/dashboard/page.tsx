@@ -695,7 +695,7 @@ const response = await fetch('/api/tenants', {
             </div>
           </section>
 
-<section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
+<section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18, marginTop: 24 }}>
             <div className="card card-feat-1">
               <div className="card-label">Tenant Management</div>
               <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
@@ -775,8 +775,8 @@ const response = await fetch('/api/tenants', {
             </div>
           </section>
 
-          <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
-            <div className="card">
+          <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18, marginTop: 24 }}>
+            <div className="card card-feat-8">
               <div className="card-label">Overdue Notifications</div>
               <h3 style={{ marginBottom: 16 }}>Send Notice</h3>
               <form onSubmit={handleSendNotification} className="form-grid">
@@ -798,7 +798,7 @@ const response = await fetch('/api/tenants', {
               ))}
             </div>
 
-            <div className="card">
+            <div className="card card-feat-9">
               <div className="card-label">Water Bills</div>
               <h3 style={{ marginBottom: 16 }}>Recent Water Billing</h3>
               {waterBills.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No water bills generated yet.</p> : (
@@ -960,7 +960,7 @@ const response = await fetch('/api/tenants', {
       )}
 
 {!isAgent && (
-        <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
+        <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18, marginTop: 24 }}>
           <div className="card card-feat-4">
             <div className="card-label">Properties and Agents</div>
             <h3 style={{ marginBottom: 16 }}>Add Property</h3>

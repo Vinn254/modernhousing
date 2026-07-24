@@ -77,20 +77,20 @@ export default function AnalyticsPage() {
       tone: '#2563eb',
     },
     {
-      title: 'Vacant Units',
-      value: String(vacantUnits),
-      change: '-1.0%',
-      trend: 'down' as const,
-      tone: '#f59e0b',
-    },
-    {
       title: 'Total Rent Owed',
-      value: `$${totalRentOwed.toLocaleString()}`,
+      value: `KSH ${totalRentOwed.toLocaleString()}`,
       change: '+6.4%',
       trend: 'up' as const,
       tone: '#7c3aed',
     },
-  ], [data.occupiedUnits, occupancyRate, totalRentOwed, totalUnits, vacantUnits]);
+    {
+      title: 'Total Payments',
+      value: `KSH ${data.totalPayments.toLocaleString()}`,
+      change: '+8.1%',
+      trend: 'up' as const,
+      tone: '#0ea5e9',
+    },
+  ], [data.occupiedUnits, occupancyRate, totalRentOwed, totalUnits, data.totalPayments]);
 
   const revenueSeries = [42, 58, 64, 73, 81, 89];
   const occupancySeries = [72, 74, 76, 79, 81, 85];
@@ -120,10 +120,10 @@ export default function AnalyticsPage() {
   const occupancyAreaPath = `${occupancyPath} L ${chartWidth - chartPadding} ${chartHeight - chartPadding} L ${chartPadding} ${chartHeight - chartPadding} Z`;
 
   const propertyRows: PropertyRow[] = [
-    { name: 'Harbor View', occupancy: 96, rating: 4.8, revenue: '$24.2K', status: 'Stable' },
-    { name: 'Lakeside Residences', occupancy: 88, rating: 4.6, revenue: '$18.9K', status: 'Stable' },
-    { name: 'Maple Court', occupancy: 71, rating: 4.2, revenue: '$12.4K', status: 'Watch' },
-    { name: 'Sunset Villas', occupancy: 63, rating: 3.9, revenue: '$8.7K', status: 'At Risk' },
+    { name: 'Harbor View', occupancy: 96, rating: 4.8, revenue: 'KSH 24.2K', status: 'Stable' },
+    { name: 'Lakeside Residences', occupancy: 88, rating: 4.6, revenue: 'KSH 18.9K', status: 'Stable' },
+    { name: 'Maple Court', occupancy: 71, rating: 4.2, revenue: 'KSH 12.4K', status: 'Watch' },
+    { name: 'Sunset Villas', occupancy: 63, rating: 3.9, revenue: 'KSH 8.7K', status: 'At Risk' },
   ];
 
   const propertyMixData = [
@@ -176,8 +176,8 @@ export default function AnalyticsPage() {
           ))}
         </section>
 
-        <section style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.9fr', gap: 20, marginBottom: 20 }}>
-          <article className="card" style={{ padding: 18 }}>
+<section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 20, marginBottom: 20 }}>
+          <article className="card card-feat-10" style={{ padding: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div>
                 <div className="card-label">Revenue</div>
@@ -201,7 +201,7 @@ export default function AnalyticsPage() {
             </div>
           </article>
 
-          <article className="card" style={{ padding: 18 }}>
+          <article className="card card-feat-3" style={{ padding: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div>
                 <div className="card-label">Property Mix</div>
@@ -222,8 +222,8 @@ export default function AnalyticsPage() {
           </article>
         </section>
 
-        <section style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 20 }}>
-          <article className="card" style={{ padding: 18 }}>
+<section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 20 }}>
+          <article className="card card-feat-1" style={{ padding: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div>
                 <div className="card-label">Occupancy</div>
@@ -243,7 +243,7 @@ export default function AnalyticsPage() {
             </div>
           </article>
 
-          <article className="card" style={{ padding: 18 }}>
+          <article className="card card-feat-2" style={{ padding: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div>
                 <div className="card-label">Property performance</div>
