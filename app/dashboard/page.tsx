@@ -278,8 +278,8 @@ const rentOwedByTenant = useMemo(() => {
             unit: t.unit || p.unit_number || p.unit || null,
             property: t.property || p.property_name || p.property || null,
             balance_remaining: 0,
-            total_paid: 0,
-            paid_overdue: 0,
+            paid_amount: 0,
+            paid_overdue_amount: 0,
             last_payment: p.created_at || null,
             payments: [] as any[],
           });
@@ -290,22 +290,19 @@ const rentOwedByTenant = useMemo(() => {
         const amount = Number(p.amount || 0);
         const balanceRem = Number(p.balance_remaining || 0);
         
-        // Unpaid payments (balance_remaining > 0) add to the balance owed
+        // Unpaid payments (balance_remaining > 0) add to the outstanding balance
         if (balanceRem > 0) {
           entry.balance_remaining += balanceRem;
         }
         
-        // Paid overdue payments reduce the outstanding rent owed
-        // (overdue payments typically cover previous rent arrears)
+        // Paid overdue payments offset what the tenant owes
         if (p.transaction_type === 'overdue' && balanceRem <= 0) {
-          entry.paid_overdue += amount;
+          entry.paid_overdue_amount += amount;
         }
         
-        // Track total paid (amount - balance_remaining, only positive)
-        if (balanceRem < amount) {
-          const paid = amount - balanceRem;
-          if (paid > 0) entry.total_paid += paid;
-        }
+        // Track all payments made
+        const paid = Math.max(0, amount - balanceRem);
+        entry.paid_amount += paid;
         
         // Track last payment date
         if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
@@ -323,12 +320,13 @@ const rentOwedByTenant = useMemo(() => {
             if (aMonth !== bMonth) return aMonth - bMonth; return (a.month_due || '').localeCompare(b.month_due || '');
           });
           
-          // Net rent owed = outstanding rent - paid overdue payments
-          const netBalance = Math.max(entry.balance_remaining - entry.paid_overdue, 0);
+          // Net rent owed = outstanding balance - paid overdue payments (cannot go negative)
+          const netBalance = Math.max(entry.balance_remaining - entry.paid_overdue_amount, 0);
           
           return {
             ...entry,
             net_balance: netBalance,
+            total_paid: entry.paid_amount,
             sorted_payments: sorted
           };
         })
