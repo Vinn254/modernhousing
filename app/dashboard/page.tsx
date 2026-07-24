@@ -15,7 +15,7 @@ interface DashboardStats {
   occupiedUnits: number;
   vacantUnits: number;
   vacantUnitsList?: Array<{ unit_number: string; property_name: string; rent_amount: number }>;
-  rentOwedByTenant?: Array<{ id: string; full_name: string; email: string; unit: string; property: string; total_paid: number; rent_amount: number; balance_remaining: number; last_payment: string | null }>;
+  rentOwedByTenant?: Array<{ id: string; full_name: string; email: string; unit: string; property: string; total_paid: number; balance_remaining: number; net_balance: number; last_payment: string | null }>;
   tenants_with_analytics: Array<{ id: string; payment_count: number; due_date: string }>;
 }
 
