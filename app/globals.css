@@ -27,6 +27,30 @@
   --shell-width: 264px;
 }
 
+[data-theme="dark"] {
+  --navy-900: #0f172a;
+  --navy-800: #1e293b;
+  --navy-700: #334155;
+  --navy-600: #475569;
+  --navy-400: #94a3b8;
+  --navy-300: #cbd5e1;
+  --accent: #10b981;
+  --accent-bright: #34d399;
+  --accent-soft: rgba(16, 185, 129, 0.15);
+  --accent-glow: rgba(16, 185, 129, 0.3);
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --line: #334155;
+  --line-soft: #1e293b;
+  --ink: #f1f5f9;
+  --ink-2: #e2e8f0;
+  --ink-3: #cbd5e1;
+  --ink-4: #94a3b8;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+  --error: #f87171;
+}
+
 * { box-sizing: border-box; }
 
 *:focus-visible {
@@ -2237,6 +2261,23 @@ footer {
    align-items: center;
    justify-content: center;
  }
+
+.theme-toggle {
+   width: 44px; height: 44px;
+   border-radius: 14px;
+   border: 1px solid rgba(255, 255, 255, 0.1);
+   background: rgba(255, 255, 255, 0.15);
+   color: #fff;
+   cursor: pointer;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+  }
+
+[data-theme="dark"] .app-header,
+[data-theme="dark"] .sidebar {
+   background: var(--navy-900) !important;
+}
 
 .sidebar {
    position: fixed;

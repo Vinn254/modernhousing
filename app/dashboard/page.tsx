@@ -287,18 +287,18 @@ const rentOwedByTenant = useMemo(() => {
         const entry = byTenant.get(tid);
         entry.payments.push(p);
         
-        const amount = Number(p.amount || 0);
-        const balanceRem = Number(p.balance_remaining || 0);
-        
-        // Unpaid payments (balance_remaining > 0) add to the outstanding balance
-        if (balanceRem > 0) {
-          entry.balance_remaining += balanceRem;
-        }
-        
-        // Paid overdue payments offset what the tenant owes
-        if (p.transaction_type === 'overdue' && balanceRem <= 0) {
-          entry.paid_overdue_amount += amount;
-        }
+const amount = Number(p.amount || 0);
+         const balanceRem = Number(p.balance_remaining || 0);
+         
+         // Unpaid payments add to the outstanding balance (negative balance_remaining means still owed)
+         if (balanceRem < 0) {
+           entry.balance_remaining += Math.abs(balanceRem);
+         }
+         
+         // Paid overdue payments offset what the tenant owes
+         if (p.transaction_type === 'overdue' && balanceRem <= 0) {
+           entry.paid_overdue_amount += amount;
+         }
         
         // Track all payments made
         const paid = Math.max(0, amount - balanceRem);
@@ -333,7 +333,7 @@ const rentOwedByTenant = useMemo(() => {
         .filter((t: any) => t.net_balance > 0);
     }, [payments, tenants]);
 
-  const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0);
+  const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.net_balance || 0), 0);
 
   const monthlyPayments = useMemo(() => {
     const months: { label: string; value: number }[] = [];
@@ -954,12 +954,12 @@ const response = await fetch('/api/tenants', {
             <div className="card-admin-header" style={{ marginBottom: 16 }}>
               <div><span className="landlord-kicker">Rent Owed</span><h2>Tenants with Outstanding Balances</h2></div>
             </div>
-            {rentOwedByTenant && rentOwedByTenant.some(t => t.balance_remaining > 0) ? (
-              <div className="table-shell"><table className="landlord-table">
-                <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Last Payment</th></tr></thead>
-                <tbody>{rentOwedByTenant.filter(t => t.balance_remaining > 0).map(t => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.balance_remaining)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
-              </table></div>
-            ) : <p className="landlord-muted">All tenants have paid.</p>}
+{rentOwedByTenant && rentOwedByTenant.some(t => t.net_balance > 0) ? (
+               <div className="table-shell"><table className="landlord-table">
+                 <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Last Payment</th></tr></thead>
+                 <tbody>{rentOwedByTenant.filter(t => t.net_balance > 0).map(t => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
+               </table></div>
+             ) : <p className="landlord-muted">All tenants have paid.</p>}
           </section>
         </>
       )}
