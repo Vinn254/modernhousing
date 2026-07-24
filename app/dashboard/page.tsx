@@ -257,7 +257,7 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
    // correct). This avoids any dependency on /api/dashboard scoping.
    const VALID_RENT_TYPES = ['rent', 'overdue'];
    
-   const rentOwedByTenant = useMemo(() => {
+const rentOwedByTenant = useMemo(() => {
       if (!payments || payments.length === 0) return [];
       const tenantMap = new Map<string, any>();
       (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
@@ -277,10 +277,8 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
             email: t.email || p.tenant_email || '',
             unit: t.unit || p.unit_number || p.unit || null,
             property: t.property || p.property_name || p.property || null,
-            total_rent: 0,
-            total_paid_on_rent: 0,
-            total_overdue_paid: 0,
-            balance_remaining: 0,
+            outstanding_rent: 0,
+            paid_overdue: 0,
             last_payment: p.created_at || null,
             payments: [] as any[],
           });
@@ -292,20 +290,14 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
         const balanceRem = Number(p.balance_remaining || 0);
         const isPaid = balanceRem <= 0;
         
-        // Track rent obligations
-        if (p.transaction_type === 'rent') {
-          entry.total_rent += amount;
-          // Track how much has been paid on this rent payment
-          if (isPaid) {
-            entry.total_paid_on_rent += amount;
-          } else {
-            entry.total_paid_on_rent += (amount - balanceRem);
-          }
+        // Only unpaid rent payments count toward outstanding balance
+        if (p.transaction_type === 'rent' && !isPaid) {
+          entry.outstanding_rent += balanceRem;
         }
         
-        // Track overdue payments that have been paid (these offset rent owed)
+        // Paid overdue payments reduce the outstanding rent owed
         if (p.transaction_type === 'overdue' && isPaid) {
-          entry.total_overdue_paid += amount;
+          entry.paid_overdue += amount;
         }
         
         // Track last payment date
@@ -325,13 +317,13 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
             return (a.month_due || '').localeCompare(b.month_due || '');
           });
           
-          // Calculate net rent owed: total rent - payments made on rent - overdue payments made
-          const netBalance = entry.total_rent - entry.total_paid_on_rent - entry.total_overdue_paid;
+          // Net rent owed = outstanding rent minus paid overdue payments
+          const netBalance = Math.max(entry.outstanding_rent - entry.paid_overdue, 0);
           
           return {
             ...entry,
-            net_balance: netBalance > 0 ? netBalance : 0,
-            balance_remaining: Math.abs(netBalance),
+            net_balance: netBalance,
+            balance_remaining: netBalance,
             sorted_payments: sorted
           };
         })
