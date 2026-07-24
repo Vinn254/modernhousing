@@ -263,57 +263,57 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
       (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
 
       const byTenant = new Map<string, any>();
-      // Track total paid amounts that should offset rent owed
-      const paidAmounts: {[tenantId: string]: number} = {};
       
-      // Process all payments to understand net balances
       payments.forEach((p: any) => {
+        if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
         const tid = String(p.tenant_id || p.tenant_email || '');
         if (!tid) return;
         
-        if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
+        if (!byTenant.has(tid)) {
+          const t = tenantMap.get(tid) || {};
+          byTenant.set(tid, {
+            id: tid,
+            full_name: t.full_name || p.tenant_name || p.tenant || '',
+            email: t.email || p.tenant_email || '',
+            unit: t.unit || p.unit_number || p.unit || null,
+            property: t.property || p.property_name || p.property || null,
+            total_rent: 0,
+            total_paid_on_rent: 0,
+            total_overdue_paid: 0,
+            balance_remaining: 0,
+            last_payment: p.created_at || null,
+            payments: [] as any[],
+          });
+        }
+        const entry = byTenant.get(tid);
+        entry.payments.push(p);
         
-        // Use the actual balance_remaining to decide if payment affects owed amounts
-        const balance = Number(p.balance_remaining || 0);
+        const amount = Number(p.amount || 0);
+        const balanceRem = Number(p.balance_remaining || 0);
+        const isPaid = balanceRem <= 0;
         
-        // Use amount to determine what to track
-        const paymentAmount = Number(p.amount || 0);
-        
-        if (p.transaction_type === 'overdue' && p.status === 'paid') {
-          // Track how much was paid for overdue amounts
-          paidAmounts[tid] = (paidAmounts[tid] || 0) + paymentAmount;
-        } 
-        // For rent payments or bills, track total processed
-        else {
-          if (!byTenant.has(tid)) {
-            const t = tenantMap.get(tid) || {};
-            byTenant.set(tid, {
-              id: tid,
-              full_name: t.full_name || p.tenant_name || p.tenant || '',
-              email: t.email || p.tenant_email || '',
-              unit: t.unit || p.unit_number || p.unit || null,
-              property: t.property || p.property_name || p.property || null,
-              total_due: 0,
-              total_paid: 0,
-              balance_remaining: 0,
-              last_payment: p.created_at || null,
-              payments: [] as any[],
-            });
+        // Track rent obligations
+        if (p.transaction_type === 'rent') {
+          entry.total_rent += amount;
+          // Track how much has been paid on this rent payment
+          if (isPaid) {
+            entry.total_paid_on_rent += amount;
+          } else {
+            entry.total_paid_on_rent += (amount - balanceRem);
           }
-          const entry = byTenant.get(tid);
-          entry.payments.push(p);
-          
-          // For rent payments, add to total_due
-          if (p.transaction_type === 'rent') {
-            entry.total_due += Number(p.amount || 0);
-          }
-          
-          // For all processes, track how much was paid toward balances
-          entry.total_paid += paymentAmount;
+        }
+        
+        // Track overdue payments that have been paid (these offset rent owed)
+        if (p.transaction_type === 'overdue' && isPaid) {
+          entry.total_overdue_paid += amount;
+        }
+        
+        // Track last payment date
+        if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
+          entry.last_payment = p.created_at;
         }
       });
 
-      // Calculate current balances per tenant
       return Array.from(byTenant.values())
         .map((entry: any) => {
           // Sort payments by due date for presentation
@@ -325,20 +325,16 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
             return (a.month_due || '').localeCompare(b.month_due || '');
           });
           
-          // Calculate net balance: what's due minus what's been paid
-          const paidOverdue = paidAmounts[entry.id] || 0;
-          const netBalance = entry.total_due - entry.total_paid - paidOverdue;
+          // Calculate net rent owed: total rent - payments made on rent - overdue payments made
+          const netBalance = entry.total_rent - entry.total_paid_on_rent - entry.total_overdue_paid;
           
           return {
             ...entry,
-            // Store the actual amount owed after all offsets
             net_balance: netBalance > 0 ? netBalance : 0,
-            balance_remaining: Math.abs(entry.balance_remaining || 0),
-            // Store source data
+            balance_remaining: Math.abs(netBalance),
             sorted_payments: sorted
           };
         })
-        // Only include tenants who actually have money owed
         .filter((t: any) => t.net_balance > 0);
     }, [payments, tenants]);
 
