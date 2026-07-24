@@ -2252,8 +2252,8 @@ footer {
     width: 44px; height: 44px;
     border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    background: var(--surface);
-    color: var(--ink);
+    background: linear-gradient(135deg, var(--navy-700) 0%, var(--navy-800) 100%);
+    color: var(--surface);
     font-size: 22px;
     cursor: pointer;
     display: flex;
@@ -2261,17 +2261,17 @@ footer {
     justify-content: center;
   }
 
-.theme-toggle {
-  width: 44px; height: 44px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: var(--line-soft);
-  color: var(--ink);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+  .theme-toggle {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: linear-gradient(135deg, var(--navy-700) 0%, var(--navy-800) 100%);
+    color: var(--surface);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
 [data-theme="dark"] .app-header,
 [data-theme="dark"] .sidebar {
@@ -2295,8 +2295,9 @@ footer {
 }
 
 [data-theme="dark"] .menu-toggle {
-  color: var(--ink);
-}
+   color: var(--surface);
+   background: linear-gradient(135deg, var(--navy-700), var(--navy-800));
+ }
 
 [data-theme="dark"] .nav-login,
 [data-theme="dark"] .form-grid button,
@@ -3608,15 +3609,11 @@ footer {
   color: #000 !important;
 }
 
-[data-theme="dark"] .menu-toggle {
-  color: var(--ink);
-}
-
 [data-theme="dark"] .theme-toggle {
-  color: var(--ink);
-  border-color: var(--line);
-  background: var(--line-soft);
-}
+   color: var(--surface);
+   border-color: var(--line);
+   background: linear-gradient(135deg, var(--navy-700), var(--navy-800));
+ }
 
 [data-theme="dark"] .card,
 [data-theme="dark"] .bento-card {
