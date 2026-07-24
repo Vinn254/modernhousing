@@ -52,7 +52,7 @@ export default function AnalyticsPage() {
     return () => window.clearInterval(interval);
   }, []);
 
-const kpis = useMemo(() => [
+  const kpis = useMemo(() => [
     {
       title: 'Property Registered',
       value: String(data.properties),
@@ -84,31 +84,19 @@ const kpis = useMemo(() => [
   ], [data.properties, data.subscriptionOwed, data.totalSubscriptions, data.subscribedLandlords, data.totalLandlords]);
 
   const revenueSeries = [42, 58, 64, 73, 81, 89];
-  const occupancySeries = [72, 74, 76, 79, 81, 85];
-  const chartWidth = 420;
-  const chartHeight = 220;
-  const chartPadding = 24;
+  const chartWidth = 300;
+  const chartHeight = 160;
+  const chartPadding = 16;
   const revenueMax = Math.max(...revenueSeries) * 1.15;
-  const occupancyMax = Math.max(...occupancySeries);
-  const occupancyMin = Math.min(...occupancySeries);
 
   const revenueBars = revenueSeries.map((value, index) => {
-    const barWidth = 46;
-    const gap = 20;
+    const barWidth = 34;
+    const gap = 12;
     const x = chartPadding + index * (barWidth + gap);
     const height = (value / revenueMax) * (chartHeight - chartPadding * 2);
     const y = chartHeight - chartPadding - height;
     return { x, y, height, value };
   });
-
-  const occupancyPoints = occupancySeries.map((value, index) => {
-    const x = chartPadding + index * ((chartWidth - chartPadding * 2) / (occupancySeries.length - 1));
-    const y = chartHeight - chartPadding - ((value - occupancyMin) / (occupancyMax - occupancyMin || 1)) * (chartHeight - chartPadding * 2);
-    return { x, y, value };
-  });
-
-  const occupancyPath = occupancyPoints.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
-  const occupancyAreaPath = `${occupancyPath} L ${chartWidth - chartPadding} ${chartHeight - chartPadding} L ${chartPadding} ${chartHeight - chartPadding} Z`;
 
   const propertyRows: PropertyRow[] = [
     { name: 'Harbor View', occupancy: 96, rating: 4.8, revenue: 'KSH 24.2K', status: 'Stable' },
@@ -153,59 +141,59 @@ const kpis = useMemo(() => [
           </div>
         </div>
 
-        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 20 }}>
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
           {kpis.map((item) => (
-            <article key={item.title} className="card" style={{ padding: 18, border: '1px solid rgba(16, 185, 129, 0.14)', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.08)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <article key={item.title} className="card" style={{ padding: 14, border: '1px solid rgba(16, 185, 129, 0.14)', boxShadow: '0 6px 18px rgba(16, 185, 129, 0.06)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <div className="card-label">{item.title}</div>
-                <span style={{ color: item.tone, fontWeight: 700, fontSize: 13 }}>
+                <span style={{ color: item.tone, fontWeight: 700, fontSize: 12 }}>
                   {item.trend === 'up' ? '▲' : '▼'} {item.change}
                 </span>
               </div>
-              <h2 style={{ margin: 0, fontSize: 28 }}>{loading ? '—' : item.value}</h2>
+              <div style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{loading ? '—' : item.value}</div>
             </article>
           ))}
         </section>
 
-<section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 20, marginBottom: 20 }}>
-          <article className="card card-feat-10" style={{ padding: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginBottom: 20 }}>
+          <article className="card card-feat-10" style={{ padding: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div>
                 <div className="card-label">Revenue</div>
-                <h3 style={{ margin: '4px 0 0' }}>Collected vs Expected</h3>
+                <div style={{ fontSize: 13, opacity: 0.8 }}>Collected vs Expected</div>
               </div>
-              <div style={{ fontSize: 13, color: '#047857', fontWeight: 700 }}>Target {period}</div>
+              <div style={{ fontSize: 12, color: '#047857', fontWeight: 700 }}>Target {period}</div>
             </div>
-            <svg width="100%" height="240" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
+            <svg width="100%" height="140" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
               {[0, 1, 2, 3].map((line) => (
-                <line key={line} x1={chartPadding} x2={chartWidth - chartPadding} y1={chartPadding + line * 45} y2={chartPadding + line * 45} stroke="#e5e7eb" strokeDasharray="4 4" />
+                <line key={line} x1={chartPadding} x2={chartWidth - chartPadding} y1={chartPadding + line * 32} y2={chartPadding + line * 32} stroke="#e5e7eb" strokeDasharray="3 3" />
               ))}
               {revenueBars.map((bar) => (
                 <g key={bar.x}>
-                  <rect x={bar.x} y={bar.y} width={46} height={bar.height} rx={10} fill="#10b981" opacity={0.9} />
-                  <rect x={bar.x + 54} y={bar.y + 16} width={46} height={Math.max(18, (bar.value * 0.8) / revenueMax * (chartHeight - chartPadding * 2))} rx={10} fill="#93c5fd" opacity={0.9} />
+                  <rect x={bar.x} y={bar.y} width={34} height={bar.height} rx={6} fill="#10b981" opacity={0.9} />
+                  <rect x={bar.x + 46} y={bar.y + 10} width={34} height={Math.max(12, (bar.value * 0.8) / revenueMax * (chartHeight - chartPadding * 2))} rx={6} fill="#93c5fd" opacity={0.9} />
                 </g>
               ))}
             </svg>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280', marginTop: 4 }}>
               <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
             </div>
           </article>
 
-          <article className="card card-feat-3" style={{ padding: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <article className="card card-feat-3" style={{ padding: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div>
                 <div className="card-label">Property Mix</div>
-                <h3 style={{ margin: '4px 0 0' }}>Portfolio split</h3>
+                <div style={{ fontSize: 13, opacity: 0.8 }}>Portfolio split</div>
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 18 }}>
-              <DonutChart data={propertyMixData} size={140} thickness={24} centerLabel={`${data.properties || 12} props`} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
+              <DonutChart data={propertyMixData} size={100} thickness={16} centerLabel={`${data.properties || 12} props`} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {propertyMixData.map((item) => (
-                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 999, background: item.color }} />
-                    <span style={{ fontSize: 13, color: '#374151' }}>{item.label} {item.value}%</span>
+                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 999, background: item.color }} />
+                    <span style={{ fontSize: 12, color: '#374151' }}>{item.label} {item.value}%</span>
                   </div>
                 ))}
               </div>
@@ -213,64 +201,57 @@ const kpis = useMemo(() => [
           </article>
         </section>
 
-<section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 20 }}>
-          <article className="card card-feat-1" style={{ padding: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+          <article className="card card-feat-1" style={{ padding: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div>
                 <div className="card-label">Occupancy</div>
-                <h3 style={{ margin: '4px 0 0' }}>Occupancy trend</h3>
+                <div style={{ fontSize: 13, opacity: 0.8 }}>Occupancy trend</div>
               </div>
-              <div style={{ color: '#047857', fontWeight: 700, fontSize: 13 }}>+13% over last 6 months</div>
+              <div style={{ color: '#047857', fontWeight: 700, fontSize: 12 }}>+13% last 6 months</div>
             </div>
-            <svg width="100%" height="240" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
-              <path d={occupancyAreaPath} fill="rgba(16, 185, 129, 0.14)" />
-              <path d={occupancyPath} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
-              {occupancyPoints.map((point) => (
-                <circle key={point.x} cx={point.x} cy={point.y} r="5" fill="#fff" stroke="#10b981" strokeWidth="3" />
-              ))}
+            <svg width="100%" height="140" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
+              <path d="M16 100 L70 84 L124 68 L178 52 L232 40 L286 32 L286 144 L16 144 Z" fill="rgba(16, 185, 129, 0.14)" />
+              <path d="M16 100 L70 84 L124 68 L178 52 L232 40 L286 32" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="16" cy="100" r="3" fill="#fff" stroke="#10b981" strokeWidth="2" />
+              <circle cx="70" cy="84" r="3" fill="#fff" stroke="#10b981" strokeWidth="2" />
+              <circle cx="124" cy="68" r="3" fill="#fff" stroke="#10b981" strokeWidth="2" />
+              <circle cx="178" cy="52" r="3" fill="#fff" stroke="#10b981" strokeWidth="2" />
+              <circle cx="232" cy="40" r="3" fill="#fff" stroke="#10b981" strokeWidth="2" />
+              <circle cx="286" cy="32" r="3" fill="#fff" stroke="#10b981" strokeWidth="2" />
             </svg>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280', marginTop: 4 }}>
               <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
             </div>
           </article>
 
-          <article className="card card-feat-2" style={{ padding: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <article className="card card-feat-2" style={{ padding: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div>
                 <div className="card-label">Property performance</div>
-                <h3 style={{ margin: '4px 0 0' }}>Top properties</h3>
+                <div style={{ fontSize: 13, opacity: 0.8 }}>Top properties</div>
               </div>
             </div>
-            <div className="table-shell">
-              <table className="landlord-table">
+            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              <table className="landlord-table" style={{ fontSize: '12px' }}>
                 <thead>
                   <tr>
-                    <th>Property</th>
-                    <th>Occupancy</th>
-                    <th>Rating</th>
-                    <th>Revenue</th>
+                    <th style={{ padding: '6px 8px' }}>Property</th>
+                    <th style={{ padding: '6px 8px' }}>Rating</th>
+                    <th style={{ padding: '6px 8px' }}>Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
                   {propertyRows.map((row) => (
                     <tr key={row.name}>
-                      <td>
-                        <div style={{ fontWeight: 700 }}>{row.name}</div>
-                        <div style={{ fontSize: 12, color: '#6b7280' }}>{row.status}</div>
+                      <td style={{ padding: '6px 8px' }}>
+                        <div style={{ fontWeight: 600 }}>{row.name}</div>
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ width: 72, height: 8, borderRadius: 999, background: '#e5e7eb' }}>
-                            <div style={{ width: `${row.occupancy}%`, height: 8, borderRadius: 999, background: row.occupancy > 85 ? '#10b981' : row.occupancy > 70 ? '#f59e0b' : '#ef4444' }} />
-                          </div>
-                          <span>{row.occupancy}%</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span style={{ color: '#f59e0b', letterSpacing: 1 }}>{'★'.repeat(Math.round(row.rating))}</span>
+                      <td style={{ padding: '6px 8px' }}>
+                        <span style={{ color: '#f59e0b' }}>{'★'.repeat(Math.round(row.rating))}</span>
                         <span style={{ color: '#d1d5db' }}>{'★'.repeat(5 - Math.round(row.rating))}</span>
                       </td>
-                      <td>{row.revenue}</td>
+                      <td style={{ padding: '6px 8px' }}>{row.revenue}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -283,7 +264,6 @@ const kpis = useMemo(() => [
       <footer>
         <div className="footer-inner">
           <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18" /><path d="M5 21V7l8-4v18" /><path d="M19 21V11l-6-4" /></svg></span>Springfield Systems</div>
-          <div className="footer-links"><a href="/">Home</a><a href="/super-admin">Dashboard</a></div>
           <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
         </div>
       </footer>
