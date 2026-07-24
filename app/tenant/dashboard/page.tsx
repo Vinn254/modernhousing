@@ -177,8 +177,8 @@ const tenant = data.tenant;
         </section>
 
 <section className="card-grid">
-          <div className="card">
-            <div className="card-label">Personal Details</div>
+<div className="card card-feat-6">
+             <div className="card-label">Personal Details</div>
             <h3 style={{ marginBottom: 16 }}>My Profile</h3>
 <div style={{ display: 'grid', gap: 12 }}>
                <div><strong>Name:</strong> {tenant.full_name}</div>
@@ -200,8 +200,8 @@ const tenant = data.tenant;
             </form>
           </div>
 
-          <div className="card">
-            <div className="card-label">Quick Links</div>
+<div className="card card-feat-7">
+             <div className="card-label">Quick Links</div>
             <h3 style={{ marginBottom: 16 }}>Navigate to</h3>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a href="/tenant/payments" className="card-cta quick-link-btn">

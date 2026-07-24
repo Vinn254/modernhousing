@@ -496,9 +496,33 @@ body {
   grid-column: span 4; 
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
 }
-.card-feat-4 { 
-  grid-column: span 4; 
+.card-feat-4 {
+  grid-column: span 4;
   background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+}
+.card-feat-5 {
+  grid-column: span 4;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+}
+.card-feat-6 {
+  grid-column: span 4;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+}
+.card-feat-7 {
+  grid-column: span 4;
+  background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+}
+.card-feat-8 {
+  grid-column: span 4;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+.card-feat-9 {
+  grid-column: span 4;
+  background: linear-gradient(135deg, #f5f5f4 0%, #e7e5e4 100%);
+}
+.card-feat-10 {
+  grid-column: span 4;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
 }
 @media (max-width: 900px) {
    .card-pm, .card-agent, .card-feat-1, .card-feat-2, .card-feat-3 {
@@ -3749,6 +3773,24 @@ footer {
 }
 [data-theme="dark"] .card-feat-4 {
   background: linear-gradient(135deg, #5b21b6 0%, #4c1d95 100%) !important;
+}
+[data-theme="dark"] .card-feat-5 {
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%) !important;
+}
+[data-theme="dark"] .card-feat-6 {
+  background: linear-gradient(135deg, #0d9488 0%, #115e59 100%) !important;
+}
+[data-theme="dark"] .card-feat-7 {
+  background: linear-gradient(135deg, #db2777 0%, #9d174d 100%) !important;
+}
+[data-theme="dark"] .card-feat-8 {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
+}
+[data-theme="dark"] .card-feat-9 {
+  background: linear-gradient(135deg, #57534e 0%, #44403c 100%) !important;
+}
+[data-theme="dark"] .card-feat-10 {
+  background: linear-gradient(135deg, #059669 0%, #065f46 100%) !important;
 }
 
 

@@ -695,8 +695,8 @@ const response = await fetch('/api/tenants', {
             </div>
           </section>
 
-          <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
-            <div className="card">
+<section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
+            <div className="card card-feat-1">
               <div className="card-label">Tenant Management</div>
               <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
               <form onSubmit={handleAgentTenantCreate} className="form-grid">
@@ -717,7 +717,7 @@ const response = await fetch('/api/tenants', {
               </form>
             </div>
 
-            <div className="card">
+            <div className="card card-feat-2">
               <div className="card-label">Water Meter Billing</div>
               <h3 style={{ marginBottom: 16 }}>Record Water Reading</h3>
               <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Enter current meter reading. Water is billed at tiered rates: 0-6m³ (88 KES), 7-20m³ (132 KES), 21-50m³ (137 KES), 51-100m³ (148 KES), 101-300m³ (165 KES), 300+m³ (custom). Consumption = Current - Previous.</p>
@@ -740,7 +740,7 @@ const response = await fetch('/api/tenants', {
           </section>
 
           <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 18, marginTop: 24 }}>
-            <div className="card">
+            <div className="card card-feat-3">
               <div className="card-label">Tenant Records</div>
               <h3 style={{ marginBottom: 16 }}>Manage Tenants</h3>
               {tenants.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p> : (
@@ -959,9 +959,9 @@ const response = await fetch('/api/tenants', {
         </>
       )}
 
-      {!isAgent && (
+{!isAgent && (
         <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
-          <div className="card">
+          <div className="card card-feat-4">
             <div className="card-label">Properties and Agents</div>
             <h3 style={{ marginBottom: 16 }}>Add Property</h3>
             <form onSubmit={handleAddProperty} className="form-grid" style={{ marginBottom: 24 }}>
@@ -997,7 +997,7 @@ const response = await fetch('/api/tenants', {
               ))}
             </div>
 
-            <div className="card">
+<div className="card card-feat-5">
               <div className="card-label">Portfolio</div>
               <h3 style={{ marginBottom: 16 }}>Properties</h3>
               {properties.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No properties added yet.</p> : properties.map((property) => (

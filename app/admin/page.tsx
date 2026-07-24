@@ -177,63 +177,63 @@ export default function AdminDashboard() {
         </section>
 
         <section className="card-grid" style={{ marginBottom: '24px' }}>
-          <article className="card">
+          <article className="card card-feat-1">
             <div className="card-label"><span className="badge badge-pm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>Properties</div>
             <h3>Manage your properties and units.</h3>
             <p>Add properties, create units, and assign agents to specific properties.</p>
             <Link href="/properties" className="card-cta">Manage Properties</Link>
           </article>
 
-          <article className="card">
+          <article className="card card-feat-2">
             <div className="card-label"><span className="badge badge-agent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13 a4 0 0 1 0 7.75"/></svg></span>Agents</div>
             <h3>Assign agents and monitor assignments.</h3>
             <p>View agents added by you, assigned properties, and active status.</p>
             <Link href="/admin/agents" className="card-cta">View Agents</Link>
           </article>
 
-          <article className="card">
+          <article className="card card-feat-3">
             <div className="feat-icon" style={{ background: 'var(--navy-700)' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
             <h3>Tenants</h3>
             <p>View your tenants and manage occupancy.</p>
             <Link href="/admin/tenants" className="card-cta">View Tenants</Link>
           </article>
 
-          <article className="card">
+          <article className="card card-feat-4">
             <div className="feat-icon" style={{ background: 'var(--accent)' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
             <h3>Payments</h3>
             <p>Review transaction records and balances.</p>
             <Link href="/payments" className="card-cta">View Payments</Link>
           </article>
 
-          <article className="card">
+          <article className="card card-feat-5">
             <div className="feat-icon" style={{ background: '#0ea5e9' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg></div>
             <h3>Communications</h3>
             <p>Manage announcements and notices.</p>
             <Link href="/admin/communications" className="card-cta">Open</Link>
           </article>
 
-          <article className="card">
+          <article className="card card-feat-6">
             <div className="feat-icon" style={{ background: '#8b5cf6' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
             <h3>Utilities</h3>
             <p>Manage utility services and payments.</p>
             <Link href="/admin/utilities" className="card-cta">Manage Utilities</Link>
           </article>
 
-          <article className="card">
+          <article className="card card-feat-7">
             <div className="feat-icon" style={{ background: '#f59e0b' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
             <h3>Tenant Documents</h3>
             <p>Review tenant-submitted documents.</p>
             <Link href="/admin/documents" className="card-cta">View Documents</Link>
           </article>
 
-          <article className="card">
+          <article className="card card-feat-8">
             <div className="feat-icon" style={{ background: '#6366f1' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
             <h3>System Audit</h3>
             <p>Monitor all system activities and security events.</p>
             <Link href="/admin/audit" className="card-cta">View Audit Logs</Link>
           </article>
 
-          <article className="card">
+          <article className="card card-feat-9">
             <div className="feat-icon" style={{ background: '#8b5cf6' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
             <h3>Document Audit Trail</h3>
             <p>View signing activity records for tenant documents.</p>
