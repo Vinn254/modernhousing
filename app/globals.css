@@ -1313,12 +1313,12 @@ body {
 }
 
 .landlord-success {
-  color: #047857;
-  background: rgba(16,185,129,0.1);
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .landlord-error {
-  color: #991b1b;
+  color: var(--rose);
   background: rgba(244,63,94,0.1);
 }
 
@@ -1358,7 +1358,7 @@ body {
 }
 
 .landlord-name {
-  color: var(--navy-900) !important;
+  color: var(--ink) !important;
   font-weight: 800;
 }
 
@@ -1372,13 +1372,13 @@ body {
 }
 
 .status-active {
-  background: rgba(16,185,129,0.12);
-  color: #047857;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .status-pending {
   background: rgba(245,158,11,0.14);
-  color: #92400e;
+  color: var(--amber);
 }
 
 .landlord-empty {
@@ -1407,23 +1407,23 @@ body {
 }
 
 .action-button {
-  background: rgba(6,21,40,0.06);
-  color: var(--navy-800);
+  background: var(--line-soft);
+  color: var(--ink-2);
 }
 
 .action-button:hover {
-  background: rgba(6,21,40,0.1);
+  background: var(--line);
   transform: translateY(-1px);
 }
 
 .action-button.primary {
-  background: rgba(16,185,129,0.14);
-  color: #047857;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .action-button.danger {
   background: rgba(244,63,94,0.1);
-  color: #be123c;
+  color: var(--rose);
 }
 
 .landlord-modal {
@@ -1500,7 +1500,7 @@ body {
 }
 
 .detail-card strong {
-  color: var(--navy-900);
+  color: var(--ink);
   font-size: 14px;
 }
 
@@ -1549,20 +1549,19 @@ body {
 
 .renewal-pill.safe,
 .status-active {
-  background: rgba(16,185,129,0.12);
-  color: #047857;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
-.renewal-pill.expiring,
-.status-pending {
+.renewal-pill.expiring {
   background: rgba(245,158,11,0.16);
-  color: #92400e;
+  color: var(--amber);
 }
 
 .renewal-pill.overdue,
 .status-pending.danger {
   background: rgba(244,63,94,0.12);
-  color: #be123c;
+  color: var(--rose);
 }
 
 .risk-row.expiring {
@@ -1731,7 +1730,7 @@ body {
 }
 
 .expiring-stat strong {
-  color: #92400e;
+  color: var(--amber);
 }
 
 .overdue-stat {
@@ -1740,12 +1739,12 @@ body {
 }
 
 .overdue-stat strong {
-  color: #be123c;
+  color: var(--rose);
 }
 
 .action-button.notify {
   background: rgba(14,165,233,0.12);
-  color: #075985;
+  color: #0ea5e9;
 }
 
 .pricing-hero-inner {
@@ -2159,11 +2158,11 @@ footer {
 
 .auth-error {
   font-size: 13px;
-  color: #dc2626;
-  background: #fef2f2;
+  color: var(--error);
+  background: rgba(220, 38, 38, 0.12);
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(220, 38, 38, 0.25);
   margin: 0;
 }
 
@@ -2263,20 +2262,40 @@ footer {
  }
 
 .theme-toggle {
-   width: 44px; height: 44px;
-   border-radius: 14px;
-   border: 1px solid rgba(255, 255, 255, 0.1);
-   background: var(--surface) 0.15);
-   color: #fff;
-   cursor: pointer;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-  }
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--line-soft);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 [data-theme="dark"] .app-header,
 [data-theme="dark"] .sidebar {
    background: var(--navy-900) !important;
+}
+
+[data-theme="dark"] .sidebar-nav a,
+[data-theme="dark"] .sidebar-logout {
+  color: var(--ink-3);
+}
+
+[data-theme="dark"] .sidebar-nav a:hover,
+[data-theme="dark"] .sidebar-logout:hover {
+  color: var(--ink);
+  background: rgba(255,255,255,0.1);
+}
+
+[data-theme="dark"] .sidebar-logout {
+  color: var(--rose);
+  background: rgba(244,63,94,0.12);
+}
+
+[data-theme="dark"] .menu-toggle {
+  color: var(--ink);
 }
 
 .sidebar {
@@ -2326,8 +2345,8 @@ footer {
 
 .sidebar-nav a:hover,
 .sidebar-logout:hover {
-  color: #fff;
-  background: var(--surface) 0.1);
+  color: var(--ink);
+  background: rgba(255,255,255,0.1);
 }
 
 .sidebar-logout {
@@ -2772,7 +2791,7 @@ footer {
 .nav-menu-user,
 .nav-menu-role {
   padding: 8px 10px 6px;
-  color: #fff;
+  color: var(--ink);
 }
 
 .nav-menu-user {
@@ -2796,7 +2815,7 @@ footer {
   border: none;
   border-radius: 10px;
   background: transparent;
-  color: var(--navy-300);
+  color: var(--ink-3);
   text-align: left;
   text-decoration: none;
   cursor: pointer;
@@ -2806,19 +2825,19 @@ footer {
 
 .nav-menu-dropdown a:hover,
 .nav-menu-dropdown button:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
+  background: var(--line-soft);
+  color: var(--ink);
 }
 
 .nav-menu-logout {
   margin-top: 8px !important;
-  color: #fecaca !important;
-  background: rgba(220,38,38,0.16) !important;
+  color: var(--rose) !important;
+  background: rgba(244,63,94,0.1) !important;
 }
 
 .nav-menu-logout:hover {
-  color: #fff !important;
-  background: rgba(220,38,38,0.28) !important;
+  color: var(--ink) !important;
+  background: rgba(244,63,94,0.15) !important;
 }
 
 .header-menu {
@@ -2841,12 +2860,12 @@ footer {
   position: absolute;
   top: 50px;
   right: 0;
-  background: linear-gradient(135deg, var(--navy-800), var(--navy-900));
-  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 14px;
   padding: 10px 12px;
   min-width: 210px;
-  box-shadow: 0 16px 40px rgba(6,21,40,0.22);
+  box-shadow: 0 16px 40px var(--shadow-lift);
   z-index: 100;
 }
 
@@ -2854,7 +2873,7 @@ footer {
 .menu-dropdown button {
   display: block;
   padding: 10px 12px;
-  color: var(--navy-300);
+  color: var(--ink-3);
   text-decoration: none;
   font-size: 14px;
   border: none;
@@ -2868,8 +2887,8 @@ footer {
 
 .menu-dropdown a:hover,
 .menu-dropdown button:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
+  background: var(--line-soft);
+  color: var(--ink);
 }
 
 .user-avatar {
@@ -3430,6 +3449,92 @@ footer {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+/* ========== COMPREHENSIVE DARK MODE OVERRIDES ========== */
+[data-theme="dark"] .sidebar {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .sidebar-brand {
+  color: var(--ink);
+  border-bottom-color: var(--line);
+}
+
+[data-theme="dark"] .sidebar-profile-name {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .user-avatar {
+  background: var(--accent);
+  color: #fff;
+}
+
+[data-theme="dark"] .sidebar-nav a,
+[data-theme="dark"] .sidebar-logout {
+  color: var(--ink-3);
+}
+
+[data-theme="dark"] .sidebar-nav a:hover {
+  color: var(--ink);
+  background: var(--line-soft);
+}
+
+[data-theme="dark"] .sidebar-nav a.active {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .app-header-greeting,
+[data-theme="dark"] .app-header-greeting span,
+[data-theme="dark"] .app-header .user-name {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .admin-nav-link {
+  color: var(--ink-3);
+}
+
+[data-theme="dark"] .admin-nav-link:hover {
+  color: var(--ink);
+  background: var(--line-soft);
+}
+
+[data-theme="dark"] .nav-menu-trigger {
+  border-color: var(--line);
+  background: var(--line-soft);
+}
+
+[data-theme="dark"] .nav-menu-trigger svg {
+  stroke: var(--ink);
+}
+
+[data-theme="dark"] .nav-menu-user {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .nav-menu-dropdown {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .nav-menu-dropdown a,
+[data-theme="dark"] .nav-menu-dropdown button {
+  color: var(--ink-3);
+}
+
+[data-theme="dark"] .nav-menu-dropdown a:hover,
+[data-theme="dark"] .nav-menu-dropdown button:hover {
+  background: var(--line-soft);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .nav-logout {
+  color: var(--rose);
+  background: rgba(244,63,94,0.1);
+}
+
+[data-theme="dark"] .nav-logout:hover {
+  background: rgba(244,63,94,0.15);
 }
 
 
