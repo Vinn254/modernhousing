@@ -58,7 +58,7 @@ export default function AdminDashboard() {
       mergedPayments.forEach((p: any) => {
         if (nonPaymentTypes.includes(p.transaction_type)) return;
         const balance = Number(p.balance_remaining || 0);
-        if (balance <= 0) return;
+        if (balance < 0) return;
         const tid = String(p.tenant_id || '');
         if (!tid) return;
         if (!byTenant.has(tid)) {
@@ -68,19 +68,28 @@ export default function AdminDashboard() {
             unit: p.unit_number || p.unit || null,
             total_paid: 0,
             balance_remaining: 0,
+            paid_overdue_amount: 0,
             last_payment: p.created_at || null,
           });
         }
         const entry = byTenant.get(tid);
-        entry.balance_remaining += balance;
-        entry.total_paid += Number(p.amount || 0);
+        if (p.transaction_type === 'rent' || p.transaction_type === 'deposit') {
+          entry.balance_remaining += Math.abs(balance);
+        }
+        if (p.transaction_type === 'overdue') {
+          entry.paid_overdue_amount += Number(p.paid_amount ?? p.amount ?? 0);
+        }
+        entry.total_paid += Number(p.paid_amount ?? p.amount ?? 0);
         if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
           entry.last_payment = p.created_at;
         }
       });
-      const owedTenants = Array.from(byTenant.values());
+      const owedTenants = Array.from(byTenant.values()).map((entry: any) => ({
+        ...entry,
+        net_balance: Math.max(entry.balance_remaining - entry.paid_overdue_amount, 0),
+      }));
       setRentOwedByTenant(owedTenants);
-      setTotalOwed(owedTenants.reduce((sum: number, t: any) => sum + Number(t.balance_remaining || 0), 0));
+      setTotalOwed(owedTenants.reduce((sum: number, t: any) => sum + Number(t.net_balance || 0), 0));
       setLoading(false);
     }
     loadData();
@@ -271,18 +280,20 @@ export default function AdminDashboard() {
                 </button>
               </div>
               <div className="modal-card-body">
-                {rentOwedByTenant.some(t => t.balance_remaining > 0) ? (
-                  <div className="table-shell" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-                    <table className="landlord-table">
-                      <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Last Payment</th></tr></thead>
-                      <tbody>{rentOwedByTenant.filter(t => t.balance_remaining > 0).map(t => (
-                        <tr key={t.id}>
-                          <td>{t.full_name}</td>
-                          <td>{t.unit}</td>
-                          <td>{formatCurrency(t.total_paid)}</td>
-                          <td><span className="pill pill-danger">{formatCurrency(t.balance_remaining)}</span></td>
-                          <td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td>
-                        </tr>
+{rentOwedByTenant.some(t => t.net_balance > 0) ? (
+                   <div className="table-shell" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                     <table className="landlord-table">
+                       <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Paid Overdue</th><th>Balance</th><th>Outstanding Balance</th><th>Last Payment</th></tr></thead>
+                       <tbody>{rentOwedByTenant.filter(t => t.net_balance > 0).map(t => (
+                         <tr key={t.id}>
+                           <td>{t.full_name}</td>
+                           <td>{t.unit}</td>
+                           <td>{formatCurrency(t.total_paid)}</td>
+                           <td>{t.paid_overdue_amount > 0 ? formatCurrency(t.paid_overdue_amount) : '—'}</td>
+                           <td>{formatCurrency(t.balance_remaining)}</td>
+                           <td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td>
+                           <td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td>
+                         </tr>
                       ))}</tbody>
                     </table>
                   </div>
