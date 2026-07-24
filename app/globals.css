@@ -1998,7 +1998,7 @@ body {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   align-items: start;
 }
@@ -2031,6 +2031,13 @@ body {
   .admin-no-hero .bento .card {
     min-width: 0;
   }
+}
+
+@media (max-width: 900px) {
+   .card-pm, .card-agent, .card-feat-1, .card-feat-2, .card-feat-3, .card-feat-4, .card-feat-5, .card-feat-6, .card-feat-7, .card-feat-8, .card-feat-9, .card-feat-10 {
+      grid-column: span 12;
+      grid-row: auto;
+    }
 }
 
 .dashboard-hero-stats {
