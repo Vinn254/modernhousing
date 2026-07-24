@@ -484,9 +484,22 @@ body {
   grid-row: span 2;
   background: var(--surface);
 }
-.card-feat-1 { grid-column: span 4; }
-.card-feat-2 { grid-column: span 4; }
-.card-feat-3 { grid-column: span 4; }
+.card-feat-1 { 
+  grid-column: span 4; 
+  background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+}
+.card-feat-2 { 
+  grid-column: span 4; 
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+.card-feat-3 { 
+  grid-column: span 4; 
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+.card-feat-4 { 
+  grid-column: span 4; 
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+}
 @media (max-width: 900px) {
    .card-pm, .card-agent, .card-feat-1, .card-feat-2, .card-feat-3 {
      grid-column: span 12; grid-row: auto;
@@ -3714,6 +3727,29 @@ footer {
 }
 
 [data-theme="dark"] .btn-ghost:hover {
+   background: var(--line);
+ }
+
+ [data-theme="dark"] .auth-pattern-bg,
+[data-theme="dark"] .admin-no-hero,
+[data-theme="dark"] .page-layout,
+[data-theme="dark"] .property-page-main,
+[data-theme="dark"] .container.auth-bg {
+  background: linear-gradient(135deg, #eafff7 0%, #d1fae5 100%) !important;
+}
+
+[data-theme="dark"] .card-feat-1 { 
+  background: linear-gradient(135deg, #0f766e 0%, #115e5a 100%) !important;
+}
+[data-theme="dark"] .card-feat-2 { 
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+}
+[data-theme="dark"] .card-feat-3 { 
+  background: linear-gradient(135deg, #92400e 0%, #78350f 100%) !important;
+}
+[data-theme="dark"] .card-feat-4 { 
+  background: linear-gradient(135deg, #5b21b6 0%, #4c1d95 100%) !important;
+}
   background: var(--line);
 }
 
