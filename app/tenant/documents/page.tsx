@@ -203,7 +203,7 @@ const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
   );
 
   return (
-    <main className="container page-layout" style={{ maxWidth: '100%', padding: '0 8px' }}>
+    <main className="container page-layout admin-no-hero">
       <div className="card-admin-header">
         <div><p className="heading">Documents</p><p className="subheading">View agreements and submit required documents.</p></div>
       </div>
