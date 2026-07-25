@@ -159,7 +159,7 @@ const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
 
   if (loading) {
     return (
-      <main className="container page-layout">
+      <main className="container page-layout admin-no-hero">
         <div className="card">Loading documents…</div>
       </main>
     );

@@ -172,7 +172,7 @@ export default function TenantDocumentsPage() {
   );
 
   return (
-    <main className="container page-layout" style={{ maxWidth: '100%', padding: '0 8px' }}>
+    <main className="container page-layout admin-no-hero">
       <div className="card-admin-header">
         <div>
           <p className="heading">Tenancy Agreement</p>

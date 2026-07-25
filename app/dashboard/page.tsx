@@ -608,7 +608,7 @@ const response = await fetch('/api/tenants', {
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
   return (
-    <main className="container auth-pattern-bg">
+    <main className="container auth-pattern-bg full-width">
       <div className="card-admin-header">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
           <div>

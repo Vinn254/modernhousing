@@ -109,7 +109,7 @@ export default function TenantDashboardPage() {
 
   if (loading) {
     return (
-      <main className="container page-layout auth-pattern-bg">
+      <main className="container page-layout auth-pattern-bg admin-no-hero">
         <div className="card">Loading tenant dashboard…</div>
       </main>
     );
@@ -117,7 +117,7 @@ export default function TenantDashboardPage() {
 
   if (!data?.tenant) {
     return (
-      <main className="container page-layout auth-pattern-bg">
+      <main className="container page-layout auth-pattern-bg admin-no-hero">
         <div className="card">
           <h1>Welcome</h1>
           <p>No tenant record was found for this account.</p>
@@ -133,7 +133,7 @@ const tenant = data.tenant;
   const timeGreeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   return (
-    <main className="container page-layout auth-pattern-bg">
+    <main className="container page-layout auth-pattern-bg admin-no-hero">
       <div className="card-admin-header">
         <p className="heading">{timeGreeting}, {tenantFirstName} 👋</p>
         <p className="subheading">Your apartment, payments, notices, and support requests in one place.</p>
