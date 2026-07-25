@@ -2120,6 +2120,10 @@ body {
   padding: 0 8px 80px;
 }
 
+.admin-no-hero.page-layout::before {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .admin-no-hero.page-layout {
     padding: 12px 8px 80px;
