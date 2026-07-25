@@ -807,26 +807,23 @@ body {
     padding: 16px;
     min-width: 0;
   }
-
-  .landlord-table th,
-  .property-table th {
-    white-space: normal;
-    padding: 10px 8px;
-    font-size: 11px;
-  }
-
-  .landlord-table td,
-  .property-table td {
-    white-space: normal;
-    padding: 12px 8px;
-    font-size: 12px;
-    max-width: none;
-    text-overflow: clip;
-  }
 }
 
-.landord-table,
-.property-table {
+.landlord-table th, .property-table th {
+  white-space: normal;
+  padding: 10px 8px;
+  font-size: 11px;
+}
+
+.landlord-table td, .property-table td {
+  white-space: normal;
+  padding: 12px 8px;
+  font-size: 12px;
+  max-width: none;
+  text-overflow: clip;
+}
+
+.landlord-table, .property-table {
   width: 100%;
   table-layout: auto;
 }
@@ -843,23 +840,6 @@ body {
   .page-layout .property-table td {
     white-space: normal;
     word-break: break-word;
-  }
-}
-
-  .landlord-table th,
-  .property-table th {
-    white-space: normal;
-    padding: 10px 8px;
-    font-size: 11px;
-  }
-
-  .landlord-table td,
-  .property-table td {
-    white-space: normal;
-    padding: 12px 8px;
-    font-size: 12px;
-    max-width: none;
-    text-overflow: clip;
   }
 }
 
