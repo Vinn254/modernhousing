@@ -2114,6 +2114,18 @@ body {
   overflow-x: auto;
 }
 
+.admin-no-hero.page-layout {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 8px 80px;
+}
+
+@media (max-width: 768px) {
+  .admin-no-hero.page-layout {
+    padding: 12px 8px 80px;
+  }
+}
+
 .page-layout.auth-pattern-bg {
   background: linear-gradient(135deg, #eafff7 0%, #d1fae5 100%);
   min-height: 100vh;
