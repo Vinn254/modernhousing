@@ -771,7 +771,7 @@ body {
 }
 
 @media (max-width: 768px) {
-  .container,
+  .container:not(.admin-no-hero),
   .page-layout {
     padding: 20px 12px 60px;
   }
