@@ -821,7 +821,7 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .admin-no-hero .bento-card {
+  .admin-no-hero .bento-grid .bento-card {
     min-width: 0;
   }
 }
@@ -849,11 +849,11 @@ body {
 .admin-no-hero .bento-grid {
   grid-template-columns: 1fr;
 }
-.admin-no-hero .bento-card {
+.admin-no-hero .bento-grid .bento-card {
   grid-column: 1;
 }
 @media (min-width: 901px) {
-  .admin-no-hero .bento-card {
+  .admin-no-hero .bento-grid .bento-card {
     grid-column: span 12;
   }
 }
@@ -2028,7 +2028,7 @@ body {
     grid-template-columns: 1fr !important;
   }
 
-  .admin-no-hero .bento-card {
+  .admin-no-hero .bento-grid .bento-card {
     min-width: 0;
   }
 }
