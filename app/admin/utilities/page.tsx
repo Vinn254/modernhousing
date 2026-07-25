@@ -146,8 +146,8 @@ setProperties(propsResult.properties ?? []);
       setTenants(tenantsResult.tenants ?? []);
       setUnits(unitsResult.units ?? []);
       // Only show utility bills - not rent/overdue/deposit
-      const utilityBills = (billsResult.bills ?? []).filter((b: any) => 
-        ['garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'].includes(b.transaction_type)
+      const utilityBills = (billsResult.bills ?? []).filter((b: any) =>
+        ['garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other', 'water'].includes(b.transaction_type)
       );
       setBills(utilityBills);
     } catch (err: any) {

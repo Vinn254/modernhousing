@@ -73,10 +73,10 @@ async function getAuthContext(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { unitId, currentReading, monthDue } = body;
+    const { unitId, consumption, monthDue } = body;
 
-    if (!unitId || currentReading === undefined) {
-      return NextResponse.json({ message: 'Unit ID and current reading are required.' }, { status: 400 });
+    if (!unitId || consumption === undefined) {
+      return NextResponse.json({ message: 'Unit ID and consumption (units) are required.' }, { status: 400 });
     }
 
     const authContext = await getAuthContext(request);
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'You can only record meter readings for units in your assigned property.' }, { status: 403 });
     }
 
-    // For landlords - verify unit belongs to their properties (created_by or organization)
+    // For landlords - verify unit belongs to their properties
     if (!isAgent && !authContext.isSuperAdmin) {
       if (authContext.organizationId) {
         const { data: unitOrgCheck } = await supabaseAdmin
@@ -127,22 +127,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const consumption = Math.max(0, Number(currentReading) - Number(unit.previous_water_reading || 0));
-    
-    if (consumption === 0) {
+    const consumptionValue = Math.max(0, Number(consumption));
+
+    if (consumptionValue === 0) {
       return NextResponse.json({ message: 'Consumption is 0 - no bill generated.' }, { status: 200 });
     }
 
     let amount: number;
-    if (consumption <= 6) {
+    if (consumptionValue <= 6) {
       amount = 88;
-    } else if (consumption <= 20) {
+    } else if (consumptionValue <= 20) {
       amount = 132;
-    } else if (consumption <= 50) {
+    } else if (consumptionValue <= 50) {
       amount = 137;
-    } else if (consumption <= 100) {
+    } else if (consumptionValue <= 100) {
       amount = 148;
-    } else if (consumption <= 300) {
+    } else if (consumptionValue <= 300) {
       amount = 165;
     } else {
       amount = 0;
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       .from('units')
       .update({
         previous_water_reading: unit.current_water_reading || 0,
-        current_water_reading: Number(currentReading),
+        current_water_reading: Number(consumptionValue),
         last_meter_update: new Date().toISOString(),
       })
       .eq('id', unitId);
