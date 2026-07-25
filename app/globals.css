@@ -796,7 +796,8 @@ body {
 
   .landlord-table,
   .property-table {
-    min-width: 650px;
+    width: 100%;
+    table-layout: auto;
   }
 
   .landlord-table th,

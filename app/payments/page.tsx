@@ -934,8 +934,8 @@ export default function PaymentsPage() {
                   ))}
                 </select>
               </div>
-              <div className="table-shell">
-                <table className="landlord-table">
+              <div className="table-shell responsive-table-wrapper">
+                <table className="landlord-table payments-table" style={{ minWidth: '800px' }}>
                   <thead>
                     <tr>
                       <th>Tenant</th>
