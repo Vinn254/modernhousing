@@ -445,12 +445,14 @@ function TenantsPageContent() {
               <input value={form.nextOfKinPhone} onChange={e => setForm(f => ({ ...f, nextOfKinPhone: e.target.value }))} placeholder="Next of Kin Phone (Optional)" />
               <select value={form.nextOfKinRelationship} onChange={e => setForm(f => ({ ...f, nextOfKinRelationship: e.target.value }))} style={{ marginLeft: '8px' }}>
                 <option value="">Next of Kin Relationship (Optional)</option>
-                <option value="Spouse">Spouse</option>
-                <option value="Parent">Parent</option>
-                <option value="Sibling">Sibling</option>
-                <option value="Child">Child</option>
-                <option value="Relative">Relative</option>
-                <option value="Friend">Friend</option>
+                <option value="partner">Partner</option>
+                <option value="spouse">Spouse</option>
+                <option value="parent">Parent</option>
+                <option value="sister">Sister</option>
+                <option value="brother">Brother</option>
+                <option value="roommate">Roommate</option>
+                <option value="uncle">Uncle</option>
+                <option value="grandparent">Grandparent</option>
               </select>
               {!editingTenant && (
                 <select value={form.unitId} onChange={e => setForm(f => ({ ...f, unitId: e.target.value }))} required>
