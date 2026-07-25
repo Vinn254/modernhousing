@@ -112,7 +112,7 @@ export default function TenantsPage() {
   }
 
   return (
-    <main className="container">
+    <main className="container admin-no-hero">
       <div className="card-admin-header">
         <p className="heading">Tenants</p>
         <p className="subheading">Create tenant records, assign units, and manage active leases.</p>
