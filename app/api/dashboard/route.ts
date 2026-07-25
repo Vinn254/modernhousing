@@ -93,9 +93,9 @@ export async function GET(request: NextRequest) {
     const isSuperAdmin = authContext.isSuperAdmin;
 
     let propertiesQuery: any = supabaseAdmin.from('properties').select('id, name, created_by');
-    let unitsQuery: any = supabaseAdmin.from('units').select('id, occupancy_status, property_id, rent_amount');
+    let unitsQuery: any = supabaseAdmin.from('units').select('id, occupancy_status, property_id, rent_amount, unit_number');
     let tenantsQuery: any = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
-    let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at');
+    let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at, transaction_type');
     let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status, email, plan, amount').eq('status', 'paid');
 
     // For landlords, filter by properties they CREATED
@@ -161,6 +161,16 @@ export async function GET(request: NextRequest) {
       .filter((p: any) => !subscribedAdminIds.includes(p.created_by))
       .reduce((sum: number, prop: any) => sum + 5000, 0);
 
+    const occupiedUnits = (unitsData ?? []).filter((u: any) => u.occupancy_status === 'occupied').length;
+    const vacantUnits = (unitsData ?? []).filter((u: any) => u.occupancy_status === 'vacant').length;
+    const vacantUnitsList = (unitsData ?? [])
+      .filter((u: any) => u.occupancy_status === 'vacant')
+      .map((u: any) => ({
+        unit_number: u.unit_number,
+        property_name: (propertiesData ?? []).find((p: any) => p.id === u.property_id)?.name ?? '',
+        rent_amount: toNumber(u.rent_amount)
+      }));
+
     const paymentsByTenant = new Map<string, number>();
     financialPayments.forEach((payment: any) => {
       const tenantId = String(payment.tenant_id ?? '');
@@ -191,6 +201,9 @@ export async function GET(request: NextRequest) {
       tenants: allTenants.length,
       total_payments: totalPayments,
       total_balance: totalBalance,
+      occupiedUnits,
+      vacantUnits,
+      vacantUnitsList,
       subscribedLandlords,
       totalLandlords,
       totalSubscriptions,
@@ -204,6 +217,9 @@ export async function GET(request: NextRequest) {
       tenants: 0,
       total_payments: 0,
       total_balance: 0,
+      occupiedUnits: 0,
+      vacantUnits: 0,
+      vacantUnitsList: [],
       subscribedLandlords: 0,
       totalLandlords: 0,
       totalSubscriptions: 0,
