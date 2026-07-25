@@ -171,10 +171,6 @@ export default function LandlordDocumentsPage() {
     }
   }
 
-  async function viewAuditTrail(docId: string) {
-    window.open(`/admin/audit-trail?documentId=${docId}`, '_blank');
-  }
-
   async function handleApproveBundle(bundleId: string) {
     const response = await fetch('/api/document-bundles', {
       method: 'PATCH',
@@ -352,10 +348,9 @@ export default function LandlordDocumentsPage() {
                         </td>
                         <td>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-'}</td>
 <td>
-                          <div className="landlord-actions">
-                            <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px' }}>Download</a>
-                            <button className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => viewAuditTrail(doc.id)}>Audit Trail</button>
-                            {doc.status === 'downloaded' && (
+<div className="landlord-actions">
+                              <a href={doc.document_url} target="_blank" rel="noopener noreferrer" className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px' }}>Download</a>
+                              {doc.status === 'downloaded' && (
                               <button className="action-button warn" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleUpdateStatus(doc.id, 'awaiting_signature')}>Mark as Signed</button>
                             )}
                             {doc.status === 'signed' && (
