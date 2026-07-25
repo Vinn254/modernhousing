@@ -141,7 +141,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+        <section className="analytics-grid">
           {kpis.map((item) => (
             <article key={item.title} className="card" style={{ padding: 14, border: '1px solid rgba(16, 185, 129, 0.14)', boxShadow: '0 6px 18px rgba(16, 185, 129, 0.06)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
