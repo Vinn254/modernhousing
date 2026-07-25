@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getAllAdminUsers, requestError } from '../../../../lib/supabaseAdmin';
+import { getAllAdminUsers } from '../../../../lib/supabaseAdmin';
 
 export async function GET(request: Request) {
   try {
@@ -17,8 +17,12 @@ export async function GET(request: Request) {
       supabaseAdmin.from('profiles').select('*').eq('role', 'project_manager'),
     ]);
 
-    if (profilesResult.error) throw profilesResult.error;
-    if (landlordProfilesResult.error) throw landlordProfilesResult.error;
+    if (profilesResult.error) {
+      return NextResponse.json({ message: `Profiles error: ${profilesResult.error.message}`, error: profilesResult.error }, { status: profilesResult.error.code === 'PGRST301' || profilesResult.error.message?.includes('permission') ? 403 : 500 });
+    }
+    if (landlordProfilesResult.error) {
+      return NextResponse.json({ message: `Landlord profiles error: ${landlordProfilesResult.error.message}`, error: landlordProfilesResult.error }, { status: landlordProfilesResult.error.code === 'PGRST301' || landlordProfilesResult.error.message?.includes('permission') ? 403 : 500 });
+    }
 
     const profiles = (profilesResult.data ?? []) as any[];
     const landlordProfiles = (landlordProfilesResult.data ?? []) as any[];
@@ -47,7 +51,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ agents });
-  } catch (error) {
-    return requestError(error);
+  } catch (error: any) {
+    return NextResponse.json({ message: error?.message || 'Internal server error', error: String(error) }, { status: 500 });
   }
 }
