@@ -2051,44 +2051,44 @@ body {
 }
 
 /* Container for authenticated pages - adds side spacing on large screens */
- .container:not(.admin-no-hero) {
-   max-width: 1400px;
-   margin-left: auto;
-   margin-right: auto;
-   padding: 34px 28px 80px;
- }
- 
- .admin-no-hero.container {
-   max-width: none;
-   margin: 0;
-   padding: 34px 28px 80px;
- }
- 
- .admin-no-hero .bento-section {
-   max-width: none;
-   margin: 0;
-   padding: 0 28px 80px;
- }
- 
- .admin-no-hero .bento {
-   margin: 0;
- }
-
- .page-layout.auth-pattern-bg {
+.container:not(.admin-no-hero) {
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
   padding: 34px 28px 80px;
- }
+}
+
+.admin-no-hero.container {
+  max-width: none;
+  margin: 0;
+  padding: 34px 28px 80px;
+}
+
+.admin-no-hero .bento-section {
+  max-width: none;
+  margin: 0;
+  padding: 0 28px 80px;
+}
+
+.admin-no-hero .bento {
+  margin: 0;
+}
+
+.page-layout.auth-pattern-bg {
+  padding: 34px 28px 80px;
+}
 
 @media (max-width: 768px) {
-   .container:not(.admin-no-hero),
-   .page-layout.auth-pattern-bg {
-     padding: 20px 16px 60px;
-     overflow-x: hidden;
-   }
-   .admin-no-hero.container,
-   .admin-no-hero .bento-section {
-     padding: 20px 16px 60px;
-   }
- }
+  .container:not(.admin-no-hero),
+  .page-layout.auth-pattern-bg {
+    padding: 20px 16px 60px;
+    overflow-x: hidden;
+  }
+  .admin-no-hero.container,
+  .admin-no-hero .bento-section {
+    padding: 20px 16px 60px;
+  }
+}
 
 .payments-form-grid {
   grid-template-columns: 1fr 1fr;

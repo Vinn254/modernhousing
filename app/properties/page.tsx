@@ -420,7 +420,7 @@ for (let i = 0; i < 12; i++) {
 
   return (
     <>
-      <main className="container property-page-main">
+      <main className="property-page-main">
       <div className="card-admin-header property-hero-card">
         <div>
           <span className="landlord-kicker">Project Manager Workspace</span>

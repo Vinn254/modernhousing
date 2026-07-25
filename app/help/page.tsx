@@ -14,7 +14,7 @@ export default function HelpPage() {
   }, []);
 
   return (
-    <main className="container auth-pattern-bg" style={{ maxWidth: '800px', padding: '24px' }}>
+    <main className="container auth-pattern-bg" style={{ padding: '24px' }}>
       <div className="card-admin-header" style={{ marginBottom: '24px' }}>
         <div>
           <span className="landlord-kicker">Support Center</span>
