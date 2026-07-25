@@ -696,7 +696,7 @@ export default function PaymentsPage() {
           }
         }
       `}</style>
-      <main className="container auth-bg">
+      <main className="container admin-no-hero auth-bg">
         <div className="card-admin-header">
           <p className="heading">Rent Payments</p>
           <p className="subheading">Record rent transactions, track balances, and view payment history.</p>
