@@ -2060,8 +2060,8 @@ body {
 }
 
 .admin-no-hero.container {
-  max-width: none;
-  margin: 0;
+  max-width: none !important;
+  margin: 0 !important;
   padding: 34px 28px 80px;
 }
 
