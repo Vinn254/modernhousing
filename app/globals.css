@@ -2100,6 +2100,9 @@ body {
  }
 
 .page-layout.auth-pattern-bg {
+  background: linear-gradient(135deg, #eafff7 0%, #d1fae5 100%);
+  min-height: 100vh;
+}
 
 .payments-form-grid {
   grid-template-columns: 1fr 1fr;
