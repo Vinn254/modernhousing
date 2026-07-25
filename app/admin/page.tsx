@@ -93,12 +93,15 @@ export default function AdminDashboard() {
       setLoading(false);
     }
     loadData();
-
+    const interval = window.setInterval(loadData, 30000);
     const handleVisibilityChange = () => {
       if (!document.hidden) loadData();
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const hour = new Date().getHours();
@@ -281,22 +284,22 @@ export default function AdminDashboard() {
               </div>
               <div className="modal-card-body">
 {rentOwedByTenant.some(t => t.net_balance > 0) ? (
-                   <div className="table-shell" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-                     <table className="landlord-table">
-                       <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Paid Overdue</th><th>Balance</th><th>Outstanding Balance</th><th>Last Payment</th></tr></thead>
-                       <tbody>{rentOwedByTenant.filter(t => t.net_balance > 0).map(t => (
-                         <tr key={t.id}>
-                           <td>{t.full_name}</td>
-                           <td>{t.unit}</td>
-                           <td>{formatCurrency(t.total_paid)}</td>
-                           <td>{t.paid_overdue_amount > 0 ? formatCurrency(t.paid_overdue_amount) : '—'}</td>
-                           <td>{formatCurrency(t.balance_remaining)}</td>
-                           <td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td>
-                           <td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td>
-                         </tr>
-                      ))}</tbody>
-                    </table>
-                  </div>
+                 <div className="table-shell" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                   <table className="landlord-table">
+                     <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Paid Overdue</th><th>Balance</th><th>Outstanding Balance</th><th>Last Payment</th></tr></thead>
+                     <tbody>{rentOwedByTenant.filter(t => t.net_balance > 0).map(t => (
+                       <tr key={t.id}>
+                         <td>{t.full_name}</td>
+                         <td>{t.unit}</td>
+                         <td>{formatCurrency(t.total_paid)}</td>
+                         <td>{t.paid_overdue_amount > 0 ? formatCurrency(t.paid_overdue_amount) : '—'}</td>
+                         <td>{formatCurrency(t.balance_remaining)}</td>
+                         <td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td>
+                         <td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td>
+                       </tr>
+                   ))}</tbody>
+                   </table>
+                 </div>
                 ) : <p className="table-empty">All tenants are paid up — nothing owed.</p>}
               </div>
             </div>
@@ -307,8 +310,15 @@ export default function AdminDashboard() {
 
       <footer>
         <div className="footer-inner">
-          <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
-          <div className="footer-links"><a href="/">Home</a><a href="/admin">Dashboard</a><a href="/help">Help</a></div>
+          <div className="footer-brand">
+            <span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 21h18" />
+                <path d="M5 21V7l8-4v18" />
+                <path d="M19 21V11l-6-4" />
+              </svg>
+            </span>Springfield Systems
+          </div>
           <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
         </div>
       </footer>
