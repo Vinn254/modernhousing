@@ -8,6 +8,16 @@
   --navy-400: #5b7ba5;
   --navy-300: #8aa3c4;
   --accent: #10b981;
+}
+
+.admin-no-hero {
+  overflow-x: hidden;
+}
+
+.admin-no-hero .bento-grid,
+.admin-no-hero .card-grid {
+  max-width: 100vw;
+}
   --accent-bright: #34d399;
   --accent-soft: rgba(16, 185, 129, 0.12);
   --accent-glow: rgba(16, 185, 129, 0.25);
@@ -782,11 +792,15 @@ body {
 
   .table-shell {
     width: 100%;
-    max-width: 100%;
+    max-width: 100vw;
     box-sizing: border-box;
     border-radius: 12px;
     overflow-x: auto;
     overflow-y: visible;
+  }
+
+  .page-layout .table-shell {
+    max-width: 100vw;
   }
 
   .admin-no-hero .card {
@@ -794,11 +808,43 @@ body {
     min-width: 0;
   }
 
-  .landlord-table,
-  .property-table {
-    width: 100%;
+  .landlord-table th,
+  .property-table th {
+    white-space: normal;
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+
+  .landlord-table td,
+  .property-table td {
+    white-space: normal;
+    padding: 12px 8px;
+    font-size: 12px;
+    max-width: none;
+    text-overflow: clip;
+  }
+}
+
+.landord-table,
+.property-table {
+  width: 100%;
+  table-layout: auto;
+}
+
+@media (max-width: 768px) {
+  .page-layout .landlord-table,
+  .page-layout .property-table {
     table-layout: auto;
   }
+
+  .page-layout .landlord-table th,
+  .page-layout .property-table th,
+  .page-layout .landlord-table td,
+  .page-layout .property-table td {
+    white-space: normal;
+    word-break: break-word;
+  }
+}
 
   .landlord-table th,
   .property-table th {
@@ -2069,30 +2115,12 @@ body {
    margin: 0 !important;
  }
 
-.admin-no-hero .bento-grid {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.admin-no-hero .table-shell {
-  max-width: 100vw;
-  overflow-x: auto;
-}
+ .admin-no-hero .table-shell {
+   max-width: 100vw;
+   overflow-x: auto;
+ }
 
 .page-layout.auth-pattern-bg {
-  padding: 34px 28px 80px;
-}
-
-@media (max-width: 768px) {
-  .container:not(.admin-no-hero),
-  .page-layout.auth-pattern-bg {
-    padding: 20px 16px 60px;
-    overflow-x: hidden;
-  }
-  .admin-no-hero.container,
-  .admin-no-hero .bento-section {
-    padding: 20px 16px 60px;
-  }
-}
 
 .payments-form-grid {
   grid-template-columns: 1fr 1fr;
