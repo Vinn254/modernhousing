@@ -14,6 +14,7 @@ interface Agent {
   email: string;
   full_name: string;
   property_name?: string;
+  property_id?: string;
   status: string;
   phone?: string | null;
 }
@@ -120,6 +121,32 @@ export default function AgentsPage() {
     setMessage('Agent deleted successfully.');
   }
 
+  async function handleReactivate(agent: Agent) {
+    if (!confirm('Reactivate this agent?')) return;
+
+    const response = await fetch('/api/agents', {
+      method: 'PATCH',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({
+        userId: agent.id,
+        fullName: agent.full_name,
+        propertyId: agent.property_id || '',
+        propertyName: agent.property_name || '',
+        status: 'active',
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to reactivate agent.');
+      return;
+    }
+
+    setAgents(agents.map(a => a.id === agent.id ? { ...a, status: 'active' } : a));
+    setMessage('Agent reactivated successfully.');
+  }
+
   function handleReassign(agent: Agent) {
     setSelectedAgent(agent);
     scrollToForm();
@@ -196,7 +223,7 @@ export default function AgentsPage() {
                                 <button className="action-button danger" onClick={() => handleDelete(agent.id)}>Delete</button>
                               </>
                             ) : (
-                              <button className="action-button" onClick={() => handleReassign(agent)}>Reactivate</button>
+                              <button className="action-button" onClick={() => handleReactivate(agent)}>Reactivate</button>
                             )}
                           </div>
                         </td>

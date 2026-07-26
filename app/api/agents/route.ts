@@ -298,13 +298,20 @@ export async function PATCH(request: NextRequest) {
       return badRequest('Agent ID is required.');
     }
 
+    const users = await getAllAdminUsers();
+    const existingUser = users.find((item) => item.id === userId);
+    const existingPropertyId = existingUser?.user_metadata?.property_id ?? '';
+    const existingPropertyName = existingUser?.user_metadata?.property_name ?? '';
+
+    const finalPropertyId = propertyId || existingPropertyId;
+    const finalPropertyName = propertyName || existingPropertyName;
+
     const authContext = await getAuthContext(request);
-    if (!authContext.isSuperAdmin && propertyId) {
-      // Landlords/Project Managers: can only modify agents assigned to properties they created or own
+    if (!authContext.isSuperAdmin && finalPropertyId) {
       const { data: prop } = await client
         .from('properties')
         .select('id, created_by, organization_id')
-        .eq('id', propertyId)
+        .eq('id', finalPropertyId)
         .or(`created_by.eq.${authContext.userId ?? ''},organization_id.eq.${authContext.organizationId ?? ''}`)
         .maybeSingle();
 
@@ -313,11 +320,7 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    if (!propertyId || !propertyName) {
-      return badRequest('Assign the agent to one property.');
-    }
-
-    const user = await updateAgentMetadata(userId, { fullName, propertyId, propertyName, status });
+    const user = await updateAgentMetadata(userId, { fullName, propertyId: finalPropertyId, propertyName: finalPropertyName, status });
     const profilesResult = await client.from('profiles').select('*').eq('user_id', userId).single();
 
     if (profilesResult.error && profilesResult.error.code !== 'PGRST116') {
@@ -326,7 +329,6 @@ export async function PATCH(request: NextRequest) {
 
     let profile = profilesResult.data as AgentProfile | undefined;
     if (!profile && fullName) {
-      const users = await getAllAdminUsers();
       const agent = users.find((item) => item.id === userId);
       profile = await upsertAgentProfile(userId, fullName, agent?.email ?? '');
     }
