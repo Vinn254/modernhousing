@@ -306,6 +306,7 @@ body {
   color: #052e1f !important;
   box-shadow: 0 6px 18px rgba(16,185,129,0.28);
   transition: all .2s;
+  text-decoration: none;
 }
 .nav-login:hover {
   transform: translateY(-1px);
@@ -392,6 +393,7 @@ body {
   color: #052e1f;
   font-weight: 700;
   box-shadow: 0 8px 24px rgba(16,185,129,0.3);
+  text-decoration: none;
 }
 .btn-primary:hover {
   background: linear-gradient(135deg, var(--accent-bright), #6ee7b7);
@@ -400,8 +402,9 @@ body {
 }
 .btn-ghost {
   background: rgba(255,255,255,0.06);
-  color: #fff;
+  color: #fbbf24;
   border-color: rgba(255,255,255,0.14);
+  text-decoration: none;
 }
 .btn-ghost:hover { background: rgba(255,255,255,0.12); }
 
