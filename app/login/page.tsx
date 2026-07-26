@@ -121,6 +121,10 @@ function LoginForm() {
 
           <section className="auth-panel">
             <div className="auth-header">
+              <Link href="/" className="auth-back">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+                Back to home
+              </Link>
               <span className="auth-badge" style={{ background: 'rgba(244,63,94,0.1)', borderColor: 'rgba(244,63,94,0.2)' }}>Payment Required</span>
               <h2>Renew Subscription</h2>
             </div>
@@ -192,6 +196,10 @@ function LoginForm() {
 
         <section className="auth-panel">
           <div className="auth-header">
+            <Link href="/" className="auth-back">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+              Back to home
+            </Link>
             <span className="auth-badge">Welcome Back</span>
             <h2>Sign in to Springfield Systems</h2>
             <p>Use your project manager, agent, or tenant credentials to continue.</p>
