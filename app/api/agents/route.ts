@@ -162,7 +162,7 @@ function normalizeAgent(user: any, profile?: AgentProfile) {
   };
 }
 
-async function updateAgentMetadata(userId: string, input: { fullName?: string; propertyId?: string; propertyName?: string; status?: string; landlordId?: string }) {
+async function updateAgentMetadata(userId: string, input: { fullName?: string; propertyId?: string; propertyName?: string; status?: string; landlordId?: string; role?: string }) {
   const users = await getAllAdminUsers();
   const user = users.find((item) => item.id === userId);
   if (!user) throw new Error('Agent not found.');
@@ -170,7 +170,7 @@ async function updateAgentMetadata(userId: string, input: { fullName?: string; p
   const userMetadata = {
     ...(user.user_metadata ?? {}),
     full_name: input.fullName ?? user.user_metadata?.full_name ?? user.email,
-    role: 'agent',
+    role: input.role ?? 'agent',
     property_id: input.propertyId ?? user.user_metadata?.property_id ?? '',
     property_name: input.propertyName ?? user.user_metadata?.property_name ?? '',
     landlord_id: input.landlordId ?? user.user_metadata?.landlord_id ?? '',
@@ -348,7 +348,6 @@ export async function DELETE(request: NextRequest) {
 
     const authContext = await getAuthContext(request);
     if (!authContext.isSuperAdmin) {
-      // Landlords/Project Managers: can only delete agents assigned to properties they CREATED or own
       const users = await getAllAdminUsers();
       const agent = users.find((item) => item.id === userId);
       const agentPropertyId = agent?.user_metadata?.property_id;
@@ -369,12 +368,18 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    const user = await updateAgentMetadata(userId, { status: 'inactive' });
-    if (!user) throw new Error('Agent not found.');
-    await client.from('profiles').update({ status: 'inactive' }).eq('user_id', userId);
+    await client.from('profiles').delete().eq('user_id', userId);
+    await updateAgentMetadata(userId, {
+      fullName: '',
+      propertyId: '',
+      propertyName: '',
+      landlordId: '',
+      status: 'inactive',
+      role: 'tenant',
+    });
 
-    return NextResponse.json({ agent: normalizeAgent(user) });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ message: error.message ?? 'Unable to remove agent.' }, { status: 500 });
+    return NextResponse.json({ message: error.message ?? 'Unable to delete agent.' }, { status: 500 });
   }
 }

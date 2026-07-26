@@ -105,19 +105,19 @@ export default function AgentsPage() {
     await loadData();
   }
 
-  async function handleRemove(agentId: string) {
-    if (!confirm('Remove this agent from active property access?')) return;
+  async function handleDelete(agentId: string) {
+    if (!confirm('Delete this agent completely? This will remove their access and profile.')) return;
 
     const response = await fetch(`/api/agents?id=${encodeURIComponent(agentId)}`, { method: 'DELETE', headers: await getAuthHeaders() });
     const result = await response.json();
 
     if (!response.ok) {
-      setError(result.message ?? 'Unable to remove agent.');
+      setError(result.message ?? 'Unable to delete agent.');
       return;
     }
 
-    setAgents(agents.map(a => a.id === agentId ? { ...a, status: 'inactive' } : a));
-    setMessage('Agent removed from active access.');
+    setAgents(agents.filter(a => a.id !== agentId));
+    setMessage('Agent deleted successfully.');
   }
 
   function handleReassign(agent: Agent) {
@@ -193,7 +193,7 @@ export default function AgentsPage() {
                             {agent.status === 'active' ? (
                               <>
                                 <button className="action-button primary" onClick={() => handleReassign(agent)}>Reassign</button>
-                                <button className="action-button danger" onClick={() => handleRemove(agent.id)}>Remove</button>
+                                <button className="action-button danger" onClick={() => handleDelete(agent.id)}>Delete</button>
                               </>
                             ) : (
                               <button className="action-button" onClick={() => handleReassign(agent)}>Reactivate</button>
