@@ -2290,6 +2290,10 @@ body, #__next, .page-wrapper {
 .auth-header {
   text-align: center;
   margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .auth-badge {
@@ -2305,7 +2309,6 @@ body, #__next, .page-wrapper {
   border: 1px solid rgba(16, 185, 129, 0.3);
   padding: 6px 14px;
   border-radius: 999px;
-  margin-bottom: 16px;
 }
 
 .auth-card h2 {
@@ -2864,7 +2867,6 @@ body, #__next, .page-wrapper {
   font-weight: 600;
   font-size: 13px;
   text-decoration: none;
-  margin-bottom: 12px;
   animation: slideInLeft 0.35s ease-out;
 }
 .auth-back svg {
