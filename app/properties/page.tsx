@@ -448,7 +448,7 @@ for (let i = 0; i < 12; i++) {
 
       <section className="landlord-section property-section">
 <div className="bento-grid property-stats">
-          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
             </div>
@@ -458,9 +458,9 @@ for (let i = 0; i < 12; i++) {
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Active properties in your workspace.</p>
             </div>
           </article>
-          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
             </div>
             <div>
               <div className="card-label">Total Units</div>
@@ -468,7 +468,7 @@ for (let i = 0; i < 12; i++) {
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Units recorded across all properties.</p>
             </div>
           </article>
-          <article className={`bento-card ${totalUnits > occupiedUnits ? '' : ''}`} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <article className={`bento-card ${totalUnits > occupiedUnits ? '' : ''}`} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><path d="M9 3v18"/><path d="M3 9h18"/><path d="M3 15h14"/></svg>
             </div>
@@ -478,7 +478,7 @@ for (let i = 0; i < 12; i++) {
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Available units waiting for tenants.</p>
             </div>
           </article>
-          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
             </div>

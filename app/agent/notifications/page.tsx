@@ -195,8 +195,8 @@ export default function AgentNotificationsPage() {
           <div><p className="heading">Tenant Communications</p><p className="subheading">Reply to tenants and send direct messages.</p></div>
         </div>
 
-        <section className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.18)', boxShadow: '0 0 20px rgba(16, 185, 129, 0.08)' }}>
-          <div style={{ padding: 16, borderBottom: '1px solid var(--line)', background: 'linear-gradient(135deg, rgba(240,253,244,0.95), rgba(255,255,255,0.98))' }}>
+        <section className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.18)', boxShadow: '0 0 20px rgba(16, 185, 129, 0.08)', background: 'linear-gradient(135deg, rgba(240,253,244,0.95), rgba(255,255,255,0.98))' }}>
+          <div style={{ padding: 16, borderBottom: '1px solid var(--line)', background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(14,165,233,0.15))' }}>
             <div className="card-label">Inbox</div>
             <h3 style={{ margin: '4px 0' }}>Tenant Messages</h3>
           </div>

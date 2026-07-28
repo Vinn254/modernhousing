@@ -142,7 +142,7 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style
       </div>
 
       <section className="bento-grid">
-        <article className="card">
+        <article className="card" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' }}>
           <div className="card-label">Water Meter Billing</div>
             <h3>Record Water Reading</h3>
             <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Water rates: 1-6 units = 88 KSH, 7-20 units = 132 KSH, 21-50 units = 137 KSH, 51-100 units = 148 KSH, 101-300 units = 165 KSH.</p>
@@ -168,7 +168,7 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </article>
 
-          <article className="card">
+          <article className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
             <div className="card-label">Record Other Utilities</div>
             <h3>Utility Billing</h3>
             <form onSubmit={handleAddUtility} className="form-grid">
@@ -189,7 +189,7 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </article>
 
-          <article className="card" style={{ gridColumn: 'span 2' }}>
+          <article className="card" style={{ gridColumn: 'span 2', background: 'var(--surface)' }}>
             <div className="card-label">Other Utility Bills</div>
             <h3 style={{ marginBottom: 16 }}>Bill History</h3>
             {loading && <p className="landlord-muted">Loading utilities...</p>}

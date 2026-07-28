@@ -706,7 +706,7 @@ export default function PaymentsPage() {
         {error && <p style={{ color: '#dc2626', fontWeight: 700, marginBottom: 16 }}>{error}</p>}
 
         <section className="card-grid">
-          <div className="card">
+          <div className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
             <div className="card-label">Manual Payment Entry</div>
             <h3 style={{ marginBottom: 16 }}>Record Direct Payment</h3>
             <form onSubmit={handleManualPayment} className="form-grid">
@@ -734,7 +734,7 @@ export default function PaymentsPage() {
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </div>
 
-          <div className="card">
+          <div className="card" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
             <div className="card-label">M-Pesa Payment</div>
             <h3 style={{ marginBottom: 16 }}>Send STK Prompt</h3>
             <form onSubmit={handleStkPush} className="form-grid">
@@ -747,7 +747,7 @@ export default function PaymentsPage() {
         </section>
 
         {userRole !== 'tenant' && (
-          <article className="card" style={{ marginTop: 24 }}>
+          <article className="card" style={{ marginTop: 24, background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' }}>
             <div className="card-label">Payment Instructions</div>
             <h3 style={{ marginBottom: 16 }}>Tenant Payment Details</h3>
             <p style={{ color: '#111827', marginBottom: 12 }}>Share these details with tenants for manual payments via M-Pesa:</p>

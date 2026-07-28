@@ -384,7 +384,7 @@ async function handleWaterMeterReading(unitId: string) {
         </div>
 
         <section className="card-grid">
-          <article className="card">
+          <article className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
             <div className="card-label"><span className="badge badge-pm">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </span>Record Other Utilities</div>
@@ -406,7 +406,7 @@ async function handleWaterMeterReading(unitId: string) {
             <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 8 }}>Creates bill record - tenants see this in Payment History</p>
           </article>
 
-          <article className="card">
+          <article className="card" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
             <div className="card-label"><span className="badge badge-agent">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </span>Add Water Bill</div>
@@ -423,7 +423,7 @@ async function handleWaterMeterReading(unitId: string) {
             </form>
           </article>
 
-          <article className="card">
+          <article className="card" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' }}>
             <div className="card-label"><span className="badge badge-agent">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             </span>Water Meter Billing</div>
