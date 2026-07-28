@@ -135,6 +135,7 @@ export async function GET(request: NextRequest) {
         unit_number,
         rent_amount,
         occupancy_status,
+        unit_type,
         created_at,
         tenants(id, full_name, email, lease_start, lease_end)
       `);
