@@ -39,10 +39,9 @@ export default function AgentComplaintsPage() {
         <div><p className="heading">Tenant Complaints</p><p className="subheading">View house problems raised by tenants for your assigned property.</p></div>
       </div>
 
-      <section className="bento-section">
-        <div className="bento">
-          <article className="card">
-            <div className="card-label">Complaints</div>
+      <section className="bento-grid">
+        <article className="card" style={{ gridColumn: '1 / -1' }}>
+          <div className="card-label">Complaints</div>
             <h3 style={{ marginBottom: 16 }}>House Problems Raised</h3>
             {loading && <p className="landlord-muted">Loading complaints...</p>}
             {!loading && comments.length === 0 && <p className="landlord-empty">No complaints raised yet.</p>}
@@ -65,7 +64,6 @@ export default function AgentComplaintsPage() {
             )}
             {error && <p className="landlord-error">{error}</p>}
           </article>
-        </div>
       </section>
     </main>
   );
