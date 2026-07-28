@@ -452,7 +452,7 @@ const getTypeLabel = (type: string) => {
           </section>
 
 <section className="dashboard-hero-stats" style={{ marginTop: 24 }}>
-        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: totalRentOwed < 0 ? 'var(--accent-soft)' : 'rgba(220,38,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={totalRentOwed < 0 ? 'var(--accent)' : '#dc2626'} strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
           </div>
@@ -461,7 +461,7 @@ const getTypeLabel = (type: string) => {
             <h3 style={{ margin: 0, color: totalRentOwed < 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(-totalRentOwed)}</h3>
           </div>
         </div>
-        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: totalUtilityOwed < 0 ? 'rgba(16,185,129,0.12)' : 'rgba(220,38,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={totalUtilityOwed < 0 ? 'var(--accent)' : '#dc2626'} strokeWidth="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </div>
@@ -470,7 +470,7 @@ const getTypeLabel = (type: string) => {
             <h3 style={{ margin: 0, color: totalUtilityOwed < 0 ? 'var(--accent)' : '#dc2626' }}>{formatCurrency(-totalUtilityOwed)}</h3>
           </div>
         </div>
-        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="card" style={{ padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: totalTenantOwes > 0 ? 'rgba(220,38,38,0.12)' : 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={totalTenantOwes > 0 ? '#dc2626' : 'var(--accent)'} strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </div>

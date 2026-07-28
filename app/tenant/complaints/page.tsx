@@ -101,7 +101,7 @@ export default function TenantComplaintsPage() {
       </div>
 
       <section className="card-grid">
-        <div className="card" style={{ border: '1px solid rgba(16, 185, 129, 0.16)', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.08)' }}>
+        <div className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)', border: '1px solid rgba(16, 185, 129, 0.16)', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.08)' }}>
           <div className="card-label">New report</div>
           <h3 style={{ marginBottom: 12 }}>Raise a house issue</h3>
           <form onSubmit={handleComplaint} className="form-grid">
@@ -136,7 +136,7 @@ export default function TenantComplaintsPage() {
           {error && <p style={{ color: '#dc2626', marginTop: 12 }}>{error}</p>}
         </div>
 
-        <div className="card">
+        <div className="card" style={{ background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100)' }}>
           <h3 style={{ marginBottom: 12 }}>Your complaints</h3>
           {loading && <p className="landlord-muted">Loading complaints…</p>}
           {!loading && comments.length === 0 && <p>No complaints submitted yet.</p>}

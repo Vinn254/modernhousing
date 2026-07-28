@@ -182,9 +182,9 @@ export default function TenantDocumentsPage() {
 
       {loading ? <p>Loading documents…</p> : (
         <>
-          {agreementDocs.length > 0 && (
-            <section style={{ marginTop: 24 }}>
-              <article className="card">
+            {agreementDocs.length > 0 && (
+              <section style={{ marginTop: 24 }}>
+                <article className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)' }}>
                 <div className="card-label">
                   <span className="status-pill status-pending">Awaiting Signature</span>
                 </div>
@@ -199,13 +199,13 @@ export default function TenantDocumentsPage() {
             </section>
           )}
 
-          {agreementDocs.length === 0 && (
-            <section className="card" style={{ marginTop: 24 }}>
-              <p className="landlord-empty">No agreement assigned yet. Contact your landlord.</p>
-            </section>
-          )}
+            {agreementDocs.length === 0 && (
+              <section className="card" style={{ marginTop: 24, background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100)' }}>
+                <p className="landlord-empty">No agreement assigned yet. Contact your landlord.</p>
+              </section>
+            )}
 
-          <section className="card" style={{ marginTop: 24 }}>
+            <section className="card" style={{ marginTop: 24, background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100)' }}>
             <div className="card-label">
               <span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -247,7 +247,7 @@ export default function TenantDocumentsPage() {
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </section>
 
-          <section className="card" style={{ marginTop: 24, overflowX: 'auto' }}>
+            <section className="card" style={{ marginTop: 24, overflowX: 'auto', background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100)' }}>
             <div className="card-label">Your Submitted Documents</div>
             <h3 style={{ marginBottom: 12 }}>Document Status</h3>
             

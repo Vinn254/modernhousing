@@ -211,7 +211,7 @@ const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
       {/* Landlord-uploaded agreements (only agreement type, not signed_agreement or id_document) */}
       {agreements.filter(d => d.document_type === 'agreement').length > 0 && (
         <section style={{ marginTop: 24 }}>
-          <div className="card">
+          <div className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)' }}>
             <div className="card-label">
               <span className="status-pill status-pending">{agreements[0].status === 'sent' ? 'Awaiting Signature' : agreements[0].status}</span>
             </div>
@@ -228,7 +228,7 @@ const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
 
       {agreements.length === 0 && (
         <section style={{ marginTop: 24 }}>
-          <div className="card">
+          <div className="card" style={{ background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100)' }}>
             <p className="landlord-empty">No agreement assigned yet. Contact your landlord.</p>
           </div>
         </section>
@@ -236,7 +236,7 @@ const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
 
       {/* Upload signed documents */}
       <section className="card-grid">
-        <article className="card" style={{ gridColumn: '1 / -1' }}>
+        <article className="card" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100)' }}>
           <div className="card-label">
             <span className="badge badge-pm">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -286,7 +286,7 @@ const [passportPhoto, setPassportPhoto] = useState<File | null>(null);
         const bundle = bundles[0]; // Get the first bundle for this tenant
         const bundleStatus = bundle?.status || null;
         return (
-          <section className="card" style={{ marginTop: 24, overflowX: 'auto' }}>
+          <section className="card" style={{ marginTop: 24, overflowX: 'auto', background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100)' }}>
             <div className="card-label">Your Submitted Documents</div>
             <h3 style={{ marginBottom: 12 }}>Document Status</h3>
             {documents.length === 0 && signedAgreementDocs.length === 0 && idDocs.length === 0 && <p>No documents uploaded yet.</p>}

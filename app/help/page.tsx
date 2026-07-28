@@ -25,7 +25,7 @@ export default function HelpPage() {
 
       <section style={{ marginBottom: '32px' }}>
         {(!userRole || userRole === 'admin' || userRole === 'project_manager') && (
-          <div className="card" style={{ marginBottom: '24px' }}>
+          <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)' }}>
             <div className="card-label" style={{ marginBottom: '16px' }}>
               <span className="badge badge-pm">Project Manager (Landlord)</span>
             </div>
@@ -46,7 +46,7 @@ export default function HelpPage() {
         )}
 
         {userRole === 'agent' && (
-          <div className="card" style={{ marginBottom: '24px' }}>
+          <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100)' }}>
             <div className="card-label" style={{ marginBottom: '16px' }}>
               <span className="badge badge-agent">Agent</span>
             </div>
@@ -64,7 +64,7 @@ export default function HelpPage() {
         )}
 
         {userRole === 'tenant' && (
-          <div className="card">
+          <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100)' }}>
             <div className="card-label" style={{ marginBottom: '16px' }}>
               <span className="badge" style={{ background: 'var(--navy-700)' }}>Tenant</span>
             </div>

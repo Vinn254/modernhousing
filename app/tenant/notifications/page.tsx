@@ -165,7 +165,7 @@ export default function TenantNotificationsPage() {
           <div><p className="heading">Communications</p><p className="subheading">Send direct messages to your landlord or agent and keep every reply in one place.</p></div>
         </div>
 
-        <section className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.18)', boxShadow: '0 0 20px rgba(16, 185, 129, 0.08)' }}>
+        <section className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.18)', boxShadow: '0 0 20px rgba(16, 185, 129, 0.08)', background: 'linear-gradient(135deg, #f0fdfa 0%, #f9fafb 100%)' }}>
           <div style={{ padding: 16, borderBottom: '1px solid var(--line)', background: 'linear-gradient(135deg, rgba(240,253,244,0.95), rgba(255,255,255,0.98))' }}>
             <div className="card-label">Inbox</div>
             <h3 style={{ margin: '4px 0' }}>Your messages</h3>

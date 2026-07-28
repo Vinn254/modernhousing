@@ -293,7 +293,7 @@ export default function CommunicationsPage() {
         </div>
 
         <section className="card-grid" style={{ gap: 20 }}>
-          <article className="card" style={{ minHeight: 260 }}>
+          <article className="card" style={{ minHeight: 260, background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
             <div className="card-label">
               <span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z" /></svg>
@@ -326,7 +326,7 @@ export default function CommunicationsPage() {
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </article>
 
-          <article className="card" style={{ minHeight: 260 }}>
+          <article className="card" style={{ minHeight: 260, background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
             <div className="card-label">
               <span className="badge badge-agent">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z" /></svg>
