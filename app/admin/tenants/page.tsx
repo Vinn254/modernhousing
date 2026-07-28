@@ -500,9 +500,12 @@ function TenantsPageContent() {
                       <th>Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {tenants.map(tenant => (
-                      <tr key={tenant.id}>
+                   <tbody>
+                     {tenants.map((tenant, idx) => {
+                       const rowColors = ['#f0fdfa', '#eff6ff', '#fef3c7', '#fdf2f8', '#f0f9ff', '#fdf4ff', '#ecfdf5', '#fff7ed'];
+                       const rowColor = rowColors[idx % rowColors.length];
+                       return (
+                       <tr key={tenant.id} style={{ background: rowColor }}>
                         <td className="landlord-name">{tenant.full_name}</td>
                         <td>{tenant.email}</td>
                         <td>{tenant.phone || '-'}</td>
@@ -521,8 +524,9 @@ function TenantsPageContent() {
                             <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRemove(tenant.id)}>Remove</button>
                           </div>
                         </td>
-                      </tr>
-                    ))}
+                       </tr>
+                       );
+                     })}
                   </tbody>
                 </table>
               </div>
