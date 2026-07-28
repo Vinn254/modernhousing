@@ -125,9 +125,12 @@ export default function DashboardPage() {
    const [agentLeaseStart, setAgentLeaseStart] = useState('');
    const [agentLeaseEnd, setAgentLeaseEnd] = useState('');
    const [agentDeposit, setAgentDeposit] = useState('');
-   const [agentNextOfKinName, setAgentNextOfKinName] = useState('');
-   const [agentNextOfKinId, setAgentNextOfKinId] = useState('');
-   const [agentNextOfKinPhone, setAgentNextOfKinPhone] = useState('');
+    const [agentNextOfKinName, setAgentNextOfKinName] = useState('');
+    const [agentNextOfKinId, setAgentNextOfKinId] = useState('');
+    const [agentNextOfKinPhone, setAgentNextOfKinPhone] = useState('');
+    const [agentNextOfKinRelationship, setAgentNextOfKinRelationship] = useState('');
+    const [agentNationalId, setAgentNationalId] = useState('');
+    const [agentKraPin, setAgentKraPin] = useState('');
    const [propertyLoading, setPropertyLoading] = useState(false);
    const [loading, setLoading] = useState(true);
    const [refreshing, setRefreshing] = useState(false);
@@ -466,22 +469,25 @@ const rentOwedByTenant = useMemo(() => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
 
-const response = await fetch('/api/tenants', {
-       method: 'POST',
-       headers,
-       body: JSON.stringify({ 
-         propertyId: effectivePropertyId, 
-         fullName: agentTenantName, 
-         email: agentTenantEmail, 
-         phone: agentTenantPhone, 
-         unitId: agentTenantUnitId || undefined, 
-         leaseStart: agentLeaseStart, 
-         leaseEnd: agentLeaseEnd, 
-         depositAmount: Number(agentDeposit), 
-         nextOfKinName: agentNextOfKinName || null, 
-         nextOfKinId: agentNextOfKinId || null, 
-         nextOfKinPhone: agentNextOfKinPhone || null 
-       }),
+ const response = await fetch('/api/tenants', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ 
+          propertyId: effectivePropertyId, 
+          fullName: agentTenantName, 
+          email: agentTenantEmail, 
+          phone: agentTenantPhone, 
+          unitId: agentTenantUnitId || undefined, 
+          leaseStart: agentLeaseStart, 
+          leaseEnd: agentLeaseEnd, 
+          depositAmount: Number(agentDeposit), 
+          nationalId: agentNationalId || null, 
+          kraPin: agentKraPin || null, 
+          nextOfKinName: agentNextOfKinName || null, 
+          nextOfKinId: agentNextOfKinId || null, 
+          nextOfKinPhone: agentNextOfKinPhone || null, 
+          nextOfKinRelationship: agentNextOfKinRelationship || null 
+        }),
       });
 
     const result = await response.json();
@@ -503,6 +509,9 @@ const response = await fetch('/api/tenants', {
     setAgentNextOfKinName('');
     setAgentNextOfKinId('');
     setAgentNextOfKinPhone('');
+    setAgentNextOfKinRelationship('');
+    setAgentNationalId('');
+    setAgentKraPin('');
     setMessage('Tenant added successfully.');
     await loadDashboard(true);
     setAgentLoading(false);
@@ -701,7 +710,7 @@ const response = await fetch('/api/tenants', {
             </div>
           </section>
 
-          <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
+          <section className="dashboard-section-grid">
             <div className="card">
               <div className="card-label">Tenant Management</div>
               <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
@@ -709,6 +718,8 @@ const response = await fetch('/api/tenants', {
                 <input value={agentTenantName} onChange={(event) => setAgentTenantName(event.target.value)} required placeholder="Tenant full name" />
                 <input type="email" value={agentTenantEmail} onChange={(event) => setAgentTenantEmail(event.target.value)} required placeholder="Tenant email" />
                 <input value={agentTenantPhone} onChange={(event) => setAgentTenantPhone(event.target.value)} placeholder="Phone" />
+                <input value={agentNationalId} onChange={(event) => setAgentNationalId(event.target.value)} placeholder="National ID (Optional)" />
+                <input value={agentKraPin} onChange={(event) => setAgentKraPin(event.target.value)} placeholder="KRA PIN (Optional)" />
                 <select value={agentTenantUnitId} onChange={(event) => setAgentTenantUnitId(event.target.value)}>
                   <option value="">Auto-create unit</option>
                   {units.map((unit) => <option key={unit.id} value={unit.id}>Unit {unit.unit_number}</option>)}
@@ -716,9 +727,20 @@ const response = await fetch('/api/tenants', {
                 <input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required />
                 <input type="date" value={agentLeaseEnd} onChange={(event) => setAgentLeaseEnd(event.target.value)} required />
                 <input type="number" value={agentDeposit} onChange={(event) => setAgentDeposit(event.target.value)} placeholder="Deposit" />
-                <input value={agentNextOfKinName} onChange={(event) => setAgentNextOfKinName(event.target.value)} placeholder="Next of Kin Name" />
-                <input value={agentNextOfKinId} onChange={(event) => setAgentNextOfKinId(event.target.value)} placeholder="Next of Kin ID" />
-                <input value={agentNextOfKinPhone} onChange={(event) => setAgentNextOfKinPhone(event.target.value)} placeholder="Next of Kin Phone" />
+                <input value={agentNextOfKinName} onChange={(event) => setAgentNextOfKinName(event.target.value)} placeholder="Next of Kin Name (Optional)" />
+                <input value={agentNextOfKinId} onChange={(event) => setAgentNextOfKinId(event.target.value)} placeholder="Next of Kin ID (Optional)" />
+                <input value={agentNextOfKinPhone} onChange={(event) => setAgentNextOfKinPhone(event.target.value)} placeholder="Next of Kin Phone (Optional)" />
+                <select value={agentNextOfKinRelationship} onChange={(event) => setAgentNextOfKinRelationship(event.target.value)} style={{ marginLeft: '8px' }}>
+                  <option value="">Next of Kin Relationship (Optional)</option>
+                  <option value="partner">Partner</option>
+                  <option value="spouse">Spouse</option>
+                  <option value="parent">Parent</option>
+                  <option value="sister">Sister</option>
+                  <option value="brother">Brother</option>
+                  <option value="roommate">Roommate</option>
+                  <option value="uncle">Uncle</option>
+                  <option value="grandparent">Grandparent</option>
+                </select>
                 <button type="submit" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Tenant'}</button>
               </form>
             </div>
