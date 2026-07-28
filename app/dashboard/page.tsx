@@ -15,7 +15,7 @@ interface DashboardStats {
   occupiedUnits: number;
   vacantUnits: number;
   vacantUnitsList?: Array<{ unit_number: string; property_name: string; rent_amount: number }>;
-  rentOwedByTenant?: Array<{ id: string; full_name: string; email: string; unit: string; property: string; total_paid: number; balance_remaining: number; net_balance: number; last_payment: string | null }>;
+  rentOwedByTenant?: Array<{ id: string; full_name: string; email: string; unit: string; property: string; total_paid: number; rent_amount: number; balance_remaining: number; last_payment: string | null }>;
   tenants_with_analytics: Array<{ id: string; payment_count: number; due_date: string }>;
 }
 
@@ -190,8 +190,6 @@ const [message, setMessage] = useState('');
 const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
           ...p,
           tenant_id: p.tenant_id,
-          amount: p.paid_amount ?? p.amount ?? 0,
-          balance_remaining: p.balance_remaining ?? p.balance ?? 0,
           created_at: p.paid_at || p.created_at,
         })), ...(billsResult.bills ?? []).map((b: any) => ({
           ...b,
@@ -255,78 +253,86 @@ const mergedPayments = [...(paymentsResult.payments ?? []).map((p: any) => ({
   }, [roleLoaded, selectedPropertyId, userRole]);
 
 // Derive "rent owed" directly from the payments already loaded by the page
-    // (the same data the Payment History table uses and which is confirmed
-    // correct). This avoids any dependency on /api/dashboard scoping.
-    const paidSum = (payments: any[]) => payments.reduce((sum, p) => sum + Number(p.paid_amount ?? p.amount ?? 0), 0);
-    const VALID_RENT_TYPES = ['rent', 'overdue', 'deposit'];
+   // (the same data the Payment History table uses and which is confirmed
+   // correct). This avoids any dependency on /api/dashboard scoping.
+   const VALID_RENT_TYPES = ['rent', 'overdue'];
+   
+const rentOwedByTenant = useMemo(() => {
+      if (!payments || payments.length === 0) return [];
+      const tenantMap = new Map<string, any>();
+      (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
 
-  const rentOwedByTenant = useMemo(() => {
-    if (!payments || payments.length === 0) return [];
-    const tenantMap = new Map<string, any>();
-    (tenants || []).forEach((t: any) => tenantMap.set(t.id, t));
+      const byTenant = new Map<string, any>();
+      
+      payments.forEach((p: any) => {
+        if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
+        const tid = String(p.tenant_id || p.tenant_email || '');
+        if (!tid) return;
+        
+        if (!byTenant.has(tid)) {
+          const t = tenantMap.get(tid) || {};
+          byTenant.set(tid, {
+            id: tid,
+            full_name: t.full_name || p.tenant_name || p.tenant || '',
+            email: t.email || p.tenant_email || '',
+            unit: t.unit || p.unit_number || p.unit || null,
+            property: t.property || p.property_name || p.property || null,
+            balance_remaining: 0,
+            paid_amount: 0,
+            paid_overdue_amount: 0,
+            last_payment: p.created_at || null,
+            payments: [] as any[],
+          });
+        }
+        const entry = byTenant.get(tid);
+        entry.payments.push(p);
+        
 
-    const byTenant = new Map<string, any>();
+         const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
+         const balanceRem = Number(p.balance_remaining || 0);
+         
+         // Unpaid payments add to the outstanding balance (negative balance_remaining means still owed)
+         if (balanceRem < 0) {
+           entry.balance_remaining += Math.abs(balanceRem);
+         }
+         
+         // Paid overdue payments offset what the tenant owes
+         if (p.transaction_type === 'overdue' && balanceRem <= 0) {
+           entry.paid_overdue_amount += paidAmt;
+         }
+         
+         // Track all payments made
+         entry.paid_amount += paidAmt;
+        
+        
+        // Track last payment date
+        if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
+          entry.last_payment = p.created_at;
+        }
+      });
 
-    payments.forEach((p: any) => {
-      if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
-      const tid = String(p.tenant_id || p.tenant_email || '');
-      if (!tid) return;
-
-      if (!byTenant.has(tid)) {
-        const t = tenantMap.get(tid) || {};
-        byTenant.set(tid, {
-          id: tid,
-          full_name: t.full_name || p.tenant_name || p.tenant || '',
-          email: t.email || p.tenant_email || '',
-          unit: t.unit || p.unit_number || p.unit || null,
-          property: t.property || p.property_name || p.property || null,
-          balance_remaining: 0,
-          paid_overdue_amount: 0,
-          last_payment: p.created_at || null,
-          payments: [] as any[],
-        });
-      }
-      const entry = byTenant.get(tid);
-      entry.payments.push(p);
-
-      const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
-      const balanceRem = Number(p.balance_remaining || 0);
-
-      if (p.transaction_type === 'rent' || p.transaction_type === 'deposit') {
-        entry.balance_remaining += Math.abs(balanceRem);
-      }
-
-if (p.transaction_type === 'overdue') {
-         entry.paid_overdue_amount += paidAmt > 0 ? paidAmt : 0;
-       }
-
-      if (p.created_at && (!entry.last_payment || p.created_at > entry.last_payment)) {
-        entry.last_payment = p.created_at;
-      }
-    });
-
-    return Array.from(byTenant.values())
-      .map((entry: any) => {
-        const sorted = entry.payments.sort((a: any, b: any) => {
-          const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-          const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-          const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-          if (aMonth !== bMonth) return aMonth - bMonth; return (a.month_due || '').localeCompare(b.month_due || '');
-        });
-
-        const total_paid = paidSum(entry.payments);
-        const netBalance = Math.max(entry.balance_remaining - entry.paid_overdue_amount, 0);
-
-        return {
-          ...entry,
-          total_paid,
-          balance_remaining: entry.balance_remaining,
-          net_balance: netBalance,
-          sorted_payments: sorted
-        };
-      })
-      .filter((t: any) => t.net_balance > 0);
-  }, [payments, tenants]);
+      return Array.from(byTenant.values())
+        .map((entry: any) => {
+          // Sort payments by due date for presentation
+          const sorted = entry.payments.sort((a: any, b: any) => {
+            const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+            const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+            const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+            if (aMonth !== bMonth) return aMonth - bMonth; return (a.month_due || '').localeCompare(b.month_due || '');
+          });
+          
+          // Net rent owed = outstanding balance - paid overdue payments (cannot go negative)
+          const netBalance = Math.max(entry.balance_remaining - entry.paid_overdue_amount, 0);
+          
+          return {
+            ...entry,
+            net_balance: netBalance,
+            total_paid: entry.paid_amount,
+            sorted_payments: sorted
+          };
+        })
+        .filter((t: any) => t.net_balance > 0);
+    }, [payments, tenants]);
 
   const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.net_balance || 0), 0);
 
@@ -337,7 +343,7 @@ if (p.transaction_type === 'overdue') {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     (payments || []).forEach((p: any) => {
       if (!VALID_RENT_TYPES.includes(p.transaction_type)) return;
-const paidAmt = Number(p.amount ?? 0);
+      const paidAmt = Number(p.paid_amount ?? p.amount ?? 0);
       if (p.month_due) {
         const monthParts = p.month_due?.split(' ');
         if (monthParts?.length >= 2) {
@@ -608,14 +614,14 @@ const response = await fetch('/api/tenants', {
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
   return (
-    <main className="container auth-pattern-bg full-width">
+    <main className="container auth-pattern-bg">
       <div className="card-admin-header">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
           <div>
             <p className="heading">{isAgent ? 'Agent Dashboard' : 'Landlord Dashboard'}</p>
             <p className="subheading">Overview of properties, agents, tenants, payments, balances, and due dates.</p>
           </div>
-          <button type="button" className="btn btn-ghost" style={{ color: 'var(--ink)', border: '1px solid var(--line)', background: 'var(--line-soft)' }} onClick={() => loadDashboard(true)} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
+          <button type="button" className="btn btn-ghost" style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)' }} onClick={() => loadDashboard(true)} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
         </div>
       </div>
 
@@ -625,7 +631,7 @@ const response = await fetch('/api/tenants', {
       {message && <p style={{ color: 'var(--accent)' }}>{message}</p>}
 
       {isAgent && !effectivePropertyId && (
-        <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: 'var(--amber)', marginBottom: 16 }}>No property assigned. Please contact your landlord to assign a property.</p>
+        <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: '#92400e', marginBottom: 16 }}>No property assigned. Please contact your landlord to assign a property.</p>
       )}
 
       {isAgent && effectivePropertyId && (
@@ -695,8 +701,8 @@ const response = await fetch('/api/tenants', {
             </div>
           </section>
 
-<section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18, marginTop: 24 }}>
-            <div className="card card-feat-1">
+          <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 24 }}>
+            <div className="card">
               <div className="card-label">Tenant Management</div>
               <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
               <form onSubmit={handleAgentTenantCreate} className="form-grid">
@@ -717,7 +723,7 @@ const response = await fetch('/api/tenants', {
               </form>
             </div>
 
-            <div className="card card-feat-2">
+            <div className="card">
               <div className="card-label">Water Meter Billing</div>
               <h3 style={{ marginBottom: 16 }}>Record Water Reading</h3>
               <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Enter current meter reading. Water is billed at tiered rates: 0-6m³ (88 KES), 7-20m³ (132 KES), 21-50m³ (137 KES), 51-100m³ (148 KES), 101-300m³ (165 KES), 300+m³ (custom). Consumption = Current - Previous.</p>
@@ -739,8 +745,8 @@ const response = await fetch('/api/tenants', {
             </div>
           </section>
 
-          <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 18, marginTop: 24 }}>
-            <div className="card card-feat-3">
+          <section className="dashboard-section-grid">
+            <div className="card">
               <div className="card-label">Tenant Records</div>
               <h3 style={{ marginBottom: 16 }}>Manage Tenants</h3>
               {tenants.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p> : (
@@ -764,7 +770,7 @@ const response = await fetch('/api/tenants', {
                           <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.unit}</td>
                           <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.lease_start} → {tenant.lease_end}</td>
                           <td style={{ padding: '14px 12px' }}>
-                            <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(220,38,38,0.1)', color: 'var(--rose)' }} onClick={() => handleAgentTenantRemove(tenant.id)}>Mark Relocated</button>
+                            <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(220,38,38,0.1)', color: '#7f1212' }} onClick={() => handleAgentTenantRemove(tenant.id)}>Mark Relocated</button>
                           </td>
                         </tr>
                       ))}
@@ -775,8 +781,8 @@ const response = await fetch('/api/tenants', {
             </div>
           </section>
 
-          <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18, marginTop: 24 }}>
-            <div className="card card-feat-8">
+          <section className="dashboard-section-grid">
+            <div className="card">
               <div className="card-label">Overdue Notifications</div>
               <h3 style={{ marginBottom: 16 }}>Send Notice</h3>
               <form onSubmit={handleSendNotification} className="form-grid">
@@ -798,7 +804,7 @@ const response = await fetch('/api/tenants', {
               ))}
             </div>
 
-            <div className="card card-feat-9">
+            <div className="card">
               <div className="card-label">Water Bills</div>
               <h3 style={{ marginBottom: 16 }}>Recent Water Billing</h3>
               {waterBills.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No water bills generated yet.</p> : (
@@ -923,8 +929,8 @@ const response = await fetch('/api/tenants', {
             </div>
             <div>
               <div className="card-label">Outstanding</div>
-               <h3 style={{ margin: 0, color: 'var(--error)' }}>{formatCurrency(totalBalance)}</h3>
-               <Sparkline data={[0, 10000, totalBalance]} color="#b91c1c" w={80} h={24}/>
+              <h3 style={{ margin: 0, color: '#b91c1c' }}>{formatCurrency(totalBalance)}</h3>
+              <Sparkline data={[0, 10000, totalBalance]} color="#b91c1c" w={80} h={24}/>
               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>rent owed</p>
             </div>
           </div>
@@ -951,17 +957,17 @@ const response = await fetch('/api/tenants', {
             </div>
 {rentOwedByTenant && rentOwedByTenant.some(t => t.net_balance > 0) ? (
                <div className="table-shell"><table className="landlord-table">
-                 <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Paid Overdue</th><th>Balance</th><th>Outstanding Balance</th><th>Last Payment</th></tr></thead>
-                 <tbody>{rentOwedByTenant.filter(t => t.net_balance > 0).map(t => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td>{t.paid_overdue_amount ? formatCurrency(t.paid_overdue_amount) : '—'}</td><td>{formatCurrency(t.balance_remaining)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
+                 <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Last Payment</th></tr></thead>
+                 <tbody>{rentOwedByTenant.filter(t => t.net_balance > 0).map(t => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
                </table></div>
              ) : <p className="landlord-muted">All tenants have paid.</p>}
           </section>
         </>
       )}
 
-{!isAgent && (
-        <section className="dashboard-section-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18, marginTop: 24 }}>
-          <div className="card card-feat-4">
+      {!isAgent && (
+          <section className="dashboard-section-grid">
+            <div className="card">
             <div className="card-label">Properties and Agents</div>
             <h3 style={{ marginBottom: 16 }}>Add Property</h3>
             <form onSubmit={handleAddProperty} className="form-grid" style={{ marginBottom: 24 }}>
@@ -972,7 +978,7 @@ const response = await fetch('/api/tenants', {
             </form>
 
             <h3 style={{ marginBottom: 16 }}>Add Agent</h3>
-            {properties.length === 0 ? <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: 'var(--amber)', marginBottom: 16 }}>Add a property first, then assign an agent to that property.</p> : null}
+            {properties.length === 0 ? <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: '#92400e', marginBottom: 16 }}>Add a property first, then assign an agent to that property.</p> : null}
             <form onSubmit={handleAddAgent} className="form-grid">
               <input value={agentName} onChange={(event) => setAgentName(event.target.value)} required placeholder="Agent full name" />
               <input type="email" value={agentEmail} onChange={(event) => setAgentEmail(event.target.value)} required placeholder="Agent email" />
@@ -992,12 +998,12 @@ const response = await fetch('/api/tenants', {
                   <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.email}</div>
                   <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.property_name || 'Unassigned'} · {agent.status}</div>
                 </div>
-                <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: agent.status === 'active' ? 'rgba(220,38,38,0.1)' : 'rgba(16,185,129,0.1)', color: agent.status === 'active' ? 'var(--rose)' : 'var(--accent)' }} onClick={() => handleRemoveAgent(agent.id)} disabled={agent.status !== 'active'}>{agent.status === 'active' ? 'Remove' : 'Removed'}</button>
+                <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: agent.status === 'active' ? 'rgba(220,38,38,0.1)' : 'rgba(16,185,129,0.1)', color: agent.status === 'active' ? '#7f1212' : 'var(--accent)' }} onClick={() => handleRemoveAgent(agent.id)} disabled={agent.status !== 'active'}>{agent.status === 'active' ? 'Remove' : 'Removed'}</button>
 </div>
               ))}
             </div>
 
-<div className="card card-feat-5">
+            <div className="card">
               <div className="card-label">Portfolio</div>
               <h3 style={{ marginBottom: 16 }}>Properties</h3>
               {properties.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No properties added yet.</p> : properties.map((property) => (
