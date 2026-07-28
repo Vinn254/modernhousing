@@ -2711,6 +2711,22 @@ body, #__next, .page-wrapper {
   }
 }
 
+.bento-grid > *,
+.card-grid > *,
+.dashboard-section-grid > * {
+  min-width: 0;
+}
+
+.role-landlord .card,
+.role-landlord .bento-card {
+  border-top-color: #10b981 !important;
+}
+
+.role-tenant .card,
+.role-tenant .bento-card {
+  border-top-color: #f59e0b !important;
+}
+
 .card-admin-header {
   background: linear-gradient(135deg, var(--navy-700) 0%, var(--navy-800) 100%);
   color: var(--surface);

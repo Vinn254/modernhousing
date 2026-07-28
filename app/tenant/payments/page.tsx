@@ -311,7 +311,7 @@ const getTypeLabel = (type: string) => {
   }
 
   return (
-    <main className="container page-layout admin-no-hero">
+    <main className="container page-layout admin-no-hero role-tenant">
       <div className="card-admin-header">
         <div><p className="heading">Tenant Payments</p><p className="subheading">Rent, utility payments, and invoices.</p></div>
       </div>

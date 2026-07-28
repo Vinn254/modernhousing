@@ -284,7 +284,7 @@ export default function CommunicationsPage() {
           .table-shell { overflow-x: auto; }
         }
       `}</style>
-      <main className="container admin-no-hero">
+      <main className="container admin-no-hero role-landlord">
         <div className="card-admin-header">
           <div>
             <p className="heading">Communications</p>

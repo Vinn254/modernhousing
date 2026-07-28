@@ -154,7 +154,7 @@ export default function AgentsPage() {
 
   return (
     <>
-      <main className="container admin-no-hero">
+      <main className="container admin-no-hero role-landlord">
         <div className="card-admin-header">
           <div>
             <p className="heading">Agent Management</p>

@@ -375,7 +375,7 @@ async function handleWaterMeterReading(unitId: string) {
 
   return (
     <>
-      <main className="container admin-no-hero">
+       <main className="container admin-no-hero role-landlord">
         <div className="card-admin-header">
           <div>
             <p className="heading">Utilities Management</p>

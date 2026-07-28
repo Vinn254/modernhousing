@@ -172,7 +172,7 @@ export default function TenantDocumentsPage() {
   );
 
   return (
-    <main className="container page-layout admin-no-hero">
+    <main className="container page-layout admin-no-hero role-tenant">
       <div className="card-admin-header">
         <div>
           <p className="heading">Tenancy Agreement</p>

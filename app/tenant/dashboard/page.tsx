@@ -109,7 +109,7 @@ export default function TenantDashboardPage() {
 
   if (loading) {
     return (
-      <main className="container page-layout auth-pattern-bg admin-no-hero">
+      <main className="container page-layout auth-pattern-bg admin-no-hero role-tenant">
         <div className="card">Loading tenant dashboard…</div>
       </main>
     );
@@ -117,7 +117,7 @@ export default function TenantDashboardPage() {
 
   if (!data?.tenant) {
     return (
-      <main className="container page-layout auth-pattern-bg admin-no-hero">
+      <main className="container page-layout auth-pattern-bg admin-no-hero role-tenant">
         <div className="card">
           <h1>Welcome</h1>
           <p>No tenant record was found for this account.</p>

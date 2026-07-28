@@ -835,7 +835,7 @@ export default function PaymentsPage() {
           </div>
         )}
 
-        <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', marginBottom: 32 }}>
+        <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', marginTop: 32, marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>

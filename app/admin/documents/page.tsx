@@ -266,7 +266,7 @@ export default function LandlordDocumentsPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <main className="container admin-no-hero">
+      <main className="container admin-no-hero role-landlord">
         <div className="card-admin-header">
           <div>
             <p className="heading">Tenancy Agreement</p>

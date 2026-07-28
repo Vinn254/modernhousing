@@ -160,7 +160,7 @@ export default function TenantNotificationsPage() {
           .tenant-inbox-thread { order: 3 !important; grid-column: auto !important; grid-row: auto !important; }
         }
       `}</style>
-<main className="container page-layout admin-no-hero">
+ <main className="container page-layout admin-no-hero role-tenant">
          <div className="card-admin-header">
           <div><p className="heading">Communications</p><p className="subheading">Send direct messages to your landlord or agent and keep every reply in one place.</p></div>
         </div>

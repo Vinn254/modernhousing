@@ -95,7 +95,7 @@ export default function TenantComplaintsPage() {
   }
 
   return (
-    <main className="container page-layout admin-no-hero">
+    <main className="container page-layout admin-no-hero role-tenant">
       <div className="card-admin-header">
         <div><p className="heading">Complaints</p><p className="subheading">Report house problems clearly, choose who should act, and attach visuals when needed.</p></div>
       </div>
