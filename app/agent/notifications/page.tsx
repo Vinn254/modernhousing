@@ -190,7 +190,7 @@ export default function AgentNotificationsPage() {
           .agent-inbox-thread { order: 3 !important; grid-column: auto !important; grid-row: auto !important; }
         }
       `}</style>
-      <main className="container page-layout">
+      <main className="container admin-no-hero page-layout">
         <div className="card-admin-header">
           <div><p className="heading">Tenant Communications</p><p className="subheading">Reply to tenants and send direct messages.</p></div>
         </div>
