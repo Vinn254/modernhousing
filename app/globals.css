@@ -2031,9 +2031,11 @@ body {
 
 .card-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   align-items: start;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
 .card-grid-single {
@@ -2680,17 +2682,17 @@ body, #__next, .page-wrapper {
     border-color: var(--accent-bright);
   }
 
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 900px) {
   .bento-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
+    grid-template-columns: 1fr;
   }
-  @media (max-width: 900px) {
-    .bento-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+}
 
 .card-admin-header {
   background: linear-gradient(135deg, var(--navy-700) 0%, var(--navy-800) 100%);
