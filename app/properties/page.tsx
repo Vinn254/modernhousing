@@ -726,16 +726,18 @@ for (let i = 0; i < 12; i++) {
                     <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {units.map((unit) => {
-                    const property = properties.find(p => p.id === unit.property_id);
-                    const unitTypeLabel = unit.unit_type === 'single-room' ? 'Single Room' :
-                       unit.unit_type === 'bedsitter' ? 'Bedsitter' :
-                       unit.unit_type === 'one-bedroom' ? 'One Bedroom' :
-                       unit.unit_type === 'two-bedroom' ? 'Two Bedroom' :
-                       unit.unit_type === 'three-bedroom' ? 'Three Bedroom' : '—';
-                    return (
-                      <tr key={unit.id}>
+                 <tbody>
+                   {units.map((unit, idx) => {
+                     const property = properties.find(p => p.id === unit.property_id);
+                     const unitTypeLabel = unit.unit_type === 'single-room' ? 'Single Room' :
+                        unit.unit_type === 'bedsitter' ? 'Bedsitter' :
+                        unit.unit_type === 'one-bedroom' ? 'One Bedroom' :
+                        unit.unit_type === 'two-bedroom' ? 'Two Bedroom' :
+                        unit.unit_type === 'three-bedroom' ? 'Three Bedroom' : '—';
+                     const rowColors = ['#f0fdfa', '#eff6ff', '#fef3c7', '#fdf2f8', '#f0f9ff', '#fdf4ff', '#ecfdf5', '#fff7ed'];
+                     const rowColor = rowColors[idx % rowColors.length];
+                     return (
+                       <tr key={unit.id} style={{ background: rowColor }}>
                         <td className="landlord-name">{unit.unit_number}</td>
                         <td style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unitTypeLabel}</td>
                         <td>{property?.name ?? '—'}</td>
