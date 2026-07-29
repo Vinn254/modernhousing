@@ -108,7 +108,7 @@ export default function AuditPage() {
   }
 
   return (
-    <main className="container page-layout auth-pattern-bg" style={{ overflowX: 'hidden' }}>
+    <main className="container page-layout auth-pattern-bg" style={{ overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <div className="card-admin-header" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', borderRadius: 16, padding: '20px 24px', marginBottom: 24, border: '1px solid rgba(124, 58, 237, 0.35)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
@@ -124,7 +124,7 @@ export default function AuditPage() {
 
       <section className="card" style={{ marginBottom: 24, background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '1px solid #e2e8f0' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', minWidth: 140, fontSize: 13 }}>
+          <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', minWidth: 140, fontSize: 13, flex: '1 1 140px' }}>
             <option value="">All Resources</option>
             <option value="property">Properties</option>
             <option value="tenant">Tenants</option>
@@ -134,7 +134,7 @@ export default function AuditPage() {
             <option value="agent">Agents</option>
             <option value="document">Documents</option>
           </select>
-          <select value={filterAction} onChange={e => setFilterAction(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', minWidth: 140, fontSize: 13 }}>
+          <select value={filterAction} onChange={e => setFilterAction(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', minWidth: 140, fontSize: 13, flex: '1 1 140px' }}>
             <option value="">All Actions</option>
             <option value="create">Create</option>
             <option value="update">Update</option>
@@ -142,7 +142,7 @@ export default function AuditPage() {
             <option value="login">Login</option>
             <option value="logout">Logout</option>
           </select>
-          <button onClick={loadAuditLogs} style={{ padding: '8px 18px', borderRadius: 8, background: '#4f46e5', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Apply Filters</button>
+          <button onClick={loadAuditLogs} style={{ padding: '8px 18px', borderRadius: 8, background: '#4f46e5', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, flex: '0 0 auto' }}>Apply Filters</button>
         </div>
       </section>
 
@@ -165,11 +165,11 @@ export default function AuditPage() {
       )}
 
       {!loading && auditLogs.length > 0 && (
-        <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff' }}>
+        <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', flex: '1 1 auto' }}>
           <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
+                <tr style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100)' }}>
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Timestamp</th>
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>User</th>
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Action</th>
@@ -206,6 +206,14 @@ export default function AuditPage() {
           </div>
         </div>
       )}
+
+      <footer style={{ marginTop: 'auto', paddingTop: 24 }}>
+        <div className="footer-inner">
+          <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
+          <div className="footer-links"><a href="/">Home</a><a href="/admin">Dashboard</a></div>
+          <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
+        </div>
+      </footer>
     </main>
   );
 }

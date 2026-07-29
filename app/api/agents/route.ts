@@ -8,6 +8,7 @@ import {
   getUserByEmail,
   requestError,
 } from '../../../lib/supabaseAdmin';
+import { generateOTP, sendEmail } from '../../../lib/emailService';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';

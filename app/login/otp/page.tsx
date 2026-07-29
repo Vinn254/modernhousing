@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function OTPLoginPage() {
+function OTPLoginForm() {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -197,5 +197,13 @@ export default function OTPLoginPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function OTPLoginPage() {
+  return (
+    <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>Loading...</div>}>
+      <OTPLoginForm />
+    </Suspense>
   );
 }
