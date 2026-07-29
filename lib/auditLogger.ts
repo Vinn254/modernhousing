@@ -15,6 +15,9 @@ export async function logAuditEvent(
   request?: NextRequest
 ) {
   try {
+    const ipAddress = request?.headers.get('x-forwarded-for') ?? request?.headers.get('x-real-ip') ?? null;
+    const userAgent = request?.headers.get('user-agent') ?? null;
+
     await supabaseAdmin.from('audit_logs').insert({
       user_id: userId ?? null,
       user_email: userEmail ?? null,
@@ -22,6 +25,8 @@ export async function logAuditEvent(
       resource_type: resourceType,
       resource_id: resourceId ?? null,
       details: details ?? null,
+      ip_address: ipAddress,
+      user_agent: userAgent,
       created_at: new Date().toISOString(),
     });
   } catch (e) {

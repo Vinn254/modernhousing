@@ -63,13 +63,12 @@ export async function GET(request: NextRequest) {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role')
+    .select('role, organization_id')
     .eq('user_id', authContext.userId)
     .single();
 
-  if (profile?.role !== 'super_admin') {
-    return NextResponse.json({ message: 'Forbidden - Super admin only' }, { status: 403 });
-  }
+  const userRole = profile?.role ?? 'user';
+  const organizationId = profile?.organization_id ?? null;
 
   const resourceType = request.nextUrl.searchParams.get('resourceType');
   const action = request.nextUrl.searchParams.get('action');
@@ -80,13 +79,122 @@ export async function GET(request: NextRequest) {
   if (resourceType) query = query.eq('resource_type', resourceType);
   if (action) query = query.eq('action', action);
 
-  const { data, error } = await query;
-
-  if (error) {
-    return NextResponse.json({ message: error.message }, { status: 500 });
+  if (userRole === 'super_admin') {
+    const { data, error } = await query;
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ auditLogs: data ?? [] });
   }
 
-  return NextResponse.json({ auditLogs: data ?? [] });
+  if (userRole === 'project_manager' || userRole === 'admin') {
+    const { data: userProps } = await supabaseAdmin
+      .from('properties')
+      .select('id')
+      .eq('created_by', authContext.userId);
+
+    const propertyIds = (userProps ?? []).map((p: any) => p.id);
+
+    const { data: units } = await supabaseAdmin
+      .from('units')
+      .select('id')
+      .in('property_id', propertyIds);
+
+    const unitIds = (units ?? []).map((u: any) => u.id);
+
+    const { data: tenants } = await supabaseAdmin
+      .from('tenants')
+      .select('id')
+      .in('unit_id', unitIds);
+
+    const tenantIds = (tenants ?? []).map((t: any) => t.id);
+
+    const resourceIds = [
+      ...propertyIds,
+      ...unitIds,
+      ...tenantIds,
+    ];
+
+    let finalQuery = supabaseAdmin
+      .from('audit_logs')
+      .select('*')
+      .eq('user_id', authContext.userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (resourceIds.length > 0) {
+      const orFilters = resourceIds.map(id => `resource_id.eq.${id}`).join(',');
+      finalQuery = supabaseAdmin
+        .from('audit_logs')
+        .select('*')
+        .or(`user_id.eq.${authContext.userId},${orFilters}`)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+    }
+
+    if (resourceType) finalQuery = finalQuery.eq('resource_type', resourceType);
+    if (action) finalQuery = finalQuery.eq('action', action);
+
+    const { data, error } = await finalQuery;
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ auditLogs: data ?? [] });
+  }
+
+  if (userRole === 'agent') {
+    const { data: profileData } = await supabaseAdmin
+      .from('profiles')
+      .select('user_metadata')
+      .eq('user_id', authContext.userId)
+      .single();
+
+    const agentEmail = profileData?.user_metadata?.email ?? authContext.userEmail;
+
+    const { data: agentUnits } = await supabaseAdmin
+      .from('units')
+      .select('id')
+      .eq('agent_email', agentEmail);
+
+    const unitIds = (agentUnits ?? []).map((u: any) => u.id);
+
+    const { data: agentTenants } = await supabaseAdmin
+      .from('tenants')
+      .select('id')
+      .in('unit_id', unitIds);
+
+    const tenantIds = (agentTenants ?? []).map((t: any) => t.id);
+
+    const resourceIds = [...unitIds, ...tenantIds];
+
+    let finalQuery = supabaseAdmin
+      .from('audit_logs')
+      .select('*')
+      .eq('user_id', authContext.userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (resourceIds.length > 0) {
+      const orFilters = resourceIds.map(id => `resource_id.eq.${id}`).join(',');
+      finalQuery = supabaseAdmin
+        .from('audit_logs')
+        .select('*')
+        .or(`user_id.eq.${authContext.userId},${orFilters}`)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+    }
+
+    if (resourceType) finalQuery = finalQuery.eq('resource_type', resourceType);
+    if (action) finalQuery = finalQuery.eq('action', action);
+
+    const { data, error } = await finalQuery;
+    if (error) {
+      return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ auditLogs: data ?? [] });
+  }
+
+  return NextResponse.json({ auditLogs: [] });
 }
 
 export async function POST(request: NextRequest) {

@@ -28,11 +28,17 @@ export default function AuditPage() {
         setUserRole(data.user.user_metadata?.role || '');
       }
     });
-    if (userRole === 'super_admin') {
+  }, []);
+
+  useEffect(() => {
+    if (!userRole) return;
+    if (userRole === 'super_admin' || userRole === 'project_manager' || userRole === 'admin' || userRole === 'agent') {
       loadAuditLogs();
     }
     const interval = window.setInterval(() => {
-      if (userRole === 'super_admin') loadAuditLogs();
+      if (userRole === 'super_admin' || userRole === 'project_manager' || userRole === 'admin' || userRole === 'agent') {
+        loadAuditLogs();
+      }
     }, 30000);
     return () => window.clearInterval(interval);
   }, [userRole]);
@@ -58,23 +64,30 @@ export default function AuditPage() {
     setLoading(false);
   }
 
-  if (userRole !== 'super_admin') {
+  const canViewAudits = userRole === 'super_admin' || userRole === 'project_manager' || userRole === 'admin' || userRole === 'agent';
+
+  if (!canViewAudits) {
     return (
       <main className="container page-layout auth-pattern-bg">
         <div className="card">
           <h1>Access Denied</h1>
-          <p>Super admin access required.</p>
+          <p>Audit logs are restricted to authorized users.</p>
         </div>
       </main>
     );
   }
 
+  const pageTitle = userRole === 'super_admin' ? 'System Audit Logs' : 'Workspace Audit Logs';
+  const pageSubtitle = userRole === 'super_admin'
+    ? 'Monitor all activities across the platform for security and compliance.'
+    : 'Track actions performed on your properties, tenants, units, and agents.';
+
   return (
     <main className="container page-layout auth-pattern-bg">
       <div className="card-admin-header">
         <div>
-          <p className="heading">System Audit Logs</p>
-          <p className="subheading">Monitor all activities across the platform for security and compliance.</p>
+          <p className="heading">{pageTitle}</p>
+          <p className="subheading">{pageSubtitle}</p>
         </div>
         <button onClick={loadAuditLogs} style={{ padding: '8px 16px' }}>Refresh</button>
       </div>
