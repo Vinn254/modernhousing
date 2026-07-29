@@ -94,16 +94,17 @@ export async function POST(request: NextRequest) {
     }
 
     await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        user_metadata: {
-          full_name: managerName,
-          role,
-          status: 'inactive',
-          approval_status: 'pending',
-        },
-      }),
-    });
+       method: 'PUT',
+       body: JSON.stringify({
+         email_confirmed_at: new Date().toISOString(),
+         user_metadata: {
+           full_name: managerName,
+           role,
+           status: 'inactive',
+           approval_status: 'pending',
+         },
+       }),
+     });
 
     return NextResponse.json({ message: `${role === 'project_manager' ? 'Project manager' : 'Agent'} registered. Awaiting super admin approval.`, subscription: subscriptionPayload?.subscription ?? null }, { status: 201 });
   } catch (error: any) {

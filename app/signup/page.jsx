@@ -27,10 +27,18 @@ export default function SignupPage() {
             setLoading(false);
             return;
         }
+        const body = {
+            userId: data.user.id,
+            organizationName,
+            managerName,
+            email,
+            plan: selectedPlan,
+            role: 'project_manager',
+        };
         const response = await fetch('/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: data.user.id, organizationName, managerName, email, plan: selectedPlan }),
+            body: JSON.stringify(body),
         });
         const result = await response.json();
         if (!response.ok) {
@@ -38,56 +46,69 @@ export default function SignupPage() {
             setLoading(false);
             return;
         }
-        // Registration successful - redirect to login
-        router.push('/login?message=Registration successful. Please sign in.');
+        router.push('/login?message=Registration submitted successfully. Please wait for super admin approval before logging in.');
     }
-    return (<main className="container">
-      <div className="hero" style={{ padding: '40px 20px 140px' }}>
-        <h1>Create Project Manager Account</h1>
-        <p>Register a workspace to manage properties, agents, tenants, and payments.</p>
-      </div>
-
-      <div className="card" style={{ maxWidth: '520px', margin: '-80px auto 0' }}>
-        <h2 style={{ marginTop: 0, color: 'var(--dark-blue-accent)', marginBottom: 8 }}>Project Manager Registration</h2>
-
-        <form onSubmit={handleSubmit} className="grid" style={{ gap: 16, marginTop: 8 }}>
-          <label>
-            Organization name
-            <input value={organizationName} onChange={(event) => setOrganizationName(event.target.value)} required placeholder="Springfield Properties"/>
-          </label>
-
-          <label>
-            Full name
-            <input value={managerName} onChange={(event) => setManagerName(event.target.value)} required placeholder="Jane Doe"/>
-          </label>
-
-          <label>
-            Email address
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="manager@example.com"/>
-          </label>
-
-          <label>
-            Password
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="Choose a secure password"/>
-          </label>
-
-          <label>
-            Subscription Plan
-            <select value={selectedPlan} onChange={(event) => setSelectedPlan(event.target.value)} required>
-              {plans.map((plan) => (<option key={plan.value} value={plan.value}>{plan.name} - {plan.price}</option>))}
-            </select>
-          </label>
-
-          {error ? <p style={{ color: '#ef4444', fontSize: '0.9rem' }}>{error}</p> : null}
-
-          <button type="submit" disabled={loading}>
-            {loading ? 'Creating account…' : 'Create Project Manager Account'}
-          </button>
-        </form>
-
-        <p style={{ marginTop: 24, textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-          Already have an account? <Link href="/login" style={{ color: 'var(--accent)', fontWeight: 600 }}>Sign in</Link>
-        </p>
-      </div>
-    </main>);
+    return (
+        <main className="auth-page">
+            <div className="auth-layout">
+                <section className="auth-visual" aria-hidden="true">
+                    <div className="auth-brand-lockup">
+                        <span className="auth-logo">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+                        </span>
+                        Springfield Systems
+                    </div>
+                    <div className="auth-visual-copy">
+                        <span className="auth-eyebrow">Create Account</span>
+                        <h1>Register as a landlord.</h1>
+                        <p>Your account will be reviewed by the super admin before activation.</p>
+                    </div>
+                </section>
+                <section className="auth-panel">
+                    <div className="auth-header" style={{ textAlign: 'center' }}>
+                        <Link href="/" className="auth-back">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+                            Back to home
+                        </Link>
+                        <span className="auth-badge">Registration</span>
+                        <h2>Create Account</h2>
+                        <p style={{ textAlign: 'center' }}>Register as a landlord. Your account will be reviewed by the super admin before activation.</p>
+                    </div>
+                    <form onSubmit={handleSubmit} className="auth-form">
+                        <div className="field-group">
+                            <label htmlFor="organizationName">Organization name</label>
+                            <input id="organizationName" value={organizationName} onChange={(event) => setOrganizationName(event.target.value)} required placeholder="Springfield Properties" />
+                        </div>
+                        <div className="field-group">
+                            <label htmlFor="managerName">Full name</label>
+                            <input id="managerName" value={managerName} onChange={(event) => setManagerName(event.target.value)} required placeholder="Jane Doe" />
+                        </div>
+                        <div className="field-group">
+                            <label htmlFor="email">Email address</label>
+                            <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="you@example.com" />
+                        </div>
+                        <div className="field-group">
+                            <label htmlFor="password">Password</label>
+                            <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="Choose a secure password" minLength={6} />
+                        </div>
+                        <div className="field-group">
+                            <label htmlFor="selectedPlan">Subscription Plan</label>
+                            <select id="selectedPlan" value={selectedPlan} onChange={(event) => setSelectedPlan(event.target.value)} required>
+                                {plans.map((plan) => (
+                                    <option key={plan.value} value={plan.value}>{plan.name} - {plan.price}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {error ? <p className="auth-error">{error}</p> : null}
+                        <button type="submit" className="auth-submit" disabled={loading}>
+                            {loading ? 'Creating account…' : 'Create Landlord Account'}
+                        </button>
+                    </form>
+                    <p className="auth-alt">
+                        Already have an account? <Link href="/login" style={{ color: 'var(--accent)', fontWeight: 600 }}>Sign in</Link>
+                    </p>
+                </section>
+            </div>
+        </main>
+    );
 }

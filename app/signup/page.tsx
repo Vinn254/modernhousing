@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const plans = [
@@ -12,7 +12,6 @@ const plans = [
 ];
 
 function SignupForm() {
-  const [role, setRole] = useState<'project_manager' | 'agent'>('project_manager');
   const [organizationName, setOrganizationName] = useState('');
   const [managerName, setManagerName] = useState('');
   const [email, setEmail] = useState('');
@@ -21,14 +20,6 @@ function SignupForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const roleParam = searchParams.get('role');
-    if (roleParam === 'project_manager' || roleParam === 'agent') {
-      setRole(roleParam);
-    }
-  }, [searchParams]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,12 +40,8 @@ function SignupForm() {
       managerName,
       email,
       plan: selectedPlan,
-      role,
+      role: 'project_manager',
     };
-
-    if (role === 'agent') {
-      body.organizationName = 'Agent Workspace';
-    }
 
     const response = await fetch('/api/register', {
       method: 'POST',
@@ -84,8 +71,8 @@ function SignupForm() {
           </div>
           <div className="auth-visual-copy">
             <span className="auth-eyebrow">Create Account</span>
-            <h1>Register as a landlord or agent.</h1>
-            <p>Your account will be reviewed by the super admin before activation. No OTP required.</p>
+            <h1>Register as a landlord.</h1>
+            <p>Your account will be reviewed by the super admin before activation.</p>
           </div>
         </section>
 
@@ -97,30 +84,14 @@ function SignupForm() {
             </Link>
             <span className="auth-badge">Registration</span>
             <h2>Create Account</h2>
-            <p style={{ textAlign: 'center' }}>Register as a landlord or agent. Your account will be reviewed by the super admin before activation.</p>
+            <p style={{ textAlign: 'center' }}>Register as a landlord. Your account will be reviewed by the super admin before activation.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="field-group">
-              <label>I am registering as</label>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1px solid ${role === 'project_manager' ? 'var(--accent)' : 'var(--line)'}`, background: role === 'project_manager' ? 'rgba(16,185,129,0.08)' : 'transparent' }}>
-                  <input type="radio" name="role" value="project_manager" checked={role === 'project_manager'} onChange={() => setRole('project_manager')} />
-                  <span>Landlord</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1px solid ${role === 'agent' ? 'var(--accent)' : 'var(--line)'}`, background: role === 'agent' ? 'rgba(16,185,129,0.08)' : 'transparent' }}>
-                  <input type="radio" name="role" value="agent" checked={role === 'agent'} onChange={() => setRole('agent')} />
-                  <span>Agent</span>
-                </label>
-              </div>
+              <label htmlFor="organizationName">Organization name</label>
+              <input id="organizationName" value={organizationName} onChange={(event) => setOrganizationName(event.target.value)} required placeholder="Springfield Properties" />
             </div>
-
-            {role === 'project_manager' && (
-              <div className="field-group">
-                <label htmlFor="organizationName">Organization name</label>
-                <input id="organizationName" value={organizationName} onChange={(event) => setOrganizationName(event.target.value)} required placeholder="Springfield Properties" />
-              </div>
-            )}
 
             <div className="field-group">
               <label htmlFor="managerName">Full name</label>
@@ -137,21 +108,19 @@ function SignupForm() {
               <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="Choose a secure password" minLength={6} />
             </div>
 
-            {role === 'project_manager' && (
-              <div className="field-group">
-                <label htmlFor="selectedPlan">Subscription Plan</label>
-                <select id="selectedPlan" value={selectedPlan} onChange={(event) => setSelectedPlan(event.target.value)} required>
-                  {plans.map((plan) => (
-                    <option key={plan.value} value={plan.value}>{plan.name} - {plan.price}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="field-group">
+              <label htmlFor="selectedPlan">Subscription Plan</label>
+              <select id="selectedPlan" value={selectedPlan} onChange={(event) => setSelectedPlan(event.target.value)} required>
+                {plans.map((plan) => (
+                  <option key={plan.value} value={plan.value}>{plan.name} - {plan.price}</option>
+                ))}
+              </select>
+            </div>
 
             {error && <p className="auth-error">{error}</p>}
 
             <button type="submit" className="auth-submit" disabled={loading}>
-              {loading ? 'Creating account…' : role === 'project_manager' ? 'Create Landlord Account' : 'Create Agent Account'}
+              {loading ? 'Creating account…' : 'Create Landlord Account'}
             </button>
           </form>
 
