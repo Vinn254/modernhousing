@@ -196,6 +196,9 @@ function LoginForm() {
           </form>
 
           <p className="auth-alt">
+            <Link href="/signup?role=project_manager">Register as landlord</Link>
+          </p>
+          <p className="auth-alt">
             Need tenant access? <Link href="/tenant/register">Tenant registration</Link>
           </p>
           <p className="auth-alt">
