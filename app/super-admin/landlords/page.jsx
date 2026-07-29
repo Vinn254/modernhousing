@@ -162,15 +162,16 @@ export default function LandlordManagementPage() {
         const response = await fetch('/api/landlords', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: landlord.id, fullName: landlord.full_name, status: 'active' }),
+            body: JSON.stringify({ action: 'approve', userId: landlord.id }),
         });
         const result = await response.json();
         if (!response.ok) {
             setError(result.message ?? 'Unable to approve project manager.');
             return;
         }
-        setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, ...result.landlord } : item)));
-        setMessage('Project manager approved and activated.');
+        setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, status: 'active' } : item)));
+        setMessage('Project manager approved and OTP sent.');
+        await loadData();
     }
     async function handleDeleteLandlord(landlord) {
         if (!confirm(`Permanently delete ${landlord.full_name}? This cannot be undone.`))

@@ -235,6 +235,7 @@ export default function LandlordManagementPage() {
 
       setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, status: 'active' } : item)));
       setMessage('Landlord approved and OTP sent.');
+      await loadData();
     } finally {
       setApprovingId(null);
     }
@@ -298,6 +299,7 @@ export default function LandlordManagementPage() {
 
       setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, status: 'active' } : item)));
       setMessage(`Landlord ${landlord.full_name} approved for direct login.`);
+      await loadData();
     } finally {
       setDirectApprovingId(null);
     }

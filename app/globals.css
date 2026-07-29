@@ -2129,9 +2129,28 @@ body {
   margin: 0 !important;
 }
 
+.admin-no-hero .bento {
+  grid-template-columns: 1fr;
+}
+
+.admin-no-hero .bento .card {
+  grid-column: 1;
+}
+
 .admin-no-hero .table-shell {
   max-width: 100vw;
+  width: 100%;
   overflow-x: auto;
+}
+
+@media (min-width: 769px) {
+  .admin-no-hero .table-shell {
+    overflow-x: hidden;
+  }
+  .admin-no-hero .landlord-table {
+    width: 100%;
+    min-width: 1200px;
+  }
 }
 
 .admin-no-hero.container {
