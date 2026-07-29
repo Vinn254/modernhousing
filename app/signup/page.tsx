@@ -90,14 +90,14 @@ function SignupForm() {
         </section>
 
         <section className="auth-panel">
-          <div className="auth-header">
+          <div className="auth-header" style={{ textAlign: 'center' }}>
             <Link href="/" className="auth-back">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
               Back to home
             </Link>
             <span className="auth-badge">Registration</span>
-            <h2>{role === 'project_manager' ? 'Landlord Registration' : 'Agent Registration'}</h2>
-            <p>{role === 'project_manager' ? 'Create your landlord account. Your subscription will be activated after super admin approval.' : 'Create your agent account. Your account will be activated after landlord approval.'}</p>
+            <h2>Create Account</h2>
+            <p style={{ textAlign: 'center' }}>Register as a landlord or agent. Your account will be reviewed by the super admin before activation.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
