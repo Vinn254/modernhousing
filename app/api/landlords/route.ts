@@ -216,7 +216,7 @@ export async function PATCH(request: NextRequest) {
     const action = body.action;
     const userId = String(body.userId ?? '').trim();
 
-    if (action === 'approve') {
+     if (action === 'approve') {
       if (!userId) return badRequest('Landlord ID is required.');
       const otp = generateOTP();
       const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
@@ -249,6 +249,32 @@ export async function PATCH(request: NextRequest) {
       });
 
       return NextResponse.json({ message: 'Landlord approved and OTP sent.', otpSent: true });
+    }
+
+    if (action === 'direct_approve') {
+      if (!userId) return badRequest('Landlord ID is required.');
+      const now = new Date().toISOString();
+
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({ status: 'active', approval_status: 'approved', approved_at: now, otp_code: null, otp_expires_at: null })
+        .eq('user_id', userId)
+        .select('*')
+        .single();
+
+      if (profileError) throw profileError;
+
+      await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          user_metadata: {
+            status: 'active',
+            approval_status: 'approved',
+          },
+        }),
+      });
+
+      return NextResponse.json({ message: 'Landlord approved for direct login (no OTP).', directApproved: true });
     }
 
     if (action === 'request_subscription') {
