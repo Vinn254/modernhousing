@@ -622,6 +622,17 @@ const rentOwedByTenant = useMemo(() => {
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
+  if (!roleLoaded) {
+    return (
+      <main className="container auth-pattern-bg" style={{ overflowX: 'hidden' }}>
+        <div className="card-admin-header">
+          <div><p className="heading">Loading dashboard…</p></div>
+        </div>
+        <p style={{ color: 'var(--ink-3)' }}>Please wait while we load your dashboard.</p>
+      </main>
+    );
+  }
+
   return (
     <main className="container auth-pattern-bg" style={{ overflowX: 'hidden' }}>
       <div className="card-admin-header">
