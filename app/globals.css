@@ -3966,10 +3966,21 @@ body, #__next, .page-wrapper {
   -webkit-overflow-scrolling: touch;
 }
 
+@media (max-width: 768px) {
+  .audit-table-shell {
+    overflow-x: hidden;
+  }
+}
+
 .audit-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 720px;
+}
+
+@media (min-width: 769px) {
+  .audit-table {
+    min-width: 720px;
+  }
 }
 
 .audit-table thead {

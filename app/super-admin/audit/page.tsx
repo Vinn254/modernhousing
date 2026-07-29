@@ -75,7 +75,7 @@ export default function SuperAdminAuditPage() {
 
   return (
     <>
-      <main className="container admin-no-hero" style={{ overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <main className="container admin-no-hero" style={{ overflowX: 'hidden' }}>
         <div className="card-admin-header" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', borderRadius: 16, padding: '16px 20px', marginBottom: 16, border: '1px solid rgba(124, 58, 237, 0.35)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div>
@@ -132,7 +132,7 @@ export default function SuperAdminAuditPage() {
         )}
 
         {!loading && auditLogs.length > 0 && (
-          <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', flex: '1 1 auto' }}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff' }}>
             <div className="audit-table-shell">
               <table className="audit-table">
                 <thead>
@@ -173,15 +173,15 @@ export default function SuperAdminAuditPage() {
             </div>
           </div>
         )}
-
-        <footer style={{ marginTop: 'auto', paddingTop: 16, paddingBottom: 8 }}>
-          <div className="footer-inner">
-            <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
-            <div className="footer-links"><a href="/">Home</a><a href="/super-admin">Dashboard</a></div>
-            <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
-          </div>
-        </footer>
       </main>
+
+      <footer>
+        <div className="footer-inner">
+          <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
+          <div className="footer-links"><a href="/">Home</a><a href="/super-admin">Dashboard</a></div>
+          <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
+        </div>
+      </footer>
     </>
   );
 }
