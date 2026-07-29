@@ -109,20 +109,20 @@ export default function AuditPage() {
 
   return (
     <main className="container page-layout auth-pattern-bg" style={{ overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <div className="card-admin-header" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', borderRadius: 16, padding: '20px 24px', marginBottom: 24, border: '1px solid rgba(124, 58, 237, 0.35)' }}>
+      <div className="card-admin-header" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', borderRadius: 16, padding: '16px 20px', marginBottom: 16, border: '1px solid rgba(124, 58, 237, 0.35)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <p className="heading" style={{ color: '#fff', marginBottom: 4 }}>{pageTitle}</p>
-            <p className="subheading" style={{ color: 'rgba(255,255,255,0.85)' }}>{pageSubtitle}</p>
+            <p className="heading" style={{ color: '#fff', marginBottom: 4, fontSize: 20 }}>{pageTitle}</p>
+            <p className="subheading" style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>{pageSubtitle}</p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={loadAuditLogs} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', cursor: 'pointer', fontWeight: 600 }}>Refresh</button>
-            <button onClick={downloadCSV} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.95)', color: '#4f46e5', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Download CSV</button>
+            <button onClick={loadAuditLogs} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Refresh</button>
+            <button onClick={downloadCSV} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.95)', color: '#4f46e5', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>Download CSV</button>
           </div>
         </div>
       </div>
 
-      <section className="card" style={{ marginBottom: 24, background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '1px solid #e2e8f0' }}>
+      <section className="card" style={{ marginBottom: 16, background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '1px solid #e2e8f0' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', minWidth: 140, fontSize: 13, flex: '1 1 140px' }}>
             <option value="">All Resources</option>
@@ -142,32 +142,32 @@ export default function AuditPage() {
             <option value="login">Login</option>
             <option value="logout">Logout</option>
           </select>
-          <button onClick={loadAuditLogs} style={{ padding: '8px 18px', borderRadius: 8, background: '#4f46e5', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, flex: '0 0 auto' }}>Apply Filters</button>
+          <button onClick={loadAuditLogs} style={{ padding: '8px 18px', borderRadius: 8, background: '#4f46e5', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, flex: '0 0 auto', fontSize: 13 }}>Apply Filters</button>
         </div>
       </section>
 
       {loading && (
-        <div className="card" style={{ textAlign: 'center', padding: '24px', background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)' }}>
-          <p style={{ color: '#065f46', fontWeight: 600 }}>Loading audit logs...</p>
+        <div className="card" style={{ textAlign: 'center', padding: '16px', background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)' }}>
+          <p style={{ color: '#065f46', fontWeight: 600, fontSize: 14 }}>Loading audit logs...</p>
         </div>
       )}
       {error && (
-        <div className="card" style={{ padding: '16px', background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100)', border: '1px solid #fecaca', marginBottom: 24 }}>
-          <p style={{ color: '#991b1b', fontWeight: 600 }}>{error}</p>
+        <div className="card" style={{ padding: '12px', background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100)', border: '1px solid #fecaca', marginBottom: 16 }}>
+          <p style={{ color: '#991b1b', fontWeight: 600, fontSize: 14 }}>{error}</p>
         </div>
       )}
 
       {!loading && auditLogs.length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: '40px 24px', background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100)', border: '1px solid #fde68a' }}>
-          <p style={{ color: '#92400e', fontWeight: 600, marginBottom: 4 }}>No audit logs found</p>
-          <p style={{ color: '#b45309', fontSize: 13 }}>System activity will appear here as actions are performed.</p>
+        <div className="card" style={{ textAlign: 'center', padding: '24px 16px', background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100)', border: '1px solid #fde68a' }}>
+          <p style={{ color: '#92400e', fontWeight: 600, marginBottom: 4, fontSize: 14 }}>No audit logs found</p>
+          <p style={{ color: '#b45309', fontSize: 12 }}>System activity will appear here as actions are performed.</p>
         </div>
       )}
 
       {!loading && auditLogs.length > 0 && (
         <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', flex: '1 1 auto' }}>
-          <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="audit-table-shell">
+            <table className="audit-table">
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100)' }}>
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Timestamp</th>
@@ -185,17 +185,17 @@ export default function AuditPage() {
                   const actionBg = log.action === 'delete' ? '#fef2f2' : log.action === 'create' ? '#f0fdf4' : log.action === 'update' ? '#eff6ff' : log.action === 'login' ? '#f5f3ff' : '#fffbeb';
                   return (
                     <tr key={log.id} style={{ background: bg, borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#334155', whiteSpace: 'nowrap' }}>{new Date(log.created_at).toLocaleString('en-GB')}</td>
-                      <td style={{ padding: '10px 16px', fontSize: 13, color: '#0f172a', fontWeight: 500 }}>{log.user_email || 'System'}</td>
-                      <td style={{ padding: '10px 16px', fontSize: 12 }}>
+                      <td data-label="Timestamp" style={{ padding: '10px 16px', fontSize: 12, color: '#334155', whiteSpace: 'nowrap' }}>{new Date(log.created_at).toLocaleString('en-GB')}</td>
+                      <td data-label="User" style={{ padding: '10px 16px', fontSize: 13, color: '#0f172a', fontWeight: 500 }}>{log.user_email || 'System'}</td>
+                      <td data-label="Action" style={{ padding: '10px 16px', fontSize: 12 }}>
                         <span style={{ padding: '3px 10px', borderRadius: 999, background: actionBg, color: actionColor, fontWeight: 700, border: `1px solid ${actionColor}25` }}>{log.action}</span>
                       </td>
-                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#334155' }}>
+                      <td data-label="Resource" style={{ padding: '10px 16px', fontSize: 12, color: '#334155' }}>
                         {log.resource_type}
                         {log.resource_id ? <span style={{ color: '#94a3b8', marginLeft: 4 }}>· {log.resource_id.slice(0, 8)}</span> : null}
                       </td>
-                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>{log.ip_address || '-'}</td>
-                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#475569', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.details ? JSON.stringify(log.details) : '-'}>
+                      <td data-label="IP Address" style={{ padding: '10px 16px', fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>{log.ip_address || '-'}</td>
+                      <td data-label="Details" style={{ padding: '10px 16px', fontSize: 12, color: '#475569', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.details ? JSON.stringify(log.details) : '-'}>
                         {log.details ? JSON.stringify(log.details).slice(0, 100) : '-'}
                       </td>
                     </tr>
@@ -207,7 +207,7 @@ export default function AuditPage() {
         </div>
       )}
 
-      <footer style={{ marginTop: 'auto', paddingTop: 24 }}>
+      <footer style={{ marginTop: 'auto', paddingTop: 16, paddingBottom: 8 }}>
         <div className="footer-inner">
           <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
           <div className="footer-links"><a href="/">Home</a><a href="/admin">Dashboard</a></div>

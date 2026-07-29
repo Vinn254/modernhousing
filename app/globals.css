@@ -792,7 +792,7 @@ body {
 @media (max-width: 768px) {
   .container:not(.admin-no-hero),
   .page-layout {
-    padding: 20px 12px 60px;
+    padding: 20px 12px 40px;
   }
 
   .card-grid {
@@ -815,6 +815,16 @@ body {
   .admin-no-hero .card {
     padding: 16px;
     min-width: 0;
+  }
+
+  .audit-table tbody td {
+    font-size: 12px;
+    padding: 6px 4px;
+  }
+
+  .audit-table tbody td::before {
+    font-size: 10px;
+    margin-right: 8px;
   }
 }
 
@@ -3950,23 +3960,78 @@ body, #__next, .page-wrapper {
   background: linear-gradient(135deg, #059669 0%, #065f46 100%) !important;
 }
 
+.audit-table-shell {
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
 
- 
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
 
+.audit-table thead {
+  display: none;
+}
 
- 
+.audit-table tbody tr {
+  display: block;
+  margin-bottom: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
 
+.audit-table tbody td {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+}
 
- 
+.audit-table tbody td::before {
+  content: attr(data-label);
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  margin-right: 12px;
+}
 
+.audit-table tbody td:last-child {
+  border-bottom: none;
+}
 
- 
+@media (min-width: 769px) {
+  .audit-table thead {
+    display: table-header-group;
+  }
 
+  .audit-table tbody tr {
+    display: table-row;
+    margin-bottom: 0;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+  }
 
- 
+  .audit-table tbody td {
+    display: table-cell;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: left;
+  }
 
-
- 
+  .audit-table tbody td::before {
+    content: none;
+  }
+}
 
 
 
