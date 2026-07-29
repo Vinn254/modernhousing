@@ -8,7 +8,7 @@ import {
   getUserByEmail,
   requestError,
 } from '../../../lib/supabaseAdmin';
-import { generateOTP, sendEmail } from '../../../lib/emailService';
+import { sendEmail } from '../../../lib/emailService';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -294,13 +294,11 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'approve') {
       if (!userId) return badRequest('Agent ID is required.');
-      const otp = generateOTP();
-      const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
       const now = new Date().toISOString();
 
       const { data: profile, error: profileError } = await client
         .from('profiles')
-        .update({ status: 'active', approval_status: 'approved', approved_at: now, otp_code: otp, otp_expires_at: otpExpiresAt })
+        .update({ status: 'active', approval_status: 'approved', approved_at: now, otp_code: null, otp_expires_at: null })
         .eq('user_id', userId)
         .select('*')
         .single();
@@ -317,14 +315,7 @@ export async function PATCH(request: NextRequest) {
         }),
       });
 
-      await sendEmail({
-        to: profile.email,
-        subject: 'Springfield Systems - Account Approved',
-        html: `<h2>Your agent account has been approved</h2><p>Use this one-time password to log in: <strong>${otp}</strong></p><p>This code expires in 15 minutes.</p><p>After verifying, you will set a new password.</p>`,
-        text: `Your OTP is ${otp}. It expires in 15 minutes.`,
-      });
-
-      return NextResponse.json({ message: 'Agent approved and OTP sent.', otpSent: true });
+      return NextResponse.json({ message: 'Agent approved and activated.', approved: true });
     }
 
     if (action === 'request_subscription') {

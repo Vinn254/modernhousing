@@ -52,7 +52,7 @@ export default function SuperAdminAgentsPage() {
       setError(result.message ?? 'Unable to approve agent.');
       return;
     }
-    setMessage('Agent approved. OTP sent to email.');
+    setMessage('Agent approved and activated.');
     await loadAgents();
   }
 

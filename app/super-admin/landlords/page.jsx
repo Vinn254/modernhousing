@@ -170,7 +170,7 @@ export default function LandlordManagementPage() {
             return;
         }
         setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, status: 'active' } : item)));
-        setMessage('Project manager approved and OTP sent.');
+        setMessage('Project manager approved and activated.');
         await loadData();
     }
     async function handleDeleteLandlord(landlord) {

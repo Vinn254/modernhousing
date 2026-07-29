@@ -105,7 +105,6 @@ export default function LandlordManagementPage() {
   const [loading, setLoading] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [directApprovingId, setDirectApprovingId] = useState<string | null>(null);
   const [bulkApproving, setBulkApproving] = useState(false);
   const [requestSubscriptionId, setRequestSubscriptionId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
@@ -279,30 +278,6 @@ export default function LandlordManagementPage() {
     setMessage(`Bulk approve complete: ${successCount} approved, ${failCount} failed.`);
     setBulkApproving(false);
     await loadData();
-  }
-
-  async function handleDirectApprove(landlord: Landlord) {
-    setDirectApprovingId(landlord.id);
-    setError('');
-    try {
-      const response = await fetch('/api/landlords', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'direct_approve', userId: landlord.id }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) {
-        setError(result.message ?? 'Unable to direct approve landlord.');
-        return;
-      }
-
-      setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, status: 'active' } : item)));
-      setMessage(`Landlord ${landlord.full_name} approved for direct login.`);
-      await loadData();
-    } finally {
-      setDirectApprovingId(null);
-    }
   }
 
   async function handleRequestSubscription(landlord: Landlord) {
@@ -523,7 +498,6 @@ export default function LandlordManagementPage() {
                                 <>
                                   <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRequestSubscription(landlord)} disabled={requestSubscriptionId === landlord.id}>{requestSubscriptionId === landlord.id ? 'Requesting...' : 'Request Subscription'}</button>
                                   <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleApprove(landlord)} disabled={approvingId === landlord.id}>{approvingId === landlord.id ? 'Approving...' : 'Approve'}</button>
-                                  <button className="action-button info" style={{ padding: '6px 10px', fontSize: '11px' }} onClick={() => handleDirectApprove(landlord)} disabled={directApprovingId === landlord.id}>{directApprovingId === landlord.id ? 'Direct...' : 'Direct Login'}</button>
                                 </>
                               )}
                               {landlord.status === 'active' && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleResetPassword(landlord)}>Reset Password</button>}

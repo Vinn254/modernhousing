@@ -64,11 +64,6 @@ function LoginForm() {
     const profileRes = await fetch('/api/profile', { headers: { Authorization: `Bearer ${sessionData.session.access_token}` } });
     const profileData = profileRes.ok ? await profileRes.json() : {};
 
-    if (profileData.profile?.approval_status === 'approved' && profileData.profile?.otp_code) {
-      router.push(`/login/otp?email=${encodeURIComponent(email)}`);
-      return;
-    }
-
     if (profileData.profile?.approval_status === 'pending') {
       setError('Your account is pending approval. Please wait for the super admin to activate your account.');
       await supabase.auth.signOut();

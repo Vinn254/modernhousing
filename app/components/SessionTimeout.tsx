@@ -4,8 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 
-const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/tenant/register', '/pricing', '/login/otp'];
-const OTP_PATHS = ['/login/otp'];
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/tenant/register', '/pricing'];
 
 export default function SessionTimeout() {
   const router = useRouter();
@@ -15,7 +14,6 @@ export default function SessionTimeout() {
   const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
-  const isOTPPath = OTP_PATHS.includes(pathname);
 
   const handleLogout = useCallback(async () => {
     if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
@@ -46,16 +44,10 @@ export default function SessionTimeout() {
         return;
       }
 
-      if (isOTPPath) {
-        return;
-      }
-
       fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
         .then(res => res.ok ? res.json() : { profile: null })
         .then(data => {
-          if (data.profile?.approval_status === 'approved' && data.profile?.otp_code) {
-            router.replace('/login/otp');
-          } else if (data.profile?.approval_status === 'pending') {
+          if (data.profile?.approval_status === 'pending') {
             router.replace('/login?message=Your account is pending approval.');
           }
         })
@@ -79,7 +71,7 @@ export default function SessionTimeout() {
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
       subscription.unsubscribe();
     };
-  }, [isPublicPath, isOTPPath, resetTimers, router]);
+  }, [isPublicPath, resetTimers, router]);
 
   if (!showWarning) return null;
 

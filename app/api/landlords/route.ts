@@ -8,7 +8,7 @@ import {
   getUserByEmail,
   requestError,
 } from '../../../lib/supabaseAdmin';
-import { sendEmail, generateOTP } from '../../../lib/emailService';
+import { sendEmail } from '../../../lib/emailService';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -217,65 +217,30 @@ export async function PATCH(request: NextRequest) {
     const userId = String(body.userId ?? '').trim();
 
      if (action === 'approve') {
-      if (!userId) return badRequest('Landlord ID is required.');
-      const otp = generateOTP();
-      const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-      const now = new Date().toISOString();
+       if (!userId) return badRequest('Landlord ID is required.');
+       const now = new Date().toISOString();
 
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .update({ status: 'active', approval_status: 'approved', approved_at: now, otp_code: otp, otp_expires_at: otpExpiresAt })
-        .eq('user_id', userId)
-        .select('*')
-        .single();
+       const { data: profile, error: profileError } = await supabaseAdmin
+         .from('profiles')
+         .update({ status: 'active', approval_status: 'approved', approved_at: now, otp_code: null, otp_expires_at: null })
+         .eq('user_id', userId)
+         .select('*')
+         .single();
 
-      if (profileError) throw profileError;
+       if (profileError) throw profileError;
 
-      await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          user_metadata: {
-            status: 'active',
-            approval_status: 'approved',
-          },
-        }),
-      });
+       await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+         method: 'PUT',
+         body: JSON.stringify({
+           user_metadata: {
+             status: 'active',
+             approval_status: 'approved',
+           },
+         }),
+       });
 
-      await sendEmail({
-        to: profile.email,
-        subject: 'Springfield Systems - Account Approved',
-        html: `<h2>Your landlord account has been approved</h2><p>Use this one-time password to log in: <strong>${otp}</strong></p><p>This code expires in 15 minutes.</p><p>After verifying, you will set a new password.</p>`,
-        text: `Your OTP is ${otp}. It expires in 15 minutes.`,
-      });
-
-      return NextResponse.json({ message: 'Landlord approved and OTP sent.', otpSent: true });
-    }
-
-    if (action === 'direct_approve') {
-      if (!userId) return badRequest('Landlord ID is required.');
-      const now = new Date().toISOString();
-
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .update({ status: 'active', approval_status: 'approved', approved_at: now, otp_code: null, otp_expires_at: null })
-        .eq('user_id', userId)
-        .select('*')
-        .single();
-
-      if (profileError) throw profileError;
-
-      await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          user_metadata: {
-            status: 'active',
-            approval_status: 'approved',
-          },
-        }),
-      });
-
-      return NextResponse.json({ message: 'Landlord approved for direct login (no OTP).', directApproved: true });
-    }
+       return NextResponse.json({ message: 'Landlord approved and activated.', approved: true });
+     }
 
     if (action === 'request_subscription') {
       if (!userId) return badRequest('Landlord ID is required.');

@@ -39,20 +39,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'OTP has expired. Please request a new one.' }, { status: 400 });
     }
 
-    if (action === 'verify') {
-      await supabaseAdmin
-        .from('profiles')
-        .update({
-          otp_code: null,
-          otp_expires_at: null,
-          approval_status: 'approved',
-          approved_at: new Date().toISOString(),
-        })
-        .eq('id', profile.id);
-
-      return NextResponse.json({ message: 'OTP verified. You can now set your password.' });
-    }
-
     if (action === 'login') {
       await supabaseAdmin
         .from('profiles')
