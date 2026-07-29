@@ -187,7 +187,6 @@ export default function AppHeader() {
     { label: 'Utilities', href: '/admin/utilities', icon: 'utilities' },
     { label: 'Communications', href: '/admin/communications', icon: 'communications' },
     { label: 'Documents', href: '/admin/documents', icon: 'documents' },
-    { label: 'Audit', href: '/admin/audit', icon: 'audit' },
     { label: 'Help', href: '/help', icon: 'help' },
   ];
 
@@ -208,6 +207,7 @@ export default function AppHeader() {
     { label: 'Tenants', href: '/super-admin/tenants', icon: 'tenants' },
     { label: 'Payments', href: '/super-admin/payments', icon: 'payments' },
     { label: 'Analytics', href: '/super-admin/analytics', icon: 'analytics' },
+    { label: 'Audit', href: '/super-admin/audit', icon: 'audit' },
     { label: 'Help', href: '/help', icon: 'help' },
   ];
 

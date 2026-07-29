@@ -40,7 +40,7 @@ export default function HelpPage() {
               <li><strong>Communications</strong> - Send announcements to all tenants or select a specific tenant. Choose message type (announcement, reminder, overdue alert) and write your message. View sent history and delete any notification.</li>
               <li><strong>Utilities</strong> - For each unit, record current water meter reading. System calculates consumption (current minus previous) and generates bill at KSH 150 per unit consumed.</li>
               <li><strong>Tenant Documents</strong> - Review documents tenants submit such as ID copies, KRA PIN, next of kin details, and lease agreements. Approve or reject submissions.</li>
-              <li><strong>System Audit</strong> - Monitor all system activities including login attempts, user actions, and security events. Use for compliance and troubleshooting.</li>
+              <li><strong>Document Audit Trail</strong> - View signing activity records for tenant documents. Track when documents were viewed, signed, and by whom.</li>
             </ul>
           </div>
         )}
