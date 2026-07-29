@@ -22,6 +22,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<string>('');
   const [paying, setPaying] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'landlord' | 'agent' | ''>('');
   const router = useRouter();
   const searchParams = useSearchParams();
   const subscribe = searchParams.get('subscribe');
@@ -193,15 +194,17 @@ function LoginForm() {
           </div>
 
           <div className="auth-stats">
-            <div>
+            <div onClick={() => setSelectedRole('landlord')} style={{ cursor: 'pointer', opacity: selectedRole === 'landlord' ? 1 : 0.7, borderBottom: selectedRole === 'landlord' ? '2px solid var(--accent)' : 'transparent', paddingBottom: 4 }}>
               <strong>Landlords</strong>
               <span>Property and subscription access</span>
+              <span style={{ display: 'block', marginTop: 4, fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}>Click to login as landlord</span>
             </div>
-            <div>
+            <div onClick={() => setSelectedRole('agent')} style={{ cursor: 'pointer', opacity: selectedRole === 'agent' ? 1 : 0.7, borderBottom: selectedRole === 'agent' ? '2px solid var(--accent)' : 'transparent', paddingBottom: 4, marginTop: 8 }}>
               <strong>Agents</strong>
               <span>Property and tenant coordination</span>
+              <span style={{ display: 'block', marginTop: 4, fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}>Click to login as agent</span>
             </div>
-            <div>
+            <div style={{ marginTop: 8 }}>
               <strong>Tenants</strong>
               <span>Rent, comments, and notices</span>
             </div>
@@ -215,8 +218,8 @@ function LoginForm() {
               Back to home
             </Link>
             <span className="auth-badge">Welcome Back</span>
-            <h2>Sign in to Springfield Systems</h2>
-            <p>Use your project manager, agent, or tenant credentials to continue.</p>
+            <h2>{selectedRole === 'landlord' ? 'Login as Landlord' : selectedRole === 'agent' ? 'Login as Agent' : 'Sign in to Springfield Systems'}</h2>
+            <p>{selectedRole === 'landlord' ? 'Access your property and subscription dashboard.' : selectedRole === 'agent' ? 'Access your property and tenant coordination workspace.' : 'Use your project manager, agent, or tenant credentials to continue.'}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
@@ -237,6 +240,11 @@ function LoginForm() {
             </button>
           </form>
 
+          {selectedRole && (
+            <p className="auth-alt">
+              <button type="button" onClick={() => setSelectedRole('')} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Clear role selection</button>
+            </p>
+          )}
           <p className="auth-alt">
             Need tenant access? <Link href="/tenant/register">Tenant registration</Link>
           </p>
