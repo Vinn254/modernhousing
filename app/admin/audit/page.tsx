@@ -41,7 +41,7 @@ export default function AuditPage() {
       }
     }, 30000);
     return () => window.clearInterval(interval);
-  }, [userRole]);
+  }, [userRole, filterType, filterAction]);
 
   async function loadAuditLogs() {
     setLoading(true);
@@ -69,9 +69,9 @@ export default function AuditPage() {
   if (!canViewAudits) {
     return (
       <main className="container page-layout auth-pattern-bg">
-        <div className="card">
-          <h1>Access Denied</h1>
-          <p>Audit logs are restricted to authorized users.</p>
+        <div className="card" style={{ textAlign: 'center', padding: '40px 24px', background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)', border: '1px solid #fecaca' }}>
+          <h1 style={{ color: '#991b1b', marginBottom: 8 }}>Access Denied</h1>
+          <p style={{ color: '#7f1d1d' }}>Audit logs are restricted to authorized users.</p>
         </div>
       </main>
     );
@@ -82,19 +82,49 @@ export default function AuditPage() {
     ? 'Monitor all activities across the platform for security and compliance.'
     : 'Track actions performed on your properties, tenants, units, and agents.';
 
+  const rowColors = ['#f0fdfa', '#eff6ff', '#fef3c7', '#fdf2f8', '#f0f9ff', '#fdf4ff', '#ecfdf5', '#fff7ed'];
+
+  function downloadCSV() {
+    if (auditLogs.length === 0) return;
+    const headers = ['Timestamp', 'User', 'Action', 'Resource', 'IP Address', 'Details'];
+    const rows = auditLogs.map(log => [
+      new Date(log.created_at).toLocaleString('en-GB'),
+      log.user_email || 'System',
+      log.action,
+      log.resource_type + (log.resource_id ? ` · ${log.resource_id.slice(0, 8)}` : ''),
+      log.ip_address || '-',
+      log.details ? JSON.stringify(log.details).slice(0, 100) : '-',
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   return (
-    <main className="container page-layout auth-pattern-bg">
-      <div className="card-admin-header">
-        <div>
-          <p className="heading">{pageTitle}</p>
-          <p className="subheading">{pageSubtitle}</p>
+    <main className="container page-layout auth-pattern-bg" style={{ overflowX: 'hidden' }}>
+      <div className="card-admin-header" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', borderRadius: 16, padding: '20px 24px', marginBottom: 24, border: '1px solid rgba(124, 58, 237, 0.35)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <p className="heading" style={{ color: '#fff', marginBottom: 4 }}>{pageTitle}</p>
+            <p className="subheading" style={{ color: 'rgba(255,255,255,0.85)' }}>{pageSubtitle}</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={loadAuditLogs} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', cursor: 'pointer', fontWeight: 600 }}>Refresh</button>
+            <button onClick={downloadCSV} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.95)', color: '#4f46e5', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Download CSV</button>
+          </div>
         </div>
-        <button onClick={loadAuditLogs} style={{ padding: '8px 16px' }}>Refresh</button>
       </div>
 
-      <section className="card" style={{ marginBottom: 24 }}>
+      <section className="card" style={{ marginBottom: 24, background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '1px solid #e2e8f0' }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <select value={filterType} onChange={e => setFilterType(e.target.value)}>
+          <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', minWidth: 140, fontSize: 13 }}>
             <option value="">All Resources</option>
             <option value="property">Properties</option>
             <option value="tenant">Tenants</option>
@@ -104,7 +134,7 @@ export default function AuditPage() {
             <option value="agent">Agents</option>
             <option value="document">Documents</option>
           </select>
-          <select value={filterAction} onChange={e => setFilterAction(e.target.value)}>
+          <select value={filterAction} onChange={e => setFilterAction(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', minWidth: 140, fontSize: 13 }}>
             <option value="">All Actions</option>
             <option value="create">Create</option>
             <option value="update">Update</option>
@@ -112,51 +142,68 @@ export default function AuditPage() {
             <option value="login">Login</option>
             <option value="logout">Logout</option>
           </select>
-          <button onClick={loadAuditLogs}>Apply Filters</button>
+          <button onClick={loadAuditLogs} style={{ padding: '8px 18px', borderRadius: 8, background: '#4f46e5', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Apply Filters</button>
         </div>
       </section>
 
-      {loading && <p className="landlord-muted">Loading audit logs...</p>}
-      {error && <p className="landlord-error">{error}</p>}
+      {loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '24px', background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)' }}>
+          <p style={{ color: '#065f46', fontWeight: 600 }}>Loading audit logs...</p>
+        </div>
+      )}
+      {error && (
+        <div className="card" style={{ padding: '16px', background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100)', border: '1px solid #fecaca', marginBottom: 24 }}>
+          <p style={{ color: '#991b1b', fontWeight: 600 }}>{error}</p>
+        </div>
+      )}
 
       {!loading && auditLogs.length === 0 && (
-        <div className="card">
-          <p>No audit logs found. System activity will appear here.</p>
+        <div className="card" style={{ textAlign: 'center', padding: '40px 24px', background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100)', border: '1px solid #fde68a' }}>
+          <p style={{ color: '#92400e', fontWeight: 600, marginBottom: 4 }}>No audit logs found</p>
+          <p style={{ color: '#b45309', fontSize: 13 }}>System activity will appear here as actions are performed.</p>
         </div>
       )}
 
       {!loading && auditLogs.length > 0 && (
-        <div className="table-shell">
-          <table className="landlord-table">
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>User</th>
-                <th>Action</th>
-                <th>Resource</th>
-                <th>IP Address</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {auditLogs.map(log => (
-                <tr key={log.id}>
-                  <td>{new Date(log.created_at).toLocaleString('en-GB')}</td>
-                  <td>{log.user_email || 'System'}</td>
-                  <td>
-                    <span className={`status-pill ${log.action === 'delete' ? 'status-pending' : 'status-active'}`}>
-                      {log.action}
-                    </span>
-                  </td>
-                  <td>{log.resource_type}{log.resource_id ? ` · ${log.resource_id.slice(0, 8)}` : ''}</td>
-                  <td style={{ fontSize: '12px', color: 'var(--ink-3)' }}>{log.ip_address || '-'}</td>
-                  <td style={{ fontSize: '12px', color: 'var(--ink-3)', maxWidth: 300 }}>
-                    {log.details ? JSON.stringify(log.details).slice(0, 100) : '-'}
-                  </td>
+        <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff' }}>
+          <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+              <thead>
+                <tr style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' }}>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Timestamp</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>User</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Action</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Resource</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>IP Address</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Details</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {auditLogs.map((log, idx) => {
+                  const bg = rowColors[idx % rowColors.length];
+                  const actionColor = log.action === 'delete' ? '#dc2626' : log.action === 'create' ? '#059669' : log.action === 'update' ? '#2563eb' : log.action === 'login' ? '#7c3aed' : '#d97706';
+                  const actionBg = log.action === 'delete' ? '#fef2f2' : log.action === 'create' ? '#f0fdf4' : log.action === 'update' ? '#eff6ff' : log.action === 'login' ? '#f5f3ff' : '#fffbeb';
+                  return (
+                    <tr key={log.id} style={{ background: bg, borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#334155', whiteSpace: 'nowrap' }}>{new Date(log.created_at).toLocaleString('en-GB')}</td>
+                      <td style={{ padding: '10px 16px', fontSize: 13, color: '#0f172a', fontWeight: 500 }}>{log.user_email || 'System'}</td>
+                      <td style={{ padding: '10px 16px', fontSize: 12 }}>
+                        <span style={{ padding: '3px 10px', borderRadius: 999, background: actionBg, color: actionColor, fontWeight: 700, border: `1px solid ${actionColor}25` }}>{log.action}</span>
+                      </td>
+                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#334155' }}>
+                        {log.resource_type}
+                        {log.resource_id ? <span style={{ color: '#94a3b8', marginLeft: 4 }}>· {log.resource_id.slice(0, 8)}</span> : null}
+                      </td>
+                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>{log.ip_address || '-'}</td>
+                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#475569', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.details ? JSON.stringify(log.details) : '-'}>
+                        {log.details ? JSON.stringify(log.details).slice(0, 100) : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </main>
