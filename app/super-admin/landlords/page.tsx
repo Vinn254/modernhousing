@@ -105,6 +105,7 @@ export default function LandlordManagementPage() {
   const [loading, setLoading] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [bulkApproving, setBulkApproving] = useState(false);
   const [requestSubscriptionId, setRequestSubscriptionId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -236,6 +237,45 @@ export default function LandlordManagementPage() {
     } finally {
       setApprovingId(null);
     }
+  }
+
+  async function handleBulkApprove() {
+    const pendingLandlords = landlords.filter((landlord) => landlord.status !== 'active');
+    if (pendingLandlords.length === 0) {
+      setMessage('No pending landlords to approve.');
+      return;
+    }
+
+    if (!confirm(`Approve ${pendingLandlords.length} pending project manager(s)? OTP emails will be sent to each.`)) return;
+
+    setBulkApproving(true);
+    setError('');
+    setMessage('');
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const landlord of pendingLandlords) {
+      try {
+        const response = await fetch('/api/landlords', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'approve', userId: landlord.id }),
+        });
+
+        if (response.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    setLandlords((current) => current.map((item) => (item.status !== 'active' ? { ...item, status: 'active' } : item)));
+    setMessage(`Bulk approve complete: ${successCount} approved, ${failCount} failed.`);
+    setBulkApproving(false);
   }
 
   async function handleRequestSubscription(landlord: Landlord) {
@@ -469,11 +509,16 @@ export default function LandlordManagementPage() {
                 </table>
               </div>
 
-              <div style={{ margin: '28px 0 0' }}>
+              <div style={{ margin: '28px 0 0', display: 'flex', gap: 12 }}>
                 <button className="action-button primary" onClick={() => setShowAddModal(true)}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Add Project Manager
                 </button>
+                {landlords.some((landlord) => landlord.status !== 'active') && (
+                  <button className="action-button primary" style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', borderColor: 'transparent' }} onClick={handleBulkApprove} disabled={bulkApproving}>
+                    {bulkApproving ? 'Approving…' : `Bulk Approve (${landlords.filter((l) => l.status !== 'active').length})`}
+                  </button>
+                )}
               </div>
             </article>
           </div>
