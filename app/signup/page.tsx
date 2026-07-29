@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ const plans = [
   { name: 'Yearly', price: 'KSH 6,000', value: 'yearly' },
 ];
 
-export default function SignupPage() {
+function SignupForm() {
   const [role, setRole] = useState<'project_manager' | 'agent'>('project_manager');
   const [organizationName, setOrganizationName] = useState('');
   const [managerName, setManagerName] = useState('');
@@ -142,5 +142,13 @@ export default function SignupPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>Loading…</div>}>
+      <SignupForm />
+    </Suspense>
   );
 }
