@@ -276,6 +276,7 @@ export default function LandlordManagementPage() {
     setLandlords((current) => current.map((item) => (item.status !== 'active' ? { ...item, status: 'active' } : item)));
     setMessage(`Bulk approve complete: ${successCount} approved, ${failCount} failed.`);
     setBulkApproving(false);
+    await loadData();
   }
 
   async function handleRequestSubscription(landlord: Landlord) {
