@@ -288,7 +288,65 @@ export async function PATCH(request: NextRequest) {
   try {
     const client = getSupabaseAdmin();
     const body = await request.json();
+    const action = body.action;
     const userId = String(body.userId ?? '').trim();
+
+    if (action === 'approve') {
+      if (!userId) return badRequest('Agent ID is required.');
+      const otp = generateOTP();
+      const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      const now = new Date().toISOString();
+
+      const { data: profile, error: profileError } = await client
+        .from('profiles')
+        .update({ status: 'active', approval_status: 'approved', approved_at: now, otp_code: otp, otp_expires_at: otpExpiresAt })
+        .eq('user_id', userId)
+        .select('*')
+        .single();
+
+      if (profileError) throw profileError;
+
+      await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          user_metadata: {
+            status: 'active',
+            approval_status: 'approved',
+          },
+        }),
+      });
+
+      await sendEmail({
+        to: profile.email,
+        subject: 'Springfield Systems - Account Approved',
+        html: `<h2>Your agent account has been approved</h2><p>Use this one-time password to log in: <strong>${otp}</strong></p><p>This code expires in 15 minutes.</p><p>After verifying, you will set a new password.</p>`,
+        text: `Your OTP is ${otp}. It expires in 15 minutes.`,
+      });
+
+      return NextResponse.json({ message: 'Agent approved and OTP sent.', otpSent: true });
+    }
+
+    if (action === 'request_subscription') {
+      if (!userId) return badRequest('Agent ID is required.');
+      const { data: profile, error: profileError } = await client
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') throw profileError;
+      if (!profile) return badRequest('Agent not found.');
+
+      await sendEmail({
+        to: profile.email,
+        subject: 'Springfield Systems - Activation Required',
+        html: `<h2>Account Activation Required</h2><p>Hello ${profile.full_name}, your agent account is pending activation. Please contact your landlord to complete setup.</p>`,
+        text: `Activation required for ${profile.full_name}.`,
+      });
+
+      return NextResponse.json({ message: 'Activation request email sent.' });
+    }
+
     const fullName = String(body.fullName ?? '').trim();
     const propertyId = String(body.propertyId ?? body.property_id ?? '').trim();
     const propertyName = String(body.propertyName ?? body.property_name ?? '').trim();

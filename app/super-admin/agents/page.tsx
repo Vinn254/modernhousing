@@ -19,8 +19,12 @@ export default function SuperAdminAgentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [requestSubscriptionId, setRequestSubscriptionId] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
 
   async function loadAgents() {
+    setLoading(true);
     const response = await fetch('/api/admin/agents');
     const result = await response.json();
 
@@ -32,6 +36,41 @@ export default function SuperAdminAgentsPage() {
 
     setAgents(result.agents ?? []);
     setLoading(false);
+  }
+
+  async function handleApprove(agent: Agent) {
+    setApprovingId(agent.id);
+    setMessage('');
+    const response = await fetch('/api/agents', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'approve', userId: agent.id }),
+    });
+    const result = await response.json();
+    setApprovingId(null);
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to approve agent.');
+      return;
+    }
+    setMessage('Agent approved. OTP sent to email.');
+    await loadAgents();
+  }
+
+  async function handleRequestSubscription(agent: Agent) {
+    setRequestSubscriptionId(agent.id);
+    setMessage('');
+    const response = await fetch('/api/agents', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'request_subscription', userId: agent.id }),
+    });
+    const result = await response.json();
+    setRequestSubscriptionId(null);
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to send request.');
+      return;
+    }
+    setMessage('Activation request email sent.');
   }
 
   useEffect(() => {
@@ -55,6 +94,7 @@ export default function SuperAdminAgentsPage() {
               <h3 style={{ marginBottom: 16 }}>All Agents</h3>
 
               {loading && <p style={{ color: 'var(--ink-3)' }}>Loading agents…</p>}
+              {message && <p className="landlord-success">{message}</p>}
               {error && <p className="landlord-error">{error}</p>}
 
               {!loading && agents.length === 0 && <p className="landlord-empty">No agents found.</p>}
@@ -89,7 +129,15 @@ export default function SuperAdminAgentsPage() {
                           </td>
                           <td>{agent.created_at ? new Date(agent.created_at).toLocaleDateString() : '—'}</td>
                           <td>
-                            <button className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => setSelectedAgent(agent)}>View</button>
+                            <div className="landlord-actions">
+                              <button className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => setSelectedAgent(agent)}>View</button>
+                              {agent.status !== 'active' && (
+                                <>
+                                  <button className="action-button warn" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleRequestSubscription(agent)} disabled={requestSubscriptionId === agent.id}>{requestSubscriptionId === agent.id ? 'Requesting...' : 'Request Activation'}</button>
+                                  <button className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleApprove(agent)} disabled={approvingId === agent.id}>{approvingId === agent.id ? 'Approving...' : 'Approve'}</button>
+                                </>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}

@@ -4,7 +4,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 
-const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/tenant/register', '/pricing'];
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/tenant/register', '/pricing', '/login/otp'];
+const OTP_PATHS = ['/login/otp'];
 
 export default function SessionTimeout() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function SessionTimeout() {
   const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
+  const isOTPPath = OTP_PATHS.includes(pathname);
 
   const handleLogout = useCallback(async () => {
     if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
@@ -41,7 +43,23 @@ export default function SessionTimeout() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         router.replace('/login');
+        return;
       }
+
+      if (isOTPPath) {
+        return;
+      }
+
+      fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        .then(res => res.ok ? res.json() : { profile: null })
+        .then(data => {
+          if (data.profile?.approval_status === 'approved' && data.profile?.otp_code) {
+            router.replace('/login/otp');
+          } else if (data.profile?.approval_status === 'pending') {
+            router.replace('/login?message=Your account is pending approval.');
+          }
+        })
+        .catch(() => {});
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
@@ -61,7 +79,7 @@ export default function SessionTimeout() {
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
       subscription.unsubscribe();
     };
-  }, [isPublicPath, resetTimers, router]);
+  }, [isPublicPath, isOTPPath, resetTimers, router]);
 
   if (!showWarning) return null;
 

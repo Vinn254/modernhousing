@@ -34,14 +34,12 @@ function LoginForm() {
 
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
-    // Record login attempt
     await fetch('/api/login-attempts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, success: !signInError })
+      body: JSON.stringify({ email, success: !signInError }),
     });
 
-    // Clear failed attempts on successful login
     if (!signInError) {
       await fetch('/api/login-attempts', { method: 'DELETE' });
     }
@@ -61,6 +59,22 @@ function LoginForm() {
     }
 
     const role = data.user?.user_metadata?.role ?? 'admin';
+
+    const profileRes = await fetch('/api/profile', { headers: { Authorization: `Bearer ${sessionData.session.access_token}` } });
+    const profileData = profileRes.ok ? await profileRes.json() : {};
+
+    if (profileData.profile?.approval_status === 'approved' && profileData.profile?.otp_code) {
+      router.push(`/login/otp?email=${encodeURIComponent(email)}`);
+      return;
+    }
+
+    if (profileData.profile?.approval_status === 'pending') {
+      setError('Your account is pending approval. Please wait for the super admin to activate your account.');
+      await supabase.auth.signOut();
+      setLoading(false);
+      return;
+    }
+
     router.push(roleRoutes[role as UserRole] ?? roleRoutes.admin);
   }
 

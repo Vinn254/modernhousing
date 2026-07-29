@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { adminRequest, badRequest } from '../../../lib/supabaseAdmin';
+import { generateOTP } from '../../../../lib/emailService';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -25,11 +26,6 @@ function todayPlus(plan: string) {
   return now.toISOString().slice(0, 10);
 }
 
-function getBaseUrl() {
-  const host = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
-  return host.replace(/\/$/, '');
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -38,66 +34,63 @@ export async function POST(request: NextRequest) {
     const managerName = String(body.managerName ?? '').trim();
     const email = String(body.email ?? '').trim();
     const plan = String(body.plan ?? 'monthly').trim();
+    const role = String(body.role ?? 'project_manager').trim();
 
-    if (!userId || !organizationName || !managerName || !email) {
+    if (!userId || !managerName || !email) {
       return badRequest('Missing registration fields.');
     }
 
-    if (!planAmounts[plan]) {
-      return badRequest('Invalid subscription plan.');
+    const profilePayload: any = {
+      user_id: userId,
+      full_name: managerName,
+      email,
+      role,
+      status: 'inactive',
+      approval_status: 'pending',
+    };
+
+    if (role === 'project_manager') {
+      const organization = await supabaseAdmin
+        .from('organizations')
+        .insert({ name: organizationName || 'Unnamed Organization', details: 'Created by project manager signup flow' })
+        .select()
+        .single();
+
+      if (organization.error) throw organization.error;
+
+      profilePayload.organization_id = organization.data.id;
     }
-
-    const organization = await supabaseAdmin
-      .from('organizations')
-      .insert({ name: organizationName, details: 'Created by project manager signup flow' })
-      .select()
-      .single();
-
-    if (organization.error) throw organization.error;
 
     const profile = await supabaseAdmin
       .from('profiles')
-      .insert({
-        user_id: userId,
-        full_name: managerName,
-        email,
-        role: 'project_manager',
-        organization_id: organization.data.id,
-        status: 'pending',
-      })
+      .insert(profilePayload)
       .select()
       .single();
 
     if (profile.error) throw profile.error;
 
-    const baseUrl = getBaseUrl();
-    const subscriptionUrl = `${baseUrl}/api/subscriptions`;
-    const subscriptionResponse = await fetch(subscriptionUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        adminName: managerName,
-        email,
-        plan,
-        adminId: userId,
-        status: 'pending',
-        start_date: new Date().toISOString().slice(0, 10),
-        expiry_date: todayPlus(plan),
-      }),
-    });
-
-    const text = await subscriptionResponse.text();
-    let subscriptionPayload: any = {};
-    if (text) {
-      try {
-        subscriptionPayload = JSON.parse(text);
-      } catch {
-        subscriptionPayload = {};
+    let subscriptionPayload: any = null;
+    if (role === 'project_manager' && plan) {
+      if (!planAmounts[plan]) {
+        return badRequest('Invalid subscription plan.');
       }
-    }
 
-    if (!subscriptionResponse.ok) {
-      console.warn('Subscription creation failed:', subscriptionPayload.message ?? subscriptionResponse.statusText);
+      const subscriptionResponse = await fetch(`${request.nextUrl.origin}/api/subscriptions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminName: managerName,
+          email,
+          plan,
+          adminId: userId,
+          status: 'pending',
+          start_date: new Date().toISOString().slice(0, 10),
+          expiry_date: todayPlus(plan),
+        }),
+      });
+
+      const text = await subscriptionResponse.text();
+      try { subscriptionPayload = JSON.parse(text); } catch { subscriptionPayload = {}; }
     }
 
     await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
@@ -105,15 +98,15 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         user_metadata: {
           full_name: managerName,
-          role: 'project_manager',
-          status: 'pending',
-          organization_id: organization.data.id,
+          role,
+          status: 'inactive',
+          approval_status: 'pending',
         },
       }),
     });
 
-    return NextResponse.json({ message: 'Project manager registered with subscription.', subscription: subscriptionPayload.subscription ?? null }, { status: 201 });
+    return NextResponse.json({ message: `${role === 'project_manager' ? 'Project manager' : 'Agent'} registered. Awaiting super admin approval.`, subscription: subscriptionPayload?.subscription ?? null }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ message: error.message ?? 'Unable to register project manager.' }, { status: 500 });
+    return NextResponse.json({ message: error.message ?? 'Unable to register account.' }, { status: 500 });
   }
 }

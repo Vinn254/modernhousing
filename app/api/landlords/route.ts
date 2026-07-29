@@ -8,6 +8,7 @@ import {
   getUserByEmail,
   requestError,
 } from '../../../lib/supabaseAdmin';
+import { sendEmail, generateOTP } from '../../../lib/emailService';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -212,7 +213,65 @@ return NextResponse.json({
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
+    const action = body.action;
     const userId = String(body.userId ?? '').trim();
+
+    if (action === 'approve') {
+      if (!userId) return badRequest('Landlord ID is required.');
+      const otp = generateOTP();
+      const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      const now = new Date().toISOString();
+
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({ status: 'active', approval_status: 'approved', approved_at: now, otp_code: otp, otp_expires_at: otpExpiresAt })
+        .eq('user_id', userId)
+        .select('*')
+        .single();
+
+      if (profileError) throw profileError;
+
+      await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          user_metadata: {
+            status: 'active',
+            approval_status: 'approved',
+          },
+        }),
+      });
+
+      await sendEmail({
+        to: profile.email,
+        subject: 'Springfield Systems - Account Approved',
+        html: `<h2>Your landlord account has been approved</h2><p>Use this one-time password to log in: <strong>${otp}</strong></p><p>This code expires in 15 minutes.</p><p>After verifying, you will set a new password.</p>`,
+        text: `Your OTP is ${otp}. It expires in 15 minutes.`,
+      });
+
+      return NextResponse.json({ message: 'Landlord approved and OTP sent.', otpSent: true });
+    }
+
+    if (action === 'request_subscription') {
+      if (!userId) return badRequest('Landlord ID is required.');
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') throw profileError;
+      if (!profile) return badRequest('Landlord not found.');
+
+      await sendEmail({
+        to: profile.email,
+        subject: 'Springfield Systems - Subscription Required',
+        html: `<h2>Subscription Required</h2><p>Hello ${profile.full_name}, your landlord account is pending activation. Please complete your subscription payment to activate your workspace.</p>`,
+        text: `Subscription required for ${profile.full_name}.`,
+      });
+
+      return NextResponse.json({ message: 'Subscription request email sent.' });
+    }
+
     const fullName = String(body.fullName ?? '').trim();
     const status = body.status as LandlordProfile['status'] | undefined;
     const password = body.password ? String(body.password) : '';

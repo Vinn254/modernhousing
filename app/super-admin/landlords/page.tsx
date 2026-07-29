@@ -104,6 +104,8 @@ export default function LandlordManagementPage() {
   const [newPlan, setNewPlan] = useState('monthly');
   const [loading, setLoading] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [requestSubscriptionId, setRequestSubscriptionId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -214,20 +216,48 @@ export default function LandlordManagementPage() {
   }
 
   async function handleApprove(landlord: Landlord) {
-    const response = await fetch('/api/landlords', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: landlord.id, fullName: landlord.full_name, status: 'active' }),
-    });
+    setApprovingId(landlord.id);
+    setError('');
+    try {
+      const response = await fetch('/api/landlords', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve', userId: landlord.id }),
+      });
 
-    const result = await response.json();
-    if (!response.ok) {
-      setError(result.message ?? 'Unable to approve project manager.');
-      return;
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.message ?? 'Unable to approve landlord.');
+        return;
+      }
+
+      setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, status: 'active' } : item)));
+      setMessage('Landlord approved and OTP sent.');
+    } finally {
+      setApprovingId(null);
     }
+  }
 
-    setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, ...result.landlord } : item)));
-    setMessage('Project manager approved and activated.');
+  async function handleRequestSubscription(landlord: Landlord) {
+    setRequestSubscriptionId(landlord.id);
+    setError('');
+    try {
+      const response = await fetch('/api/landlords', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request_subscription', userId: landlord.id }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.message ?? 'Unable to send subscription request.');
+        return;
+      }
+
+      setMessage('Subscription request email sent.');
+    } finally {
+      setRequestSubscriptionId(null);
+    }
   }
 
   async function handleDeleteLandlord(landlord: Landlord) {
@@ -422,8 +452,13 @@ export default function LandlordManagementPage() {
                               <button className="action-button secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => setSelectedLandlord(landlord)}>View</button>
                               {subscription && <button className="action-button info" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => openNotification(subscription, landlord)}>Notify</button>}
                               {subscription && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleUpgradeSubscription(landlord)}>Upgrade</button>}
-                              {landlord.status !== 'active' && <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleApprove(landlord)}>Approve</button>}
-                              <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleResetPassword(landlord)}>Reset Password</button>
+                              {landlord.status !== 'active' && (
+                                <>
+                                  <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRequestSubscription(landlord)} disabled={requestSubscriptionId === landlord.id}>{requestSubscriptionId === landlord.id ? 'Requesting...' : 'Request Subscription'}</button>
+                                  <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleApprove(landlord)} disabled={approvingId === landlord.id}>{approvingId === landlord.id ? 'Approving...' : 'Approve'}</button>
+                                </>
+                              )}
+                              {landlord.status === 'active' && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleResetPassword(landlord)}>Reset Password</button>}
                               <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleDeleteLandlord(landlord)}>Delete</button>
                             </div>
                           </td>
