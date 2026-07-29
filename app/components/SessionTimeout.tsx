@@ -1,14 +1,19 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/tenant/register', '/pricing'];
+
 export default function SessionTimeout() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [showWarning, setShowWarning] = useState(false);
   const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const router = useRouter();
+
+  const isPublicPath = PUBLIC_PATHS.includes(pathname);
 
   const handleLogout = useCallback(async () => {
     if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
@@ -27,10 +32,12 @@ export default function SessionTimeout() {
       logoutTimerRef.current = setTimeout(async () => {
         await handleLogout();
       }, 60000);
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 5 * 60 * 1000);
   }, [handleLogout]);
 
   useEffect(() => {
+    if (isPublicPath) return;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         router.replace('/login');
@@ -54,7 +61,7 @@ export default function SessionTimeout() {
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
       subscription.unsubscribe();
     };
-  }, [resetTimers]);
+  }, [isPublicPath, resetTimers, router]);
 
   if (!showWarning) return null;
 
