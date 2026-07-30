@@ -93,18 +93,29 @@ export async function POST(request: NextRequest) {
       try { subscriptionPayload = JSON.parse(text); } catch { subscriptionPayload = {}; }
     }
 
-    await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
-       method: 'PUT',
-       body: JSON.stringify({
-         email_confirm: true,
-         user_metadata: {
-           full_name: managerName,
-           role,
-           status: 'inactive',
-           approval_status: 'pending',
-         },
-       }),
-     });
+    const confirmRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({
+        email_confirm: true,
+        user_metadata: {
+          full_name: managerName,
+          role,
+          status: 'inactive',
+          approval_status: 'pending',
+        },
+      }),
+    });
+
+    const confirmText = await confirmRes.text();
+    console.log('[register] confirm email status:', confirmRes.status, confirmText);
+    if (!confirmRes.ok) {
+      console.error('[register] confirm email failed:', confirmText);
+    }
 
     return NextResponse.json({ message: `${role === 'project_manager' ? 'Project manager' : 'Agent'} registered. Awaiting super admin approval.`, subscription: subscriptionPayload?.subscription ?? null }, { status: 201 });
   } catch (error: any) {

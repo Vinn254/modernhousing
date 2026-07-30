@@ -305,15 +305,27 @@ export async function PATCH(request: NextRequest) {
 
       if (profileError) throw profileError;
 
-      await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+      const confirmRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: serviceRoleKey,
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
         body: JSON.stringify({
+          email_confirm: true,
           user_metadata: {
             status: 'active',
             approval_status: 'approved',
           },
         }),
       });
+
+      const confirmText = await confirmRes.text();
+      console.log('[agents] confirm email status:', confirmRes.status, confirmText);
+      if (!confirmRes.ok) {
+        console.error('[agents] confirm email failed:', confirmText);
+      }
 
       return NextResponse.json({ message: 'Agent approved and activated.', approved: true });
     }

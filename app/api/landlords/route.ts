@@ -103,7 +103,6 @@ async function updateLandlordMetadata(userId: string, input: { fullName?: string
   if (!user) throw new Error('Landlord not found.');
 
   const body: Record<string, any> = {
-    email_confirm: true,
     user_metadata: {
       ...(user.user_metadata ?? {}),
       full_name: input.fullName ?? user.user_metadata?.full_name ?? user.email,
@@ -120,10 +119,23 @@ async function updateLandlordMetadata(userId: string, input: { fullName?: string
     body.password = input.password;
   }
 
-  return adminRequest<any>(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+  const res = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
     method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
     body: JSON.stringify(body),
   });
+
+  const text = await res.text();
+  if (!res.ok) {
+    const message = (() => { try { return JSON.parse(text).message; } catch { return text; } })();
+    throw new Error(message || `Failed to update landlord metadata: ${res.status}`);
+  }
+
+  return JSON.parse(text);
 }
 
 export async function GET() {
@@ -230,15 +242,27 @@ export async function PATCH(request: NextRequest) {
 
        if (profileError) throw profileError;
 
-       await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
-         method: 'PUT',
-         body: JSON.stringify({
-           user_metadata: {
-             status: 'active',
-             approval_status: 'approved',
-           },
-         }),
-       });
+        const confirmRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: serviceRoleKey,
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            email_confirm: true,
+            user_metadata: {
+              status: 'active',
+              approval_status: 'approved',
+            },
+          }),
+        });
+
+        const confirmText = await confirmRes.text();
+        console.log('[landlords] confirm email status:', confirmRes.status, confirmText);
+        if (!confirmRes.ok) {
+          console.error('[landlords] confirm email failed:', confirmText);
+        }
 
        return NextResponse.json({ message: 'Landlord approved and activated.', approved: true });
      }
