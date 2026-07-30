@@ -103,6 +103,7 @@ async function updateLandlordMetadata(userId: string, input: { fullName?: string
   if (!user) throw new Error('Landlord not found.');
 
   const body: Record<string, any> = {
+    email_confirm: true,
     user_metadata: {
       ...(user.user_metadata ?? {}),
       full_name: input.fullName ?? user.user_metadata?.full_name ?? user.email,

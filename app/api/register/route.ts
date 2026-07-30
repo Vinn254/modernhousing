@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     await adminRequest(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
        method: 'PUT',
        body: JSON.stringify({
-         email_confirmed_at: new Date().toISOString(),
+         email_confirm: true,
          user_metadata: {
            full_name: managerName,
            role,
