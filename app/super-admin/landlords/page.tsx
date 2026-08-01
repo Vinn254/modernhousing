@@ -533,21 +533,21 @@ export default function LandlordManagementPage() {
                           <span className="status-pill" style={{ background: landlord.status === 'active' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: landlord.status === 'active' ? '#059669' : '#d97706' }}>{landlord.status}</span>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <button className="action-button secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => setSelectedLandlord(landlord)}>View</button>
-                        {subscription && <button className="action-button info" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => openNotification(subscription, landlord)}>Notify</button>}
-                        {subscription && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleUpgradeSubscription(landlord)}>Upgrade</button>}
+                      <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+                        <button className="action-button secondary" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => setSelectedLandlord(landlord)}>View</button>
+                        {subscription && <button className="action-button info" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => openNotification(subscription, landlord)}>Notify</button>}
+                        {subscription && <button className="action-button warn" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => handleUpgradeSubscription(landlord)}>Upgrade</button>}
                         {landlord.status !== 'active' && (
                           <>
-                            <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRequestSubscription(landlord)} disabled={requestSubscriptionId === landlord.id}>{requestSubscriptionId === landlord.id ? 'Requesting...' : 'Request Subscription'}</button>
-                            <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleApprove(landlord)} disabled={approvingId === landlord.id}>{approvingId === landlord.id ? 'Approving...' : 'Approve'}</button>
+                            <button className="action-button warn" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => handleRequestSubscription(landlord)} disabled={requestSubscriptionId === landlord.id}>{requestSubscriptionId === landlord.id ? 'Req...' : 'Request Sub'}</button>
+                            <button className="action-button primary" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => handleApprove(landlord)} disabled={approvingId === landlord.id}>{approvingId === landlord.id ? '...' : 'Approve'}</button>
                           </>
                         )}
                         {landlord.bank_edit_request && (
-                          <button className="action-button info" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleUnlockBankEdits(landlord)}>Unlock Bank Edit</button>
+                          <button className="action-button info" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => handleUnlockBankEdits(landlord)}>Unlock Bank</button>
                         )}
-                        {landlord.status === 'active' && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleResetPassword(landlord)}>Reset Password</button>}
-                        <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleDeleteLandlord(landlord)}>Delete</button>
+                        {landlord.status === 'active' && <button className="action-button warn" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => handleResetPassword(landlord)}>Reset Pwd</button>}
+                        <button className="action-button danger" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => handleDeleteLandlord(landlord)}>Delete</button>
                       </div>
                     </div>
                   );
