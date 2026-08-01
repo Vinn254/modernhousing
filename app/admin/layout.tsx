@@ -45,7 +45,8 @@ export default function AdminLayout({
 
         const result = await response.json().catch(() => ({}));
         const approvalStatus = result.profile?.approval_status;
-        const isApproved = approvalStatus === 'approved' || approvalStatus === null || approvalStatus === undefined;
+        const profileStatus = result.profile?.status;
+        const isApproved = approvalStatus === 'approved' || (approvalStatus === null || approvalStatus === undefined ? profileStatus === 'active' : false);
 
         if (!isApproved && pathname !== LANDLORD_PROFILE_PATH) {
           router.replace(LANDLORD_PROFILE_PATH);

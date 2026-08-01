@@ -50,7 +50,14 @@ export default function SessionTimeout() {
           if (data.profile?.role === 'tenant' && data.profile?.approval_status === 'pending') {
             router.replace('/login?message=Your account is pending approval.');
           }
-          if (data.profile?.role === 'project_manager' && data.profile?.approval_status === 'pending' && pathname !== '/profile') {
+          const isUnapprovedLandlord = data.profile?.role === 'project_manager' && (
+            data.profile?.approval_status === 'pending' ||
+            data.profile?.approval_status === 'rejected' ||
+            data.profile?.status === 'pending' ||
+            data.profile?.status === 'inactive' ||
+            (!data.profile?.approval_status && data.profile?.status === 'pending')
+          );
+          if (isUnapprovedLandlord && pathname !== '/profile') {
             router.replace('/profile');
           }
         })

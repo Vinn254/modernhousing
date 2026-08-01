@@ -72,9 +72,17 @@ function LoginForm() {
       return;
     }
 
-    if (profileData.profile?.role === 'project_manager' && profileData.profile?.approval_status === 'pending') {
-      router.push('/profile');
-      return;
+    if (role === 'project_manager' || role === 'admin') {
+      const isPendingLandlord = profileData.profile?.approval_status === 'pending' ||
+        profileData.profile?.approval_status === 'rejected' ||
+        profileData.profile?.status === 'pending' ||
+        profileData.profile?.status === 'inactive' ||
+        (!profileData.profile?.approval_status && profileData.profile?.status === 'pending');
+      if (isPendingLandlord) {
+        router.push('/profile');
+        setLoading(false);
+        return;
+      }
     }
 
     router.push(roleRoutes[role as UserRole] ?? roleRoutes.admin);
