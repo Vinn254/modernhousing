@@ -25,6 +25,10 @@
   --shell-width: 264px;
 }
 
+body {
+  font-family: "Inter", sans-serif;
+}
+
 .admin-no-hero {
   overflow-x: hidden;
 }

@@ -1,0 +1,242 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+function decodeJWT(token) {
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3)
+            return null;
+        let payload = parts[1];
+        payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+        while (payload.length % 4)
+            payload += '=';
+        try {
+            return JSON.parse(atob(payload));
+        }
+        catch {
+            return JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
+        }
+    }
+    catch {
+        return null;
+    }
+}
+async function getAuthContext(request) {
+    const cookie = request.headers.get('cookie') ?? '';
+    const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
+    let sessionUser = null;
+    if (authorization?.startsWith('Bearer ')) {
+        const token = authorization.split(' ')[1];
+        const decoded = decodeJWT(token);
+        if (decoded?.sub) {
+            sessionUser = { id: decoded.sub, email: decoded.email, user_metadata: decoded.user_metadata || {} };
+        }
+    }
+    if (!sessionUser && cookie) {
+        try {
+            const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { cookie } } });
+            const { data: { user } } = await supabaseAuth.auth.getUser();
+            sessionUser = user;
+        }
+        catch (e) { }
+    }
+    if (!sessionUser && cookie) {
+        try {
+            const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { cookie } } });
+            const { data: { session } } = await supabaseAuth.auth.getSession();
+            if (session?.user)
+                sessionUser = session.user;
+        }
+        catch (e) { }
+    }
+    if (!sessionUser)
+        return { isSuperAdmin: false, isLandlord: false, sessionUser: null, userMetadata: {}, organizationId: null };
+    const userMetadata = sessionUser.user_metadata || {};
+    const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('organization_id, role')
+        .eq('user_id', sessionUser.id)
+        .maybeSingle();
+    let orgId = profile?.organization_id ?? userMetadata.organization_id ?? null;
+    if (!orgId && sessionUser.email) {
+        const { data: profileByEmail } = await supabaseAdmin
+            .from('profiles')
+            .select('organization_id')
+            .eq('email', sessionUser.email)
+            .maybeSingle();
+        orgId = profileByEmail?.organization_id ?? null;
+    }
+    if (!orgId && userMetadata.role === 'tenant' && userMetadata.tenant_id) {
+        const { data: tenantData } = await supabaseAdmin
+            .from('tenants')
+            .select('unit_id')
+            .eq('id', userMetadata.tenant_id)
+            .maybeSingle();
+        if (tenantData?.unit_id) {
+            const { data: unitData } = await supabaseAdmin
+                .from('units')
+                .select('property_id')
+                .eq('id', tenantData.unit_id)
+                .maybeSingle();
+            if (unitData?.property_id) {
+                const { data: propData } = await supabaseAdmin
+                    .from('properties')
+                    .select('organization_id')
+                    .eq('id', unitData.property_id)
+                    .maybeSingle();
+                orgId = propData?.organization_id ?? null;
+            }
+        }
+    }
+    if (!orgId && userMetadata.role === 'project_manager' && sessionUser?.id) {
+        const { data: propData } = await supabaseAdmin
+            .from('properties')
+            .select('organization_id')
+            .eq('created_by', sessionUser.id)
+            .maybeSingle();
+        orgId = propData?.organization_id ?? null;
+    }
+    return {
+        isSuperAdmin: userMetadata.role === 'super_admin' || profile?.role === 'super_admin',
+        isLandlord: userMetadata.role === 'project_manager' || profile?.role === 'project_manager',
+        sessionUser,
+        userMetadata,
+        organizationId: orgId,
+        userId: sessionUser?.id ?? null,
+    };
+}
+async function getTenantOrganizationId(tenantId) {
+    const { data: tenantData } = await supabaseAdmin
+        .from('tenants')
+        .select('unit_id')
+        .eq('id', tenantId)
+        .maybeSingle();
+    if (!tenantData?.unit_id)
+        return null;
+    const { data: unitData } = await supabaseAdmin
+        .from('units')
+        .select('property_id')
+        .eq('id', tenantData.unit_id)
+        .maybeSingle();
+    if (!unitData?.property_id)
+        return null;
+    const { data: propData } = await supabaseAdmin
+        .from('properties')
+        .select('organization_id')
+        .eq('id', unitData.property_id)
+        .maybeSingle();
+    return propData?.organization_id ?? null;
+}
+export async function GET(request) {
+    try {
+        const tenantId = request.nextUrl.searchParams.get('tenantId');
+        let orgId = null;
+        if (tenantId) {
+            orgId = await getTenantOrganizationId(tenantId);
+        }
+        else {
+            const authContext = await getAuthContext(request);
+            orgId = authContext.organizationId;
+            if (!orgId && authContext.isLandlord && authContext.userId) {
+                const { data: propData } = await supabaseAdmin
+                    .from('properties')
+                    .select('organization_id')
+                    .eq('created_by', authContext.userId)
+                    .maybeSingle();
+                orgId = propData?.organization_id ?? null;
+            }
+        }
+        if (!orgId) {
+            return NextResponse.json({
+                paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '', shortCode: '',
+                consumerKey: '', consumerSecret: '', passkey: '',
+            });
+        }
+        const { data: settings } = await supabaseAdmin
+            .from('payment_settings')
+            .select('paybill, paybill_account, till, pochi, mobile, shortcode, consumer_key, consumer_secret, passkey')
+            .eq('organization_id', orgId)
+            .maybeSingle();
+        return NextResponse.json({
+            paybill: settings?.paybill ?? '',
+            paybillAccount: settings?.paybill_account ?? '',
+            till: settings?.till ?? '',
+            pochi: settings?.pochi ?? '',
+            mobile: settings?.mobile ?? '',
+            shortCode: settings?.shortcode ?? '',
+            consumerKey: settings?.consumer_key ?? '',
+            consumerSecret: settings?.consumer_secret ?? '',
+            passkey: settings?.passkey ?? '',
+        });
+    }
+    catch (error) {
+        return NextResponse.json({
+            paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '', shortCode: '',
+            consumerKey: '', consumerSecret: '', passkey: '',
+        });
+    }
+}
+export async function POST(request) {
+    try {
+        const authContext = await getAuthContext(request);
+        let orgId = authContext.organizationId;
+        if (!orgId && authContext.isLandlord && authContext.userId) {
+            const { data: propData } = await supabaseAdmin
+                .from('properties')
+                .select('organization_id')
+                .eq('created_by', authContext.userId)
+                .maybeSingle();
+            orgId = propData?.organization_id ?? null;
+        }
+        if (!authContext.isSuperAdmin && !orgId) {
+            return NextResponse.json({ message: 'Unable to verify organization access.' }, { status: 403 });
+        }
+        const body = await request.json();
+        const { paybill, paybillAccount, till, pochi, mobile, shortCode, consumerKey, consumerSecret, passkey } = body;
+        const { data: existing } = await supabaseAdmin
+            .from('payment_settings')
+            .select('id')
+            .eq('organization_id', orgId ?? '')
+            .limit(1)
+            .maybeSingle();
+        const data = {
+            organization_id: orgId ?? '',
+            paybill: paybill ?? '',
+            paybill_account: paybillAccount ?? '',
+            till: till ?? '',
+            pochi: pochi ?? '',
+            mobile: mobile ?? '',
+            shortcode: shortCode ?? '',
+            consumer_key: consumerKey ?? '',
+            consumer_secret: consumerSecret ?? '',
+            passkey: passkey ?? '',
+            updated_at: new Date().toISOString(),
+        };
+        if (existing) {
+            const result = await supabaseAdmin
+                .from('payment_settings')
+                .update(data)
+                .eq('id', existing.id)
+                .select()
+                .maybeSingle();
+            if (result.error)
+                throw result.error;
+        }
+        else {
+            const result = await supabaseAdmin
+                .from('payment_settings')
+                .insert({ ...data, created_at: new Date().toISOString() })
+                .select()
+                .maybeSingle();
+            if (result.error)
+                throw result.error;
+        }
+        return NextResponse.json({ message: 'Payment settings saved.' });
+    }
+    catch (error) {
+        return NextResponse.json({ message: error.message ?? 'Unable to save payment settings.' }, { status: 500 });
+    }
+}

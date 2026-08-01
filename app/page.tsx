@@ -3,7 +3,7 @@ import Link from 'next/link';
 export default function HomePage() {
   return (
     <>
-      <section className="hero">
+      <section className="hero" style={{ background: 'radial-gradient(circle at center, rgba(0,255,200,.12), transparent 38%), linear-gradient(180deg, #071726 0%, #061B2A 35%, #041522 70%, #03111C 100%)' }}>
         <nav className="nav">
           <Link href="/" className="logo">
             <span className="logo-mark">
@@ -28,12 +28,12 @@ export default function HomePage() {
         </div>
 
 <div className="floats">
-           <div className="float-card float-1"><div className="row"><span className="dot"></span> Rent collected</div></div>
-           <div className="float-card float-2"><div className="row"><span className="dot"></span> Agent assigned</div></div>
-           <div className="float-card float-3"><div className="row"><span className="dot"></span> Tenant support</div></div>
-           <div className="float-card float-4"><div className="row"><span className="dot"></span> Secure portal</div></div>
-           <div className="float-card float-5"><div className="row"><span className="dot"></span> Quick setup</div></div>
-           <div className="float-card float-6"><div className="row"><span className="dot"></span> Real-time sync</div></div>
+           <div className="float-card float-1" style={{ boxShadow: '0 0 18px rgba(16,185,129,.35), 0 0 40px rgba(16,185,129,.15)' }}><div className="row"><span className="dot"></span> Rent collected</div></div>
+           <div className="float-card float-2" style={{ boxShadow: '0 0 18px rgba(16,185,129,.35), 0 0 40px rgba(16,185,129,.15)' }}><div className="row"><span className="dot"></span> Agent assigned</div></div>
+           <div className="float-card float-3" style={{ boxShadow: '0 0 18px rgba(16,185,129,.35), 0 0 40px rgba(16,185,129,.15)' }}><div className="row"><span className="dot"></span> Tenant support</div></div>
+           <div className="float-card float-4" style={{ boxShadow: '0 0 18px rgba(16,185,129,.35), 0 0 40px rgba(16,185,129,.15)' }}><div className="row"><span className="dot"></span> Secure portal</div></div>
+           <div className="float-card float-5" style={{ boxShadow: '0 0 18px rgba(16,185,129,.35), 0 0 40px rgba(16,185,129,.15)' }}><div className="row"><span className="dot"></span> Quick setup</div></div>
+           <div className="float-card float-6" style={{ boxShadow: '0 0 18px rgba(16,185,129,.35), 0 0 40px rgba(16,185,129,.15)' }}><div className="row"><span className="dot"></span> Real-time sync</div></div>
          </div>
       </section>
 
