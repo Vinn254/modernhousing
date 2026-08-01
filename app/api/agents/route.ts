@@ -180,7 +180,10 @@ async function updateAgentMetadata(userId: string, input: { fullName?: string; p
 
   return adminRequest<any>(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
     method: 'PUT',
-    body: JSON.stringify({ user_metadata: userMetadata }),
+    body: JSON.stringify({
+      email_confirmed_at: new Date().toISOString(),
+      user_metadata: userMetadata,
+    }),
   });
 }
 
@@ -278,6 +281,13 @@ export async function POST(request: NextRequest) {
 
     const agentOrgId = authContext.organizationId;
     const profile = await upsertAgentProfile(user.id, fullName, email, phone, agentOrgId);
+
+    if (!authContext.isSuperAdmin) {
+      await client
+        .from('profiles')
+        .update({ approval_status: 'approved', approved_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+    }
 
     return NextResponse.json({ agent: normalizeAgent(user, profile) }, { status: existingUser ? 200 : 201 });
   } catch (error: any) {
