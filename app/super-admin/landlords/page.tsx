@@ -120,6 +120,8 @@ export default function LandlordManagementPage() {
   const [requestSubscriptionId, setRequestSubscriptionId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   async function loadData() {
     setLoading(true);
@@ -468,6 +470,12 @@ export default function LandlordManagementPage() {
   const overdueCount = landlords.filter((landlord) => getRisk(getSubscriptionForLandlord(landlord, subscriptions)) === 'overdue').length;
   const composerSubscriptions = subscriptions;
 
+  const filteredLandlords = landlords.filter((landlord) => {
+    const matchesSearch = !searchQuery || landlord.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || landlord.email.toLowerCase().includes(searchQuery.toLowerCase()) || landlord.organization.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || landlord.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <>
       <main className="container admin-no-hero">
@@ -488,10 +496,30 @@ export default function LandlordManagementPage() {
               {message && <p className="landlord-success">{message}</p>}
               {error && <p className="landlord-error">{error}</p>}
 
-              <div style={{ display: 'grid', gap: 12 }}>
-                {landlords.length === 0 && !loading ? (
-                  <p className="landlord-empty">No project managers found.</p>
-                ) : landlords.map((landlord) => {
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="Search landlords..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontSize: 14, minWidth: 220, flex: 1 }}
+                />
+                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--ink)', fontSize: 14 }}>
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="pending">Pending</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <button className="action-button primary" onClick={() => setShowAddModal(true)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Add Project Manager
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                {filteredLandlords.length === 0 && !loading ? (
+                  <p className="landlord-empty" style={{ gridColumn: '1 / -1' }}>No project managers found.</p>
+                ) : filteredLandlords.map((landlord) => {
                   const subscription = getSubscriptionForLandlord(landlord, subscriptions);
                   const risk = getRisk(subscription);
                   return (
@@ -527,10 +555,6 @@ export default function LandlordManagementPage() {
               </div>
 
               <div style={{ margin: '28px 0 0', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <button className="action-button primary" onClick={() => setShowAddModal(true)}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Add Project Manager
-                </button>
                 {landlords.some((landlord) => landlord.status !== 'active') && (
                   <button className="action-button primary" style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', borderColor: 'transparent' }} onClick={handleBulkApprove} disabled={bulkApproving}>
                     {bulkApproving ? 'Approving…' : `Bulk Approve (${landlords.filter((l) => l.status !== 'active').length})`}

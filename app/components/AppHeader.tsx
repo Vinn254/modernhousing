@@ -219,8 +219,6 @@ export default function AppHeader() {
 
   const isLinkActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href + '/'));
 
-  const isLinkActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href + '/'));
-
   const firstName = (user?.user_metadata?.full_name || user?.email || 'there').split(' ')[0].split('@')[0];
   const roleLabel = isTenant ? 'Tenant' : isAgent ? 'Agent' : isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : isLandlord ? 'Project Manager' : 'User';
   const hour = new Date().getHours();
