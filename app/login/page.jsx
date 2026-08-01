@@ -195,15 +195,16 @@ function LoginForm() {
             </button>
           </form>
 
-          <p className="auth-alt">
-            <Link href="/signup?role=project_manager">Register as landlord</Link>
-          </p>
-          <p className="auth-alt">
-            Need tenant access? <Link href="/tenant/register">Tenant registration</Link>
-          </p>
-          <p className="auth-alt">
-            <Link href="/forgot-password">Forgot password?</Link>
-          </p>
+          {selectedRole && (
+            <p className="auth-alt">
+              <button type="button" onClick={() => setSelectedRole('')} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, padding: 0, fontSize: 'inherit' }}>Clear role selection</button>
+            </p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+            <Link href="/signup?role=project_manager" style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>Register as landlord</Link>
+            <span style={{ color: 'var(--ink-3)', fontSize: 13 }}>Need tenant access? <Link href="/tenant/register" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Tenant registration</Link></span>
+            <Link href="/forgot-password" style={{ color: 'var(--ink-3)', fontWeight: 500, fontSize: 13, textDecoration: 'none' }}>Forgot password?</Link>
+          </div>
 
         </section>
       </div>
