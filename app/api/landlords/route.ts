@@ -29,6 +29,20 @@ interface LandlordProfile {
   organization_id?: string | null;
   status: 'active' | 'inactive' | 'pending';
   created_at: string;
+  organization_name?: string | null;
+  id_number?: string | null;
+  kra_pin?: string | null;
+  property_name?: string | null;
+  property_location?: string | null;
+  number_of_units?: string | number | null;
+  account_holder_name?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  branch?: string | null;
+  agreement_accepted?: boolean | null;
+  signed_on?: string | null;
+  bank_details_edit_allowed?: boolean | null;
+  bank_edit_request?: boolean | null;
 }
 
 function normalizeLandlord(user: any, profile?: LandlordProfile) {
@@ -36,10 +50,16 @@ function normalizeLandlord(user: any, profile?: LandlordProfile) {
     id: user?.id ?? profile?.user_id,
     email: profile?.email ?? user?.email ?? '',
     full_name: profile?.full_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Project Manager',
-    organization: '',
+    organization: profile?.organization_name ?? '',
     phone: profile?.phone ?? null,
     status: profile?.status ?? (user?.email_confirmed_at ? 'active' : 'pending'),
     created_at: profile?.created_at ?? user?.created_at ?? '',
+    bank_details_edit_allowed: profile?.bank_details_edit_allowed ?? true,
+    bank_edit_request: Boolean(profile?.bank_edit_request),
+    account_holder_name: profile?.account_holder_name ?? null,
+    bank_name: profile?.bank_name ?? null,
+    account_number: profile?.account_number ?? null,
+    branch: profile?.branch ?? null,
   };
 }
 

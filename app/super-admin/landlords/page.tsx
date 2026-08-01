@@ -10,6 +10,12 @@ interface Landlord {
   phone?: string | null;
   status: 'active' | 'inactive' | 'pending';
   created_at: string;
+  bank_details_edit_allowed?: boolean;
+  bank_edit_request?: boolean;
+  account_holder_name?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  branch?: string | null;
 }
 
 interface Subscription {
@@ -317,6 +323,25 @@ export default function LandlordManagementPage() {
     setMessage('Project manager permanently deleted.');
   }
 
+  async function handleUnlockBankEdits(landlord: Landlord) {
+    setError('');
+    setMessage('');
+    const response = await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: landlord.id, profileData: { bank_details_edit_allowed: true, bank_edit_request: false } }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to unlock bank edits.');
+      return;
+    }
+
+    setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, bank_details_edit_allowed: true, bank_edit_request: false } : item)));
+    setMessage(`Bank edit access unlocked for ${landlord.full_name}.`);
+  }
+
   async function handleResetPassword(landlord: Landlord) {
     const newPassword = prompt('Enter new password for ' + landlord.full_name + ':');
     if (!newPassword) return;
@@ -500,6 +525,9 @@ export default function LandlordManagementPage() {
                                   <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleApprove(landlord)} disabled={approvingId === landlord.id}>{approvingId === landlord.id ? 'Approving...' : 'Approve'}</button>
                                 </>
                               )}
+                              {landlord.bank_edit_request && (
+                                <button className="action-button info" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleUnlockBankEdits(landlord)}>Unlock Bank Edit</button>
+                              )}
                               {landlord.status === 'active' && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleResetPassword(landlord)}>Reset Password</button>}
                               <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleDeleteLandlord(landlord)}>Delete</button>
                             </div>
@@ -586,6 +614,10 @@ export default function LandlordManagementPage() {
               <div className="detail-card"><span>Email</span><strong>{selectedLandlord.email}</strong></div>
               {selectedLandlord.phone && <div className="detail-card"><span>Phone</span><strong>{selectedLandlord.phone}</strong></div>}
               <div className="detail-card"><span>Status</span><strong>{selectedLandlord.status}</strong></div>
+              <div className="detail-card"><span>Bank edit access</span><strong>{selectedLandlord.bank_details_edit_allowed === false ? 'Locked' : 'Open'}</strong></div>
+              <div className="detail-card"><span>Bank edit request</span><strong>{selectedLandlord.bank_edit_request ? 'Pending unlock' : 'None'}</strong></div>
+              {selectedLandlord.bank_name && <div className="detail-card"><span>Bank</span><strong>{selectedLandlord.bank_name}</strong></div>}
+              {selectedLandlord.account_holder_name && <div className="detail-card"><span>Account holder</span><strong>{selectedLandlord.account_holder_name}</strong></div>}
               <div className="detail-card"><span>Created</span><strong>{new Date(selectedLandlord.created_at).toLocaleDateString()}</strong></div>
             </div>
           </div>

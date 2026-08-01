@@ -183,6 +183,7 @@ export default function AppHeader() {
 
   const landlordPMLinks: NavLink[] = [
     { label: 'Dashboard', href: '/admin', icon: 'dashboard' },
+    { label: 'My Profile', href: '/profile', icon: 'dashboard' },
     { label: 'Properties', href: '/properties', icon: 'properties' },
     { label: 'Agents', href: '/admin/agents', icon: 'agents' },
     { label: 'Tenants', href: '/admin/tenants', icon: 'tenants' },
