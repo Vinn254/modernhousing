@@ -156,6 +156,9 @@ const [message, setMessage] = useState('');
   const [modalContent, setModalContent] = useState<React.ReactNode>(null);
   const [previousBalances, setPreviousBalances] = useState<{[id: string]: number}>({});
   const [recentSettlements, setRecentSettlements] = useState<Array<{tenant: string, unit: string, amount: number, settlementDate: Date}>>([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', propertyName: '' });
 
   const isAgent = roleLoaded && userRole === 'agent';
   const agentPropertyFromStorage = typeof window !== 'undefined' ? localStorage.getItem('agentPropertyId') || '' : '';
@@ -458,6 +461,84 @@ const rentOwedByTenant = useMemo(() => {
 
     setAgents((current) => current.map((agent) => (agent.id === agentId ? { ...agent, status: 'inactive' } : agent)));
     setMessage('Agent removed from active access.');
+  }
+
+  async function handleReassignAgent(agentId: string) {
+    const propertyName = prompt('Enter the property name to reassign this agent to:');
+    if (!propertyName) return;
+
+    const response = await fetch(`/api/agents?id=${encodeURIComponent(agentId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reassign', propertyName }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to reassign agent.');
+      return;
+    }
+
+    setAgents((current) => current.map((agent) => (agent.id === agentId ? { ...agent, property_name: propertyName } : agent)));
+    setMessage('Agent reassigned successfully.');
+  }
+
+  async function handleDeleteAgent(agentId: string) {
+    if (!confirm('Permanently delete this agent? This cannot be undone.')) return;
+
+    const response = await fetch(`/api/agents?id=${encodeURIComponent(agentId)}`, { method: 'DELETE' });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to delete agent.');
+      return;
+    }
+
+    setAgents((current) => current.filter((agent) => agent.id !== agentId));
+    setMessage('Agent deleted permanently.');
+  }
+
+  async function handleReactivateAgent(agentId: string) {
+    const response = await fetch(`/api/agents?id=${encodeURIComponent(agentId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reactivate' }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to reactivate agent.');
+      return;
+    }
+
+    setAgents((current) => current.map((agent) => (agent.id === agentId ? { ...agent, status: 'active' } : agent)));
+    setMessage('Agent reactivated successfully.');
+  }
+
+  function handleEditAgent(agent: any) {
+    setEditingAgent(agent);
+    setEditForm({ name: agent.full_name || '', email: agent.email || '', propertyName: agent.property_name || '' });
+    setShowEditModal(true);
+  }
+
+  async function handleSaveAgentEdit() {
+    if (!editingAgent) return;
+    const response = await fetch(`/api/agents?id=${encodeURIComponent(editingAgent.id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update', fullName: editForm.name, email: editForm.email, propertyName: editForm.propertyName }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.message ?? 'Unable to update agent.');
+      return;
+    }
+
+    setAgents((current) => current.map((agent) => (agent.id === editingAgent.id ? { ...agent, full_name: editForm.name, email: editForm.email, property_name: editForm.propertyName } : agent)));
+    setShowEditModal(false);
+    setEditingAgent(null);
+    setMessage('Agent updated successfully.');
   }
 
   async function handleAgentTenantCreate(event: React.FormEvent) {
@@ -848,7 +929,18 @@ const rentOwedByTenant = useMemo(() => {
                     <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.email}</div>
                     <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.property_name || 'Unassigned'} · {agent.status}</div>
                   </div>
-                  <button className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '12px' }} onClick={() => handleRemoveAgent(agent.id)} disabled={agent.status !== 'active'}>{agent.status === 'active' ? 'Remove' : 'Removed'}</button>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {agent.status === 'active' ? (
+                      <>
+                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleReassignAgent(agent.id)}>Reassign</button>
+                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleEditAgent(agent)}>Edit</button>
+                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRemoveAgent(agent.id)}>Remove</button>
+                        <button className="btn" style={{ padding: '6px 10px', fontSize: '12px', background: '#dc2626', color: '#fff', border: 'none' }} onClick={() => handleDeleteAgent(agent.id)}>Delete</button>
+                      </>
+                    ) : (
+                      <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleReactivateAgent(agent.id)}>Reactivate</button>
+                    )}
+                  </div>
                 </div>
               ))}
             </SectionCard>
@@ -891,9 +983,37 @@ const rentOwedByTenant = useMemo(() => {
             </div>
           </div>
         )}
+        {showEditModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowEditModal(false)}>
+            <div className="card" style={{ maxWidth: '420px', width: '90%', padding: 20 }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ margin: 0 }}>Edit Agent</h3>
+                <button type="button" onClick={() => setShowEditModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--ink-2)' }}>×</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Full name</span>
+                  <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Email</span>
+                  <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} required />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Property</span>
+                  <select value={editForm.propertyName} onChange={(e) => setEditForm({ ...editForm, propertyName: e.target.value })}>
+                    <option value="">Unassigned</option>
+                    {properties.map((property) => <option key={property.id} value={property.name}>{property.name}</option>)}
+                  </select>
+                </label>
+                <button type="button" className="btn" onClick={handleSaveAgentEdit} style={{ marginTop: 4 }}>Save changes</button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     );
-}
+  }
 
 
 
