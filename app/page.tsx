@@ -3,7 +3,7 @@ import Link from 'next/link';
 export default function HomePage() {
   return (
     <>
-      <section className="hero" style={{ background: 'radial-gradient(circle at center, rgba(0,255,200,.12), transparent 38%), linear-gradient(180deg, #071726 0%, #061B2A 35%, #041522 70%, #03111C 100%)' }}>
+      <section className="hero">
         <nav className="nav">
           <Link href="/" className="logo">
             <span className="logo-mark">

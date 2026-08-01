@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
 import Sparkline from '../components/Sparkline';
 import DonutChart from '../components/DonutChart';
+import { DashboardHeader, FormField, PremiumTable, SectionCard, StatCard, ThemeToggle } from '../components/dashboard-ui';
 
 interface DashboardStats {
   properties: number;
@@ -624,31 +625,32 @@ const rentOwedByTenant = useMemo(() => {
 
   if (!roleLoaded) {
     return (
-      <main className="container auth-pattern-bg" style={{ overflowX: 'hidden' }}>
-        <div className="card-admin-header">
-          <div><p className="heading">Loading dashboard…</p></div>
-        </div>
-        <p style={{ color: 'var(--ink-3)' }}>Please wait while we load your dashboard.</p>
+      <main className="container" style={{ overflowX: 'hidden' }}>
+        <DashboardHeader title={isAgent ? 'Agent Dashboard' : 'Landlord Dashboard'} subtitle="Preparing your workspace and recent activity…" action={<ThemeToggle />} />
+        <SectionCard title="Loading dashboard" subtitle="Please wait while we load your workspace.">
+          <p style={{ color: 'var(--ink-3)', margin: 0 }}>Fetching the latest metrics, tenants, and payment activity.</p>
+        </SectionCard>
       </main>
     );
   }
 
   return (
-    <main className="container auth-pattern-bg" style={{ overflowX: 'hidden' }}>
-      <div className="card-admin-header">
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-          <div>
-            <p className="heading">{isAgent ? 'Agent Dashboard' : 'Landlord Dashboard'}</p>
-            <p className="subheading">Overview of properties, agents, tenants, payments, balances, and due dates.</p>
+    <main className="container" style={{ overflowX: 'hidden' }}>
+      <DashboardHeader
+        title={isAgent ? 'Agent Dashboard' : 'Landlord Dashboard'}
+        subtitle="A premium operations view of properties, tenants, collections, and occupancy."
+        action={
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <ThemeToggle />
+            <button type="button" className="btn" onClick={() => loadDashboard(true)} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
           </div>
-          <button type="button" className="btn btn-ghost" style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)' }} onClick={() => loadDashboard(true)} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
-        </div>
-      </div>
+        }
+      />
 
-      {loading && <p style={{ color: 'var(--ink-3)' }}>Loading dashboard…</p>}
+      {loading && <SectionCard title="Loading workspace" subtitle="Syncing the latest dashboard data."><p style={{ color: 'var(--ink-3)', margin: 0 }}>Loading dashboard…</p></SectionCard>}
       {!loading && lastUpdated && <p style={{ color: 'var(--ink-3)', fontSize: '13px', marginBottom: 16 }}>Last updated: {lastUpdated.toLocaleTimeString()}</p>}
-      {error && <p style={{ color: '#dc2626' }}>{error}</p>}
-      {message && <p style={{ color: 'var(--accent)' }}>{message}</p>}
+      {error && <p style={{ color: '#dc2626', marginBottom: 16 }}>{error}</p>}
+      {message && <p style={{ color: 'var(--accent)', marginBottom: 16 }}>{message}</p>}
 
       {isAgent && !effectivePropertyId && (
         <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: '#92400e', marginBottom: 16 }}>No property assigned. Please contact your landlord to assign a property.</p>
@@ -656,413 +658,226 @@ const rentOwedByTenant = useMemo(() => {
 
       {isAgent && effectivePropertyId && (
         <>
-          <section style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 24, overflow: 'hidden' }}>
-            <div className="bento-card card-color-indigo" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('All Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No units found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Status</th><th style={{ textAlign: 'left', padding: '8px' }}>Tenant</th></tr></thead><tbody>{units.map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td><td style={{ padding: '8px', color: unit.occupancy_status === 'occupied' ? 'var(--accent)' : 'var(--amber)' }}>{unit.occupancy_status ?? 'unknown'}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{unit.tenant?.full_name ?? '—'}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-              </div>
-              <div>
-                <div className="card-label">Total Units</div>
-                <h3 style={{ margin: 0 }}>{units.length}</h3>
-                <Sparkline data={[units.length, units.filter(u => u.occupancy_status === 'occupied').length, units.filter(u => u.occupancy_status === 'vacant').length]} color="#4f46e5" w={80} h={24}/>
-                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>in your portfolio</p>
-              </div>
-            </div>
+          <section className="bento-grid" style={{ marginBottom: 24 }}>
+            <StatCard title="Total Units" value={units.length} caption="in your portfolio" accent="indigo" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>} trend={<span className="status-pill">{units.filter((u) => u.occupancy_status === 'occupied').length} occupied</span>} onClick={() => { setModalTitle('All Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No units found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Status</th><th style={{ textAlign: 'left', padding: '8px' }}>Tenant</th></tr></thead><tbody>{units.map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td><td style={{ padding: '8px', color: unit.occupancy_status === 'occupied' ? 'var(--accent)' : 'var(--amber)' }}>{unit.occupancy_status ?? 'unknown'}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{unit.tenant?.full_name ?? '—'}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }} />
 
-            <div className="bento-card card-color-emerald" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('Occupied Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.filter(u => u.occupancy_status === 'occupied').length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No occupied units.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Tenant</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{units.filter(u => u.occupancy_status === 'occupied').map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td><td style={{ padding: '8px' }}>{unit.tenant?.full_name ?? '—'}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{unit.tenant?.email ?? '—'}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
-              </div>
-              <div>
-                <div className="card-label">Occupied</div>
-                <h3 style={{ margin: 0 }}>{units.filter(u => u.occupancy_status === 'occupied').length}</h3>
-                <Sparkline data={[10, 12, units.filter(u => u.occupancy_status === 'occupied').length]} color="#10b981" w={80} h={24}/>
-                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>units with tenants</p>
-              </div>
-            </div>
+            <StatCard title="Occupied" value={units.filter((u) => u.occupancy_status === 'occupied').length} caption="units with tenants" accent="emerald" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>} trend={<span className="status-pill">{units.filter((u) => u.occupancy_status === 'vacant').length} vacant</span>} onClick={() => { setModalTitle('Occupied Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.filter(u => u.occupancy_status === 'occupied').length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No occupied units.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Tenant</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{units.filter(u => u.occupancy_status === 'occupied').map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td><td style={{ padding: '8px' }}>{unit.tenant?.full_name ?? '—'}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{unit.tenant?.email ?? '—'}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }} />
 
-            <div className="bento-card card-color-sky" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('Vacant Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.filter(u => u.occupancy_status === 'vacant').length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No vacant units.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th></tr></thead><tbody>{units.filter(u => u.occupancy_status === 'vacant').map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              </div>
-              <div>
-                <div className="card-label">Vacant</div>
-                <h3 style={{ margin: 0 }}>{units.filter(u => u.occupancy_status === 'vacant').length}</h3>
-                <Sparkline data={[3, 1, units.filter(u => u.occupancy_status === 'vacant').length]} color="#0ea5e9" w={80} h={24}/>
-                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>available for rent</p>
-              </div>
-            </div>
+            <StatCard title="Vacant" value={units.filter((u) => u.occupancy_status === 'vacant').length} caption="available for rent" accent="sky" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>} trend={<span className="status-pill warning">ready to lease</span>} onClick={() => { setModalTitle('Vacant Units'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{units.filter(u => u.occupancy_status === 'vacant').length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No vacant units.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th></tr></thead><tbody>{units.filter(u => u.occupancy_status === 'vacant').map((unit) => <tr key={unit.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{unit.unit_number}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }} />
 
-            <div className="bento-card card-color-amber" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => { setModalTitle('All Tenants'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{tenants.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Name</th><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{tenants.map((tenant) => <tr key={tenant.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{tenant.full_name}</td><td style={{ padding: '8px' }}>{tenant.unit}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{tenant.email}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-              </div>
-              <div>
-                <div className="card-label">Active Tenants</div>
-                <h3 style={{ margin: 0 }}>{tenants.length}</h3>
-                <Sparkline data={[2, 4, tenants.length]} color="var(--amber)" w={80} h={24}/>
-                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>registered</p>
-              </div>
-            </div>
+            <StatCard title="Active Tenants" value={tenants.length} caption="registered" accent="amber" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>} trend={<span className="status-pill">{tenants.length > 0 ? 'healthy' : 'new'}</span>} onClick={() => { setModalTitle('All Tenants'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{tenants.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Name</th><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{tenants.map((tenant) => <tr key={tenant.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{tenant.full_name}</td><td style={{ padding: '8px' }}>{tenant.unit}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{tenant.email}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }} />
 
-            <div className="bento-card card-color-pink" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(236,72,153,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ec4899" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div className="card-label">Occupancy Rate</div>
-                <h3 style={{ margin: 0 }}>{units.length > 0 ? Math.round((units.filter(u => u.occupancy_status === 'occupied').length / units.length) * 100) : 0}%</h3>
-                <DonutChart data={[
-                  { label: 'Occupied', value: units.filter(u => u.occupancy_status === 'occupied').length, color: '#10b981' },
-                  { label: 'Vacant', value: units.filter(u => u.occupancy_status === 'vacant').length, color: '#9ca3af' }
-                ]} size={60} centerLabel={`${units.filter(u => u.occupancy_status === 'occupied').length}/${units.length}`}/>
-                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>occupied / total</p>
-              </div>
-            </div>
+            <StatCard title="Occupancy Rate" value={`${units.length > 0 ? Math.round((units.filter((u) => u.occupancy_status === 'occupied').length / units.length) * 100) : 0}%`} caption="occupied / total" accent="rose" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ec4899" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>} trend={<DonutChart data={[{ label: 'Occupied', value: units.filter((u) => u.occupancy_status === 'occupied').length, color: '#10b981' }, { label: 'Vacant', value: units.filter((u) => u.occupancy_status === 'vacant').length, color: '#9ca3af' }]} size={56} centerLabel={`${units.filter((u) => u.occupancy_status === 'occupied').length}/${units.length}`} />} />
           </section>
 
-          <section className="dashboard-section-grid" style={{ overflow: 'hidden' }}>
-            <div className="card">
-              <div className="card-label">Tenant Management</div>
-              <h3 style={{ marginBottom: 16 }}>Add Tenant</h3>
+          <section className="dashboard-grid">
+            <SectionCard title="Tenant Management" subtitle="Capture new residents with structured details and clear next steps.">
               <form onSubmit={handleAgentTenantCreate} className="form-grid">
-                <input value={agentTenantName} onChange={(event) => setAgentTenantName(event.target.value)} required placeholder="Tenant full name" />
-                <input type="email" value={agentTenantEmail} onChange={(event) => setAgentTenantEmail(event.target.value)} required placeholder="Tenant email" />
-                <input value={agentTenantPhone} onChange={(event) => setAgentTenantPhone(event.target.value)} placeholder="Phone" />
-                <input value={agentNationalId} onChange={(event) => setAgentNationalId(event.target.value)} placeholder="National ID (Optional)" />
-                <input value={agentKraPin} onChange={(event) => setAgentKraPin(event.target.value)} placeholder="KRA PIN (Optional)" />
-                <select value={agentTenantUnitId} onChange={(event) => setAgentTenantUnitId(event.target.value)}>
-                  <option value="">Auto-create unit</option>
-                  {units.map((unit) => <option key={unit.id} value={unit.id}>Unit {unit.unit_number}</option>)}
-                </select>
-                <input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required />
-                <input type="date" value={agentLeaseEnd} onChange={(event) => setAgentLeaseEnd(event.target.value)} required />
-                <input type="number" value={agentDeposit} onChange={(event) => setAgentDeposit(event.target.value)} placeholder="Deposit" />
-                <input value={agentNextOfKinName} onChange={(event) => setAgentNextOfKinName(event.target.value)} placeholder="Next of Kin Name (Optional)" />
-                <input value={agentNextOfKinId} onChange={(event) => setAgentNextOfKinId(event.target.value)} placeholder="Next of Kin ID (Optional)" />
-                <input value={agentNextOfKinPhone} onChange={(event) => setAgentNextOfKinPhone(event.target.value)} placeholder="Next of Kin Phone (Optional)" />
-                <select value={agentNextOfKinRelationship} onChange={(event) => setAgentNextOfKinRelationship(event.target.value)} style={{ marginLeft: '8px' }}>
-                  <option value="">Next of Kin Relationship (Optional)</option>
-                  <option value="partner">Partner</option>
-                  <option value="spouse">Spouse</option>
-                  <option value="parent">Parent</option>
-                  <option value="sister">Sister</option>
-                  <option value="brother">Brother</option>
-                  <option value="roommate">Roommate</option>
-                  <option value="uncle">Uncle</option>
-                  <option value="grandparent">Grandparent</option>
-                </select>
-                <button type="submit" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Tenant'}</button>
+                <FormField label="Tenant full name"><input value={agentTenantName} onChange={(event) => setAgentTenantName(event.target.value)} required placeholder="Tenant full name" /></FormField>
+                <FormField label="Email"><input type="email" value={agentTenantEmail} onChange={(event) => setAgentTenantEmail(event.target.value)} required placeholder="Tenant email" /></FormField>
+                <FormField label="Phone"><input value={agentTenantPhone} onChange={(event) => setAgentTenantPhone(event.target.value)} placeholder="Phone" /></FormField>
+                <FormField label="National ID"><input value={agentNationalId} onChange={(event) => setAgentNationalId(event.target.value)} placeholder="National ID (Optional)" /></FormField>
+                <FormField label="KRA PIN"><input value={agentKraPin} onChange={(event) => setAgentKraPin(event.target.value)} placeholder="KRA PIN (Optional)" /></FormField>
+                <FormField label="Unit assignment"><select value={agentTenantUnitId} onChange={(event) => setAgentTenantUnitId(event.target.value)}><option value="">Auto-create unit</option>{units.map((unit) => <option key={unit.id} value={unit.id}>Unit {unit.unit_number}</option>)}</select></FormField>
+                <FormField label="Lease start"><input type="date" value={agentLeaseStart} onChange={(event) => setAgentLeaseStart(event.target.value)} required /></FormField>
+                <FormField label="Lease end"><input type="date" value={agentLeaseEnd} onChange={(event) => setAgentLeaseEnd(event.target.value)} required /></FormField>
+                <FormField label="Deposit"><input type="number" value={agentDeposit} onChange={(event) => setAgentDeposit(event.target.value)} placeholder="Deposit" /></FormField>
+                <FormField label="Next of kin"><input value={agentNextOfKinName} onChange={(event) => setAgentNextOfKinName(event.target.value)} placeholder="Next of Kin Name (Optional)" /></FormField>
+                <FormField label="Next of kin ID"><input value={agentNextOfKinId} onChange={(event) => setAgentNextOfKinId(event.target.value)} placeholder="Next of Kin ID (Optional)" /></FormField>
+                <FormField label="Next of kin phone"><input value={agentNextOfKinPhone} onChange={(event) => setAgentNextOfKinPhone(event.target.value)} placeholder="Next of Kin Phone (Optional)" /></FormField>
+                <FormField label="Relationship"><select value={agentNextOfKinRelationship} onChange={(event) => setAgentNextOfKinRelationship(event.target.value)}><option value="">Next of Kin Relationship (Optional)</option><option value="partner">Partner</option><option value="spouse">Spouse</option><option value="parent">Parent</option><option value="sister">Sister</option><option value="brother">Brother</option><option value="roommate">Roommate</option><option value="uncle">Uncle</option><option value="grandparent">Grandparent</option></select></FormField>
+                <button type="submit" className="btn" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Tenant'}</button>
               </form>
-            </div>
+            </SectionCard>
 
-            <div className="card">
-              <div className="card-label">Water Meter Billing</div>
-              <h3 style={{ marginBottom: 16 }}>Record Water Reading</h3>
-              <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Enter current meter reading. Water is billed at tiered rates: 0-6m³ (88 KES), 7-20m³ (132 KES), 21-50m³ (137 KES), 51-100m³ (148 KES), 101-300m³ (165 KES), 300+m³ (custom). Consumption = Current - Previous.</p>
-              <input type="month" value={waterMonthDue} onChange={(event) => setWaterMonthDue(event.target.value)} placeholder="Billing month" style={{ marginBottom: 12 }} />
+            <SectionCard title="Water Meter Billing" subtitle="Capture utility usage and turn it into actionable billing entries.">
+              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Enter current meter reading. Water is billed at tiered rates: 0-6m³ (88 KES), 7-20m³ (132 KES), 21-50m³ (137 KES), 51-100m³ (148 KES), 101-300m³ (165 KES), 300+m³ (custom). Consumption = Current - Previous.</p>
+              <FormField label="Billing month"><input type="month" value={waterMonthDue} onChange={(event) => setWaterMonthDue(event.target.value)} placeholder="Billing month" /></FormField>
               {units.length === 0 ? (
-                <p style={{ color: 'var(--ink-3)', fontSize: '13px' }}>No units available. Add tenants first to create units.</p>
+                <p style={{ color: 'var(--ink-3)', fontSize: '13px', margin: 0 }}>No units available. Add tenants first to create units.</p>
               ) : (
-                <div style={{ maxHeight: '240px', overflow: 'auto', marginBottom: 12, border: '1px solid var(--line)', borderRadius: '8px', padding: '8px' }}>
+                <div style={{ maxHeight: '240px', overflow: 'auto', border: '1px solid var(--line)', borderRadius: '12px', padding: '8px', display: 'grid', gap: 8 }}>
                   {units.map((unit) => (
-                    <div key={unit.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                      <span style={{ width: 100, fontSize: '13px' }}>Unit {unit.unit_number}</span>
-                      <span style={{ width: 80, fontSize: '12px', color: 'var(--ink-3)' }}>{unit.previous_water_reading ?? 0} →</span>
-                      <input type="number" value={waterMeterReadings[unit.id] || ''} onChange={(e) => setWaterMeterReadings((prev) => ({ ...prev, [unit.id]: e.target.value }))} placeholder="Current" style={{ flex: 1, padding: '6px' }} />
-                      <button type="button" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id]} style={{ padding: '6px 12px', fontSize: '12px' }}>Bill</button>
+                    <div key={unit.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) auto minmax(120px, 1fr) auto', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600 }}>Unit {unit.unit_number}</span>
+                      <span style={{ fontSize: '12px', color: 'var(--ink-3)' }}>{unit.previous_water_reading ?? 0} →</span>
+                      <input type="number" value={waterMeterReadings[unit.id] || ''} onChange={(e) => setWaterMeterReadings((prev) => ({ ...prev, [unit.id]: e.target.value }))} placeholder="Current" />
+                      <button type="button" className="btn btn-secondary" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id]} style={{ padding: '8px 12px', fontSize: '12px' }}>Bill</button>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
+            </SectionCard>
           </section>
 
-          <section style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20, marginTop: 24, overflow: 'hidden' }}>
-            <div className="card">
-              <div className="card-label">Tenant Records</div>
-              <h3 style={{ marginBottom: 16 }}>Manage Tenants</h3>
-              {tenants.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p> : (
-                <div className="table-shell">
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--line)' }}>
-                        <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Tenant</th>
-                        <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Unit</th>
-                        <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Lease</th>
-                        <th style={{ textAlign: 'left', padding: '12px', fontWeight: 700 }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tenants.map((tenant) => (
-                        <tr key={tenant.id} style={{ borderBottom: '1px solid var(--line-soft)' }}>
-                          <td style={{ padding: '14px 12px' }}>
-                            <strong>{tenant.full_name}</strong>
-                            <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{tenant.email}</div>
-                          </td>
-                          <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.unit}</td>
-                          <td style={{ padding: '14px 12px', color: 'var(--ink-3)' }}>{tenant.lease_start} → {tenant.lease_end}</td>
-                          <td style={{ padding: '14px 12px' }}>
-                            <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(220,38,38,0.1)', color: '#7f1212' }} onClick={() => handleAgentTenantRemove(tenant.id)}>Mark Relocated</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+          <section className="dashboard-stack" style={{ marginTop: 24 }}>
+            <SectionCard title="Tenant Records" subtitle="Keep your occupancy history and lease details neatly organized.">
+              {tenants.length === 0 ? <p style={{ color: 'var(--ink-3)', margin: 0 }}>No tenants found.</p> : (
+                <PremiumTable headers={['Tenant', 'Unit', 'Lease', 'Actions']}>
+                  {tenants.map((tenant) => (
+                    <tr key={tenant.id}>
+                      <td>
+                        <strong>{tenant.full_name}</strong>
+                        <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{tenant.email}</div>
+                      </td>
+                      <td>{tenant.unit}</td>
+                      <td>{tenant.lease_start} → {tenant.lease_end}</td>
+                      <td><button className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '12px' }} onClick={() => handleAgentTenantRemove(tenant.id)}>Mark Relocated</button></td>
+                    </tr>
+                  ))}
+                </PremiumTable>
               )}
-            </div>
-          </section>
+            </SectionCard>
 
-          <section style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20, marginTop: 24, overflow: 'hidden' }}>
-            <div className="card">
-              <div className="card-label">Overdue Notifications</div>
-              <h3 style={{ marginBottom: 16 }}>Send Notice</h3>
-              <form onSubmit={handleSendNotification} className="form-grid">
-                <select value={notificationTenantId} onChange={(event) => setNotificationTenantId(event.target.value)} required>
-                  <option value="">Select tenant</option>
-                  {tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} — Unit {tenant.unit}</option>)}
-                </select>
-                <textarea value={notificationMessage} onChange={(event) => setNotificationMessage(event.target.value)} required placeholder="Overdue rent reminder..." style={{ gridColumn: 'span 2', minHeight: 90, padding: 12, borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)' }} />
-                <button type="submit" style={{ gridColumn: 'span 2' }}>Send Notification</button>
-              </form>
+            <section className="dashboard-grid">
+              <SectionCard title="Overdue Notifications" subtitle="Send timely reminders to the right tenants.">
+                <form onSubmit={handleSendNotification} className="form-grid">
+                  <FormField label="Select tenant"><select value={notificationTenantId} onChange={(event) => setNotificationTenantId(event.target.value)} required><option value="">Select tenant</option>{tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.full_name} — Unit {tenant.unit}</option>)}</select></FormField>
+                  <FormField label="Message"><textarea value={notificationMessage} onChange={(event) => setNotificationMessage(event.target.value)} required placeholder="Overdue rent reminder..." style={{ minHeight: 100 }} /></FormField>
+                  <button type="submit" className="btn">Send Notification</button>
+                </form>
 
-              <h3 style={{ marginTop: 24, marginBottom: 12 }}>Tenant Complaints</h3>
-              {comments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No complaints yet.</p> : comments.map((comment) => (
-                <div key={comment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                  <strong>{comment.tenant}</strong>
-                  <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{comment.message}</div>
-                  <span style={{ display: 'inline-block', marginTop: 6, padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: comment.status === 'open' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)', color: comment.status === 'open' ? 'var(--amber)' : 'var(--accent)' }}>{comment.status}</span>
-                </div>
-              ))}
-            </div>
+                <h4 style={{ margin: '8px 0 0' }}>Tenant Complaints</h4>
+                {comments.length === 0 ? <p style={{ color: 'var(--ink-3)', margin: 0 }}>No complaints yet.</p> : comments.map((comment) => (
+                  <div key={comment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                    <strong>{comment.tenant}</strong>
+                    <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{comment.message}</div>
+                    <span className={`status-pill ${comment.status === 'open' ? 'warning' : ''}`} style={{ marginTop: 8 }}>{comment.status}</span>
+                  </div>
+                ))}
+              </SectionCard>
 
-            <div className="card">
-              <div className="card-label">Water Bills</div>
-              <h3 style={{ marginBottom: 16 }}>Recent Water Billing</h3>
-              {waterBills.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No water bills generated yet.</p> : (
-                <div className="table-shell">
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--line)' }}>
-                        <th style={{ textAlign: 'left', padding: '8px', fontWeight: 700 }}>Tenant</th>
-                        <th style={{ textAlign: 'left', padding: '8px', fontWeight: 700 }}>Consumption</th>
-                        <th style={{ textAlign: 'left', padding: '8px', fontWeight: 700 }}>Amount</th>
-                        <th style={{ textAlign: 'left', padding: '8px', fontWeight: 700 }}>Status</th>
+              <SectionCard title="Water Bills" subtitle="Review the latest utility billing records.">
+                {waterBills.length === 0 ? <p style={{ color: 'var(--ink-3)', margin: 0 }}>No water bills generated yet.</p> : (
+                  <PremiumTable headers={['Tenant', 'Consumption', 'Amount', 'Status']}>
+                    {waterBills.slice(0, 5).map((bill) => (
+                      <tr key={bill.id}>
+                        <td>{bill.tenants?.full_name ?? '—'}</td>
+                        <td>{bill.water_consumption ?? 0} units</td>
+                        <td>{formatCurrency(bill.amount)}</td>
+                        <td><span className={`status-pill ${bill.status === 'paid' ? '' : 'warning'}`}>{bill.status}</span></td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {waterBills.slice(0, 5).map((bill) => (
-                        <tr key={bill.id} style={{ borderBottom: '1px solid var(--line-soft)' }}>
-                          <td style={{ padding: '10px 8px', color: 'var(--ink-2)' }}>{bill.tenants?.full_name ?? '—'}</td>
-                          <td style={{ padding: '10px 8px', fontSize: '12px', color: 'var(--ink-3)' }}>{bill.water_consumption ?? 0} units</td>
-                          <td style={{ padding: '10px 8px', fontWeight: 600 }}>{formatCurrency(bill.amount)}</td>
-                          <td style={{ padding: '10px 8px' }}>
-                            <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', background: bill.status === 'paid' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: bill.status === 'paid' ? 'var(--accent)' : 'var(--amber)' }}>{bill.status}</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                    ))}
+                  </PremiumTable>
+                )}
+              </SectionCard>
+            </section>
           </section>
         </>
       )}
 
 {!isAgent && stats && (
         <section className="bento-grid">
-          <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-            </div>
-            <div>
-              <div className="card-label">Properties</div>
-              <h3 style={{ margin: 0 }}>{stats.properties}</h3>
-              <Sparkline data={[1, 3, stats.properties]} color="#1e3a8a" w={80} h={24}/>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>total</p>
-            </div>
-          </div>
+          <StatCard title="Properties" value={stats.properties} caption="total" accent="indigo" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>} trend={<span className="status-pill">{stats.properties > 0 ? 'active' : 'new'}</span>} />
 
-          <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-            </div>
-            <div>
-              <div className="card-label">Agents</div>
-              <h3 style={{ margin: 0 }}>{stats.agents}</h3>
-              <Sparkline data={[0, 1, stats.agents]} color="var(--amber)" w={80} h={24}/>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>assigned</p>
-            </div>
-          </div>
+          <StatCard title="Agents" value={stats.agents} caption="assigned" accent="amber" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>} trend={<span className="status-pill">{stats.agents > 0 ? 'ready' : 'needed'}</span>} />
 
-          <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>
-            </div>
-            <div>
-              <div className="card-label">Tenants</div>
-              <h3 style={{ margin: 0 }}>{stats.tenants}</h3>
-              <Sparkline data={[2, 3, stats.tenants]} color="var(--accent)" w={80} h={24}/>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>active records</p>
-            </div>
-          </div>
+          <StatCard title="Tenants" value={stats.tenants} caption="active records" accent="emerald" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>} trend={<span className="status-pill">{stats.tenants > 0 ? 'stable' : 'growing'}</span>} />
 
-<div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-             </div>
-             <div>
-               <div className="card-label">Collections</div>
-               <h3 style={{ margin: 0 }}>{formatCurrency(stats.total_payments)}</h3>
-               <Sparkline data={[50000, 100000, stats.total_payments]} color="#0ea5e9" w={80} h={24}/>
-               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>total payments</p>
-             </div>
-           </div>
+          <StatCard title="Collections" value={formatCurrency(stats.total_payments)} caption="total payments" accent="sky" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>} trend={<span className="status-pill">{formatCurrency(stats.total_payments)}</span>} />
 
-           <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-             <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
-               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-               </div>
-               <div>
-                 <div className="card-label">Revenue Trend</div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                   <span style={{ color: trendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700, fontSize: '14px' }}>{trendPercent >= 0 ? '+' : ''}{trendPercent.toFixed(1)}%</span>
-                   <h3 style={{ margin: 0 }}>{formatCurrency(currentMonthPayment)}</h3>
-                 </div>
-                 <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>per month collected</p>
-               </div>
-             </div>
-<Sparkline data={monthlyPayments.map(m => m.value).length > 0 ? monthlyPayments.map(m => m.value) : [0, 0, 0]} color="var(--accent)" w={300} h={40}/>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: 'var(--ink-3)', fontSize: '11px' }}>
-                {monthlyPayments.map(m => <span key={m.label}>{m.label}</span>)}
-              </div>
-           </div>
+          <StatCard title="Revenue Trend" value={formatCurrency(currentMonthPayment)} caption="per month collected" accent="slate" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>} trend={<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><span style={{ color: trendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700 }}>{trendPercent >= 0 ? '+' : ''}{trendPercent.toFixed(1)}%</span><Sparkline data={monthlyPayments.map((m) => m.value).length > 0 ? monthlyPayments.map((m) => m.value) : [0, 0, 0]} color="var(--accent)" w={220} h={40} /></div>} />
 
-           <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-             </div>
-             <div style={{ flex: 1 }}>
-               <div className="card-label">Occupancy</div>
-               <h3 style={{ margin: 0 }}>{stats.occupiedUnits}/{stats.occupiedUnits + stats.vacantUnits}</h3>
-               <DonutChart data={[
-                 { label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' },
-                 { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' }
-               ]} size={60} centerLabel={`${stats.occupiedUnits}`}/>
-               <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Occupied / Vacant</p>
-             </div>
-           </div>
+          <StatCard title="Occupancy" value={`${stats.occupiedUnits}/${stats.occupiedUnits + stats.vacantUnits}`} caption="occupied / vacant" accent="rose" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>} trend={<DonutChart data={[{ label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' }, { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' }]} size={58} centerLabel={`${stats.occupiedUnits}`} />} />
 
-          <div className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(220,38,38,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/></svg>
-            </div>
-            <div>
-              <div className="card-label">Outstanding</div>
-              <h3 style={{ margin: 0, color: '#b91c1c' }}>{formatCurrency(totalBalance)}</h3>
-              <Sparkline data={[0, 10000, totalBalance]} color="#b91c1c" w={80} h={24}/>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>rent owed</p>
-            </div>
-          </div>
+          <StatCard title="Outstanding" value={formatCurrency(totalBalance)} caption="rent owed" accent="rose" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/></svg>} trend={<span className="status-pill danger">needs follow-up</span>} />
         </section>
       )}
 
       {!isAgent && (
         <>
-          <section style={{ marginTop: 24 }}>
-            <div className="card-admin-header" style={{ marginBottom: 16 }}>
-              <div><span className="landlord-kicker">Vacant Units</span><h2>Available for Rent</h2></div>
-            </div>
-            {stats?.vacantUnitsList && stats.vacantUnitsList.length > 0 ? (
-              <div className="table-shell"><table className="landlord-table">
-                <thead><tr><th>Unit</th><th>Property</th><th>Rent Amount</th></tr></thead>
-                <tbody>{stats.vacantUnitsList.map((u, i) => <tr key={i}><td>{u.unit_number}</td><td>{u.property_name}</td><td>{formatCurrency(u.rent_amount)}</td></tr>)}</tbody>
-              </table></div>
-            ) : <p className="landlord-muted">No vacant units.</p>}
-          </section>
+          <section className="dashboard-stack" style={{ marginTop: 24 }}>
+            <SectionCard title="Available for Rent" subtitle="A focused view of units that are currently vacant and ready for leasing.">
+              {stats?.vacantUnitsList && stats.vacantUnitsList.length > 0 ? (
+                <PremiumTable headers={['Unit', 'Property', 'Rent Amount']}>
+                  {stats.vacantUnitsList.map((u, i) => (
+                    <tr key={i}>
+                      <td>{u.unit_number}</td>
+                      <td>{u.property_name}</td>
+                      <td>{formatCurrency(u.rent_amount)}</td>
+                    </tr>
+                  ))}
+                </PremiumTable>
+              ) : <p className="landlord-muted" style={{ margin: 0 }}>No vacant units.</p>}
+            </SectionCard>
 
-          <section style={{ marginTop: 24 }}>
-            <div className="card-admin-header" style={{ marginBottom: 16 }}>
-              <div><span className="landlord-kicker">Rent Owed</span><h2>Tenants with Outstanding Balances</h2></div>
-            </div>
-{rentOwedByTenant && rentOwedByTenant.some(t => t.net_balance > 0) ? (
-               <div className="table-shell"><table className="landlord-table">
-                 <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Balance</th><th>Last Payment</th></tr></thead>
-                 <tbody>{rentOwedByTenant.filter(t => t.net_balance > 0).map(t => <tr key={t.id}><td className="landlord-name">{t.full_name}</td><td>{t.unit}</td><td>{formatCurrency(t.total_paid)}</td><td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td><td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td></tr>)}</tbody>
-               </table></div>
-             ) : <p className="landlord-muted">All tenants have paid.</p>}
+            <SectionCard title="Tenants with Outstanding Balances" subtitle="Track overdue balances and keep collections moving.">
+              {rentOwedByTenant && rentOwedByTenant.some((t) => t.net_balance > 0) ? (
+                <PremiumTable headers={['Tenant', 'Unit', 'Total Paid', 'Balance', 'Last Payment']}>
+                  {rentOwedByTenant.filter((t) => t.net_balance > 0).map((t) => (
+                    <tr key={t.id}>
+                      <td>{t.full_name}</td>
+                      <td>{t.unit}</td>
+                      <td>{formatCurrency(t.total_paid)}</td>
+                      <td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td>
+                      <td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  ))}
+                </PremiumTable>
+              ) : <p className="landlord-muted" style={{ margin: 0 }}>All tenants have paid.</p>}
+            </SectionCard>
           </section>
         </>
       )}
 
       {!isAgent && (
-          <section className="dashboard-section-grid" style={{ overflow: 'hidden' }}>
-            <div className="card">
-            <div className="card-label">Properties and Agents</div>
-            <h3 style={{ marginBottom: 16 }}>Add Property</h3>
-            <form onSubmit={handleAddProperty} className="form-grid" style={{ marginBottom: 24 }}>
-              <input value={propertyName} onChange={(event) => setPropertyName(event.target.value)} required placeholder="Property name" />
-              <input value={propertyAddress} onChange={(event) => setPropertyAddress(event.target.value)} required placeholder="Property address" />
-              <input value={propertySize} onChange={(event) => setPropertySize(event.target.value)} placeholder="Size / units" />
-              <button type="submit" disabled={propertyLoading}>{propertyLoading ? 'Adding…' : 'Add Property'}</button>
-            </form>
+          <section className="dashboard-grid" style={{ marginTop: 24 }}>
+            <SectionCard title="Properties and Agents" subtitle="Create new properties, onboard agents, and manage access from one place.">
+              <form onSubmit={handleAddProperty} className="form-grid" style={{ marginBottom: 24 }}>
+                <FormField label="Property name"><input value={propertyName} onChange={(event) => setPropertyName(event.target.value)} required placeholder="Property name" /></FormField>
+                <FormField label="Address"><input value={propertyAddress} onChange={(event) => setPropertyAddress(event.target.value)} required placeholder="Property address" /></FormField>
+                <FormField label="Size / units"><input value={propertySize} onChange={(event) => setPropertySize(event.target.value)} placeholder="Size / units" /></FormField>
+                <button type="submit" className="btn" disabled={propertyLoading}>{propertyLoading ? 'Adding…' : 'Add Property'}</button>
+              </form>
 
-            <h3 style={{ marginBottom: 16 }}>Add Agent</h3>
-            {properties.length === 0 ? <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: '#92400e', marginBottom: 16 }}>Add a property first, then assign an agent to that property.</p> : null}
-            <form onSubmit={handleAddAgent} className="form-grid">
-              <input value={agentName} onChange={(event) => setAgentName(event.target.value)} required placeholder="Agent full name" />
-              <input type="email" value={agentEmail} onChange={(event) => setAgentEmail(event.target.value)} required placeholder="Agent email" />
-              <input type="password" value={agentPassword} onChange={(event) => setAgentPassword(event.target.value)} required placeholder="Password" />
-              <select value={agentPropertyId} onChange={(event) => setAgentPropertyId(event.target.value)} required>
-                <option value="">Select property</option>
-                {properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}
-              </select>
-              <button type="submit" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Agent'}</button>
-            </form>
+              <h4 style={{ margin: '4px 0 10px' }}>Add Agent</h4>
+              {properties.length === 0 ? <p style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.1)', color: '#92400e', marginBottom: 16 }}>Add a property first, then assign an agent to that property.</p> : null}
+              <form onSubmit={handleAddAgent} className="form-grid">
+                <FormField label="Agent full name"><input value={agentName} onChange={(event) => setAgentName(event.target.value)} required placeholder="Agent full name" /></FormField>
+                <FormField label="Email"><input type="email" value={agentEmail} onChange={(event) => setAgentEmail(event.target.value)} required placeholder="Agent email" /></FormField>
+                <FormField label="Password"><input type="password" value={agentPassword} onChange={(event) => setAgentPassword(event.target.value)} required placeholder="Password" /></FormField>
+                <FormField label="Property"><select value={agentPropertyId} onChange={(event) => setAgentPropertyId(event.target.value)} required><option value="">Select property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</select></FormField>
+                <button type="submit" className="btn" disabled={agentLoading}>{agentLoading ? 'Adding…' : 'Add Agent'}</button>
+              </form>
 
-            <h3 style={{ marginTop: 24, marginBottom: 12 }}>Assigned Agents</h3>
-            {agents.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No agents assigned yet.</p> : agents.map((agent) => (
-              <div key={agent.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                <div>
-                  <strong>{agent.full_name}</strong>
-                  <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.email}</div>
-                  <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.property_name || 'Unassigned'} · {agent.status}</div>
+              <h4 style={{ margin: '18px 0 10px' }}>Assigned Agents</h4>
+              {agents.length === 0 ? <p style={{ color: 'var(--ink-3)', margin: 0 }}>No agents assigned yet.</p> : agents.map((agent) => (
+                <div key={agent.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                  <div>
+                    <strong>{agent.full_name}</strong>
+                    <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.email}</div>
+                    <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.property_name || 'Unassigned'} · {agent.status}</div>
+                  </div>
+                  <button className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: '12px' }} onClick={() => handleRemoveAgent(agent.id)} disabled={agent.status !== 'active'}>{agent.status === 'active' ? 'Remove' : 'Removed'}</button>
                 </div>
-                <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: agent.status === 'active' ? 'rgba(220,38,38,0.1)' : 'rgba(16,185,129,0.1)', color: agent.status === 'active' ? '#7f1212' : 'var(--accent)' }} onClick={() => handleRemoveAgent(agent.id)} disabled={agent.status !== 'active'}>{agent.status === 'active' ? 'Remove' : 'Removed'}</button>
-</div>
               ))}
-            </div>
+            </SectionCard>
 
-            <div className="card">
-              <div className="card-label">Portfolio</div>
-              <h3 style={{ marginBottom: 16 }}>Properties</h3>
-              {properties.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No properties added yet.</p> : properties.map((property) => (
+            <SectionCard title="Portfolio" subtitle="Keep an eye on the properties you manage and the latest payment activity.">
+              {properties.length === 0 ? <p style={{ color: 'var(--ink-3)', margin: 0 }}>No properties added yet.</p> : properties.map((property) => (
                 <div key={property.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
                   <strong>{property.name}</strong>
                   <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{property.address}</div>
                 </div>
               ))}
-<h3 style={{ marginTop: 24, marginBottom: 16 }}>Recent Payments</h3>
-                {payments.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No payments recorded yet.</p> : [...payments].sort((a, b) => {
-                  const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-                  const aMonth = (a as any).month_due?.split(' ')[0]?.toLowerCase() || '';
-                  const bMonth = (b as any).month_due?.split(' ')[0]?.toLowerCase() || '';
-                  const aOrder = monthNames.indexOf(aMonth) + 1;
-                  const bOrder = monthNames.indexOf(bMonth) + 1;
-                  return aOrder - bOrder;
-                }).slice(0, 6).map((payment) => (
-                 <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-<div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <strong>{payment.tenant}</strong>
-                      <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
-                    </div>
-                    <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {(payment as any).month_due || ''} {(payment as any).source === 'bills' && (payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '')}</div>
+              <h4 style={{ margin: '18px 0 10px' }}>Recent Payments</h4>
+              {payments.length === 0 ? <p style={{ color: 'var(--ink-3)', margin: 0 }}>No payments recorded yet.</p> : [...payments].sort((a, b) => {
+                const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+                const aMonth = (a as any).month_due?.split(' ')[0]?.toLowerCase() || '';
+                const bMonth = (b as any).month_due?.split(' ')[0]?.toLowerCase() || '';
+                const aOrder = monthNames.indexOf(aMonth) + 1;
+                const bOrder = monthNames.indexOf(bMonth) + 1;
+                return aOrder - bOrder;
+              }).slice(0, 6).map((payment) => (
+                <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                    <strong>{payment.tenant}</strong>
+                    <span style={{ color: payment.balance_remaining > 0 ? '#dc2626' : 'var(--accent)', fontWeight: 700 }}>{formatCurrency(payment.balance_remaining)}</span>
                   </div>
-               ))}
-            </div>
+                  <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{payment.property} · {(payment as any).month_due || ''} {(payment as any).source === 'bills' && (payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '')}</div>
+                </div>
+              ))}
+            </SectionCard>
           </section>
         )}
         {showModal && (

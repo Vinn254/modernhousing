@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import { FormField } from '../components/dashboard-ui';
 
 type UserRole = 'admin' | 'agent' | 'tenant' | 'super_admin' | 'project_manager';
 
@@ -218,15 +219,13 @@ function LoginForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
-            <div className="field-group">
-              <label htmlFor="email">Email address</label>
+            <FormField label="Email address">
               <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="you@example.com" />
-            </div>
+            </FormField>
 
-            <div className="field-group">
-              <label htmlFor="password">Password</label>
+            <FormField label="Password">
               <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="••••••••" />
-            </div>
+            </FormField>
 
             {error && <p className="auth-error">{error}</p>}
 
@@ -237,18 +236,14 @@ function LoginForm() {
 
           {selectedRole && (
             <p className="auth-alt">
-              <button type="button" onClick={() => setSelectedRole('')} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Clear role selection</button>
+              <button type="button" onClick={() => setSelectedRole('')} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, padding: 0, fontSize: 'inherit' }}>Clear role selection</button>
             </p>
           )}
-          <p className="auth-alt">
-            <Link href="/signup?role=project_manager">Register as landlord</Link>
-          </p>
-          <p className="auth-alt">
-            Need tenant access? <Link href="/tenant/register">Tenant registration</Link>
-          </p>
-          <p className="auth-alt">
-            <Link href="/forgot-password">Forgot password?</Link>
-          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+            <Link href="/signup?role=project_manager" style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>Register as landlord</Link>
+            <span style={{ color: 'var(--ink-3)', fontSize: 13 }}>Need tenant access? <Link href="/tenant/register" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Tenant registration</Link></span>
+            <Link href="/forgot-password" style={{ color: 'var(--ink-3)', fontWeight: 500, fontSize: 13, textDecoration: 'none' }}>Forgot password?</Link>
+          </div>
 
         </section>
       </div>

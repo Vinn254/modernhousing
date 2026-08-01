@@ -86,11 +86,14 @@ export default function AppHeader() {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+    if (savedTheme === 'dark') {
       setDarkMode(true);
       document.documentElement.setAttribute('data-theme', 'dark');
+      return;
     }
+
+    setDarkMode(false);
+    document.documentElement.setAttribute('data-theme', 'light');
   }, []);
 
   const toggleDarkMode = () => {

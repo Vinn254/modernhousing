@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import Sparkline from '../components/Sparkline';
+import { DashboardHeader, FormField, StatCard } from '../components/dashboard-ui';
 
 interface Unit {
   id: string;
@@ -421,90 +422,22 @@ for (let i = 0; i < 12; i++) {
   return (
     <>
       <main className="property-page-main">
-      <div className="card-admin-header property-hero-card">
-        <div>
-          <span className="landlord-kicker">Project Manager Workspace</span>
-          <h1 className="property-page-title">Properties</h1>
-          <p className="property-page-subtitle">Build your portfolio, track units, and keep every property ready for agents and tenants.</p>
-        </div>
-        <div className="property-header-metrics">
-          <div>
-            <span>Properties</span>
-            <strong>{properties.length}</strong>
-          </div>
-          <div>
-            <span>Units</span>
-            <strong>{totalUnits}</strong>
-          </div>
-          <div>
-            <span>Occupancy</span>
-            <strong>{occupancyRate}%</strong>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Properties"
+        subtitle="Build your portfolio, track units, and keep every property ready for agents and tenants."
+        action={<button type="button" className="btn" onClick={scrollToForm}>Add Property</button>}
+      />
 
       {message && <p className="landlord-success property-alert">{message}</p>}
       {error && <p className="landlord-error property-alert">{error}</p>}
 
       <section className="landlord-section property-section">
 <div className="bento-grid property-stats">
-          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(30,58,138,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
-            </div>
-            <div>
-              <div className="card-label">Portfolio</div>
-              <h3 style={{ margin: 0 }}>{properties.length}</h3>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Active properties in your workspace.</p>
-            </div>
-          </article>
-          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-            </div>
-            <div>
-              <div className="card-label">Total Units</div>
-              <h3 style={{ margin: 0 }}>{totalUnits}</h3>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Units recorded across all properties.</p>
-            </div>
-          </article>
-          <article className={`bento-card ${totalUnits > occupiedUnits ? '' : ''}`} style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><path d="M9 3v18"/><path d="M3 9h18"/><path d="M3 15h14"/></svg>
-            </div>
-            <div>
-              <div className="card-label">Vacant Units</div>
-              <h3 style={{ margin: 0 }}>{Math.max(totalUnits - occupiedUnits, 0)}</h3>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Available units waiting for tenants.</p>
-            </div>
-          </article>
-          <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(14,165,233,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-            </div>
-            <div>
-              <div className="card-label">Rent Roll</div>
-              <h3 style={{ margin: 0 }}>KSH {rentRoll.toLocaleString()}</h3>
-              <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>Monthly rent from recorded units.</p>
-            </div>
-          </article>
-<article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer' }} onClick={() => setShowPaymentsModal(true)}>
-             <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
-               <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-               </div>
-               <div style={{ flex: 1 }}>
-                 <div className="card-label">Revenue Trend</div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                   <span style={{ color: revenueTrendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700, fontSize: '14px' }}>{revenueTrendPercent >= 0 ? '+' : ''}{revenueTrendPercent.toFixed(1)}%</span>
-                   <h3 style={{ margin: 0 }}>{formatCurrency(currentMonthVal)}</h3>
-                 </div>
-                 <p style={{ margin: '4px 0 0', color: 'var(--ink-3)', fontSize: '13px' }}>per month collected</p>
-               </div>
-               <svg style={{ marginLeft: 'auto' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-             </div>
-             <Sparkline data={monthlyData.map(m => m.value).length > 0 ? monthlyData.map(m => m.value) : [0, 0, 0]} color="#10b981" w={350} h={40}/>
-           </article>
+          <StatCard title="Portfolio" value={properties.length} caption="Active properties in your workspace." accent="indigo" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>} />
+          <StatCard title="Total Units" value={totalUnits} caption="Units recorded across all properties." accent="sky" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>} />
+          <StatCard title="Vacant Units" value={Math.max(totalUnits - occupiedUnits, 0)} caption="Available units waiting for tenants." accent="amber" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/><path d="M9 3v18"/><path d="M3 9h18"/><path d="M3 15h14"/></svg>} />
+          <StatCard title="Rent Roll" value={`KSH ${rentRoll.toLocaleString()}`} caption="Monthly rent from recorded units." accent="emerald" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>} />
+          <StatCard title="Revenue Trend" value={formatCurrency(currentMonthVal)} caption="per month collected" accent="slate" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>} trend={<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><span style={{ color: revenueTrendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700 }}>{revenueTrendPercent >= 0 ? '+' : ''}{revenueTrendPercent.toFixed(1)}%</span><Sparkline data={monthlyData.map((m) => m.value).length > 0 ? monthlyData.map((m) => m.value) : [0, 0, 0]} color="#10b981" w={220} h={40} /></div>} onClick={() => setShowPaymentsModal(true)} />
         </div>
 
         {showPaymentsModal && (
@@ -561,26 +494,11 @@ for (let i = 0; i < 12; i++) {
             </div>
             <h3>{editingProperty ? 'Update Property Details' : 'Create New Property'}</h3>
             <form onSubmit={handleSubmit} className="form-grid">
-              <div className="field-group">
-                <label>Property name</label>
-                <input value={form.name} onChange={(event) => updateForm('name', event.target.value)} required placeholder="Sunset Apartments" />
-              </div>
-              <div className="field-group">
-                <label>Address</label>
-                <input value={form.address} onChange={(event) => updateForm('address', event.target.value)} required placeholder="123 Main Street" />
-              </div>
-              <div className="field-group">
-                <label>Units</label>
-                <input type="number" min="0" value={form.unitCount} onChange={(event) => updateForm('unitCount', event.target.value)} required placeholder="24" />
-              </div>
-              <div className="field-group">
-                <label>Amenities</label>
-                <input value={form.amenities} onChange={(event) => updateForm('amenities', event.target.value)} placeholder="Parking, water, security" />
-              </div>
-              <div className="field-group field-group-wide">
-                <label>Ownership info</label>
-                <textarea value={form.ownershipInfo} onChange={(event) => updateForm('ownershipInfo', event.target.value)} placeholder="Owner details, title deed notes, or management notes" rows={4} />
-              </div>
+                <FormField label="Property name"><input value={form.name} onChange={(event) => updateForm('name', event.target.value)} required placeholder="Sunset Apartments" /></FormField>
+              <FormField label="Address"><input value={form.address} onChange={(event) => updateForm('address', event.target.value)} required placeholder="123 Main Street" /></FormField>
+              <FormField label="Units"><input type="number" min="0" value={form.unitCount} onChange={(event) => updateForm('unitCount', event.target.value)} required placeholder="24" /></FormField>
+              <FormField label="Amenities"><input value={form.amenities} onChange={(event) => updateForm('amenities', event.target.value)} placeholder="Parking, water, security" /></FormField>
+              <FormField label="Ownership info"><textarea value={form.ownershipInfo} onChange={(event) => updateForm('ownershipInfo', event.target.value)} placeholder="Owner details, title deed notes, or management notes" rows={4} /></FormField>
               <div className="modal-actions property-form-actions">
                 <button type="submit" disabled={saving}>{saving ? 'Saving…' : editingProperty ? 'Update Property' : 'Create Property'}</button>
                 {editingProperty && <button type="button" className="secondary-button" onClick={resetForm}>Cancel Edit</button>}
@@ -595,20 +513,10 @@ for (let i = 0; i < 12; i++) {
             </div>
             <h3>Add Units (comma separated)</h3>
 <form onSubmit={handleAddUnits} className="form-grid">
-            <select value={unitForm.propertyId} onChange={(e) => setUnitForm(f => ({ ...f, propertyId: e.target.value }))} required>
-              <option value="">Select property</option>
-              {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <input value={unitForm.unitNumbers} onChange={(e) => setUnitForm(f => ({ ...f, unitNumbers: e.target.value }))} required placeholder="Unit numbers (A1, A2, B1, ...)" />
-            <input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" />
-             <select value={unitForm.unitType} onChange={(e) => setUnitForm(f => ({ ...f, unitType: e.target.value }))}>
-                <option value="">Unit Type (optional)</option>
-                <option value="single-room">Single Room</option>
-                <option value="bedsitter">Bedsitter</option>
-                <option value="one-bedroom">One Bedroom</option>
-                <option value="two-bedroom">Two Bedroom</option>
-                <option value="three-bedroom">Three Bedroom</option>
-              </select>
+            <FormField label="Property"><select value={unitForm.propertyId} onChange={(e) => setUnitForm(f => ({ ...f, propertyId: e.target.value }))} required><option value="">Select property</option>{properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></FormField>
+            <FormField label="Unit numbers"><input value={unitForm.unitNumbers} onChange={(e) => setUnitForm(f => ({ ...f, unitNumbers: e.target.value }))} required placeholder="Unit numbers (A1, A2, B1, ...)" /></FormField>
+            <FormField label="Rent amount"><input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" /></FormField>
+            <FormField label="Unit type"><select value={unitForm.unitType} onChange={(e) => setUnitForm(f => ({ ...f, unitType: e.target.value }))}><option value="">Unit Type (optional)</option><option value="single-room">Single Room</option><option value="bedsitter">Bedsitter</option><option value="one-bedroom">One Bedroom</option><option value="two-bedroom">Two Bedroom</option><option value="three-bedroom">Three Bedroom</option></select></FormField>
             <button type="submit">Add Units</button>
           </form>
 
