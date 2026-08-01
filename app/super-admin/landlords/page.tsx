@@ -523,8 +523,8 @@ export default function LandlordManagementPage() {
                   const subscription = getSubscriptionForLandlord(landlord, subscriptions);
                   const risk = getRisk(subscription);
                   return (
-                    <div key={landlord.id} className={`bento-card ${risk === 'overdue' ? 'accent-rose' : risk === 'expiring' ? 'accent-amber' : 'accent-emerald'}`} style={{ padding: 16, gap: 12 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                    <div key={landlord.id} className={`bento-card ${risk === 'overdue' ? 'accent-rose' : risk === 'expiring' ? 'accent-amber' : 'accent-emerald'}`} style={{ padding: 16, gap: 12, display: 'grid', gridTemplateRows: 'auto auto', gridTemplateColumns: '1fr' }}>
+                      <div>
                         <strong style={{ display: 'block', marginBottom: 4 }}>{landlord.full_name}</strong>
                         <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{landlord.organization || '—'}</div>
                         <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{landlord.email}</div>
@@ -533,7 +533,7 @@ export default function LandlordManagementPage() {
                           <span className="status-pill" style={{ background: landlord.status === 'active' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: landlord.status === 'active' ? '#059669' : '#d97706' }}>{landlord.status}</span>
                         </div>
                       </div>
-                      <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }}>
                         <button className="action-button secondary" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => setSelectedLandlord(landlord)}>View</button>
                         {subscription && <button className="action-button info" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => openNotification(subscription, landlord)}>Notify</button>}
                         {subscription && <button className="action-button warn" style={{ padding: '5px 9px', fontSize: '11px' }} onClick={() => handleUpgradeSubscription(landlord)}>Upgrade</button>}
