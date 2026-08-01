@@ -72,6 +72,11 @@ function LoginForm() {
       return;
     }
 
+    if (profileData.profile?.role === 'project_manager' && profileData.profile?.approval_status === 'pending') {
+      router.push('/profile');
+      return;
+    }
+
     router.push(roleRoutes[role as UserRole] ?? roleRoutes.admin);
   }
 

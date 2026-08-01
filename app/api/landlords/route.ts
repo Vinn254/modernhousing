@@ -43,6 +43,8 @@ interface LandlordProfile {
   signed_on?: string | null;
   bank_details_edit_allowed?: boolean | null;
   bank_edit_request?: boolean | null;
+  approval_status?: string | null;
+  approved_at?: string | null;
 }
 
 function normalizeLandlord(user: any, profile?: LandlordProfile) {
@@ -56,10 +58,15 @@ function normalizeLandlord(user: any, profile?: LandlordProfile) {
     created_at: profile?.created_at ?? user?.created_at ?? '',
     bank_details_edit_allowed: profile?.bank_details_edit_allowed ?? true,
     bank_edit_request: Boolean(profile?.bank_edit_request),
-    account_holder_name: profile?.account_holder_name ?? null,
-    bank_name: profile?.bank_name ?? null,
-    account_number: profile?.account_number ?? null,
-    branch: profile?.branch ?? null,
+    id_number: profile?.id_number ?? null,
+    kra_pin: profile?.kra_pin ?? null,
+    property_name: profile?.property_name ?? null,
+    property_location: profile?.property_location ?? null,
+    number_of_units: profile?.number_of_units ?? null,
+    agreement_accepted: Boolean(profile?.agreement_accepted),
+    signed_on: profile?.signed_on ?? null,
+    approval_status: profile?.approval_status ?? null,
+    approved_at: profile?.approved_at ?? null,
   };
 }
 

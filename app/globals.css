@@ -672,6 +672,17 @@ textarea:focus {
   100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
 }
 
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(245,158,11,0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+  100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+}
+
+@keyframes blink-border {
+  0%, 100% { border-color: rgba(245,158,11,0.35); }
+  50% { border-color: rgba(245,158,11,0.9); }
+}
+
 .hero-inner h1 {
   font-size: clamp(40px, 6vw, 68px);
   font-weight: 700;

@@ -51,6 +51,7 @@ export default function MyProfilePage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [name, setName] = useState('Landlord');
+  const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadProfile() {
@@ -70,6 +71,7 @@ export default function MyProfilePage() {
       const result = await response.json().catch(() => ({}));
       if (response.ok && result.profile) {
         const profile = result.profile;
+        setApprovalStatus(profile.approval_status ?? null);
         setForm({
           full_name: profile.full_name || profile.fullName || session?.user?.user_metadata?.full_name || '',
           organization_name: profile.organization_name || profile.organization || '',
@@ -97,6 +99,8 @@ export default function MyProfilePage() {
 
     loadProfile();
   }, []);
+
+  const isUnapproved = approvalStatus !== 'approved' && approvalStatus !== null && approvalStatus !== undefined;
 
   async function saveProfile(action?: 'request_bank_edit_unlock' | 'submit_for_approval') {
     setSaving(true);
@@ -156,6 +160,33 @@ export default function MyProfilePage() {
         </div>
         <Link href="/admin" className="action-button ghost">Back to dashboard</Link>
       </div>
+
+      {isUnapproved && (
+        <div style={{
+          background: 'linear-gradient(90deg, rgba(245,158,11,0.12) 0%, rgba(251,191,36,0.12) 100%)',
+          border: '1px solid rgba(245,158,11,0.35)',
+          borderRadius: 12,
+          padding: '16px 18px',
+          marginBottom: 20,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          animation: 'blink-border 2s infinite'
+        }}>
+          <div style={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            background: '#f59e0b',
+            boxShadow: '0 0 0 0 rgba(245,158,11,0.7)',
+            animation: 'pulse-dot 1.5s infinite'
+          }} />
+          <div>
+            <p style={{ margin: 0, fontWeight: 600, color: '#92400e' }}>Account pending approval</p>
+            <p style={{ margin: '4px 0 0', color: '#a16207', fontSize: 14 }}>Fill in your profile details and click <strong>Submit for Approval</strong> to access the full landlord workspace.</p>
+          </div>
+        </div>
+      )}
 
       {message && <p className="landlord-success" style={{ marginBottom: 16 }}>{message}</p>}
       {error && <p className="landlord-error" style={{ marginBottom: 16 }}>{error}</p>}

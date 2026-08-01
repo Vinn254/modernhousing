@@ -12,10 +12,15 @@ interface Landlord {
   created_at: string;
   bank_details_edit_allowed?: boolean;
   bank_edit_request?: boolean;
-  account_holder_name?: string | null;
-  bank_name?: string | null;
-  account_number?: string | null;
-  branch?: string | null;
+  id_number?: string | null;
+  kra_pin?: string | null;
+  property_name?: string | null;
+  property_location?: string | null;
+  number_of_units?: string | number | null;
+  agreement_accepted?: boolean | null;
+  signed_on?: string | null;
+  approval_status?: string | null;
+  approved_at?: string | null;
 }
 
 interface Subscription {
@@ -483,63 +488,45 @@ export default function LandlordManagementPage() {
               {message && <p className="landlord-success">{message}</p>}
               {error && <p className="landlord-error">{error}</p>}
 
-              <div className="table-shell">
-                <table className="landlord-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Organization</th>
-                      <th>Email</th>
-                      <th>Subscription</th>
-                      <th>Expiry</th>
-                      <th>Renewal Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {landlords.length === 0 && !loading ? (
-                      <tr>
-                        <td colSpan={7} className="landlord-empty">No project managers found.</td>
-                      </tr>
-                    ) : landlords.map((landlord) => {
-                      const subscription = getSubscriptionForLandlord(landlord, subscriptions);
-                      const risk = getRisk(subscription);
-                      return (
-                        <tr key={landlord.id} className={`risk-row ${risk}`}>
-                          <td className="landlord-name">{landlord.full_name}</td>
-                          <td>{landlord.organization || '—'}</td>
-                          <td>{landlord.email}</td>
-                          <td>{subscription ? `${subscription.plan} · KSH ${Number(subscription.amount ?? 0).toLocaleString()}` : 'No subscription'}</td>
-                          <td>{subscription?.expiry_date ? new Date(subscription.expiry_date).toLocaleDateString() : '—'}</td>
-                          <td>
-                            <span className={`renewal-pill ${risk}`}>{getRiskLabel(subscription)}</span>
-                          </td>
-                          <td>
-                            <div className="landlord-actions">
-                              <button className="action-button secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => setSelectedLandlord(landlord)}>View</button>
-                              {subscription && <button className="action-button info" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => openNotification(subscription, landlord)}>Notify</button>}
-                              {subscription && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleUpgradeSubscription(landlord)}>Upgrade</button>}
-                              {landlord.status !== 'active' && (
-                                <>
-                                  <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRequestSubscription(landlord)} disabled={requestSubscriptionId === landlord.id}>{requestSubscriptionId === landlord.id ? 'Requesting...' : 'Request Subscription'}</button>
-                                  <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleApprove(landlord)} disabled={approvingId === landlord.id}>{approvingId === landlord.id ? 'Approving...' : 'Approve'}</button>
-                                </>
-                              )}
-                              {landlord.bank_edit_request && (
-                                <button className="action-button info" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleUnlockBankEdits(landlord)}>Unlock Bank Edit</button>
-                              )}
-                              {landlord.status === 'active' && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleResetPassword(landlord)}>Reset Password</button>}
-                              <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleDeleteLandlord(landlord)}>Delete</button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {landlords.length === 0 && !loading ? (
+                  <p className="landlord-empty">No project managers found.</p>
+                ) : landlords.map((landlord) => {
+                  const subscription = getSubscriptionForLandlord(landlord, subscriptions);
+                  const risk = getRisk(subscription);
+                  return (
+                    <div key={landlord.id} className={`bento-card ${risk === 'overdue' ? 'accent-rose' : risk === 'expiring' ? 'accent-amber' : 'accent-emerald'}`} style={{ padding: 16, gap: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <strong style={{ display: 'block', marginBottom: 4 }}>{landlord.full_name}</strong>
+                        <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{landlord.organization || '—'}</div>
+                        <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{landlord.email}</div>
+                        <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span className={`renewal-pill ${risk}`}>{getRiskLabel(subscription)}</span>
+                          <span className="status-pill" style={{ background: landlord.status === 'active' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: landlord.status === 'active' ? '#059669' : '#d97706' }}>{landlord.status}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <button className="action-button secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => setSelectedLandlord(landlord)}>View</button>
+                        {subscription && <button className="action-button info" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => openNotification(subscription, landlord)}>Notify</button>}
+                        {subscription && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleUpgradeSubscription(landlord)}>Upgrade</button>}
+                        {landlord.status !== 'active' && (
+                          <>
+                            <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRequestSubscription(landlord)} disabled={requestSubscriptionId === landlord.id}>{requestSubscriptionId === landlord.id ? 'Requesting...' : 'Request Subscription'}</button>
+                            <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleApprove(landlord)} disabled={approvingId === landlord.id}>{approvingId === landlord.id ? 'Approving...' : 'Approve'}</button>
+                          </>
+                        )}
+                        {landlord.bank_edit_request && (
+                          <button className="action-button info" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleUnlockBankEdits(landlord)}>Unlock Bank Edit</button>
+                        )}
+                        {landlord.status === 'active' && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleResetPassword(landlord)}>Reset Password</button>}
+                        <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleDeleteLandlord(landlord)}>Delete</button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              <div style={{ margin: '28px 0 0', display: 'flex', gap: 12 }}>
+              <div style={{ margin: '28px 0 0', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <button className="action-button primary" onClick={() => setShowAddModal(true)}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   Add Project Manager
@@ -614,10 +601,17 @@ export default function LandlordManagementPage() {
               <div className="detail-card"><span>Email</span><strong>{selectedLandlord.email}</strong></div>
               {selectedLandlord.phone && <div className="detail-card"><span>Phone</span><strong>{selectedLandlord.phone}</strong></div>}
               <div className="detail-card"><span>Status</span><strong>{selectedLandlord.status}</strong></div>
+              {selectedLandlord.id_number && <div className="detail-card"><span>ID / Passport</span><strong>{selectedLandlord.id_number}</strong></div>}
+              {selectedLandlord.kra_pin && <div className="detail-card"><span>KRA PIN</span><strong>{selectedLandlord.kra_pin}</strong></div>}
+              {selectedLandlord.property_name && <div className="detail-card"><span>Property name</span><strong>{selectedLandlord.property_name}</strong></div>}
+              {selectedLandlord.property_location && <div className="detail-card"><span>Property location</span><strong>{selectedLandlord.property_location}</strong></div>}
+              {selectedLandlord.number_of_units && <div className="detail-card"><span>Units</span><strong>{String(selectedLandlord.number_of_units)}</strong></div>}
+              <div className="detail-card"><span>Agreement accepted</span><strong>{selectedLandlord.agreement_accepted ? 'Yes' : 'No'}</strong></div>
+              {selectedLandlord.signed_on && <div className="detail-card"><span>Signed on</span><strong>{new Date(selectedLandlord.signed_on).toLocaleDateString()}</strong></div>}
+              {selectedLandlord.approval_status && <div className="detail-card"><span>Approval status</span><strong>{selectedLandlord.approval_status}</strong></div>}
+              {selectedLandlord.approved_at && <div className="detail-card"><span>Approved at</span><strong>{new Date(selectedLandlord.approved_at).toLocaleString()}</strong></div>}
               <div className="detail-card"><span>Bank edit access</span><strong>{selectedLandlord.bank_details_edit_allowed === false ? 'Locked' : 'Open'}</strong></div>
               <div className="detail-card"><span>Bank edit request</span><strong>{selectedLandlord.bank_edit_request ? 'Pending unlock' : 'None'}</strong></div>
-              {selectedLandlord.bank_name && <div className="detail-card"><span>Bank</span><strong>{selectedLandlord.bank_name}</strong></div>}
-              {selectedLandlord.account_holder_name && <div className="detail-card"><span>Account holder</span><strong>{selectedLandlord.account_holder_name}</strong></div>}
               <div className="detail-card"><span>Created</span><strong>{new Date(selectedLandlord.created_at).toLocaleDateString()}</strong></div>
             </div>
           </div>

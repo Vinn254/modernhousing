@@ -50,6 +50,9 @@ export default function SessionTimeout() {
           if (data.profile?.role === 'tenant' && data.profile?.approval_status === 'pending') {
             router.replace('/login?message=Your account is pending approval.');
           }
+          if (data.profile?.role === 'project_manager' && data.profile?.approval_status === 'pending' && pathname !== '/profile') {
+            router.replace('/profile');
+          }
         })
         .catch(() => {});
     });
@@ -71,7 +74,7 @@ export default function SessionTimeout() {
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
       subscription.unsubscribe();
     };
-  }, [isPublicPath, resetTimers, router]);
+  }, [isPublicPath, resetTimers, router, pathname]);
 
   if (!showWarning) return null;
 
