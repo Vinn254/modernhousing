@@ -65,7 +65,7 @@ function LoginForm() {
     const profileRes = await fetch('/api/profile', { headers: { Authorization: `Bearer ${sessionData.session.access_token}` } });
     const profileData = profileRes.ok ? await profileRes.json() : {};
 
-    if (profileData.profile?.approval_status === 'pending') {
+    if (profileData.profile?.role === 'tenant' && profileData.profile?.approval_status === 'pending') {
       setError('Your account is pending approval. Please wait for the super admin to activate your account.');
       await supabase.auth.signOut();
       setLoading(false);
@@ -242,7 +242,7 @@ function LoginForm() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
             <Link href="/signup?role=project_manager" style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>Register as landlord</Link>
             <span style={{ color: 'var(--ink-3)', fontSize: 13 }}>Need tenant access? <Link href="/tenant/register" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Tenant registration</Link></span>
-            <Link href="/forgot-password" style={{ color: 'var(--ink-3)', fontWeight: 500, fontSize: 13, textDecoration: 'none' }}>Forgot password?</Link>
+            <Link href="/forgot-password" style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 13, textDecoration: 'underline' }}>Forgot password?</Link>
           </div>
 
         </section>

@@ -903,7 +903,7 @@ const rentOwedByTenant = useMemo(() => {
 
       {!isAgent && (
           <section className="dashboard-grid" style={{ marginTop: 24 }}>
-            <SectionCard title="Properties and Agents" subtitle="Create new properties, onboard agents, and manage access from one place.">
+            <SectionCard title="Properties and Agents" subtitle="Create new properties, onboard agents, and manage access from one place." className="property-card-dark">
               <form onSubmit={handleAddProperty} className="form-grid" style={{ marginBottom: 24 }}>
                 <FormField label="Property name"><input value={propertyName} onChange={(event) => setPropertyName(event.target.value)} required placeholder="Property name" /></FormField>
                 <FormField label="Address"><input value={propertyAddress} onChange={(event) => setPropertyAddress(event.target.value)} required placeholder="Property address" /></FormField>

@@ -47,7 +47,7 @@ export default function SessionTimeout() {
       fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } })
         .then(res => res.ok ? res.json() : { profile: null })
         .then(data => {
-          if (data.profile?.approval_status === 'pending') {
+          if (data.profile?.role === 'tenant' && data.profile?.approval_status === 'pending') {
             router.replace('/login?message=Your account is pending approval.');
           }
         })
