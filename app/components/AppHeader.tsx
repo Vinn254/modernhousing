@@ -81,6 +81,8 @@ export default function AppHeader() {
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<Role>('user');
   const [roleLoaded, setRoleLoaded] = useState(false);
+  const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
@@ -147,6 +149,35 @@ export default function AppHeader() {
 
     return () => listener?.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setProfileLoaded(true);
+      return;
+    }
+
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled || !session?.access_token) {
+        setProfileLoaded(true);
+        return;
+      }
+
+      fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' })
+        .then(res => res.ok ? res.json() : { profile: null })
+        .then(data => {
+          if (!cancelled) {
+            setApprovalStatus(data.profile?.approval_status ?? null);
+            setProfileLoaded(true);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setProfileLoaded(true);
+        });
+    });
+
+    return () => { cancelled = true; };
+  }, [user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -217,6 +248,13 @@ export default function AppHeader() {
 
   const navLinks = isTenant ? tenantLinks : (isAgent ? agentLinks : (isSuperAdmin ? superAdminLinks : (isAdmin ? adminLinks : landlordPMLinks)));
 
+  const visibleNavLinks = (() => {
+    if (isLandlord && approvalStatus !== 'approved') {
+      return [{ label: 'My Profile', href: '/profile', icon: 'dashboard' as IconName }];
+    }
+    return navLinks;
+  })();
+
   const isLinkActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href + '/'));
 
   const firstName = (user?.user_metadata?.full_name || user?.email || 'there').split(' ')[0].split('@')[0];
@@ -245,7 +283,7 @@ export default function AppHeader() {
             </div>
 
             <nav className="sidebar-nav">
-              {navLinks.map((link) => (
+              {visibleNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
