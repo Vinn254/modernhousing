@@ -922,27 +922,31 @@ const rentOwedByTenant = useMemo(() => {
               </form>
 
               <h4 style={{ margin: '18px 0 10px' }}>Assigned Agents</h4>
-              {agents.length === 0 ? <p style={{ color: 'var(--ink-3)', margin: 0 }}>No agents assigned yet.</p> : agents.map((agent) => (
-                <div key={agent.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
-                  <div>
-                    <strong>{agent.full_name}</strong>
-                    <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.email}</div>
-                    <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.property_name || 'Unassigned'} · {agent.status}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    {agent.status === 'active' ? (
-                      <>
-                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleReassignAgent(agent.id)}>Reassign</button>
-                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleEditAgent(agent)}>Edit</button>
-                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRemoveAgent(agent.id)}>Remove</button>
-                        <button className="btn" style={{ padding: '6px 10px', fontSize: '12px', background: '#dc2626', color: '#fff', border: 'none' }} onClick={() => handleDeleteAgent(agent.id)}>Delete</button>
-                      </>
-                    ) : (
-                      <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleReactivateAgent(agent.id)}>Reactivate</button>
-                    )}
-                  </div>
+              {agents.length === 0 ? <p style={{ color: 'var(--ink-3)', margin: 0 }}>No agents assigned yet.</p> : (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {agents.map((agent) => (
+                    <div key={agent.id} className={`bento-card ${agent.status === 'active' ? 'accent-emerald' : 'accent-amber'}`} style={{ padding: 14, gap: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <strong style={{ display: 'block', marginBottom: 4 }}>{agent.full_name}</strong>
+                        <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.email}</div>
+                        <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{agent.property_name || 'Unassigned'} · {agent.status}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        {agent.status === 'active' ? (
+                          <>
+                            <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleReassignAgent(agent.id)}>Reassign</button>
+                            <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleEditAgent(agent)}>Edit</button>
+                            <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRemoveAgent(agent.id)}>Remove</button>
+                            <button className="btn" style={{ padding: '6px 10px', fontSize: '12px', background: '#dc2626', color: '#fff', border: 'none' }} onClick={() => handleDeleteAgent(agent.id)}>Delete</button>
+                          </>
+                        ) : (
+                          <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleReactivateAgent(agent.id)}>Reactivate</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </SectionCard>
 
             <SectionCard title="Portfolio" subtitle="Keep an eye on the properties you manage and the latest payment activity.">

@@ -203,7 +203,7 @@ function LoginForm() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
             <Link href="/signup?role=project_manager" style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>Register as landlord</Link>
             <span style={{ color: 'var(--ink-3)', fontSize: 13 }}>Need tenant access? <Link href="/tenant/register" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Tenant registration</Link></span>
-            <Link href="/forgot-password" style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 13, textDecoration: 'underline' }}>Forgot password?</Link>
+            <p className="auth-alt" style={{ margin: 0 }}><Link href="/forgot-password">Forgot password?</Link></p>
           </div>
 
         </section>
