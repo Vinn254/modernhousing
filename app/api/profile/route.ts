@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { adminRequest } from '../../../lib/supabaseAdmin';
+import { sendEmail } from '../../../lib/emailService';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -35,6 +36,8 @@ function buildProfileUpdate(profileData: Record<string, any>, action?: string) {
     metadata.bank_details_edit_allowed = false;
   }
 
+  const isSubmittingForApproval = action === 'submit_for_approval';
+
   return {
     full_name: metadata.full_name ?? metadata.fullName ?? null,
     email: metadata.email ?? null,
@@ -49,11 +52,12 @@ function buildProfileUpdate(profileData: Record<string, any>, action?: string) {
     bank_name: metadata.bank_name ?? null,
     account_number: metadata.account_number ?? null,
     branch: metadata.branch ?? null,
-    agreement_accepted: Boolean(metadata.agreement_accepted),
+    agreement_accepted: isSubmittingForApproval ? true : Boolean(metadata.agreement_accepted),
     signed_on: metadata.signed_on ?? null,
-    bank_details_edit_allowed: metadata.bank_details_edit_allowed ?? true,
+    bank_details_edit_allowed: isSubmittingForApproval ? false : (metadata.bank_details_edit_allowed ?? true),
     bank_edit_request: Boolean(metadata.bank_edit_request),
-    status: 'pending',
+    status: isSubmittingForApproval ? 'pending' : (metadata.status ?? 'active'),
+    approval_status: isSubmittingForApproval ? 'pending' : (metadata.approval_status ?? 'approved'),
     picture_url: JSON.stringify(metadata),
     updated_at: new Date().toISOString(),
   };
@@ -134,6 +138,20 @@ export async function POST(request: NextRequest) {
         .single();
       profile = data;
       if (error) return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+
+    if (action === 'submit_for_approval') {
+      try {
+        const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'vin.oumaotieno@gmail.com';
+        await sendEmail({
+          to: superAdminEmail,
+          subject: 'New Landlord Profile Pending Approval',
+          html: `<h2>Landlord Profile Submitted</h2><p>A landlord has submitted their profile for approval.</p><p><strong>Name:</strong> ${profile.full_name || 'N/A'}</p><p><strong>Email:</strong> ${profile.email || 'N/A'}</p><p><strong>Organization:</strong> ${profile.organization_name || 'N/A'}</p><p>Please review and approve in the super admin panel.</p>`,
+          text: `Landlord ${profile.full_name || 'N/A'} has submitted their profile for approval. Email: ${profile.email || 'N/A'}. Please review in the super admin panel.`,
+        });
+      } catch (emailError) {
+        console.error('Failed to send approval notification email:', emailError);
+      }
     }
 
     const metadata = parseMetadata(profile?.picture_url);

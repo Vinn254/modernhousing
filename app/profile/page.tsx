@@ -98,7 +98,7 @@ export default function MyProfilePage() {
     loadProfile();
   }, []);
 
-  async function saveProfile(action?: 'request_bank_edit_unlock') {
+  async function saveProfile(action?: 'request_bank_edit_unlock' | 'submit_for_approval') {
     setSaving(true);
     setMessage('');
     setError('');
@@ -141,7 +141,7 @@ export default function MyProfilePage() {
       bank_details_edit_allowed: action === 'request_bank_edit_unlock' ? false : false,
       bank_edit_request: action === 'request_bank_edit_unlock',
     }));
-    setMessage(action === 'request_bank_edit_unlock' ? 'Bank edit request sent to the super admin.' : 'Profile saved successfully.');
+    setMessage(action === 'request_bank_edit_unlock' ? 'Bank edit request sent to the super admin.' : action === 'submit_for_approval' ? 'Profile submitted for approval. The super admin will review it shortly.' : 'Profile saved successfully.');
     setSaving(false);
   }
 
@@ -242,15 +242,29 @@ export default function MyProfilePage() {
           </section>
 
           <section style={{ display: 'grid', gap: 12 }}>
+            <div className="card-label">Agreement</div>
+            <div style={{ display: 'grid', gap: 10, padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--line-soft)', borderRadius: 12 }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-2)' }}>By tapping <strong>I agree</strong>, you confirm that:</p>
+              <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--ink-2)', fontSize: 14, lineHeight: 1.6 }}>
+                <li>You understand that a <strong>1% platform fee</strong> is deducted from every rent payment processed through this app.</li>
+                <li>The bank account or M-PESA number you entered is yours, and you authorise us to send your share of rent to it automatically.</li>
+                <li>Payouts arrive in your account within <strong>1 business day</strong> after the tenant pays.</li>
+                <li>You can update your payout details anytime from your dashboard.</li>
+              </ul>
+            </div>
             <label className="field-group" style={{ gap: 8 }}>
-              <span>Agreement acknowledgement</span>
               <input type="checkbox" checked={form.agreement_accepted} onChange={(event) => setForm((current) => ({ ...current, agreement_accepted: event.target.checked }))} style={{ width: 18, height: 18 }} />
-              <span className="landlord-muted">I confirm that the information above is accurate and I agree to the onboarding terms.</span>
+              <span className="landlord-muted">I agree to the terms above.</span>
             </label>
             <label className="field-group">
               <span>Signed on</span>
               <input type="date" value={form.signed_on} onChange={(event) => setForm((current) => ({ ...current, signed_on: event.target.value }))} />
             </label>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button type="button" className="action-button primary" disabled={saving || !form.agreement_accepted} onClick={() => void saveProfile('submit_for_approval')}>
+                {saving ? 'Submitting…' : 'Submit for Approval'}
+              </button>
+            </div>
           </section>
         </form>
       )}
