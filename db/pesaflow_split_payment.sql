@@ -24,7 +24,7 @@ alter table payment_settings
 create table if not exists split_payments (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid references tenants(id) on delete cascade,
-  landlord_id uuid references profiles(user_id) on delete cascade,
+  landlord_id uuid references auth.users(id) on delete cascade,
   original_amount numeric not null,
   platform_fee_amount numeric not null,
   landlord_amount numeric not null,
