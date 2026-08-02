@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { FormField } from '../components/dashboard-ui';
 
@@ -24,68 +24,77 @@ function LoginForm() {
   const [subscriptionPlan, setSubscriptionPlan] = useState<string>('');
   const [paying, setPaying] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'landlord' | 'agent' | ''>('');
+  const [redirecting, setRedirecting] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
+
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const subscribe = searchParams.get('subscribe');
   const restricted = searchParams.get('restricted') === 'true';
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading || redirecting) return;
     setError('');
     setLoading(true);
 
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
-    await fetch('/api/login-attempts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, success: !signInError }),
-    });
+      fetch('/api/login-attempts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, success: !signInError }),
+      }).catch(() => {});
 
-    if (!signInError) {
-      await fetch('/api/login-attempts', { method: 'DELETE' });
-    }
+      if (!signInError) {
+        fetch('/api/login-attempts', { method: 'DELETE' }).catch(() => {});
+      }
 
-    if (signInError) {
-      setError(signInError.message === 'FetchError: Failed to fetch' ? 'Unable to connect to Springfield Systems. Check your internet connection and Supabase configuration.' : signInError.message);
-      setLoading(false);
-      return;
-    }
-
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
-    if (sessionError || !sessionData.session) {
-      setError('Login succeeded, but the session could not be saved. Please try again.');
-      setLoading(false);
-      return;
-    }
-
-    const role = data.user?.user_metadata?.role ?? 'admin';
-
-    const profileRes = await fetch('/api/profile', { headers: { Authorization: `Bearer ${sessionData.session.access_token}` } });
-    const profileData = profileRes.ok ? await profileRes.json() : {};
-
-    if (profileData.profile?.role === 'tenant' && profileData.profile?.approval_status === 'pending') {
-      setError('Your account is pending approval. Please wait for the super admin to activate your account.');
-      await supabase.auth.signOut();
-      setLoading(false);
-      return;
-    }
-
-    if (role === 'project_manager' || role === 'admin') {
-      const isPendingLandlord = profileData.profile?.approval_status === 'pending' ||
-        profileData.profile?.approval_status === 'rejected' ||
-        profileData.profile?.status === 'pending' ||
-        profileData.profile?.status === 'inactive' ||
-        (!profileData.profile?.approval_status && profileData.profile?.status === 'pending');
-      if (isPendingLandlord) {
-        router.push('/profile');
+      if (signInError) {
+        setError(signInError.message === 'FetchError: Failed to fetch' ? 'Unable to connect to Springfield Systems. Check your internet connection and Supabase configuration.' : signInError.message);
         setLoading(false);
         return;
       }
-    }
 
-    router.push(roleRoutes[role as UserRole] ?? roleRoutes.admin);
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !sessionData.session) {
+        setError('Login succeeded, but the session could not be saved. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      const role = data.user?.user_metadata?.role ?? 'admin';
+
+      const profileRes = await fetch('/api/profile', { headers: { Authorization: `Bearer ${sessionData.session.access_token}` } });
+      const profileData = profileRes.ok ? await profileRes.json() : {};
+
+      if (profileData.profile?.role === 'tenant' && profileData.profile?.approval_status === 'pending') {
+        setError('Your account is pending approval. Please wait for the super admin to activate your account.');
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+
+      if (role === 'project_manager' || role === 'admin') {
+        const isPendingLandlord = profileData.profile?.approval_status === 'pending' ||
+          profileData.profile?.approval_status === 'rejected' ||
+          profileData.profile?.status === 'pending' ||
+          profileData.profile?.status === 'inactive' ||
+          (!profileData.profile?.approval_status && profileData.profile?.status === 'pending');
+        if (isPendingLandlord) {
+          setRedirecting(true);
+          router.replace('/profile');
+          return;
+        }
+      }
+
+      setRedirecting(true);
+      router.replace(roleRoutes[role as UserRole] ?? roleRoutes.admin);
+    } catch (err: any) {
+      setError(err.message ?? 'Login failed.');
+      setLoading(false);
+    }
   }
 
   async function handleSubscription() {
@@ -117,7 +126,8 @@ function LoginForm() {
         setPaying(false);
         return;
       }
-      router.push('/admin');
+      setRedirecting(true);
+      router.replace('/admin');
     } catch (err: any) {
       setError(err.message ?? 'Subscription failed.');
     } finally {
@@ -187,6 +197,23 @@ function LoginForm() {
 
   return (
     <main className="auth-page">
+      {redirecting && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(255,255,255,0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div className="spinner" style={{ width: 40, height: 40, border: '4px solid var(--line)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+            <p style={{ color: 'var(--ink-2)', fontWeight: 600 }}>Redirecting to your workspace…</p>
+          </div>
+        </div>
+      )}
       <div className="auth-layout">
         <section className="auth-visual" aria-hidden="true">
           <div className="auth-brand-lockup">
@@ -233,17 +260,17 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="auth-form">
             <FormField label="Email address">
-              <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="you@example.com" />
+              <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="you@example.com" disabled={loading || redirecting} />
             </FormField>
 
             <FormField label="Password">
-              <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="••••••••" />
+              <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="••••••••" disabled={loading || redirecting} />
             </FormField>
 
             {error && <p className="auth-error">{error}</p>}
 
-            <button type="submit" className="auth-submit" disabled={loading}>
-              {loading ? 'Signing in…' : 'Sign In'}
+            <button type="submit" className="auth-submit" disabled={loading || redirecting}>
+              {redirecting ? 'Redirecting…' : loading ? 'Signing in…' : 'Sign In'}
             </button>
           </form>
 
@@ -265,9 +292,5 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={<div>Loading…</div>}>
-      <LoginForm />
-    </Suspense>
-  );
+  return <LoginForm />;
 }

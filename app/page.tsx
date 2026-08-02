@@ -1,8 +1,42 @@
 import Link from 'next/link';
 
+export const metadata = {
+  title: 'Springfield Systems - Property Management Platform',
+  description: 'Comprehensive property management platform for landlords, agents, and tenants. Manage properties, tenants, payments, and leases in one workspace.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'Springfield Systems - Property Management Platform',
+    description: 'Comprehensive property management platform for landlords, agents, and tenants.',
+    url: 'https://modernhousing.vercel.app',
+    siteName: 'Springfield Systems',
+    type: 'website',
+  },
+};
+
 export default function HomePage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Springfield Systems',
+    description: 'Property management platform for landlords, agents, and tenants',
+    url: 'https://modernhousing.vercel.app',
+    logo: 'https://modernhousing.vercel.app/logo.png',
+    sameAs: [],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      email: 'support@springfieldsystems.com',
+      contactType: 'customer service',
+    },
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <section className="hero">
         <nav className="nav">
           <Link href="/" className="logo">
