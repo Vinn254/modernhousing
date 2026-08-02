@@ -179,7 +179,8 @@ export default function HomePage() {
             <p><strong>Email:</strong> support@springfieldsystems.com<br /><strong>Phone:</strong> +254 700 000 000<br /><strong>Hours:</strong> Mon-Fri, 8:00 AM - 6:00 PM EAT</p>
             <div className="split-actions">
               <Link href="mailto:support@springfieldsystems.com" className="btn btn-primary">Email us</Link>
-              <Link href="#contact-us" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', borderColor: 'transparent' }}>Contact support</Link>
+              <Link href="https://wa.me/254721634528" target="_blank" rel="noreferrer" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #25d366, #128c7e)', borderColor: 'transparent' }}>Contact support</Link>
+              <Link href="/help" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', borderColor: 'transparent' }}>Visit help center</Link>
             </div>
           </div>
           <div className="split-visual">
