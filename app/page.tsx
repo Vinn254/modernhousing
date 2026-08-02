@@ -122,7 +122,7 @@ export default function HomePage() {
           </div>
           <div className="split-visual">
             <div className="split-card split-card-image">
-              <img src="/about.png" alt="About Springfield Systems" className="split-card-image__img" />
+              <img src="/about.png" alt="About Springfield Systems" className="split-card-image__img" loading="lazy" decoding="async" width="480" height="360" />
             </div>
           </div>
         </div>
@@ -143,7 +143,7 @@ export default function HomePage() {
           </div>
           <div className="split-visual">
             <div className="split-card split-card-image">
-              <img src="/policy.png" alt="Terms and policies" className="split-card-image__img" />
+              <img src="/policy.png" alt="Terms and policies" className="split-card-image__img" loading="lazy" decoding="async" width="480" height="360" />
             </div>
           </div>
         </div>
@@ -164,7 +164,7 @@ export default function HomePage() {
           </div>
           <div className="split-visual">
             <div className="split-card split-card-image">
-              <img src="/refund.png" alt="Refund policy" className="split-card-image__img" />
+              <img src="/refund.png" alt="Refund policy" className="split-card-image__img" loading="lazy" decoding="async" width="480" height="360" />
             </div>
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function HomePage() {
             <span className="section-eyebrow">Contact Us</span>
             <h2>Talk to our support team.</h2>
             <p>Need help with onboarding, subscriptions, or integrations? Reach out and we will respond within one business day. For urgent issues, use the in-app support chat or visit the help center.</p>
-            <p><strong>Email:</strong> support@springfieldsystems.com<br /><strong>Phone:</strong> +254 700 000 000<br /><strong>Hours:</strong> Mon-Fri, 8:00 AM - 6:00 PM EAT</p>
+            <p><strong>Email:</strong> support@springfieldsystems.com<br /><strong>Phone:</strong> +254 0721634528<br /><strong>Hours:</strong> Mon-Fri, 8:00 AM - 6:00 PM EAT</p>
             <div className="split-actions">
               <Link href="mailto:support@springfieldsystems.com" className="btn btn-primary">Email us</Link>
               <Link href="https://wa.me/254721634528" target="_blank" rel="noreferrer" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #25d366, #128c7e)', borderColor: 'transparent' }}>Contact support</Link>

@@ -640,8 +640,30 @@ textarea:focus {
 }
 .nav-cta:hover { background: rgba(255,255,255,0.14); }
 @media (max-width: 720px) {
-  .nav-links a:not(.nav-cta) { display: none; }
-  .nav-pricing-link { display: inline-flex !important; }
+  .nav {
+    gap: 10px;
+    padding: 10px 16px;
+  }
+  .nav-links {
+    gap: 10px;
+  }
+  .logo {
+    font-size: 14px;
+    gap: 6px;
+  }
+  .logo-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+  }
+  .nav-pricing-link {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  .nav-login {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
 }
 
 .hero-inner {

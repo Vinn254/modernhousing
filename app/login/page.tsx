@@ -56,9 +56,8 @@ function LoginForm() {
         return;
       }
 
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError || !sessionData.session) {
+      const session = data.session;
+      if (!session?.access_token) {
         setError('Login succeeded, but the session could not be saved. Please try again.');
         setLoading(false);
         return;
@@ -66,7 +65,7 @@ function LoginForm() {
 
       const role = data.user?.user_metadata?.role ?? 'admin';
 
-      const profileRes = await fetch('/api/profile', { headers: { Authorization: `Bearer ${sessionData.session.access_token}` } });
+      const profileRes = await fetch('/api/profile', { headers: { Authorization: `Bearer ${session.access_token}` } });
       const profileData = profileRes.ok ? await profileRes.json() : {};
 
       if (profileData.profile?.role === 'tenant' && profileData.profile?.approval_status === 'pending') {
