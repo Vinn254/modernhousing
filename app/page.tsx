@@ -130,14 +130,8 @@ export default function HomePage() {
             </div>
           </div>
           <div className="split-visual">
-            <div className="split-card split-card--animated">
-              <div className="split-card__inner">
-                <div className="split-card__icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></div>
-                <h3>Property-first design</h3>
-                <p>From unit-level tracking to portfolio-level reporting, every feature is built around real property workflows.</p>
-                <div className="card-metric">2,400+</div>
-                <div className="card-metric-label">Units managed</div>
-              </div>
+            <div className="split-card split-card-image">
+              <img src="/about.png" alt="About Springfield Systems" className="split-card-image__img" />
             </div>
           </div>
         </div>
@@ -186,16 +180,8 @@ export default function HomePage() {
             </div>
           </div>
           <div className="split-visual">
-            <div className="split-card split-card--animated">
-              <div className="split-card__inner">
-                <div className="split-card__icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-                <h3>Transparent policies</h3>
-                <p>No hidden clauses. We publish plain-language terms so you know exactly what to expect.</p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  <span style={{ padding: '6px 12px', borderRadius: 999, background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>Plain language</span>
-                  <span style={{ padding: '6px 12px', borderRadius: 999, background: 'rgba(14,165,233,0.12)', color: '#0284c7', fontSize: 12, fontWeight: 700 }}>Fair use</span>
-                </div>
-              </div>
+            <div className="split-card split-card-image">
+              <img src="/policy.png" alt="Terms and policies" className="split-card-image__img" />
             </div>
           </div>
         </div>
@@ -215,18 +201,24 @@ export default function HomePage() {
             </div>
           </div>
           <div className="split-visual">
-            <div className="split-card">
-              <div className="split-card__inner">
-                <div className="split-card__icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8l-4 4-2-2"/></svg></div>
-                <h3>Hassle-free cancellations</h3>
-                <p>Cancel anytime from your dashboard. No emails, no waiting on hold.</p>
-                <div className="card-metric">14 days</div>
-                <div className="card-metric-label">Money-back guarantee</div>
-              </div>
+            <div className="split-card split-card-image">
+              <img src="/refund.png" alt="Refund policy" className="split-card-image__img" />
             </div>
           </div>
         </div>
       </section>
+
+      <a
+        href="https://wa.me/254700000000"
+        target="_blank"
+        rel="noreferrer"
+        className="whatsapp-float"
+        aria-label="Chat on WhatsApp"
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+      </a>
     </>
   );
 }
