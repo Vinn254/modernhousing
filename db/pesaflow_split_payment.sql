@@ -1,5 +1,16 @@
 -- PesaFlow split payment integration
 -- Adds PesaFlow config to payment_settings and creates split_payments table
+--
+-- Flow:
+-- 1. Landlord registers and fills bank details in their profile
+-- 2. Super admin configures PesaFlow API credentials in payment_settings
+-- 3. PesaFlow fetches landlord bank details automatically
+-- 4. When tenant pays rent, PesaFlow automatically splits:
+--    - 1% platform fee -> super admin account
+--    - 99% -> landlord bank account
+-- 5. PesaFlow sends webhook to /api/pesaflow/webhook
+-- 6. This table records the split for landlord/super admin transparency
+-- 7. Tenant payment history remains untouched (shows full amount)
 
 -- Add PesaFlow configuration columns to payment_settings
 alter table payment_settings

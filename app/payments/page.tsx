@@ -82,6 +82,11 @@ export default function PaymentsPage() {
   const [consumerKey, setConsumerKey] = useState('');
   const [consumerSecret, setConsumerSecret] = useState('');
   const [passkey, setPasskey] = useState('');
+  const [pesaflowApiKey, setPesaflowApiKey] = useState('');
+  const [pesaflowMerchantId, setPesaflowMerchantId] = useState('');
+  const [pesaflowWebhookSecret, setPesaflowWebhookSecret] = useState('');
+  const [platformFeePercentage, setPlatformFeePercentage] = useState('1');
+  const [paymentSplitEnabled, setPaymentSplitEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'paybill' | 'till' | 'pochi' | 'mobile'>('paybill');
   const [hoverMonth, setHoverMonth] = useState<string | null>(null);
@@ -376,6 +381,11 @@ export default function PaymentsPage() {
       setConsumerSecret(result.consumerSecret ?? '');
       setShortCode(result.shortCode ?? '');
       setPasskey(result.passkey ?? '');
+      setPesaflowApiKey(result.pesaflowApiKey ?? '');
+      setPesaflowMerchantId(result.pesaflowMerchantId ?? '');
+      setPesaflowWebhookSecret(result.pesaflowWebhookSecret ?? '');
+      setPlatformFeePercentage(String(result.platformFeePercentage ?? 1));
+      setPaymentSplitEnabled(result.paymentSplitEnabled ?? false);
     }
   }
 
@@ -386,6 +396,9 @@ export default function PaymentsPage() {
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         paybill, paybillAccount, till, pochi, mobile, shortCode, consumerKey, consumerSecret, passkey,
+        pesaflowApiKey, pesaflowMerchantId, pesaflowWebhookSecret,
+        platformFeePercentage: Number(platformFeePercentage) || 1,
+        paymentSplitEnabled,
       }),
     });
 
@@ -773,6 +786,16 @@ export default function PaymentsPage() {
                 <input value={consumerSecret} onChange={e => setConsumerSecret(e.target.value)} placeholder="Consumer Secret" />
                 <input value={shortCode} onChange={e => setShortCode(e.target.value)} placeholder="Business ShortCode (e.g. 174347)" />
                 <input value={passkey} onChange={e => setPasskey(e.target.value)} placeholder="Passkey (Security Key)" />
+
+                <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>PesaFlow Configuration</h4>
+                <input value={pesaflowApiKey} onChange={e => setPesaflowApiKey(e.target.value)} placeholder="PesaFlow API Key" />
+                <input value={pesaflowMerchantId} onChange={e => setPesaflowMerchantId(e.target.value)} placeholder="PesaFlow Merchant ID" />
+                <input value={pesaflowWebhookSecret} onChange={e => setPesaflowWebhookSecret(e.target.value)} placeholder="PesaFlow Webhook Secret" />
+                <input type="number" step="0.1" value={platformFeePercentage} onChange={e => setPlatformFeePercentage(e.target.value)} placeholder="Platform Fee % (e.g. 1)" />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px', fontWeight: 600, color: '#374151' }}>
+                  <input type="checkbox" checked={paymentSplitEnabled} onChange={e => setPaymentSplitEnabled(e.target.checked)} />
+                  Enable PesaFlow Split Payments
+                </label>
 
                 <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>Payment Method Selection</h4>
                 <select value={selectedMethod} onChange={e => setSelectedMethod(e.target.value as any)}>

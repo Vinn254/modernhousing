@@ -24,6 +24,13 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = JSON.parse(bodyText);
+
+    /*
+     * PesaFlow handles the actual money movement:
+     * - 1% platform fee is deducted and sent to the super admin account
+     * - 99% is sent to the landlord's bank account (fetched from their profile)
+     * - This webhook only records the split in our database for transparency
+     */
     const {
       transaction_id,
       tenant_id,
