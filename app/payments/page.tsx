@@ -876,6 +876,16 @@ export default function PaymentsPage() {
           </div>
         </article>
 
+        <article className="card" style={{ marginTop: 24 }}>
+          <div className="card-label">Platform Fees</div>
+          <h3 style={{ marginBottom: 16 }}>Split Payment History</h3>
+          <p style={{ color: 'var(--ink-3)', marginBottom: 16 }}>View your 1% platform fee deductions from rent payments processed via PesaFlow.</p>
+          <a href="/payments/splits" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+            View Split Payments
+          </a>
+        </article>
+
         <article
           className="card"
           style={{
