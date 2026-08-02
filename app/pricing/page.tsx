@@ -113,7 +113,7 @@ function PricingContent() {
             <p>Both options give you full access to all features. You can switch between them from your dashboard settings.</p>
             <div className="split-actions">
               <Link href="/login" className="btn btn-primary">Get started</Link>
-              <Link href="/pricing" className="btn btn-ghost">View pricing</Link>
+              <Link href="/pricing" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', borderColor: 'transparent' }}>View pricing</Link>
             </div>
           </div>
           <div className="split-visual">

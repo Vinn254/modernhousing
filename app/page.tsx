@@ -117,7 +117,7 @@ export default function HomePage() {
             <p>Our platform handles leases, payments, complaints, and renewals in one workspace—reducing paperwork, missed follow-ups, and revenue leakage.</p>
             <div className="split-actions">
               <Link href="/login" className="btn btn-primary">Get started</Link>
-              <Link href="/pricing" className="btn btn-ghost">View pricing</Link>
+              <Link href="/pricing" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', borderColor: 'transparent' }}>View pricing</Link>
             </div>
           </div>
           <div className="split-visual">
@@ -180,7 +180,6 @@ export default function HomePage() {
             <div className="split-actions">
               <Link href="mailto:support@springfieldsystems.com" className="btn btn-primary">Email us</Link>
               <Link href="https://wa.me/254721634528" target="_blank" rel="noreferrer" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #25d366, #128c7e)', borderColor: 'transparent' }}>Contact support</Link>
-              <Link href="/help" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', borderColor: 'transparent' }}>Visit help center</Link>
             </div>
           </div>
           <div className="split-visual">
