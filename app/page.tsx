@@ -37,6 +37,7 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <main>
       <section className="hero">
         <nav className="nav">
           <Link href="/" className="logo">
@@ -107,15 +108,41 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer>
-        <div className="footer-inner">
-          <div className="footer-brand">
-            <span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>
-            Springfield Systems
-          </div>
-          <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
+      <section className="bento-section">
+        <div className="bento">
+          <article className="card card-pm">
+ <div className="card-label"><span className="badge badge-pm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Project Manager Workspace</div>
+             <h3>Control your property portfolio.</h3>
+             <p>Create properties, assign agents, add tenants, review payments, and monitor balances from the project manager dashboard.</p>
+             <Link href="/login" className="card-cta">Project Manager Login <svg className="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></Link>
+          </article>
+
+          <article className="card card-agent">
+            <div className="card-label"><span className="badge badge-agent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13 a4 0 0 1 0 7.75"/></svg></span>Agent Access</div>
+            <h3>Manage assigned units.</h3>
+            <p>Agents see only the property assigned by the project manager and can add tenants, send notices, and review complaints.</p>
+            <Link href="/login" className="card-cta">Agent Login <svg className="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></Link>
+          </article>
+
+          <article className="card card-feat card-feat-1">
+            <div className="feat-icon" style={{ background: 'var(--accent)' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+            <h3>Tenant Dashboard</h3>
+            <p>Tenants view apartment details, payment history, next payment date, notices, and house problems raised to their agent.</p>
+          </article>
+
+          <article className="card card-feat card-feat-2">
+            <div className="feat-icon" style={{ background: 'var(--navy-700)' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <h3>Secure Roles</h3>
+            <p>Role-based routing keeps project manager pages hidden from tenants and limits agents to their assigned property.</p>
+          </article>
+
+          <article className="card card-feat card-feat-3">
+            <div className="feat-icon" style={{ background: '#0ea5e9' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            <h3>Payment Tracking</h3>
+            <p>Record transactions, calculate due dates, and keep rent balances visible across tenants and properties.</p>
+          </article>
         </div>
-      </footer>
+      </section>
 
       <section className="split-section">
         <div className="split-grid">
@@ -140,9 +167,51 @@ export default function HomePage() {
       <section className="split-section reverse">
         <div className="split-grid">
           <div className="split-content">
+            <span className="section-eyebrow">Terms of Service</span>
+            <h2>Clear terms for fair use.</h2>
+            <p><strong>1. Account access.</strong> You are responsible for keeping your login secure. Do not share credentials.</p>
+            <p><strong>2. Payments.</strong> Rent collected through Springfield Systems may include a platform fee. Payouts to landlords are processed within 1 business day after tenant payment confirmation.</p>
+            <p><strong>3. Data.</strong> We use your data only to operate the platform and improve services. We do not sell personal information.</p>
+            <p><strong>4. Termination.</strong> Accounts may be suspended for misuse, fraud, or violation of these terms.</p>
+            <div className="split-actions">
+              <Link href="/terms" className="btn btn-primary">Read full terms</Link>
+            </div>
+          </div>
+          <div className="split-visual">
+            <div className="split-card split-card-image">
+              <img src="/policy.png" alt="Terms and policies" className="split-card-image__img" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="split-section">
+        <div className="split-grid">
+          <div className="split-content">
+            <span className="section-eyebrow">Refund Policy</span>
+            <h2>Simple refunds, no drama.</h2>
+            <p><strong>1. Subscription refunds.</strong> If you cancel within 14 days of a new subscription purchase, we will refund the full amount.</p>
+            <p><strong>2. Processing refunds.</strong> Refunds are issued to the original payment method within 5-10 business days.</p>
+            <p><strong>3. Partial months.</strong> We do not prorate partial months. Cancel before renewal to avoid future charges.</p>
+            <p><strong>4. Chargebacks.</strong> If a chargeback is filed without contacting support first, the account may be suspended pending review.</p>
+            <div className="split-actions">
+              <Link href="/refund-policy" className="btn btn-primary">View refund policy</Link>
+            </div>
+          </div>
+          <div className="split-visual">
+            <div className="split-card split-card-image">
+              <img src="/refund.png" alt="Refund policy" className="split-card-image__img" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="split-section reverse">
+        <div className="split-grid">
+          <div className="split-content">
             <span className="section-eyebrow">Contact Us</span>
             <h2>Talk to our support team.</h2>
-            <p>Need help with onboarding, subscriptions, or integrations? Reach out and we will respond within one business day. For urgent issues, use the in-app support chat.</p>
+            <p>Need help with onboarding, subscriptions, or integrations? Reach out and we will respond within one business day. For urgent issues, use the in-app support chat or visit the help center.</p>
             <p><strong>Email:</strong> support@springfieldsystems.com<br /><strong>Phone:</strong> +254 700 000 000<br /><strong>Hours:</strong> Mon-Fri, 8:00 AM - 6:00 PM EAT</p>
             <div className="split-actions">
               <Link href="mailto:support@springfieldsystems.com" className="btn btn-primary">Email us</Link>
@@ -166,47 +235,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="split-section">
-        <div className="split-grid">
-          <div className="split-content">
-            <span className="section-eyebrow">Terms of Service</span>
-            <h2>Clear terms for fair use.</h2>
-            <p><strong>1. Account access.</strong> You are responsible for keeping your login secure. Do not share credentials.</p>
-            <p><strong>2. Payments.</strong> Rent collected through Springfield Systems may include a platform fee. Payouts to landlords are processed within 1 business day after tenant payment confirmation.</p>
-            <p><strong>3. Data.</strong> We use your data only to operate the platform and improve services. We do not sell personal information.</p>
-            <p><strong>4. Termination.</strong> Accounts may be suspended for misuse, fraud, or violation of these terms.</p>
-            <div className="split-actions">
-              <Link href="/terms" className="btn btn-primary">Read full terms</Link>
-            </div>
+      <footer>
+        <div className="footer-inner">
+          <div className="footer-brand">
+            <span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>
+            Springfield Systems
           </div>
-          <div className="split-visual">
-            <div className="split-card split-card-image">
-              <img src="/policy.png" alt="Terms and policies" className="split-card-image__img" />
-            </div>
-          </div>
+          <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
         </div>
-      </section>
-
-      <section className="split-section reverse">
-        <div className="split-grid">
-          <div className="split-content">
-            <span className="section-eyebrow">Refund Policy</span>
-            <h2>Simple refunds, no drama.</h2>
-            <p><strong>1. Subscription refunds.</strong> If you cancel within 14 days of a new subscription purchase, we will refund the full amount.</p>
-            <p><strong>2. Processing refunds.</strong> Refunds are issued to the original payment method within 5-10 business days.</p>
-            <p><strong>3. Partial months.</strong> We do not prorate partial months. Cancel before renewal to avoid future charges.</p>
-            <p><strong>4. Chargebacks.</strong> If a chargeback is filed without contacting support first, the account may be suspended pending review.</p>
-            <div className="split-actions">
-              <Link href="/refund-policy" className="btn btn-primary">View refund policy</Link>
-            </div>
-          </div>
-          <div className="split-visual">
-            <div className="split-card split-card-image">
-              <img src="/refund.png" alt="Refund policy" className="split-card-image__img" />
-            </div>
-          </div>
-        </div>
-      </section>
+      </footer>
 
       <a
         href="https://wa.me/254700000000"
@@ -219,6 +256,7 @@ export default function HomePage() {
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
         </svg>
       </a>
+      </main>
     </>
   );
 }
