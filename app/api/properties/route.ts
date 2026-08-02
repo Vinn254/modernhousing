@@ -148,7 +148,7 @@ async function enrichProperties(rows: any[]) {
       .select('id, unit_id')
       .in(
         'unit_id',
-        (await supabaseAdmin.from('units').select('id').in('property_id', propertyIds)).data?.map((unit) => unit.id) ?? []
+        (await supabaseAdmin.from('units').select('id').in('property_id', propertyIds)).data?.map((unit: any) => unit.id) ?? []
       ),
   ]);
 
@@ -161,14 +161,14 @@ async function enrichProperties(rows: any[]) {
     }));
   }
 
-  const unitsByProperty = units?.reduce<Record<string, any[]>>((acc, unit) => {
+  const unitsByProperty = units?.reduce<Record<string, any[]>>((acc: Record<string, any[]>, unit: any) => {
     acc[unit.property_id] = acc[unit.property_id] ?? [];
     acc[unit.property_id].push(unit);
     return acc;
   }, {}) ?? {};
 
-  const tenantsByProperty = tenants?.reduce<Record<string, number>>((acc, tenant) => {
-    const unit = units?.find((item) => item.id === tenant.unit_id);
+  const tenantsByProperty = tenants?.reduce<Record<string, number>>((acc: Record<string, number>, tenant: any) => {
+    const unit = units?.find((item: any) => item.id === tenant.unit_id);
     if (!unit) return acc;
     acc[unit.property_id] = (acc[unit.property_id] ?? 0) + 1;
     return acc;
@@ -176,8 +176,8 @@ async function enrichProperties(rows: any[]) {
 
   return rows.map((row) => {
     const propertyUnits = unitsByProperty[row.id] ?? [];
-    const occupiedUnits = propertyUnits.filter((u) => u.occupancy_status === 'occupied').length;
-    const rentRoll = propertyUnits.reduce((sum, unit) => sum + Number(unit.rent_amount ?? 0), 0);
+     const occupiedUnits = propertyUnits.filter((u: any) => u.occupancy_status === 'occupied').length;
+     const rentRoll = propertyUnits.reduce((sum: number, unit: any) => sum + Number(unit.rent_amount ?? 0), 0);
     const storedUnitCount = Number(row.unit_count ?? 0);
     const totalUnits = storedUnitCount > 0 ? storedUnitCount : propertyUnits.length;
     return {

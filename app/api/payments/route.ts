@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
       const { data: orgTenants } = await supabaseAdmin
         .from('tenants')
         .select('id')
-        .in('unit_id', (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map(u => u.id) ?? []);
+        .in('unit_id', (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map((u: any) => u.id) ?? []);
       const tenantIds = (orgTenants ?? []).map((t: any) => t.id);
 
       const { data, error } = await supabaseAdmin

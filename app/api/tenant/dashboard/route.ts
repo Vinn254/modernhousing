@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
       const authEmail = user?.email;
 
       if (tenantId) {
-        tenant = tenants.find((item) => item.id === tenantId) ?? null;
+        tenant = tenants.find((item: any) => item.id === tenantId) ?? null;
       }
 
       if (!tenant && authEmail) {

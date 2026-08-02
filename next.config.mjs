@@ -11,17 +11,16 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 365,
   },
   swcMinify: true,
-  optimization: {
-    minimize: true,
-    usedImports: true,
-    sideEffects: false,
-  },
-  experimental: {
-    optimizePackageImports: ['@supabase/supabase-js', 'lucide-react'],
-    turbopack: {},
-  },
   webpack: (config) => {
-    config.resolve.fallback = { ...config.resolve.fallback, fs: false, net: false, tls: false };
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+      self: false,
+      undici: false,
+    };
+
     config.optimization = {
       ...config.optimization,
       moduleIds: 'deterministic',
@@ -31,16 +30,6 @@ const nextConfig = {
         cacheGroups: {
           default: false,
           vendors: false,
-          supabase: {
-            name: 'supabase',
-            test: /[\\/]node_modules[\\/]@supabase[\\/]/,
-            priority: 10,
-          },
-          react: {
-            name: 'react',
-            test: /[\\/]node_modules[\\/]react[\\/]/,
-            priority: 20,
-          },
           commons: {
             name: 'commons',
             minChunks: 2,
@@ -50,6 +39,7 @@ const nextConfig = {
         },
       },
     };
+
     return config;
   },
 };

@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
 
     const profiles = (profilesResult.data ?? []) as AgentProfile[];
 
-    let agents = profiles.map((profile) => normalizeAgent(users.find((user) => user.id === profile.user_id), profile));
+    let agents = profiles.map((profile) => normalizeAgent(users.find((user: any) => user.id === profile.user_id), profile));
 
     if (!authContext.isSuperAdmin) {
       // Landlords/Project Managers: see agents assigned to properties they CREATED or own via organization

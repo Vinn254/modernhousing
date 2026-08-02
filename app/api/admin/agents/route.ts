@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     const profiles = (profilesResult.data ?? []) as any[];
     const landlordProfiles = (landlordProfilesResult.data ?? []) as any[];
     const landlordById = new Map(landlordProfiles.map((profile: any) => [profile.user_id, profile]));
-    const usersById = new Map(users.map((user: any) => [user.id, user]));
+    const usersById = new Map<string, any>(users.map((user: any) => [user.id, user]));
 
     let agents = profiles.map((profile: any) => {
       const user = usersById.get(profile.user_id);
