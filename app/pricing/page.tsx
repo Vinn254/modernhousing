@@ -35,6 +35,17 @@ function PricingContent() {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: 'Springfield Systems Subscription',
+          description: 'Property management subscription plans for landlords and agents.',
+          offers: plans.map(plan => ({ '@type': 'Offer', name: plan.name, price: plan.price, priceCurrency: 'KES' }))
+        }) }}
+      />
+      <main>
       <section className="hero">
         <nav className="nav">
           <Link href="/" className="logo">
@@ -92,12 +103,42 @@ function PricingContent() {
         </div>
       </section>
 
+      <section className="split-section">
+        <div className="split-grid">
+          <div className="split-content">
+            <span className="section-eyebrow">Payment Options</span>
+            <h2>Flexible payment methods.</h2>
+            <p><strong>Option 1: Subscription fee.</strong> Pay a fixed monthly, quarterly, or yearly subscription fee to access the platform.</p>
+            <p><strong>Option 2: Pay-per-use (1% platform fee).</strong> Alternatively, you can choose to pay a <strong>1% platform fee</strong> deducted automatically from every rent payment processed through the app. No upfront subscription required.</p>
+            <p>Both options give you full access to all features. You can switch between them from your dashboard settings.</p>
+            <div className="split-actions">
+              <Link href="/login" className="btn btn-primary">Get started</Link>
+              <Link href="/pricing" className="btn btn-ghost">View pricing</Link>
+            </div>
+          </div>
+          <div className="split-visual">
+            <div className="split-card split-card--animated">
+              <div className="split-card__inner">
+                <div className="split-card__icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+                <h3>Choose your payment style</h3>
+                <p>Fixed subscription or pay-as-you-go with 1% per transaction.</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <span style={{ padding: '6px 12px', borderRadius: 999, background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>Subscription</span>
+                  <span style={{ padding: '6px 12px', borderRadius: 999, background: 'rgba(14,165,233,0.12)', color: '#0284c7', fontSize: 12, fontWeight: 700 }}>1% per rent</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer>
         <div className="footer-inner">
           <div className="footer-brand"><span className="logo-mark" style={{ width: 26, height: 26, borderRadius: 7 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>Springfield Systems</div>
           <div className="footer-copy">© 2026 Springfield Systems. All rights reserved.</div>
         </div>
       </footer>
+      </main>
     </>
   );
 }

@@ -206,7 +206,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="split-section reverse">
+      <section className="split-section reverse" id="contact-us">
         <div className="split-grid">
           <div className="split-content">
             <span className="section-eyebrow">Contact Us</span>
@@ -215,7 +215,7 @@ export default function HomePage() {
             <p><strong>Email:</strong> support@springfieldsystems.com<br /><strong>Phone:</strong> +254 700 000 000<br /><strong>Hours:</strong> Mon-Fri, 8:00 AM - 6:00 PM EAT</p>
             <div className="split-actions">
               <Link href="mailto:support@springfieldsystems.com" className="btn btn-primary">Email us</Link>
-              <Link href="/help" className="btn btn-ghost">Visit help center</Link>
+              <Link href="#contact-us" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', borderColor: 'transparent' }}>Contact support</Link>
             </div>
           </div>
           <div className="split-visual">
@@ -246,7 +246,7 @@ export default function HomePage() {
       </footer>
 
       <a
-        href="https://wa.me/254700000000"
+        href="https://wa.me/254721634528"
         target="_blank"
         rel="noreferrer"
         className="whatsapp-float"
