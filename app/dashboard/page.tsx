@@ -965,10 +965,13 @@ const rentOwedByTenant = useMemo(() => {
               <h4 style={{ margin: '18px 0 10px' }}>Recent Payments</h4>
               {payments.length === 0 ? <p style={{ color: 'var(--ink-3)', margin: 0 }}>No payments recorded yet.</p> : [...payments].sort((a, b) => {
                 const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-                const aMonth = (a as any).month_due?.split(' ')[0]?.toLowerCase() || '';
-                const bMonth = (b as any).month_due?.split(' ')[0]?.toLowerCase() || '';
-                const aOrder = monthNames.indexOf(aMonth) + 1;
-                const bOrder = monthNames.indexOf(bMonth) + 1;
+                const aParts = ((a as any).month_due || '').split(' ');
+                const bParts = ((b as any).month_due || '').split(' ');
+                const aYear = Number(aParts[1]) || 0;
+                const bYear = Number(bParts[1]) || 0;
+                if (aYear !== bYear) return aYear - bYear;
+                const aOrder = monthNames.indexOf((aParts[0] || '').toLowerCase()) + 1;
+                const bOrder = monthNames.indexOf((bParts[0] || '').toLowerCase()) + 1;
                 return aOrder - bOrder;
               }).slice(0, 6).map((payment) => (
                 <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>
