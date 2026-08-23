@@ -350,13 +350,17 @@ export default function PaymentsPage() {
       allPayments = [...allPayments, ...legacyPayments];
     }
 
-    allPayments.sort((a, b) => {
+allPayments.sort((a, b) => {
       const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-      const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-      const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
+      const aParts = (a as any).month_due ? (a as any).month_due.split(' ') : [];
+      const bParts = (b as any).month_due ? (b as any).month_due.split(' ') : [];
+      const aMonth = monthNames.indexOf((aParts[0] || '').toLowerCase()) + 1;
+      const bMonth = monthNames.indexOf((bParts[0] || '').toLowerCase()) + 1;
+      const aYear = Number(aParts[1]) || 0;
+      const bYear = Number(bParts[1]) || 0;
+      if (aYear !== bYear) return aYear - bYear;
       if (aMonth !== bMonth) return aMonth - bMonth;
-      if (a.month_due !== b.month_due) return (a.month_due || '').localeCompare(a.month_due || '');
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      return a.localeCompare(b);
     });
     setPayments(allPayments);
     setLoading(false);
@@ -623,7 +627,7 @@ export default function PaymentsPage() {
     const finalBalance = recordsToDownload.length > 0 ? (recordsToDownload[recordsToDownload.length - 1] as any).running_balance ?? recordsToDownload[recordsToDownload.length - 1].balance_remaining : 0;
 
     const headers = ['Tenant', 'Month Due', 'Trans Code', 'Due', 'Paid', 'Running Balance', 'Date'];
-    const colX = [50, 160, 250, 340, 420, 500, 570];
+    const colX = [50, 190, 280, 365, 445, 520, 580];
     headers.forEach((h, i) => {
       page.drawText(h, { x: colX[i], y, font: boldFont, size: 10, color: rgb(0.25, 0.25, 0.25) });
     });
@@ -635,15 +639,15 @@ export default function PaymentsPage() {
       if (idx % 2 === 0) {
         page.drawRectangle({ x: 48, y: y - 4, width: 604, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
       }
-      page.drawText(payment.tenant.substring(0, 12), { x: 50, y, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
-      page.drawText((payment as any).month_due || payment.description || '—', { x: 160, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 250, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
-      page.drawText(formatCurrency((payment as any).due_amount || payment.amount).replace('KES', ''), { x: 340, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 420, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
-      page.drawText(formatCurrency((payment as any).running_balance ?? payment.balance_remaining).replace('KES', ''), { x: 500, y, font, size: 9, color: ((payment as any).running_balance ?? payment.balance_remaining) < 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
+      page.drawText(payment.tenant.substring(0, 25), { x: 50, y, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
+      page.drawText((payment as any).month_due || payment.description || '—', { x: 190, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 280, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
+      page.drawText(formatCurrency((payment as any).due_amount || payment.amount).replace('KES', ''), { x: 365, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 445, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
+      page.drawText(formatCurrency((payment as any).running_balance ?? payment.balance_remaining).replace('KES', ''), { x: 520, y, font, size: 9, color: ((payment as any).running_balance ?? payment.balance_remaining) < 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
       page.drawText((payment as any).source === 'bills'
         ? ((payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString('en-GB') : '—')
-        : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 570, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+        : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 580, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
       y -= 16;
     });
 

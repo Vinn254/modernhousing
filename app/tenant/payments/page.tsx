@@ -34,9 +34,17 @@ const MONTH_ORDER: Record<string, number> = {
   july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
 };
 
+function getSortKey(month: string): { year: number; month: number } {
+  const parts = (month?.split(' ') || []);
+  const year = Number(parts[1]) || 0;
+  const monthName = (parts[0] || '').toLowerCase();
+  const monthNum = MONTH_ORDER[monthName] || 0;
+  return { year, month: monthNum };
+}
+
 function getMonthSortValue(month: string): number {
-  const normalized = (month?.split(' ')[0] || '').toLowerCase();
-  return MONTH_ORDER[normalized] || 0;
+  const key = getSortKey(month);
+  return key.year * 100 + key.month;
 }
 
 export default function TenantPaymentsPage() {
@@ -121,9 +129,15 @@ export default function TenantPaymentsPage() {
     }
 
     allBills.sort((a, b) => {
-      const aOrder = getMonthSortValue(a.month_due);
-      const bOrder = getMonthSortValue(b.month_due);
-      if (aOrder !== bOrder) return aOrder - bOrder;
+      const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+      const aParts = (a.month_due || '').split(' ');
+      const bParts = (b.month_due || '').split(' ');
+      const aYear = Number(aParts[1]) || 0;
+      const bYear = Number(bParts[1]) || 0;
+      if (aYear !== bYear) return aYear - bYear;
+      const aMonth = monthNames.indexOf((aParts[0] || '').toLowerCase()) + 1;
+      const bMonth = monthNames.indexOf((bParts[0] || '').toLowerCase()) + 1;
+      if (aMonth !== bMonth) return aMonth - bMonth;
       const isOverdueA = a.transaction_type === 'overdue';
       const isOverdueB = b.transaction_type === 'overdue';
       if (isOverdueA !== isOverdueB) return isOverdueA ? 1 : -1;
@@ -383,10 +397,10 @@ const getTypeLabel = (type: string) => {
                 </thead>
                 <tbody>
 {invoices.sort((a, b) => {
-                     const aOrder = getMonthSortValue(a.month_due);
-                     const bOrder = getMonthSortValue(b.month_due);
-                     return aOrder - bOrder || (a.month_due || '').localeCompare(a.month_due || '');
-                   }).map(inv => (
+                      const aOrder = getMonthSortValue(a.month_due);
+                      const bOrder = getMonthSortValue(b.month_due);
+                      return aOrder - bOrder || (a.month_due || '').localeCompare(b.month_due || '');
+                    }).map(inv => (
                     <tr key={inv.id} style={{ backgroundColor: (() => { const mk = (inv.month_due || '').split(' ')[0]?.toLowerCase() || ''; return monthRowColors.get(mk) || ''; })() }}>
                       <td style={{ textTransform: 'capitalize' }}>{(() => { const parts = (inv.month_due || '').trim().split(' '); return parts.length > 2 ? parts.slice(0, 2).join(' ') : inv.month_due; })() || '-'}</td>
                       <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getInvoiceTypeLabel(inv.invoice_type)}</span></td>

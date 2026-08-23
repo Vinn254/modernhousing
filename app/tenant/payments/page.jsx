@@ -3,13 +3,17 @@ import { useEffect, useState } from 'react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { supabase } from '../../../lib/supabaseClient';
 const MONTH_ORDER = {
-    january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
-    july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
-};
-function getMonthSortValue(month) {
-    const normalized = (month || '').toLowerCase();
-    return MONTH_ORDER[normalized] || 0;
-}
+     january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+     july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+ };
+ const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+ function getSortKey(month) {
+     const parts = (month || '').split(' ');
+     const year = Number(parts[1]) || 0;
+     const monthName = (parts[0] || '').toLowerCase();
+     const monthNum = MONTH_ORDER[monthName] || 0;
+     return { year, month: monthNum };
+ }
 export default function TenantPaymentsPage() {
     const [user, setUser] = useState(null);
     const [bills, setBills] = useState([]);
@@ -70,11 +74,11 @@ export default function TenantPaymentsPage() {
             }));
             allBills = [...allBills, ...legacyBills];
         }
-        allBills.sort((a, b) => {
-            const aOrder = getMonthSortValue(a.month_due);
-            const bOrder = getMonthSortValue(b.month_due);
-            if (aOrder !== bOrder)
-                return aOrder - bOrder;
+allBills.sort((a, b) => {
+            const aKey = getSortKey(a.month_due);
+            const bKey = getSortKey(b.month_due);
+            if (aKey.year !== bKey.year) return aKey.year - bKey.year;
+            if (aKey.month !== bKey.month) return aKey.month - bKey.month;
             const isOverdueA = a.transaction_type === 'overdue';
             const isOverdueB = b.transaction_type === 'overdue';
             if (isOverdueA !== isOverdueB)

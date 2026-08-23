@@ -323,9 +323,15 @@ const rentOwedByTenant = useMemo(() => {
           // Sort payments by due date for presentation
           const sorted = entry.payments.sort((a: any, b: any) => {
             const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-            const aMonth = a.month_due ? monthNames.indexOf(a.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-            const bMonth = b.month_due ? monthNames.indexOf(b.month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-            if (aMonth !== bMonth) return aMonth - bMonth; return (a.month_due || '').localeCompare(b.month_due || '');
+            const aParts = (a.month_due || '').split(' ');
+            const bParts = (b.month_due || '').split(' ');
+            const aYear = Number(aParts[1]) || 0;
+            const bYear = Number(bParts[1]) || 0;
+            if (aYear !== bYear) return aYear - bYear;
+            const aMonth = monthNames.indexOf(aParts[0]?.toLowerCase() || '') + 1;
+            const bMonth = monthNames.indexOf(bParts[0]?.toLowerCase() || '') + 1;
+            if (aMonth !== bMonth) return aMonth - bMonth;
+            return a.localeCompare(b);
           });
           
           // Net rent owed = outstanding balance - paid overdue payments (cannot go negative)
