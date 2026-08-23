@@ -218,12 +218,27 @@ export default function PaymentsPage() {
   };
 
   const paymentsWithBalance = useMemo(() => {
+    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    const parseMonthDue = (monthDue: string | undefined): { year: number; month: number } => {
+      if (!monthDue) return { year: 0, month: 0 };
+      const trimmed = monthDue.trim();
+      const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})$/);
+      if (ymdMatch) {
+        return { year: parseInt(ymdMatch[1], 10), month: parseInt(ymdMatch[2], 10) };
+      }
+      const parts = trimmed.split(' ');
+      const monthName = (parts[0] || '').toLowerCase();
+      const year = Number(parts[1]) || 0;
+      const monthIdx = monthNames.indexOf(monthName);
+      return { year, month: monthIdx >= 0 ? monthIdx + 1 : 0 };
+    };
+    
     const sorted = [...visiblePayments].sort((a, b) => {
-      const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-      const aMonth = (a as any).month_due ? monthNames.indexOf((a as any).month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-      const bMonth = (b as any).month_due ? monthNames.indexOf((b as any).month_due.split(' ')[0]?.toLowerCase() || '') + 1 : 0;
-      if (aMonth !== bMonth) return aMonth - bMonth;
-      return (a as any).month_due?.localeCompare((b as any).month_due || '') || 0;
+      const aKey = parseMonthDue((a as any).month_due);
+      const bKey = parseMonthDue((b as any).month_due);
+      if (aKey.year !== bKey.year) return aKey.year - bKey.year;
+      if (aKey.month !== bKey.month) return aKey.month - bKey.month;
+      return String((a as any).month_due || '').localeCompare(String((b as any).month_due || ''));
     });
     return calculateWithRunningBalance(sorted);
   }, [visiblePayments]);
