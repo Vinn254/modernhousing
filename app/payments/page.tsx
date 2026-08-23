@@ -351,17 +351,17 @@ export default function PaymentsPage() {
     }
 
 allPayments.sort((a, b) => {
-      const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-      const aParts = (a as any).month_due ? (a as any).month_due.split(' ') : [];
-      const bParts = (b as any).month_due ? (b as any).month_due.split(' ') : [];
-      const aMonth = monthNames.indexOf((aParts[0] || '').toLowerCase()) + 1;
-      const bMonth = monthNames.indexOf((bParts[0] || '').toLowerCase()) + 1;
-      const aYear = Number(aParts[1]) || 0;
-      const bYear = Number(bParts[1]) || 0;
-      if (aYear !== bYear) return aYear - bYear;
-      if (aMonth !== bMonth) return aMonth - bMonth;
-      return a.localeCompare(b);
-    });
+       const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+       const aParts = (a as any).month_due ? (a as any).month_due.split(' ') : [];
+       const bParts = (b as any).month_due ? (b as any).month_due.split(' ') : [];
+       const aMonth = monthNames.indexOf((aParts[0] || '').toLowerCase()) + 1;
+       const bMonth = monthNames.indexOf((bParts[0] || '').toLowerCase()) + 1;
+       const aYear = Number(aParts[1]) || 0;
+       const bYear = Number(bParts[1]) || 0;
+       if (aYear !== bYear) return aYear - bYear;
+       if (aMonth !== bMonth) return aMonth - bMonth;
+       return String((a as any).month_due).localeCompare(String((b as any).month_due));
+     });
     setPayments(allPayments);
     setLoading(false);
   }
