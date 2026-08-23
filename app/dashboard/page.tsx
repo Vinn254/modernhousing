@@ -318,25 +318,33 @@ const rentOwedByTenant = useMemo(() => {
         }
       });
 
-      return Array.from(byTenant.values())
+return Array.from(byTenant.values())
         .map((entry: any) => {
-          // Sort payments by due date for presentation
-          const sorted = entry.payments.sort((a: any, b: any) => {
-            const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-            const aParts = (a.month_due || '').split(' ');
-            const bParts = (b.month_due || '').split(' ');
-            const aYear = Number(aParts[1]) || 0;
-            const bYear = Number(bParts[1]) || 0;
-            if (aYear !== bYear) return aYear - bYear;
-            const aMonth = monthNames.indexOf(aParts[0]?.toLowerCase() || '') + 1;
-            const bMonth = monthNames.indexOf(bParts[0]?.toLowerCase() || '') + 1;
-            if (aMonth !== bMonth) return aMonth - bMonth;
-            return a.localeCompare(b);
-          });
+          const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+          const parseMonthDue = (monthDue: string): { year: number; month: number } => {
+            const trimmed = monthDue.trim();
+            const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})$/);
+            if (ymdMatch) {
+              return { year: parseInt(ymdMatch[1], 10), month: parseInt(ymdMatch[2], 10) };
+            }
+            const parts = trimmed.split(' ');
+            const monthName = (parts[0] || '').toLowerCase();
+            const year = Number(parts[1]) || 0;
+            const monthIdx = monthNames.indexOf(monthName);
+            return { year, month: monthIdx >= 0 ? monthIdx + 1 : 0 };
+          };
           
+          const sorted = entry.payments.sort((a: any, b: any) => {
+            const aKey = parseMonthDue(a.month_due || '');
+            const bKey = parseMonthDue(b.month_due || '');
+            if (aKey.year !== bKey.year) return aKey.year - bKey.year;
+            if (aKey.month !== bKey.month) return aKey.month - bKey.month;
+            return String(a.month_due).localeCompare(String(b.month_due));
+          });
+
           // Net rent owed = outstanding balance - paid overdue payments (cannot go negative)
           const netBalance = Math.max(entry.balance_remaining - entry.paid_overdue_amount, 0);
-          
+
           return {
             ...entry,
             net_balance: netBalance,
@@ -345,7 +353,7 @@ const rentOwedByTenant = useMemo(() => {
           };
         })
         .filter((t: any) => t.net_balance > 0);
-    }, [payments, tenants]);
+      }, [payments, tenants]);
 
   const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.net_balance || 0), 0);
 
@@ -965,13 +973,24 @@ const rentOwedByTenant = useMemo(() => {
               <h4 style={{ margin: '18px 0 10px' }}>Recent Payments</h4>
               {payments.length === 0 ? <p style={{ color: 'var(--ink-3)', margin: 0 }}>No payments recorded yet.</p> : [...payments].sort((a, b) => {
                 const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-                const aParts = ((a as any).month_due || '').split(' ');
-                const bParts = ((b as any).month_due || '').split(' ');
-                const aYear = Number(aParts[1]) || 0;
-                const bYear = Number(bParts[1]) || 0;
-                if (aYear !== bYear) return aYear - bYear;
-                const aOrder = monthNames.indexOf((aParts[0] || '').toLowerCase()) + 1;
-                const bOrder = monthNames.indexOf((bParts[0] || '').toLowerCase()) + 1;
+                const parseMonthDue = (monthDue: string | undefined): { year: number; month: number } => {
+                  if (!monthDue) return { year: 0, month: 0 };
+                  const trimmed = monthDue.trim();
+                  const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})$/);
+                  if (ymdMatch) {
+                    return { year: parseInt(ymdMatch[1], 10), month: parseInt(ymdMatch[2], 10) };
+                  }
+                  const parts = trimmed.split(' ');
+                  const monthName = (parts[0] || '').toLowerCase();
+                  const year = Number(parts[1]) || 0;
+                  const monthIdx = monthNames.indexOf(monthName);
+                  return { year, month: monthIdx >= 0 ? monthIdx + 1 : 0 };
+                };
+                const aKey = parseMonthDue((a as any).month_due);
+                const bKey = parseMonthDue((b as any).month_due);
+                if (aKey.year !== bKey.year) return aKey.year - bKey.year;
+                const aOrder = aKey.month;
+                const bOrder = bKey.month;
                 return aOrder - bOrder;
               }).slice(0, 6).map((payment) => (
                 <div key={payment.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line-soft)' }}>

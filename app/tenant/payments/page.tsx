@@ -35,7 +35,13 @@ const MONTH_ORDER: Record<string, number> = {
 };
 
 function getSortKey(month: string): { year: number; month: number } {
-  const parts = (month?.split(' ') || []);
+  if (!month) return { year: 0, month: 0 };
+  const trimmed = month.trim();
+  const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})$/);
+  if (ymdMatch) {
+    return { year: parseInt(ymdMatch[1], 10), month: parseInt(ymdMatch[2], 10) };
+  }
+  const parts = trimmed.split(' ');
   const year = Number(parts[1]) || 0;
   const monthName = (parts[0] || '').toLowerCase();
   const monthNum = MONTH_ORDER[monthName] || 0;
@@ -130,14 +136,24 @@ export default function TenantPaymentsPage() {
 
     allBills.sort((a, b) => {
       const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-      const aParts = (a.month_due || '').split(' ');
-      const bParts = (b.month_due || '').split(' ');
-      const aYear = Number(aParts[1]) || 0;
-      const bYear = Number(bParts[1]) || 0;
-      if (aYear !== bYear) return aYear - bYear;
-      const aMonth = monthNames.indexOf((aParts[0] || '').toLowerCase()) + 1;
-      const bMonth = monthNames.indexOf((bParts[0] || '').toLowerCase()) + 1;
-      if (aMonth !== bMonth) return aMonth - bMonth;
+      const parseMonthDue = (monthDue: string): { year: number; month: number } => {
+        const trimmed = monthDue.trim();
+        const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})$/);
+        if (ymdMatch) {
+          return { year: parseInt(ymdMatch[1], 10), month: parseInt(ymdMatch[2], 10) };
+        }
+        const parts = trimmed.split(' ');
+        const monthName = (parts[0] || '').toLowerCase();
+        const year = Number(parts[1]) || 0;
+        const monthIdx = monthNames.indexOf(monthName);
+        return { year, month: monthIdx >= 0 ? monthIdx + 1 : 0 };
+      };
+      
+      const aKey = parseMonthDue(a.month_due || '');
+      const bKey = parseMonthDue(b.month_due || '');
+      
+      if (aKey.year !== bKey.year) return aKey.year - bKey.year;
+      if (aKey.month !== bKey.month) return aKey.month - bKey.month;
       const isOverdueA = a.transaction_type === 'overdue';
       const isOverdueB = b.transaction_type === 'overdue';
       if (isOverdueA !== isOverdueB) return isOverdueA ? 1 : -1;

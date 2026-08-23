@@ -352,15 +352,30 @@ export default function PaymentsPage() {
 
 allPayments.sort((a, b) => {
        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-       const aParts = (a as any).month_due ? (a as any).month_due.split(' ') : [];
-       const bParts = (b as any).month_due ? (b as any).month_due.split(' ') : [];
-       const aMonth = monthNames.indexOf((aParts[0] || '').toLowerCase()) + 1;
-       const bMonth = monthNames.indexOf((bParts[0] || '').toLowerCase()) + 1;
-       const aYear = Number(aParts[1]) || 0;
-       const bYear = Number(bParts[1]) || 0;
-       if (aYear !== bYear) return aYear - bYear;
-       if (aMonth !== bMonth) return aMonth - bMonth;
-       return String((a as any).month_due).localeCompare(String((b as any).month_due));
+       const parseMonthDue = (monthDue: string | undefined): { year: number; month: number } => {
+         if (!monthDue) return { year: 0, month: 0 };
+         const trimmed = monthDue.trim();
+         
+         // Check for YYYY-MM format (e.g., "2026-06")
+         const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})$/);
+         if (ymdMatch) {
+           return { year: parseInt(ymdMatch[1], 10), month: parseInt(ymdMatch[2], 10) };
+         }
+         
+         // Check for "Month YYYY" format (e.g., "June 2026")
+         const parts = trimmed.split(' ');
+         const monthName = (parts[0] || '').toLowerCase();
+         const year = Number(parts[1]) || 0;
+         const monthIdx = monthNames.indexOf(monthName);
+         return { year, month: monthIdx >= 0 ? monthIdx + 1 : 0 };
+       };
+       
+       const aKey = parseMonthDue((a as any).month_due);
+       const bKey = parseMonthDue((b as any).month_due);
+       
+       if (aKey.year !== bKey.year) return aKey.year - bKey.year;
+       if (aKey.month !== bKey.month) return aKey.month - bKey.month;
+       return String((a as any).month_due || '').localeCompare(String((b as any).month_due || ''));
      });
     setPayments(allPayments);
     setLoading(false);

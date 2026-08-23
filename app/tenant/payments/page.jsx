@@ -8,7 +8,13 @@ const MONTH_ORDER = {
  };
  const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
  function getSortKey(month) {
-     const parts = (month || '').split(' ');
+     if (!month) return { year: 0, month: 0 };
+     const trimmed = month.trim();
+     const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})$/);
+     if (ymdMatch) {
+         return { year: parseInt(ymdMatch[1], 10), month: parseInt(ymdMatch[2], 10) };
+     }
+     const parts = trimmed.split(' ');
      const year = Number(parts[1]) || 0;
      const monthName = (parts[0] || '').toLowerCase();
      const monthNum = MONTH_ORDER[monthName] || 0;
