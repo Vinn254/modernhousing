@@ -294,26 +294,98 @@ export async function PATCH(request: NextRequest) {
        return NextResponse.json({ message: 'Landlord approved and activated.', approved: true });
      }
 
-    if (action === 'request_subscription') {
-      if (!userId) return badRequest('Landlord ID is required.');
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+     if (action === 'request_subscription') {
+       if (!userId) return badRequest('Landlord ID is required.');
+       const { data: profile, error: profileError } = await supabaseAdmin
+         .from('profiles')
+         .select('*')
+         .eq('user_id', userId)
+         .single();
 
-      if (profileError && profileError.code !== 'PGRST116') throw profileError;
-      if (!profile) return badRequest('Landlord not found.');
+       if (profileError && profileError.code !== 'PGRST116') throw profileError;
+       if (!profile) return badRequest('Landlord not found.');
 
-      await sendEmail({
-        to: profile.email,
-        subject: 'Springfield Systems - Subscription Required',
-        html: `<h2>Subscription Required</h2><p>Hello ${profile.full_name}, your landlord account is pending activation. Please complete your subscription payment to activate your workspace.</p>`,
-        text: `Subscription required for ${profile.full_name}.`,
-      });
+       await sendEmail({
+         to: profile.email,
+         subject: 'Springfield Systems - Subscription Required',
+         html: `<h2>Subscription Required</h2><p>Hello ${profile.full_name}, your landlord account is pending activation. Please complete your subscription payment to activate your workspace.</p>`,
+         text: `Subscription required for ${profile.full_name}.`,
+       });
 
-      return NextResponse.json({ message: 'Subscription request email sent.' });
-    }
+       return NextResponse.json({ message: 'Subscription request email sent.' });
+     }
+
+     if (action === 'deactivate') {
+       if (!userId) return badRequest('Landlord ID is required.');
+       
+       const { data: profile, error: profileError } = await supabaseAdmin
+         .from('profiles')
+         .update({ 
+           status: 'inactive', 
+           approval_status: 'deactivated',
+           deactivated_at: new Date().toISOString(),
+         })
+         .eq('user_id', userId)
+         .select('*')
+         .single();
+
+       if (profileError) throw profileError;
+
+       // Update user metadata to mark as deactivated
+       await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+         method: 'PUT',
+         headers: {
+           'Content-Type': 'application/json',
+           apikey: serviceRoleKey,
+           Authorization: `Bearer ${serviceRoleKey}`,
+         },
+         body: JSON.stringify({
+           user_metadata: {
+             status: 'inactive',
+             approval_status: 'deactivated',
+             deactivated_at: new Date().toISOString(),
+           },
+         }),
+       });
+
+       return NextResponse.json({ message: 'Landlord deactivated. They can no longer access landlord pages.', deactivated: true });
+     }
+
+     if (action === 'reactivate') {
+       if (!userId) return badRequest('Landlord ID is required.');
+       
+       const { data: profile, error: profileError } = await supabaseAdmin
+         .from('profiles')
+         .update({ 
+           status: 'active', 
+           approval_status: 'approved',
+           deactivated_at: null,
+         })
+         .eq('user_id', userId)
+         .select('*')
+         .single();
+
+       if (profileError) throw profileError;
+
+       // Update user metadata to mark as active
+       await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+         method: 'PUT',
+         headers: {
+           'Content-Type': 'application/json',
+           apikey: serviceRoleKey,
+           Authorization: `Bearer ${serviceRoleKey}`,
+         },
+         body: JSON.stringify({
+           user_metadata: {
+             status: 'active',
+             approval_status: 'approved',
+             deactivated_at: null,
+           },
+         }),
+       });
+
+       return NextResponse.json({ message: 'Landlord re-activated successfully.', reactivated: true });
+     }
 
     const fullName = String(body.fullName ?? '').trim();
     const status = body.status as LandlordProfile['status'] | undefined;

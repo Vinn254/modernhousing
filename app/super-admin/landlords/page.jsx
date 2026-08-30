@@ -205,6 +205,38 @@ export default function LandlordManagementPage() {
         }
         setMessage(`Password reset for ${landlord.full_name}.`);
     }
+    async function handleDeactivate(landlord) {
+        if (!confirm(`Deactivate ${landlord.full_name}? They will not be able to access landlord pages until reactivated. Their subscription must be renewed to be reactivated.`))
+            return;
+        const response = await fetch('/api/landlords', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'deactivate', userId: landlord.id }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            setError(result.message ?? 'Unable to deactivate landlord.');
+            return;
+        }
+        setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, status: 'inactive', approval_status: 'deactivated' } : item)));
+        setMessage(`${landlord.full_name} has been deactivated.`);
+    }
+    async function handleReactivate(landlord) {
+        if (!confirm(`Reactivate ${landlord.full_name}? They will regain access to landlord pages.`))
+            return;
+        const response = await fetch('/api/landlords', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'reactivate', userId: landlord.id }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            setError(result.message ?? 'Unable to reactivate landlord.');
+            return;
+        }
+        setLandlords((current) => current.map((item) => (item.id === landlord.id ? { ...item, status: 'active', approval_status: 'approved' } : item)));
+        setMessage(`${landlord.full_name} has been reactivated.`);
+    }
     async function handleUpgradeSubscription(landlord) {
         const plans = ['monthly', 'quarterly', 'yearly'];
         const plan = prompt('Enter new subscription plan (monthly, quarterly, or yearly):\nCurrent subscription: ' + (getSubscriptionForLandlord(landlord, subscriptions)?.plan || 'none'));
@@ -345,7 +377,8 @@ export default function LandlordManagementPage() {
                               {subscription && <button className="action-button info" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => openNotification(subscription, landlord)}>Notify</button>}
                               {subscription && <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleUpgradeSubscription(landlord)}>Upgrade</button>}
                               {landlord.status !== 'active' && <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleApprove(landlord)}>Approve</button>}
-                              <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleResetPassword(landlord)}>Reset Password</button>
+                              {landlord.status === 'active' && <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleDeactivate(landlord)}>Deactivate</button>}
+                              {landlord.status === 'inactive' && landlord.approval_status === 'deactivated' && <button className="action-button primary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleReactivate(landlord)}>Reactivate</button>}
                               <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleDeleteLandlord(landlord)}>Delete</button>
                             </div>
                           </td>

@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabaseClient';
 import Sparkline from '../components/Sparkline';
 import DonutChart from '../components/DonutChart';
 import { DashboardHeader, FormField, PremiumTable, SectionCard, StatCard, ThemeToggle } from '../components/dashboard-ui';
+import { useDeactivationGuard, DeactivationPopup } from '../components/DeactivationGuard';
 
 interface DashboardStats {
   properties: number;
@@ -141,8 +142,9 @@ export default function DashboardPage() {
    const [landlordId, setLandlordId] = useState('');
    const [userRole, setUserRole] = useState('');
    const [roleLoaded, setRoleLoaded] = useState(false);
-const [message, setMessage] = useState('');
-  const [assignedPropertyParam, setAssignedPropertyParam] = useState('');
+   const [message, setMessage] = useState('');
+   const [assignedPropertyParam, setAssignedPropertyParam] = useState('');
+   const { isDeactivated, deactivationInfo, loading: guardLoading, handleLogout } = useDeactivationGuard();
   const [utilityTenantId, setUtilityTenantId] = useState('');
   const [utilityType, setUtilityType] = useState('water');
   const [utilityAmount, setUtilityAmount] = useState('');
@@ -167,6 +169,12 @@ const [message, setMessage] = useState('');
   async function loadDashboard(refresh = false) {
     if (refresh) setRefreshing(true); else setLoading(true);
     setError('');
+
+    // Don't load data if landlord is deactivated
+    if (isDeactivated) {
+      if (refresh) setRefreshing(false); else setLoading(false);
+      return;
+    }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -720,16 +728,21 @@ return Array.from(byTenant.values())
 
   if (!roleLoaded) {
     return (
+      <>
+      {isDeactivated && <DeactivationPopup landlordName={deactivationInfo?.landlordName} onLogout={handleLogout} />}
       <main className="container" style={{ overflowX: 'hidden' }}>
         <DashboardHeader title={isAgent ? 'Agent Dashboard' : 'Landlord Dashboard'} subtitle="Preparing your workspace and recent activity…" action={<ThemeToggle />} />
         <SectionCard title="Loading dashboard" subtitle="Please wait while we load your workspace.">
           <p style={{ color: 'var(--ink-3)', margin: 0 }}>Fetching the latest metrics, tenants, and payment activity.</p>
         </SectionCard>
       </main>
+      </>
     );
   }
 
   return (
+    <>
+    {isDeactivated && <DeactivationPopup landlordName={deactivationInfo?.landlordName} onLogout={handleLogout} />}
     <main className="container" style={{ overflowX: 'hidden' }}>
       <DashboardHeader
         title={isAgent ? 'Agent Dashboard' : 'Landlord Dashboard'}
@@ -1044,8 +1057,9 @@ return Array.from(byTenant.values())
           </div>
         )}
       </main>
-    );
-  }
+    </>
+  );
+}
 
 
 
