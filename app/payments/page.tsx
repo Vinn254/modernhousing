@@ -797,13 +797,11 @@ allPayments.sort((a, b) => {
           <article className="card" style={{ marginTop: 24, background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' }}>
             <div className="card-label">Payment Instructions</div>
             <h3 style={{ marginBottom: 16 }}>Tenant Payment Details</h3>
-            <p style={{ color: '#111827', marginBottom: 12 }}>Share these details with tenants for manual payments via M-Pesa:</p>
+            <p style={{ color: '#111827', marginBottom: 12 }}>Share these details with tenants for manual payments via M-Pesa Paybill. The account number is the short code assigned to each unit.</p>
             <div style={{ padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '14px', color: '#111827' }}>
-              {paybill && <div><strong>Paybill:</strong> {paybill}{paybillAccount ? ` (Account: ${paybillAccount})` : ''}</div>}
-              {till && <div><strong>Till:</strong> {till}</div>}
-              {pochi && <div><strong>Pochi la Biashara:</strong> {pochi}</div>}
-              {mobile && <div><strong>Mobile:</strong> {mobile}</div>}
-              {!paybill && !till && !pochi && !mobile && <div>No payment details configured. Click "Edit Payment Details" to add.</div>}
+              {paybill && <div><strong>Paybill Number:</strong> {paybill}</div>}
+              <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants should use the short code from their unit as the account number when paying via Paybill.</div>
+              {!paybill && <div>No paybill configured. Click "Edit Payment Details" to add.</div>}
             </div>
             <button onClick={() => setShowSettings(true)} className="btn btn-ghost" style={{ marginTop: 12, fontSize: '14px', padding: '10px 16px', fontWeight: 600, background: '#f3f4f6', color: '#111827', border: '1px solid #d1d5db' }}>Edit Payment Details</button>
           </article>
@@ -813,8 +811,13 @@ allPayments.sort((a, b) => {
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div className="card" style={{ maxWidth: 500, width: '90%' }}>
               <div className="card-label">Payment Settings</div>
-              <h3 style={{ marginBottom: 16 }}>Configure Daraja & Payment Details</h3>
+              <h3 style={{ marginBottom: 16 }}>Configure Paybill & Daraja</h3>
               <form onSubmit={saveSettings} className="form-grid">
+                <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>M-Pesa Paybill Number</h4>
+                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 8px 0' }}>This is the paybill number that tenants will use to make payments. The account number is the short code of each unit (configured when adding units).</p>
+                <input value={paybill} onChange={e => setPaybill(e.target.value)} placeholder="Paybill Number" />
+                <input value={paybillAccount} onChange={e => setPaybillAccount(e.target.value)} placeholder="Default Account Number (optional - usually unit short code)" />
+
                 <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>M-Pesa Daraja Keys</h4>
                 <input value={consumerKey} onChange={e => setConsumerKey(e.target.value)} placeholder="Consumer Key" />
                 <input value={consumerSecret} onChange={e => setConsumerSecret(e.target.value)} placeholder="Consumer Secret" />
@@ -830,22 +833,6 @@ allPayments.sort((a, b) => {
                   <input type="checkbox" checked={paymentSplitEnabled} onChange={e => setPaymentSplitEnabled(e.target.checked)} />
                   Enable PesaFlow Split Payments
                 </label>
-
-                <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>Payment Method Selection</h4>
-                <select value={selectedMethod} onChange={e => setSelectedMethod(e.target.value as any)}>
-                  {paymentMethods.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-
-                <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>Payment Number</h4>
-                {selectedMethod === 'paybill' && (
-                  <>
-                    <input value={paybill} onChange={e => setPaybill(e.target.value)} placeholder="Paybill Number" />
-                    <input value={paybillAccount} onChange={e => setPaybillAccount(e.target.value)} placeholder="Account Number" />
-                  </>
-                )}
-                {selectedMethod === 'till' && <input value={till} onChange={e => setTill(e.target.value)} placeholder="Till Number" />}
-                {selectedMethod === 'pochi' && <input value={pochi} onChange={e => setPochi(e.target.value)} placeholder="Pochi Number" />}
-                {selectedMethod === 'mobile' && <input value={mobile} onChange={e => setMobile(e.target.value)} placeholder="Mobile Number" />}
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
                   <button type="submit">Save Settings</button>

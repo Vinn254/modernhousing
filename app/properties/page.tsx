@@ -12,6 +12,7 @@ interface Unit {
   rent_amount: number;
   occupancy_status: string;
   unit_type?: string;
+  short_code?: string;
 }
 
 interface Property {
@@ -55,11 +56,11 @@ export default function PropertiesPage() {
   const [showPaymentsModal, setShowPaymentsModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [form, setForm] = useState(emptyForm);
-  const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumbers: '', rentAmount: '', unitType: '' });
+  const [unitForm, setUnitForm] = useState({ propertyId: '', unitNumbers: '', rentAmount: '', unitType: '', shortCode: '' });
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
-  const [unitEditForm, setUnitEditForm] = useState({ unitNumber: '', rentAmount: '', unitType: '', occupancyStatus: '' });
+  const [unitEditForm, setUnitEditForm] = useState({ unitNumber: '', rentAmount: '', unitType: '', occupancyStatus: '', shortCode: '' });
   const [showUnitEdit, setShowUnitEdit] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -219,9 +220,15 @@ const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
       return;
     }
 
+    if (!unitForm.shortCode || !unitForm.shortCode.trim()) {
+      setError('Short code is required for each unit. This is used as the paybill account number.');
+      return;
+    }
+
     const unitNumbers = unitForm.unitNumbers.split(',').map(u => u.trim()).filter(Boolean);
     const rentAmount = Number(unitForm.rentAmount) || 0;
     const unitType = unitForm.unitType;
+    const shortCode = unitForm.shortCode.trim();
 
     for (const unitNumber of unitNumbers) {
       const response = await fetch('/api/units', {
@@ -232,6 +239,7 @@ const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
           unitNumber,
           rentAmount,
           unitType,
+          shortCode,
           occupancyStatus: 'vacant',
         }),
       });
@@ -244,7 +252,7 @@ const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
     }
 
     setMessage(`${unitNumbers.length} unit(s) added successfully.`);
-    setUnitForm({ propertyId: '', unitNumbers: '', rentAmount: '', unitType: '' });
+    setUnitForm({ propertyId: '', unitNumbers: '', rentAmount: '', unitType: '', shortCode: '' });
     await Promise.all([loadProperties(), loadUnits()]);
   }
 
@@ -255,6 +263,7 @@ const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
       rentAmount: String(unit.rent_amount ?? ''),
       unitType: unit.unit_type ?? '',
       occupancyStatus: unit.occupancy_status ?? 'vacant',
+      shortCode: unit.short_code ?? '',
     });
     setShowUnitEdit(true);
     setMessage('');
@@ -273,6 +282,7 @@ const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
         rentAmount: Number(unitEditForm.rentAmount) || 0,
         unitType: unitEditForm.unitType || null,
         occupancyStatus: unitEditForm.occupancyStatus,
+        shortCode: unitEditForm.shortCode,
       }),
     });
 
@@ -515,6 +525,7 @@ for (let i = 0; i < 12; i++) {
 <form onSubmit={handleAddUnits} className="form-grid">
             <FormField label="Property"><select value={unitForm.propertyId} onChange={(e) => setUnitForm(f => ({ ...f, propertyId: e.target.value }))} required><option value="">Select property</option>{properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></FormField>
             <FormField label="Unit numbers"><input value={unitForm.unitNumbers} onChange={(e) => setUnitForm(f => ({ ...f, unitNumbers: e.target.value }))} required placeholder="Unit numbers (A1, A2, B1, ...)" /></FormField>
+            <FormField label="Short code (Paybill account number)"><input value={unitForm.shortCode} onChange={(e) => setUnitForm(f => ({ ...f, shortCode: e.target.value }))} required placeholder="Short code (e.g. UNI-001)" /></FormField>
             <FormField label="Rent amount"><input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" /></FormField>
             <FormField label="Unit type"><select value={unitForm.unitType} onChange={(e) => setUnitForm(f => ({ ...f, unitType: e.target.value }))}><option value="">Unit Type (optional)</option><option value="single-room">Single Room</option><option value="bedsitter">Bedsitter</option><option value="one-bedroom">One Bedroom</option><option value="two-bedroom">Two Bedroom</option><option value="three-bedroom">Three Bedroom</option></select></FormField>
             <button type="submit">Add Units</button>
@@ -684,6 +695,10 @@ for (let i = 0; i < 12; i++) {
               <div className="field-group">
                 <label>Unit Number</label>
                 <input value={unitEditForm.unitNumber} onChange={e => setUnitEditForm(f => ({ ...f, unitNumber: e.target.value }))} required placeholder="e.g., A1" />
+              </div>
+              <div className="field-group">
+                <label>Short Code (Paybill Account Number)</label>
+                <input value={unitEditForm.shortCode} onChange={e => setUnitEditForm(f => ({ ...f, shortCode: e.target.value }))} required placeholder="e.g., UNI-001" />
               </div>
               <div className="field-group">
                 <label>Rent Amount (KSH)</label>

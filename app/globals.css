@@ -117,6 +117,27 @@ button {
   padding: 24px;
 }
 
+@media (min-width: 1024px) {
+  .container {
+    padding-left: 64px;
+    padding-right: 64px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .container {
+    padding-left: 96px;
+    padding-right: 96px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .container {
+    padding-left: 128px;
+    padding-right: 128px;
+  }
+}
+
 .dashboard-hero {
   display: flex;
   align-items: center;

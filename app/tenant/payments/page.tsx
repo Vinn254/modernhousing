@@ -78,7 +78,7 @@ export default function TenantPaymentsPage() {
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [paymentSettings, setPaymentSettings] = useState({ paybill: '', till: '', pochi: '', mobile: '', paybillAccount: '' });
+  const [paymentSettings, setPaymentSettings] = useState({ paybill: '', till: '', pochi: '', mobile: '', paybillAccount: '', tenantShortCode: '' });
   const [paymentType, setPaymentType] = useState<'rent' | 'tenancy_agreement'>('rent');
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
@@ -379,11 +379,13 @@ const getTypeLabel = (type: string) => {
             {activeTab === 'payments' && (
               <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
                 <strong>Payment Details:</strong>
-                {paymentSettings.paybill && <div>Paybill: {paymentSettings.paybill}{paymentSettings.paybillAccount ? ` (Account: ${paymentSettings.paybillAccount})` : ''}</div>}
-                {paymentSettings.till && <div>Till: {paymentSettings.till}</div>}
-                {paymentSettings.pochi && <div>Pochi: {paymentSettings.pochi}</div>}
-                {paymentSettings.mobile && <div>Mobile: {paymentSettings.mobile}</div>}
-                {!paymentSettings.paybill && !paymentSettings.till && !paymentSettings.pochi && !paymentSettings.mobile && <div style={{ color: 'var(--ink-3)' }}>Contact landlord for payment details.</div>}
+                {paymentSettings.paybill && (
+                  <div>
+                    <strong>Paybill:</strong> {paymentSettings.paybill}
+                    {paymentSettings.tenantShortCode ? ` (Account: ${paymentSettings.tenantShortCode})` : paymentSettings.paybillAccount ? ` (Account: ${paymentSettings.paybillAccount})` : ''}
+                  </div>
+                )}
+                {!paymentSettings.paybill && <div style={{ color: 'var(--ink-3)' }}>Contact landlord for payment details.</div>}
               </div>
             )}
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}

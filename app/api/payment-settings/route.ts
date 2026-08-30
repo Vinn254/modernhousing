@@ -149,9 +149,27 @@ export async function GET(request: NextRequest) {
   try {
     const tenantId = request.nextUrl.searchParams.get('tenantId');
     let orgId: string | null = null;
+    let tenantShortCode: string | null = null;
 
     if (tenantId) {
       orgId = await getTenantOrganizationId(tenantId);
+      
+      // Get the tenant's unit short code (used as paybill account number)
+      const { data: tenantData } = await supabaseAdmin
+        .from('tenants')
+        .select('unit_id')
+        .eq('id', tenantId)
+        .maybeSingle();
+      
+      if (tenantData?.unit_id) {
+        const { data: unitData } = await supabaseAdmin
+          .from('units')
+          .select('short_code')
+          .eq('id', tenantData.unit_id)
+          .maybeSingle();
+        
+        tenantShortCode = unitData?.short_code ?? null;
+      }
     } else {
       const authContext = await getAuthContext(request);
       orgId = authContext.organizationId;
@@ -168,6 +186,7 @@ export async function GET(request: NextRequest) {
     if (!orgId) {
       return NextResponse.json({
         paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '', shortCode: '',
+        tenantShortCode: tenantShortCode ?? '',
         consumerKey: '', consumerSecret: '', passkey: '',
       });
     }
@@ -185,6 +204,7 @@ export async function GET(request: NextRequest) {
       pochi: settings?.pochi ?? '',
       mobile: settings?.mobile ?? '',
       shortCode: settings?.shortcode ?? '',
+      tenantShortCode: tenantShortCode ?? '',
       consumerKey: settings?.consumer_key ?? '',
       consumerSecret: settings?.consumer_secret ?? '',
       passkey: settings?.passkey ?? '',
@@ -197,6 +217,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({
       paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '', shortCode: '',
+      tenantShortCode: '',
       consumerKey: '', consumerSecret: '', passkey: '',
     });
   }

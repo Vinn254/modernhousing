@@ -136,6 +136,7 @@ export async function GET(request: NextRequest) {
         rent_amount,
         occupancy_status,
         unit_type,
+        short_code,
         created_at,
         tenants(id, full_name, email, lease_start, lease_end)
       `);
@@ -161,6 +162,7 @@ export async function GET(request: NextRequest) {
       rent_amount: Number(unit.rent_amount ?? 0),
       occupancy_status: unit.occupancy_status ?? 'vacant',
       unit_type: unit.unit_type ?? null,
+      short_code: unit.short_code ?? null,
       created_at: unit.created_at,
       previous_water_reading: unit.previous_water_reading ?? null,
       current_water_reading: unit.current_water_reading ?? null,
@@ -181,10 +183,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { propertyId, unitNumber, rentAmount, unitType, size, agentEmail, occupancyStatus } = body;
+    const { propertyId, unitNumber, rentAmount, unitType, size, agentEmail, occupancyStatus, shortCode } = body;
 
     if (!propertyId || !unitNumber) {
       return NextResponse.json({ message: 'Property ID and unit number are required.' }, { status: 400 });
+    }
+
+    if (!shortCode || !String(shortCode).trim()) {
+      return NextResponse.json({ message: 'Short code is required for each unit.' }, { status: 400 });
     }
 
     const authContext = await getAuthContext(request);
@@ -213,6 +219,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check for duplicate short code
+    const { data: existingUnit } = await supabaseAdmin
+      .from('units')
+      .select('id, unit_number')
+      .eq('short_code', String(shortCode).trim())
+      .maybeSingle();
+
+    if (existingUnit) {
+      return NextResponse.json({ message: `Short code "${shortCode}" is already in use by unit ${existingUnit.unit_number}.` }, { status: 400 });
+    }
+
     const insertData: any = {
       property_id: propertyId,
       unit_number: unitNumber,
@@ -220,6 +237,7 @@ export async function POST(request: NextRequest) {
       size,
       agent_email: agentEmail,
       occupancy_status: occupancyStatus ?? 'vacant',
+      short_code: String(shortCode).trim(),
     };
     if (unitType) insertData.unit_type = unitType;
 
@@ -236,7 +254,7 @@ export async function POST(request: NextRequest) {
       'create',
       'unit',
       result.data?.id,
-      { unit_number: unitNumber, property_id: propertyId, rent_amount: rentAmount }
+      { unit_number: unitNumber, property_id: propertyId, rent_amount: rentAmount, short_code: shortCode }
     );
 
     return NextResponse.json({ unit: result.data, message: 'Unit created.' }, { status: 201 });
@@ -249,7 +267,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const id = request.nextUrl.searchParams.get('id');
     const body = await request.json().catch(() => ({}));
-    const { unitNumber, rentAmount, size, agentEmail, occupancyStatus, unitType } = body || {};
+    const { unitNumber, rentAmount, size, agentEmail, occupancyStatus, unitType, shortCode } = body || {};
 
     if (!id) {
       return NextResponse.json({ message: 'Unit ID is required.', receivedId: id }, { status: 400 });
@@ -294,6 +312,7 @@ export async function PATCH(request: NextRequest) {
     if (agentEmail !== undefined) updates.agent_email = agentEmail;
     if (occupancyStatus !== undefined) updates.occupancy_status = occupancyStatus;
     if (unitType !== undefined) updates.unit_type = unitType;
+    if (shortCode !== undefined) updates.short_code = String(shortCode).trim();
 
     const result = await supabaseAdmin.from('units').update(updates).eq('id', id).select().single();
 
@@ -308,7 +327,7 @@ export async function PATCH(request: NextRequest) {
       'update',
       'unit',
       id,
-      { unit_number: unitNumber, rent_amount: rentAmount, occupancy_status: occupancyStatus }
+      { unit_number: unitNumber, rent_amount: rentAmount, occupancy_status: occupancyStatus, short_code: shortCode }
     );
 
     return NextResponse.json({ unit: result.data, message: 'Unit updated.' });
