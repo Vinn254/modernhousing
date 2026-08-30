@@ -75,9 +75,6 @@ export default function PaymentsPage() {
 
   const [paybill, setPaybill] = useState('');
   const [paybillAccount, setPaybillAccount] = useState('');
-  const [till, setTill] = useState('');
-  const [pochi, setPochi] = useState('');
-  const [mobile, setMobile] = useState('');
   const [shortCode, setShortCode] = useState('');
   const [consumerKey, setConsumerKey] = useState('');
   const [consumerSecret, setConsumerSecret] = useState('');
@@ -86,9 +83,7 @@ export default function PaymentsPage() {
   const [pesaflowMerchantId, setPesaflowMerchantId] = useState('');
   const [pesaflowWebhookSecret, setPesaflowWebhookSecret] = useState('');
   const [platformFeePercentage, setPlatformFeePercentage] = useState('1');
-  const [paymentSplitEnabled, setPaymentSplitEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<'paybill' | 'till' | 'pochi' | 'mobile'>('paybill');
   const [hoverMonth, setHoverMonth] = useState<string | null>(null);
 
   const monthlyRevenue = useMemo(() => {
@@ -300,13 +295,6 @@ export default function PaymentsPage() {
     source: 'bills' as 'bills' | 'payments',
   });
 
-  const paymentMethods = [
-    { value: 'paybill', label: 'Paybill' },
-    { value: 'till', label: 'Till' },
-    { value: 'pochi', label: 'Pochi la Biashara' },
-    { value: 'mobile', label: 'Mobile Number' },
-  ] as const;
-
   async function loadPayments() {
     const [billsResponse, paymentsResponse] = await Promise.all([
       fetch('/api/bills', { headers: await getAuthHeaders() }),
@@ -408,9 +396,6 @@ allPayments.sort((a, b) => {
     if (response.ok) {
       setPaybill(result.paybill ?? '');
       setPaybillAccount(result.paybillAccount ?? '');
-      setTill(result.till ?? '');
-      setPochi(result.pochi ?? '');
-      setMobile(result.mobile ?? '');
       setConsumerKey(result.consumerKey ?? '');
       setConsumerSecret(result.consumerSecret ?? '');
       setShortCode(result.shortCode ?? '');
@@ -419,7 +404,6 @@ allPayments.sort((a, b) => {
       setPesaflowMerchantId(result.pesaflowMerchantId ?? '');
       setPesaflowWebhookSecret(result.pesaflowWebhookSecret ?? '');
       setPlatformFeePercentage(String(result.platformFeePercentage ?? 1));
-      setPaymentSplitEnabled(result.paymentSplitEnabled ?? false);
     }
   }
 
@@ -429,10 +413,9 @@ allPayments.sort((a, b) => {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify({
-        paybill, paybillAccount, till, pochi, mobile, shortCode, consumerKey, consumerSecret, passkey,
+        paybill, paybillAccount, shortCode, consumerKey, consumerSecret, passkey,
         pesaflowApiKey, pesaflowMerchantId, pesaflowWebhookSecret,
         platformFeePercentage: Number(platformFeePercentage) || 1,
-        paymentSplitEnabled,
       }),
     });
 
@@ -808,34 +791,30 @@ allPayments.sort((a, b) => {
           </article>
         )}
 
-        {showSettings && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div className="card" style={{ maxWidth: 500, width: '90%' }}>
+         {showSettings && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div className="card" style={{ maxWidth: 520, width: '100%', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', padding: 24 }}>
               <div className="card-label">Payment Settings</div>
               <h3 style={{ marginBottom: 16 }}>Configure Paybill & Daraja</h3>
               <form onSubmit={saveSettings} className="form-grid">
-                <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>M-Pesa Paybill Number</h4>
-                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 8px 0' }}>This is the paybill number that tenants will use to make payments. The account number is the short code of each unit (configured when adding units).</p>
+                <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>M-Pesa Paybill Number</h4>
+                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>This is the paybill number that tenants will use to make payments. The account number is the short code of each unit (configured when adding units).</p>
                 <input value={paybill} onChange={e => setPaybill(e.target.value)} placeholder="Paybill Number" />
                 <input value={paybillAccount} onChange={e => setPaybillAccount(e.target.value)} placeholder="Default Account Number (optional - usually unit short code)" />
 
-                <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>M-Pesa Daraja Keys</h4>
+                <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>M-Pesa Daraja Keys</h4>
                 <input value={consumerKey} onChange={e => setConsumerKey(e.target.value)} placeholder="Consumer Key" />
                 <input value={consumerSecret} onChange={e => setConsumerSecret(e.target.value)} placeholder="Consumer Secret" />
                 <input value={shortCode} onChange={e => setShortCode(e.target.value)} placeholder="Business ShortCode (e.g. 174347)" />
                 <input value={passkey} onChange={e => setPasskey(e.target.value)} placeholder="Passkey (Security Key)" />
 
-                <h4 style={{ margin: '16px 0 8px', fontSize: '14px' }}>PesaFlow Configuration</h4>
+                <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>PesaFlow Configuration</h4>
                 <input value={pesaflowApiKey} onChange={e => setPesaflowApiKey(e.target.value)} placeholder="PesaFlow API Key" />
                 <input value={pesaflowMerchantId} onChange={e => setPesaflowMerchantId(e.target.value)} placeholder="PesaFlow Merchant ID" />
                 <input value={pesaflowWebhookSecret} onChange={e => setPesaflowWebhookSecret(e.target.value)} placeholder="PesaFlow Webhook Secret" />
                 <input type="number" step="0.1" value={platformFeePercentage} onChange={e => setPlatformFeePercentage(e.target.value)} placeholder="Platform Fee % (e.g. 1)" />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-                  <input type="checkbox" checked={paymentSplitEnabled} onChange={e => setPaymentSplitEnabled(e.target.checked)} />
-                  Enable PesaFlow Split Payments
-                </label>
 
-                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button type="submit">Save Settings</button>
                   <button type="button" onClick={() => setShowSettings(false)} className="btn btn-ghost">Cancel</button>
                 </div>
@@ -919,16 +898,6 @@ allPayments.sort((a, b) => {
               );
             })}
           </div>
-        </article>
-
-        <article className="card" style={{ marginTop: 24 }}>
-          <div className="card-label">Platform Fees</div>
-          <h3 style={{ marginBottom: 16 }}>Split Payment History</h3>
-          <p style={{ color: 'var(--ink-3)', marginBottom: 16 }}>View your 1% platform fee deductions from rent payments processed via PesaFlow.</p>
-          <a href="/payments/splits" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-            View Split Payments
-          </a>
         </article>
 
         <article

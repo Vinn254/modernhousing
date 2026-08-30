@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
 
     const { data: settings } = await supabaseAdmin
       .from('payment_settings')
-      .select('paybill, paybill_account, till, pochi, mobile, shortcode, consumer_key, consumer_secret, passkey, pesaflow_api_key, pesaflow_merchant_id, pesaflow_webhook_secret, platform_fee_percentage, payment_split_enabled')
+      .select('paybill, paybill_account, till, pochi, mobile, shortcode, consumer_key, consumer_secret, passkey, pesaflow_api_key, pesaflow_merchant_id, pesaflow_webhook_secret, platform_fee_percentage')
       .eq('organization_id', orgId)
       .maybeSingle();
 
@@ -212,7 +212,6 @@ export async function GET(request: NextRequest) {
       pesaflowMerchantId: settings?.pesaflow_merchant_id ?? '',
       pesaflowWebhookSecret: settings?.pesaflow_webhook_secret ?? '',
       platformFeePercentage: settings?.platform_fee_percentage ?? 1.0,
-      paymentSplitEnabled: settings?.payment_split_enabled ?? false,
     });
   } catch (error: any) {
     return NextResponse.json({
@@ -242,7 +241,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { paybill, paybillAccount, till, pochi, mobile, shortCode, consumerKey, consumerSecret, passkey, pesaflowApiKey, pesaflowMerchantId, pesaflowWebhookSecret, platformFeePercentage, paymentSplitEnabled } = body;
+    const { paybill, paybillAccount, till, pochi, mobile, shortCode, consumerKey, consumerSecret, passkey, pesaflowApiKey, pesaflowMerchantId, pesaflowWebhookSecret, platformFeePercentage } = body;
 
     const { data: existing } = await supabaseAdmin
       .from('payment_settings')
@@ -266,7 +265,6 @@ export async function POST(request: NextRequest) {
       pesaflow_merchant_id: pesaflowMerchantId ?? '',
       pesaflow_webhook_secret: pesaflowWebhookSecret ?? '',
       platform_fee_percentage: platformFeePercentage ?? 1.0,
-      payment_split_enabled: paymentSplitEnabled ?? false,
       updated_at: new Date().toISOString(),
     };
 

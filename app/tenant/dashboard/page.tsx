@@ -150,7 +150,7 @@ const tenant = data.tenant;
             />
             <div className="kpi-tile-body">
               <span className="kpi-tile-value" style={{ fontSize: 16 }}>{tenant.property_name}</span>
-              <span className="kpi-tile-label">Unit {tenant.unit_number}</span>
+              <span className="kpi-tile-label">Unit {tenant.unit_number} {tenant.unit_short_code ? `· Code ${tenant.unit_short_code}` : ''}</span>
             </div>
           </div>
           <div className="kpi-tile">

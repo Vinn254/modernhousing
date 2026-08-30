@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
 
     const { data: allTenants, error: tenantError } = await supabaseAdmin
       .from('tenants')
-      .select('*, units(property_id, unit_number, properties(name, address)), picture_url')
+      .select('*, units(property_id, unit_number, short_code, properties(name, address)), picture_url')
       .order('created_at', { ascending: false });
 
     if (tenantError) throw tenantError;
@@ -169,15 +169,16 @@ const [payments, notifications, comments, documents] = await Promise.all([
         ? new Date(new Date(tenant.lease_start).getTime() + 30 * dayMs).toISOString().slice(0, 10)
         : '';
 
-return NextResponse.json({
-       tenant: {
-         ...tenant,
-         property_id: tenant.units?.property_id ?? '',
-         property_name: property?.name ?? '',
-         property_address: property?.address ?? '',
-         unit_number: tenant.units?.unit_number ?? '',
-         next_payment_date: nextPaymentDate,
-       },
+ return NextResponse.json({
+        tenant: {
+          ...tenant,
+          property_id: tenant.units?.property_id ?? '',
+          property_name: property?.name ?? '',
+          property_address: property?.address ?? '',
+          unit_number: tenant.units?.unit_number ?? '',
+          unit_short_code: tenant.units?.short_code ?? '',
+          next_payment_date: nextPaymentDate,
+        },
        payments: payments ?? [],
        notifications: notifications ?? [],
        comments: comments ?? [],

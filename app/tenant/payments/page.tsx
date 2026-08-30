@@ -347,7 +347,7 @@ const getTypeLabel = (type: string) => {
       </div>
 
       {user && (
-        <section className="card-grid" style={{ marginBottom: 24 }}>
+        <section className="card-grid" style={{ marginTop: 24, marginBottom: 24 }}>
           <article className="card">
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               <button onClick={() => setActiveTab('payments')} className={activeTab === 'payments' ? 'action-button primary' : 'action-button ghost'} style={{ flex: 1 }}>Rent Payments</button>
@@ -381,8 +381,10 @@ const getTypeLabel = (type: string) => {
                 <strong>Payment Details:</strong>
                 {paymentSettings.paybill && (
                   <div>
-                    <strong>Paybill:</strong> {paymentSettings.paybill}
-                    {paymentSettings.tenantShortCode ? ` (Account: ${paymentSettings.tenantShortCode})` : paymentSettings.paybillAccount ? ` (Account: ${paymentSettings.paybillAccount})` : ''}
+                    <div><strong>Paybill Number:</strong> {paymentSettings.paybill}</div>
+                    <div style={{ marginTop: 6, fontSize: '12px', color: 'var(--ink-2)' }}>
+                      Use your unit code <strong>{paymentSettings.tenantShortCode || paymentSettings.paybillAccount || '____'}</strong> as the account number when paying via Paybill.
+                    </div>
                   </div>
                 )}
                 {!paymentSettings.paybill && <div style={{ color: 'var(--ink-3)' }}>Contact landlord for payment details.</div>}
