@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { supabase } from '../../../lib/supabaseClient';
 
 interface Property {
@@ -362,6 +361,7 @@ function TenantsPageContent() {
 
   async function downloadTenantStatement() {
     if (!selectedTenant) return;
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595.28, 841.89]);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);

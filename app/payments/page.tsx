@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import Sparkline from '../components/Sparkline';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+
+const Sparkline = lazy(() => import('../components/Sparkline'));
 
 interface TenantOption {
   id: string;
@@ -637,6 +637,7 @@ allPayments.sort((a, b) => {
       return;
     }
 
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([700, 841.89]);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -895,7 +896,7 @@ allPayments.sort((a, b) => {
               {percentageChange.sign}{percentageChange.value}%
             </span>
           </div>
-          <Sparkline data={monthlyData.length > 0 && monthlyData.some(d => d > 0) ? monthlyData : [0, 0, 0]} color="#10b981" w={340} h={40}/>
+          <Suspense fallback={<div style={{ width: 340, height: 40 }} className="skeleton" />}><Sparkline data={monthlyData.length > 0 && monthlyData.some(d => d > 0) ? monthlyData : [0, 0, 0]} color="#10b981" w={340} h={40}/></Suspense>
           <div style={{ display: 'flex', gap: '4px', marginTop: 8, flexWrap: 'wrap' }}>
             {monthlyLabels.map((m, i) => {
               const revenue = monthlyRevenue.months[m] || 0;

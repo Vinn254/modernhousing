@@ -167,7 +167,7 @@ allBills.sort((a, b) => {
         };
         return map[type] || type;
     };
-    async function generateStatementPDF(billsList, title, totalBalance) {
+async function generateStatementPDF(billsList, title, totalBalance) {
         const pdfDoc = await PDFDocument.create();
         let currentPage = pdfDoc.addPage([612, 792]);
         const font = await pdfDoc.embedFont(StandardFonts.Helvetica);

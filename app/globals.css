@@ -180,6 +180,13 @@ button {
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
+  padding: 20px;
+}
+
+@media (min-width: 1024px) {
+  .bento-card {
+    padding: 24px;
+  }
 }
 
 .panel-card {
@@ -4737,4 +4744,126 @@ body, #__next, .page-wrapper {
     width: 52px;
     height: 52px;
   }
+}
+
+/* ===== Performance & UX Optimizations ===== */
+
+/* Skeleton loader for faster perceived loading */
+@keyframes skeleton-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.12) 50%, rgba(0,0,0,0.06) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+.skeleton-text {
+  height: 12px;
+  margin-bottom: 8px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.12) 50%, rgba(0,0,0,0.06) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skeleton-card {
+  padding: 20px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid rgba(16,185,129,0.18);
+  margin-bottom: 16px;
+}
+
+/* Card grid layout with proper padding alignment */
+.card-grid-uniform {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.card-uniform {
+  padding: 20px 24px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid rgba(16,185,129,0.18);
+  box-shadow: 0 12px 32px rgba(6,21,40,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+}
+
+@media (min-width: 1024px) {
+  .card-uniform {
+    padding: 24px 28px;
+  }
+  .card-grid-uniform {
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .card-uniform {
+    padding: 24px 32px;
+  }
+  .card-grid-uniform {
+    gap: 24px;
+  }
+}
+
+/* Optimize content reflow - prevent layout shift */
+.content-fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Lazy image optimization */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Improve scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.25);
+}
+
+/* Will-change for performance on hover/transform */
+.card, .bento-card, .action-button {
+  will-change: transform;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Better text rendering */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

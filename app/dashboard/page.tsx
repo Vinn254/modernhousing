@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
-import Sparkline from '../components/Sparkline';
-import DonutChart from '../components/DonutChart';
 import { DashboardHeader, FormField, PremiumTable, SectionCard, StatCard, ThemeToggle } from '../components/dashboard-ui';
 import { useDeactivationGuard, DeactivationPopup } from '../components/DeactivationGuard';
+
+const Sparkline = lazy(() => import('../components/Sparkline'));
+const DonutChart = lazy(() => import('../components/DonutChart'));
 
 interface DashboardStats {
   properties: number;
@@ -775,7 +776,7 @@ return Array.from(byTenant.values())
 
             <StatCard title="Active Tenants" value={tenants.length} caption="registered" accent="amber" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>} trend={<span className="status-pill">{tenants.length > 0 ? 'healthy' : 'new'}</span>} onClick={() => { setModalTitle('All Tenants'); setModalContent(<div style={{ maxHeight: '300px', overflow: 'auto' }}>{tenants.length === 0 ? <p style={{ color: 'var(--ink-3)' }}>No tenants found.</p> : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}><thead><tr style={{ borderBottom: '1px solid var(--line)' }}><th style={{ textAlign: 'left', padding: '8px' }}>Name</th><th style={{ textAlign: 'left', padding: '8px' }}>Unit</th><th style={{ textAlign: 'left', padding: '8px' }}>Email</th></tr></thead><tbody>{tenants.map((tenant) => <tr key={tenant.id} style={{ borderBottom: '1px solid var(--line-soft)' }}><td style={{ padding: '8px' }}>{tenant.full_name}</td><td style={{ padding: '8px' }}>{tenant.unit}</td><td style={{ padding: '8px', color: 'var(--ink-3)' }}>{tenant.email}</td></tr>)}</tbody></table>}</div>); setShowModal(true); }} />
 
-            <StatCard title="Occupancy Rate" value={`${units.length > 0 ? Math.round((units.filter((u) => u.occupancy_status === 'occupied').length / units.length) * 100) : 0}%`} caption="occupied / total" accent="rose" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ec4899" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>} trend={<DonutChart data={[{ label: 'Occupied', value: units.filter((u) => u.occupancy_status === 'occupied').length, color: '#10b981' }, { label: 'Vacant', value: units.filter((u) => u.occupancy_status === 'vacant').length, color: '#9ca3af' }]} size={56} centerLabel={`${units.filter((u) => u.occupancy_status === 'occupied').length}/${units.length}`} />} />
+            <StatCard title="Occupancy Rate" value={`${units.length > 0 ? Math.round((units.filter((u) => u.occupancy_status === 'occupied').length / units.length) * 100) : 0}%`} caption="occupied / total" accent="rose" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ec4899" strokeWidth="2"><path d="M22 11.08V12a10 12 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 8 10.01"/></svg>} trend={<Suspense fallback={<div style={{ width: 56, height: 56 }} />}><DonutChart data={[{ label: 'Occupied', value: units.filter((u) => u.occupancy_status === 'occupied').length, color: '#10b981' }, { label: 'Vacant', value: units.filter((u) => u.occupancy_status === 'vacant').length, color: '#9ca3af' }]} size={56} centerLabel={`${units.filter((u) => u.occupancy_status === 'occupied').length}/${units.length}`} /></Suspense>} />
           </section>
 
           <section className="dashboard-grid">
@@ -884,9 +885,9 @@ return Array.from(byTenant.values())
 
           <StatCard title="Collections" value={formatCurrency(stats.total_payments)} caption="total payments" accent="sky" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>} trend={<span className="status-pill">{formatCurrency(stats.total_payments)}</span>} />
 
-          <StatCard title="Revenue Trend" value={formatCurrency(currentMonthPayment)} caption="per month collected" accent="slate" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>} trend={<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><span style={{ color: trendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700 }}>{trendPercent >= 0 ? '+' : ''}{trendPercent.toFixed(1)}%</span><Sparkline data={monthlyPayments.map((m) => m.value).length > 0 ? monthlyPayments.map((m) => m.value) : [0, 0, 0]} color="var(--accent)" w={220} h={40} /></div>} />
+          <StatCard title="Revenue Trend" value={formatCurrency(currentMonthPayment)} caption="per month collected" accent="slate" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>} trend={<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><span style={{ color: trendPercent >= 0 ? 'var(--accent)' : '#b91c1c', fontWeight: 700 }}>{trendPercent >= 0 ? '+' : ''}{trendPercent.toFixed(1)}%</span><Suspense fallback={<div style={{ width: 220, height: 40 }} />}><Sparkline data={monthlyPayments.map((m) => m.value).length > 0 ? monthlyPayments.map((m) => m.value) : [0, 0, 0]} color="var(--accent)" w={220} h={40} /></Suspense></div>} />
 
-          <StatCard title="Occupancy" value={`${stats.occupiedUnits}/${stats.occupiedUnits + stats.vacantUnits}`} caption="occupied / vacant" accent="rose" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>} trend={<DonutChart data={[{ label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' }, { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' }]} size={58} centerLabel={`${stats.occupiedUnits}`} />} />
+          <StatCard title="Occupancy" value={`${stats.occupiedUnits}/${stats.occupiedUnits + stats.vacantUnits}`} caption="occupied / vacant" accent="rose" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>} trend={<Suspense fallback={<div style={{ width: 58, height: 58 }} />}><DonutChart data={[{ label: 'Occupied', value: stats.occupiedUnits, color: '#10b981' }, { label: 'Vacant', value: stats.vacantUnits, color: '#9ca3af' }]} size={58} centerLabel={`${stats.occupiedUnits}`} /></Suspense>} />
 
           <StatCard title="Outstanding" value={formatCurrency(totalBalance)} caption="rent owed" accent="rose" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2"><path d="M12 9v2m0 4h.01"/><circle cx="12" cy="12" r="10"/></svg>} trend={<span className="status-pill danger">needs follow-up</span>} />
         </section>
