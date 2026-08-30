@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
 
     if (!orgId) {
       return NextResponse.json({
-        paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '', shortCode: '',
+        paybill: '', paybillAccount: '', shortCode: '',
         tenantShortCode: tenantShortCode ?? '',
         consumerKey: '', consumerSecret: '', passkey: '',
       });
@@ -193,29 +193,22 @@ export async function GET(request: NextRequest) {
 
     const { data: settings } = await supabaseAdmin
       .from('payment_settings')
-      .select('paybill, paybill_account, till, pochi, mobile, shortcode, consumer_key, consumer_secret, passkey, pesaflow_api_key, pesaflow_merchant_id, pesaflow_webhook_secret, platform_fee_percentage')
+      .select('paybill, paybill_account, shortcode, consumer_key, consumer_secret, passkey')
       .eq('organization_id', orgId)
       .maybeSingle();
 
     return NextResponse.json({
       paybill: settings?.paybill ?? '',
       paybillAccount: settings?.paybill_account ?? '',
-      till: settings?.till ?? '',
-      pochi: settings?.pochi ?? '',
-      mobile: settings?.mobile ?? '',
       shortCode: settings?.shortcode ?? '',
       tenantShortCode: tenantShortCode ?? '',
       consumerKey: settings?.consumer_key ?? '',
       consumerSecret: settings?.consumer_secret ?? '',
       passkey: settings?.passkey ?? '',
-      pesaflowApiKey: settings?.pesaflow_api_key ?? '',
-      pesaflowMerchantId: settings?.pesaflow_merchant_id ?? '',
-      pesaflowWebhookSecret: settings?.pesaflow_webhook_secret ?? '',
-      platformFeePercentage: settings?.platform_fee_percentage ?? 1.0,
     });
   } catch (error: any) {
     return NextResponse.json({
-      paybill: '', paybillAccount: '', till: '', pochi: '', mobile: '', shortCode: '',
+      paybill: '', paybillAccount: '', shortCode: '',
       tenantShortCode: '',
       consumerKey: '', consumerSecret: '', passkey: '',
     });
@@ -241,7 +234,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { paybill, paybillAccount, till, pochi, mobile, shortCode, consumerKey, consumerSecret, passkey, pesaflowApiKey, pesaflowMerchantId, pesaflowWebhookSecret, platformFeePercentage } = body;
+    const { paybill, paybillAccount, shortCode, consumerKey, consumerSecret, passkey } = body;
 
     const { data: existing } = await supabaseAdmin
       .from('payment_settings')
@@ -254,17 +247,10 @@ export async function POST(request: NextRequest) {
       organization_id: orgId ?? '',
       paybill: paybill ?? '',
       paybill_account: paybillAccount ?? '',
-      till: till ?? '',
-      pochi: pochi ?? '',
-      mobile: mobile ?? '',
       shortcode: shortCode ?? '',
       consumer_key: consumerKey ?? '',
       consumer_secret: consumerSecret ?? '',
       passkey: passkey ?? '',
-      pesaflow_api_key: pesaflowApiKey ?? '',
-      pesaflow_merchant_id: pesaflowMerchantId ?? '',
-      pesaflow_webhook_secret: pesaflowWebhookSecret ?? '',
-      platform_fee_percentage: platformFeePercentage ?? 1.0,
       updated_at: new Date().toISOString(),
     };
 
