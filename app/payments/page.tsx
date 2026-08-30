@@ -79,10 +79,6 @@ export default function PaymentsPage() {
   const [consumerKey, setConsumerKey] = useState('');
   const [consumerSecret, setConsumerSecret] = useState('');
   const [passkey, setPasskey] = useState('');
-  const [pesaflowApiKey, setPesaflowApiKey] = useState('');
-  const [pesaflowMerchantId, setPesaflowMerchantId] = useState('');
-  const [pesaflowWebhookSecret, setPesaflowWebhookSecret] = useState('');
-  const [platformFeePercentage, setPlatformFeePercentage] = useState('1');
   const [showSettings, setShowSettings] = useState(false);
   const [hoverMonth, setHoverMonth] = useState<string | null>(null);
 
@@ -400,10 +396,6 @@ allPayments.sort((a, b) => {
       setConsumerSecret(result.consumerSecret ?? '');
       setShortCode(result.shortCode ?? '');
       setPasskey(result.passkey ?? '');
-      setPesaflowApiKey(result.pesaflowApiKey ?? '');
-      setPesaflowMerchantId(result.pesaflowMerchantId ?? '');
-      setPesaflowWebhookSecret(result.pesaflowWebhookSecret ?? '');
-      setPlatformFeePercentage(String(result.platformFeePercentage ?? 1));
     }
   }
 
@@ -414,8 +406,6 @@ allPayments.sort((a, b) => {
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         paybill, paybillAccount, shortCode, consumerKey, consumerSecret, passkey,
-        pesaflowApiKey, pesaflowMerchantId, pesaflowWebhookSecret,
-        platformFeePercentage: Number(platformFeePercentage) || 1,
       }),
     });
 
@@ -799,7 +789,7 @@ allPayments.sort((a, b) => {
               <form onSubmit={saveSettings} className="form-grid">
                 <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>M-Pesa Paybill Number</h4>
                 <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>This is the paybill number that tenants will use to make payments. The account number is the short code of each unit (configured when adding units).</p>
-                <input value={paybill} onChange={e => setPaybill(e.target.value)} placeholder="Paybill Number" />
+                <input value={paybill} onChange={e => setPaybill(e.target.value)} placeholder="Paybill Number" required />
                 <input value={paybillAccount} onChange={e => setPaybillAccount(e.target.value)} placeholder="Default Account Number (optional - usually unit short code)" />
 
                 <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>M-Pesa Daraja Keys</h4>
@@ -807,12 +797,6 @@ allPayments.sort((a, b) => {
                 <input value={consumerSecret} onChange={e => setConsumerSecret(e.target.value)} placeholder="Consumer Secret" />
                 <input value={shortCode} onChange={e => setShortCode(e.target.value)} placeholder="Business ShortCode (e.g. 174347)" />
                 <input value={passkey} onChange={e => setPasskey(e.target.value)} placeholder="Passkey (Security Key)" />
-
-                <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>PesaFlow Configuration</h4>
-                <input value={pesaflowApiKey} onChange={e => setPesaflowApiKey(e.target.value)} placeholder="PesaFlow API Key" />
-                <input value={pesaflowMerchantId} onChange={e => setPesaflowMerchantId(e.target.value)} placeholder="PesaFlow Merchant ID" />
-                <input value={pesaflowWebhookSecret} onChange={e => setPesaflowWebhookSecret(e.target.value)} placeholder="PesaFlow Webhook Secret" />
-                <input type="number" step="0.1" value={platformFeePercentage} onChange={e => setPlatformFeePercentage(e.target.value)} placeholder="Platform Fee % (e.g. 1)" />
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button type="submit">Save Settings</button>
