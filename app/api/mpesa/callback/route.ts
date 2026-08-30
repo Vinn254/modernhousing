@@ -20,11 +20,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Payment not successful' }, { status: 200 });
     }
 
-    // Parse tenant info from AccountReference (format: "tenantId|paymentType")
+    // Parse tenant info from AccountReference
+    // Old format: "tenantId|paymentType"
+    // New format: "tenantId|unitShortCode|paymentType"
     const accountRef = body.AccountReference || '';
-    const [tenantId, paymentType] = accountRef.includes('|') 
-      ? accountRef.split('|') 
-      : [null, 'rent'];
+    const parts = accountRef.includes('|') ? accountRef.split('|') : [null, null, 'rent'];
+    const tenantId = parts[0] || null;
+    const knownPaymentTypes = new Set(['rent', 'tenancy_agreement', 'water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other', 'utility']);
+    let unitShortCode: string | null = null;
+    let paymentType = 'rent';
+
+    if (parts.length === 2 && knownPaymentTypes.has(parts[1] || '')) {
+      paymentType = parts[1] || 'rent';
+    } else if (parts.length >= 3) {
+      unitShortCode = parts[1] || null;
+      paymentType = parts[2] || 'rent';
+    }
 
     const amount = body.CallbackMetadata?.Item?.find((i: any) => i.Name === 'Amount')?.Value ?? 0;
     const transactionDate = body.CallbackMetadata?.Item?.find((i: any) => i.Name === 'TransactionDate')?.Value ?? '';

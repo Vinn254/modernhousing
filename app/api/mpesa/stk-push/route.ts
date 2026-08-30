@@ -96,12 +96,30 @@ async function getTenantOrganizationId(tenantId: string, userEmail?: string): Pr
   return anySettings?.organization_id ?? null;
 }
 
+async function getTenantUnitShortCode(tenantId: string): Promise<string | null> {
+  const { data: tenantRow } = await supabaseAdmin
+    .from('tenants')
+    .select('unit_id')
+    .eq('id', tenantId)
+    .maybeSingle();
+
+  if (!tenantRow?.unit_id) return null;
+
+  const { data: unitRow } = await supabaseAdmin
+    .from('units')
+    .select('short_code')
+    .eq('id', tenantRow.unit_id)
+    .maybeSingle();
+
+  return unitRow?.short_code ?? null;
+}
+
 async function getOrganizationCredentials(organizationId: string | null) {
   // Try to find organization-specific credentials first
   if (organizationId) {
     const { data: settings } = await supabaseAdmin
       .from('payment_settings')
-      .select('consumer_key, consumer_secret, passkey, shortcode')
+      .select('consumer_key, consumer_secret, passkey, shortcode, paybill')
       .eq('organization_id', organizationId)
       .maybeSingle();
 
@@ -110,7 +128,8 @@ async function getOrganizationCredentials(organizationId: string | null) {
         consumerKey: settings.consumer_key,
         consumerSecret: settings.consumer_secret,
         passkey: settings.passkey || defaultPasskey,
-        shortCode: settings.shortcode || defaultShortCode
+        shortCode: settings.shortcode || defaultShortCode,
+        paybill: settings.paybill || null,
       };
     }
   }
@@ -118,7 +137,7 @@ async function getOrganizationCredentials(organizationId: string | null) {
   // Fallback: use ANY payment_settings credentials (e.g., default landlord's settings)
   const { data: anySettings } = await supabaseAdmin
     .from('payment_settings')
-    .select('consumer_key, consumer_secret, passkey, shortcode')
+    .select('consumer_key, consumer_secret, passkey, shortcode, paybill')
     .limit(1)
     .maybeSingle();
 
@@ -126,7 +145,8 @@ async function getOrganizationCredentials(organizationId: string | null) {
     consumerKey: anySettings?.consumer_key || defaultConsumerKey,
     consumerSecret: anySettings?.consumer_secret || defaultConsumerSecret,
     passkey: anySettings?.passkey || defaultPasskey,
-    shortCode: anySettings?.shortcode || defaultShortCode
+    shortCode: anySettings?.shortcode || defaultShortCode,
+    paybill: anySettings?.paybill || null,
   };
 }
 
@@ -212,6 +232,12 @@ export async function POST(request: NextRequest) {
       ? `${process.env.NEXT_PUBLIC_APP_URL}/api/mpesa/callback` 
       : 'https://webhook.site';
 
+    const tenantId = decoded?.user_metadata?.tenant_id ?? userId;
+    const unitShortCode = tenantId ? await getTenantUnitShortCode(tenantId) : null;
+    const accountReference = unitShortCode
+      ? `${tenantId}|${unitShortCode}|${transactionType || 'rent'}`
+      : (userId ? `${userId}|${transactionType || 'rent'}` : 'SPRINGFIELD');
+
     let response;
     let result;
     try {
@@ -228,10 +254,10 @@ export async function POST(request: NextRequest) {
           TransactionType: 'CustomerPayBillOnline',
           Amount: Math.round(amount),
           PartyA: phone,
-          PartyB: creds.shortCode,
+          PartyB: creds.paybill || creds.shortCode,
           PhoneNumber: phone,
           CallBackURL: callbackUrl,
-          AccountReference: userId ? `${userId}|${transactionType || 'rent'}` : 'SPRINGFIELD',
+          AccountReference: accountReference,
           TransactionDesc: transactionDesc || 'Rent Payment'
         })
       });
