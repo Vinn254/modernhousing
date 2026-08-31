@@ -273,6 +273,12 @@ async function generateStatementPDF(billsList, title, totalBalance) {
                   <option value="rent">Rent Payment</option>
                   <option value="tenancy_agreement">Tenancy Agreement Fee</option>
                 </select>
+                {paymentSettings.tenantShortCode && (
+                  <div style={{ padding: '8px 12px', background: 'var(--surface)', borderRadius: 8, fontSize: '13px', border: '1px solid var(--line)' }}>
+                    <strong>Your Unit Code:</strong> {paymentSettings.tenantShortCode}
+                    <div style={{ fontSize: '12px', color: 'var(--ink-2)', marginTop: 4 }}>Use this as the account number when paying via Paybill.</div>
+                  </div>
+                )}
                 <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)"/>
                 <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1"/>
                 <button type="submit" disabled={processing} className="action-button primary">{processing ? 'Processing…' : 'Pay Now'}</button>

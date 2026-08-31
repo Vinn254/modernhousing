@@ -150,36 +150,34 @@ async function getOrganizationCredentials(organizationId: string | null) {
   };
 }
 
-async function getAccessToken(consumerKey: string, consumerSecret: string): Promise<string> {
+async function getAccessToken(consumerKey: string, consumerSecret: string): Promise<NextResponse> {
   const baseUrl = environment === 'production'
     ? 'https://api.safaricom.co.ke'
     : 'https://sandbox-api.safaricom.co.ke';
 
   if (!consumerKey || !consumerSecret) {
-    throw new Error('M-Pesa credentials not configured. Set MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET in .env.local or configure in Payment Settings.');
+    return NextResponse.json({ message: 'M-Pesa credentials not configured.' }, { status: 500 });
   }
 
   const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
-  const response = await fetch(`${baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
-    headers: { Authorization: `Basic ${auth}` }
-  });
-
-  let tokenResponse;
+  let response;
   try {
-    tokenResponse = response;
+    response = await fetch(`${baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
+      headers: { Authorization: `Basic ${auth}` }
+    });
   } catch (err: any) {
     console.error('Failed to fetch M-Pesa access token. URL:', `${baseUrl}/oauth/v1/generate?grant_type=client_credentials`, 'Error:', err?.message || err);
-    throw new Error('fetch failed');
+    return NextResponse.json({ message: 'M-Pesa access token fetch failed: ' + (err?.message || 'network error'), error: err?.message || 'fetch failed' }, { status: 502 });
   }
 
-  if (!tokenResponse.ok) {
-    const errorText = await tokenResponse.text();
-    console.error('M-Pesa token request returned non-OK status', tokenResponse.status, errorText);
-    throw new Error(`Failed to get M-Pesa access token: ${errorText}`);
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('M-Pesa token request returned non-OK status', response.status, errorText);
+    return NextResponse.json({ message: `Failed to get M-Pesa access token: ${response.status}`, error: errorText }, { status: 502 });
   }
 
-  const data = await tokenResponse.json();
-  return data.access_token;
+  const data = await response.json();
+  return NextResponse.json({ access_token: data.access_token });
 }
 
 export async function POST(request: NextRequest) {
@@ -219,7 +217,19 @@ export async function POST(request: NextRequest) {
     // Get credentials - prefer organization-specific if available
     const creds = await getOrganizationCredentials(organizationId);
 
-    const accessToken = await getAccessToken(creds.consumerKey, creds.consumerSecret);
+    if (!creds.consumerKey || !creds.consumerSecret) {
+      return NextResponse.json({ message: 'M-Pesa credentials are missing. Configure Consumer Key and Consumer Secret in Payment Settings.' }, { status: 400 });
+    }
+
+    if (!creds.shortCode || !creds.passkey) {
+      return NextResponse.json({ message: 'M-Pesa ShortCode or Passkey is missing. Configure them in Payment Settings.' }, { status: 400 });
+    }
+
+    const accessTokenResponse = await getAccessToken(creds.consumerKey, creds.consumerSecret);
+    if (!accessTokenResponse.ok) {
+      return accessTokenResponse;
+    }
+    const accessToken = (await accessTokenResponse.json()).access_token;
 
     const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
     const password = Buffer.from(`${creds.shortCode}${creds.passkey}${timestamp}`).toString('base64');
@@ -233,10 +243,16 @@ export async function POST(request: NextRequest) {
       : 'https://webhook.site';
 
     const tenantId = decoded?.user_metadata?.tenant_id ?? userId;
-    const unitShortCode = tenantId ? await getTenantUnitShortCode(tenantId) : null;
+    let unitShortCode: string | null = null;
+    try {
+      unitShortCode = tenantId ? await getTenantUnitShortCode(tenantId) : null;
+    } catch {
+      unitShortCode = null;
+    }
+
     const accountReference = unitShortCode
-      ? `${tenantId}|${unitShortCode}|${transactionType || 'rent'}`
-      : (userId ? `${userId}|${transactionType || 'rent'}` : 'SPRINGFIELD');
+      ? String(unitShortCode).slice(0, 12)
+      : (userId ? String(userId).slice(0, 12) : 'SPRINGFIELD');
 
     let response;
     let result;
@@ -264,7 +280,7 @@ export async function POST(request: NextRequest) {
       result = await response.json();
     } catch (err: any) {
       console.error('Failed to call M-Pesa STK processrequest. URL:', `${baseUrl}/mpesa/stkpush/v1/processrequest`, 'Error:', err?.message || err);
-      throw new Error('fetch failed');
+      return NextResponse.json({ message: 'M-Pesa STK push request failed: ' + (err?.message || 'network error'), error: err?.message || 'fetch failed' }, { status: 500 });
     }
     
     if (!response.ok) {

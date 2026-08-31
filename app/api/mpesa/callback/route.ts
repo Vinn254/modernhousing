@@ -21,20 +21,40 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse tenant info from AccountReference
-    // Old format: "tenantId|paymentType"
-    // New format: "tenantId|unitShortCode|paymentType"
+    // New format: unitShortCode or tenantId|unitShortCode|paymentType
     const accountRef = body.AccountReference || '';
-    const parts = accountRef.includes('|') ? accountRef.split('|') : [null, null, 'rent'];
-    const tenantId = parts[0] || null;
+    const parts = accountRef.includes('|') ? accountRef.split('|') : [];
     const knownPaymentTypes = new Set(['rent', 'tenancy_agreement', 'water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other', 'utility']);
+    let tenantId: string | null = null;
     let unitShortCode: string | null = null;
     let paymentType = 'rent';
 
-    if (parts.length === 2 && knownPaymentTypes.has(parts[1] || '')) {
-      paymentType = parts[1] || 'rent';
+    if (parts.length === 0 && accountRef) {
+      unitShortCode = accountRef;
+    } else if (parts.length === 1) {
+      unitShortCode = parts[0] || null;
+    } else if (parts.length === 2) {
+      if (knownPaymentTypes.has(parts[1] || '')) {
+        tenantId = parts[0] || null;
+        paymentType = parts[1] || 'rent';
+      } else {
+        tenantId = parts[0] || null;
+        unitShortCode = parts[1] || null;
+      }
     } else if (parts.length >= 3) {
+      tenantId = parts[0] || null;
       unitShortCode = parts[1] || null;
       paymentType = parts[2] || 'rent';
+    }
+
+    if (!tenantId && unitShortCode) {
+      const { data: unitRow } = await supabaseAdmin
+        .from('units')
+        .select('tenant_id')
+        .eq('short_code', unitShortCode)
+        .maybeSingle();
+
+      tenantId = unitRow?.tenant_id ?? null;
     }
 
     const amount = body.CallbackMetadata?.Item?.find((i: any) => i.Name === 'Amount')?.Value ?? 0;
