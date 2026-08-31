@@ -2510,12 +2510,21 @@ textarea:focus {
   margin: 0 !important;
 }
 
+@media (max-width: 900px) {
+  .admin-no-hero .bento {
+    grid-template-columns: 1fr;
+  }
+  .admin-no-hero .bento .card {
+    grid-column: 1;
+  }
+}
+
 .admin-no-hero .bento {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .admin-no-hero .bento .card {
-  grid-column: 1;
+  grid-column: span 1;
 }
 
 .admin-no-hero .table-shell {
@@ -3144,6 +3153,13 @@ body, #__next, .page-wrapper {
   padding: 28px;
   margin-bottom: 24px;
   border-top: none;
+}
+
+.admin-no-hero > .card-admin-header + .bento-section,
+.admin-no-hero > .card-admin-header + .bento-grid,
+.admin-no-hero > .card-admin-header + section,
+.admin-no-hero > .card-admin-header + .card-grid {
+  margin-top: 24px !important;
 }
 
 .card-admin-header .heading {
