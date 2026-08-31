@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { DeactivationPopup } from '../components/DeactivationGuard';
+import AppHeader from '../components/AppHeader';
 
 const LANDLORD_PROFILE_PATH = '/profile';
 
@@ -75,6 +76,7 @@ export default function AdminLayout({
   return (
     <>
       {isDeactivated && <DeactivationPopup landlordName={deactivationInfo?.landlordName} onLogout={handleLogout} />}
+      <AppHeader />
       {children}
     </>
   );

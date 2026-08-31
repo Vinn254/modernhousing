@@ -82,6 +82,7 @@ export default function AppHeader() {
   const [role, setRole] = useState<Role>('user');
   const [roleLoaded, setRoleLoaded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
@@ -229,7 +230,7 @@ export default function AppHeader() {
     <>
       {user && (
         <>
-          <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+          <div className={`sidebar ${sidebarOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}>
             <div className="sidebar-brand">
               <span className="logo-mark" style={{ width: 28, height: 28, borderRadius: 8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
@@ -252,9 +253,10 @@ export default function AppHeader() {
                   href={link.href}
                   onClick={() => setSidebarOpen(false)}
                   className={isLinkActive(link.href) ? 'active' : ''}
+                  title={link.label}
                 >
                   <NavIcon name={link.icon} />
-                  {link.label}
+                  <span>{link.label}</span>
                 </Link>
               ))}
             </nav>
@@ -269,6 +271,9 @@ export default function AppHeader() {
         <div className="app-header-content">
           {user && (
             <>
+              <button type="button" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="icon-button" aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} style={{ marginRight: 8 }}>
+                {sidebarCollapsed ? '☰' : '◀'}
+              </button>
               <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
               <span className="user-name" style={{ fontSize: '14px' }}>{user.user_metadata?.full_name || user.email}</span>
               <button

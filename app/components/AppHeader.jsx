@@ -55,6 +55,8 @@ export default function AppHeader() {
     const [role, setRole] = useState('user');
     const [roleLoaded, setRoleLoaded] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [darkMode, setDarkMode] = useState(false);
     const resolveRole = (currentUser) => {
         if (currentUser?.email === 'vin.oumaotieno@gmail.com')
             return 'super_admin';
@@ -164,7 +166,7 @@ export default function AppHeader() {
     const timeGreeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
     return (<>
       {user && (<>
-          <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+          <div className={`sidebar ${sidebarOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}>
             <div className="sidebar-brand">
               <span className="logo-mark" style={{ width: 28, height: 28, borderRadius: 8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
@@ -181,9 +183,9 @@ export default function AppHeader() {
             </div>
 
             <nav className="sidebar-nav">
-              {navLinks.map((link) => (<Link key={link.href} href={link.href} onClick={() => setSidebarOpen(false)} className={isLinkActive(link.href) ? 'active' : ''}>
+              {navLinks.map((link) => (<Link key={link.href} href={link.href} onClick={() => setSidebarOpen(false)} className={isLinkActive(link.href) ? 'active' : ''} title={link.label}>
                   <NavIcon name={link.icon}/>
-                  {link.label}
+                  <span>{link.label}</span>
                 </Link>))}
             </nav>
             <button onClick={handleLogout} className="sidebar-logout">Logout</button>
@@ -195,6 +197,9 @@ export default function AppHeader() {
       <header className="app-header">
         <div className="app-header-content">
           {user && (<>
+              <button type="button" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="icon-button" aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} style={{ marginRight: 8 }}>
+                {sidebarCollapsed ? '☰' : '◀'}
+              </button>
               <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
               <span className="user-name" style={{ fontSize: '14px' }}>{user.user_metadata?.full_name || user.email}</span>
               <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">☰</button>

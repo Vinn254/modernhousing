@@ -151,6 +151,10 @@ button {
   margin-bottom: 24px;
 }
 
+.dashboard-hero + * {
+  margin-top: 24px;
+}
+
 .dashboard-hero h1 {
   margin: 4px 0 8px;
   font-size: clamp(1.35rem, 2vw, 2rem);
@@ -224,6 +228,18 @@ button {
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   margin-bottom: 24px;
+}
+
+.dashboard-stats-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 768px) {
+  .dashboard-stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .bento-card {
@@ -823,7 +839,7 @@ textarea:focus {
 /* ========== BENTO ========== */
 .bento-section {
   max-width: 1200px;
-  margin: -60px auto 0;
+  margin: 24px auto 0;
   padding: 0 28px 80px;
   position: relative;
   z-index: 2;
@@ -2971,13 +2987,49 @@ body, #__next, .page-wrapper {
    color: #fff;
    box-shadow: 24px 0 60px rgba(6, 21, 40, 0.28);
    transform: translateX(-105%);
-   transition: transform .22s ease;
+   transition: transform .22s ease, width .22s ease;
    display: flex;
-  flex-direction: column;
+   flex-direction: column;
 }
 
 .sidebar.open {
-  transform: translateX(0);
+   transform: translateX(0);
+}
+
+.sidebar.collapsed {
+   width: 72px;
+   padding: 76px 8px 24px;
+}
+
+.sidebar.collapsed .sidebar-brand,
+.sidebar.collapsed .sidebar-profile,
+.sidebar.collapsed .sidebar-nav a span:not(svg),
+.sidebar.collapsed .sidebar-logout {
+   display: none;
+}
+
+.sidebar.collapsed .sidebar-nav a {
+   justify-content: center;
+   padding: 12px;
+}
+
+.sidebar.collapsed .sidebar-nav a svg {
+   margin: 0;
+}
+
+@media (min-width: 901px) {
+   .sidebar {
+      transform: translateX(0);
+      width: 280px;
+   }
+
+   .sidebar.collapsed {
+      width: 72px;
+   }
+
+   body:not(.has-app-shell) {
+      padding-left: 0;
+   }
 }
 
 .sidebar-nav {
