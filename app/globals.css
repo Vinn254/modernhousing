@@ -2987,49 +2987,13 @@ body, #__next, .page-wrapper {
    color: #fff;
    box-shadow: 24px 0 60px rgba(6, 21, 40, 0.28);
    transform: translateX(-105%);
-   transition: transform .22s ease, width .22s ease;
+   transition: transform .22s ease;
    display: flex;
    flex-direction: column;
 }
 
 .sidebar.open {
    transform: translateX(0);
-}
-
-.sidebar.collapsed {
-   width: 72px;
-   padding: 76px 8px 24px;
-}
-
-.sidebar.collapsed .sidebar-brand,
-.sidebar.collapsed .sidebar-profile,
-.sidebar.collapsed .sidebar-nav a span:not(svg),
-.sidebar.collapsed .sidebar-logout {
-   display: none;
-}
-
-.sidebar.collapsed .sidebar-nav a {
-   justify-content: center;
-   padding: 12px;
-}
-
-.sidebar.collapsed .sidebar-nav a svg {
-   margin: 0;
-}
-
-@media (min-width: 901px) {
-   .sidebar {
-      transform: translateX(0);
-      width: 280px;
-   }
-
-   .sidebar.collapsed {
-      width: 72px;
-   }
-
-   body:not(.has-app-shell) {
-      padding-left: 0;
-   }
 }
 
 .sidebar-nav {
