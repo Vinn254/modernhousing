@@ -163,11 +163,14 @@ async function getAccessToken(consumerKey: string, consumerSecret: string): Prom
   let response;
   try {
     response = await fetch(`${baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
-      headers: { Authorization: `Basic ${auth}` }
+      headers: { Authorization: `Basic ${auth}` },
+      signal: AbortSignal.timeout(20000),
     });
   } catch (err: any) {
     console.error('Failed to fetch M-Pesa access token. URL:', `${baseUrl}/oauth/v1/generate?grant_type=client_credentials`, 'Error:', err?.message || err);
-    return NextResponse.json({ message: 'M-Pesa access token fetch failed: ' + (err?.message || 'network error'), error: err?.message || 'fetch failed' }, { status: 502 });
+    const reason = err?.message || 'network error';
+    const isNetwork = /fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|timeout/i.test(reason);
+    return NextResponse.json({ message: isNetwork ? 'M-Pesa access token fetch failed: network/timeout to Safaricom.' : 'M-Pesa access token fetch failed.', error: reason }, { status: 502 });
   }
 
   if (!response.ok) {
