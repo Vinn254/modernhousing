@@ -208,7 +208,7 @@ export default function LandlordDocumentsPage() {
           </div>
         </div>
 
-    <section className="card-grid">
+    <section className="card-grid" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 20, width: '100%' }}>
           <article className="card" style={{ gridColumn: '1 / -1' }}>
             <div className="card-label">
               <span className="badge badge-pm">

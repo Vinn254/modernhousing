@@ -147,7 +147,7 @@ export default function CommunicationsPage() {
           </div>
         </div>
 
-        <section className="card-grid">
+        <section className="card-grid" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 20, width: '100%' }}>
           <article className="card">
             <div className="card-label"><span className="badge badge-pm">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"/></svg>
