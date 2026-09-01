@@ -2541,7 +2541,6 @@ textarea:focus {
 
 .admin-no-hero .bento-section {
   max-width: none !important;
-  margin: 0 !important;
 }
 
 @media (max-width: 900px) {
