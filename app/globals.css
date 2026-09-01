@@ -3157,18 +3157,6 @@ body, #__next, .page-wrapper {
     border-color: var(--accent-bright);
   }
 
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-@media (max-width: 900px) {
-  .bento-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 .bento-grid > *,
 .card-grid > *,
 .dashboard-section-grid > * {
