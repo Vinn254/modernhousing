@@ -232,7 +232,7 @@ button {
 
 @media (min-width: 1024px) {
   .bento-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, 1fr) !important;
   }
 }
 
@@ -860,7 +860,7 @@ textarea:focus {
 
 @media (min-width: 1024px) {
   .bento {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, 1fr) !important;
   }
 }
 .card {
@@ -2459,7 +2459,7 @@ textarea:focus {
 
 @media (min-width: 1024px) {
   .card-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, 1fr) !important;
   }
 }
 
@@ -2558,7 +2558,7 @@ textarea:focus {
 
 @media (min-width: 1024px) {
   .admin-no-hero .bento {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, 1fr) !important;
   }
 }
 
