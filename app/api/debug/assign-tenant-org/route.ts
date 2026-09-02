@@ -10,7 +10,17 @@ if (!supabaseUrl || !serviceRoleKey) {
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+function devGuard() {
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ message: 'Not found' }, { status: 404 });
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
+  const guard = devGuard();
+  if (guard) return guard;
+
   try {
     const body = await request.json();
     const tenantId = String(body.tenantId ?? '').trim();

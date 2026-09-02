@@ -292,7 +292,7 @@ export default function CommunicationsPage() {
           </div>
         </div>
 
-        <section className="card-grid" style={{ gap: 20 }}>
+        <section className="card-grid" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 20, width: '100%' }}>
           <article className="card" style={{ minHeight: 260, background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
             <div className="card-label">
               <span className="badge badge-pm">

@@ -11,6 +11,13 @@ if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+function devGuard() {
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ message: 'Not found' }, { status: 404 });
+  }
+  return null;
+}
+
 function decodeJWT(token: string): any | null {
   try {
     const parts = token.split('.');
@@ -48,6 +55,9 @@ async function getUserFromCookie(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const guard = devGuard();
+  if (guard) return guard;
+
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
   let sessionUser: any | null = null;
 

@@ -76,23 +76,6 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthWrapper>{children}</AuthWrapper>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js').catch(() => {});
-                });
-              }
-              document.addEventListener('contextmenu', event => event.preventDefault());
-              document.addEventListener('keydown', event => {
-                if (event.key === 'F12' || (event.ctrlKey && event.shiftKey && ['i','j','c'].includes(event.key.toLowerCase())) || (event.ctrlKey && event.key.toLowerCase() === 'u')) {
-                  event.preventDefault();
-                }
-              });
-            `,
-          }}
-        />
       </body>
     </html>
   );

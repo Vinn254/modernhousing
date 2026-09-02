@@ -2,10 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
+if (!supabaseUrl || !serviceRoleKey) {
+  throw new Error('Missing Supabase server environment variables');
+}
+
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+function devGuard() {
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ message: 'Not found' }, { status: 404 });
+  }
+  return null;
+}
 
 function decodeJWT(token: string): any | null {
   try {
@@ -52,6 +62,9 @@ async function getAuthOrg(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const guard = devGuard();
+  if (guard) return guard;
+
   try {
     // allow tenantId or email query params to lookup org without auth
     const tenantId = request.nextUrl.searchParams.get('tenantId');

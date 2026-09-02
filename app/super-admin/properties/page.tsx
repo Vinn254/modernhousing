@@ -94,7 +94,7 @@ export default function PropertiesPage() {
 
         <section className="bento-section">
           <div className="bento">
-            <article className="card">
+            <article className="card" style={{ gridColumn: '1 / -1' }}>
               <div className="landlord-stats">
                 <article className="landlord-stat">
                   <span>Total Properties</span>
