@@ -863,6 +863,18 @@ textarea:focus {
     grid-template-columns: repeat(3, 1fr) !important;
   }
 }
+
+/* ===== Home page landing bento — 3-column layout ===== */
+@media (min-width: 1024px) {
+  .home-bento .bento .card-pm,
+  .home-bento .bento .card-agent,
+  .home-bento .bento .card-feat-1,
+  .home-bento .bento .card-feat-2,
+  .home-bento .bento .card-feat-3 {
+    grid-column: span 1;
+    grid-row: auto;
+  }
+}
 .card {
   position: relative;
   
