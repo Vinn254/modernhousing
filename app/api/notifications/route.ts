@@ -43,28 +43,51 @@ async function ensureNotificationTable() {
 }
 
 async function getFallbackLandlordNotifications(adminEmail?: string) {
-  let query: any = supabaseAdmin
+  let landlordQuery: any = supabaseAdmin
     .from('payments')
-    .select('*')
+    .select('*, tenants!inner(full_name, email)')
     .eq('transaction_type', 'landlord_notification')
     .order('created_at', { ascending: false });
 
   if (adminEmail) {
-    query = query.eq('admin_email', adminEmail);
+    landlordQuery = landlordQuery.eq('admin_email', adminEmail);
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
+  let tenantQuery: any = supabaseAdmin
+    .from('payments')
+    .select('*, tenants(full_name, email)')
+    .eq('transaction_type', 'notification')
+    .order('created_at', { ascending: false });
 
-  return (data ?? []).map((item: any) => ({
-    ...item,
-    recipient: 'project_manager',
-    admin_id: item.admin_id ?? null,
-    admin_name: item.admin_name ?? null,
-    admin_email: item.admin_email ?? null,
-    message: item.description ?? '',
-    status: item.status,
-  }));
+  if (adminEmail) {
+    tenantQuery = tenantQuery.eq('admin_email', adminEmail);
+  }
+
+  const [{ data: landlordData }, { data: tenantData }] = await Promise.all([
+    landlordQuery,
+    tenantQuery,
+  ]);
+
+  return [
+    ...(landlordData ?? []).map((item: any) => ({
+      ...item,
+      recipient: 'project_manager',
+      admin_id: item.admin_id ?? null,
+      admin_name: item.admin_name ?? null,
+      admin_email: item.admin_email ?? null,
+      message: item.description ?? '',
+      status: item.status,
+    })),
+
+    ...(tenantData ?? []).map((item: any) => ({
+      ...item,
+      recipient: 'tenant',
+      tenant: item.tenants?.full_name ?? '',
+      tenant_email: item.tenants?.email ?? '',
+      message: item.description ?? '',
+      status: item.status,
+    })),
+  ];
 }
 
 async function insertFallbackLandlordNotification(body: {

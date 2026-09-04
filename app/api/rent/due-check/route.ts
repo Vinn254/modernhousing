@@ -272,53 +272,127 @@ export async function GET(request: NextRequest) {
       const OVERDUE_NOTIFY_INTERVAL_DAYS = 5;
 
       async function ensureNotification(type: string, message: string, recipient: 'tenant' | 'project_manager', notificationAdminEmail?: string) {
-        const existingNotifs = await supabaseAdmin
-          .from('notifications')
-          .select('id')
-          .eq('tenant_id', tenant.id)
-          .eq('type', type)
-          .gte('created_at', dueDateStr + 'T00:00:00')
-          .lte('created_at', new Date(dueDateObj.getTime() + dayMs).toISOString().slice(0, 10) + 'T23:59:59');
+        try {
+          const existingNotifs = await supabaseAdmin
+            .from('notifications')
+            .select('id')
+            .eq('tenant_id', tenant.id)
+            .eq('type', type)
+            .gte('created_at', dueDateStr + 'T00:00:00')
+            .lte('created_at', new Date(dueDateObj.getTime() + dayMs).toISOString().slice(0, 10) + 'T23:59:59');
 
-        if ((existingNotifs.data ?? []).length > 0) return false;
+          if ((existingNotifs.data ?? []).length > 0) return false;
 
-         await supabaseAdmin.from('notifications').insert({
-           recipient,
-           tenant_id: tenant.id,
-           property_id: propertyId,
-           admin_email: notificationAdminEmail || landlordEmail || null,
-           type,
-           message,
-           status: 'sent',
-           created_at: new Date().toISOString(),
-         });
+          const insertResult = await supabaseAdmin.from('notifications').insert({
+            recipient,
+            tenant_id: tenant.id,
+            property_id: propertyId,
+            admin_email: notificationAdminEmail || landlordEmail || null,
+            type,
+            message,
+            status: 'sent',
+            created_at: new Date().toISOString(),
+          });
 
-        return true;
+          if (insertResult.error) {
+            console.warn('Notification insert failed, using payments fallback:', insertResult.error);
+            await supabaseAdmin.from('payments').insert({
+              tenant_id: tenant.id,
+              property_id: propertyId,
+              description: message,
+              transaction_type: recipient === 'tenant' ? 'notification' : 'landlord_notification',
+              amount: 0,
+              balance_remaining: 0,
+              admin_email: notificationAdminEmail || landlordEmail || null,
+              month_due: monthDueLabel,
+              due_date: dueDateStr,
+              paid_at: new Date().toISOString(),
+            });
+          }
+
+          return true;
+        } catch (e: any) {
+          console.warn('ensureNotification failed:', e.message);
+          try {
+            await supabaseAdmin.from('payments').insert({
+              tenant_id: tenant.id,
+              property_id: propertyId,
+              description: message,
+              transaction_type: recipient === 'tenant' ? 'notification' : 'landlord_notification',
+              amount: 0,
+              balance_remaining: 0,
+              admin_email: notificationAdminEmail || landlordEmail || null,
+              month_due: monthDueLabel,
+              due_date: dueDateStr,
+              paid_at: new Date().toISOString(),
+            });
+          } catch (fallbackErr: any) {
+            console.error('Fallback notification insert also failed:', fallbackErr.message);
+          }
+          return false;
+        }
       }
 
       async function ensureRecurringNotification(type: string, message: string, recipient: 'tenant' | 'project_manager', notificationAdminEmail?: string, intervalDays: number = OVERDUE_NOTIFY_INTERVAL_DAYS) {
-        const cutoff = new Date(todayStart.getTime() - intervalDays * dayMs).toISOString();
-        const existingNotifs = await supabaseAdmin
-          .from('notifications')
-          .select('id')
-          .eq('tenant_id', tenant.id)
-          .eq('type', type)
-          .gte('created_at', cutoff);
+        try {
+          const cutoff = new Date(todayStart.getTime() - intervalDays * dayMs).toISOString();
+          const existingNotifs = await supabaseAdmin
+            .from('notifications')
+            .select('id')
+            .eq('tenant_id', tenant.id)
+            .eq('type', type)
+            .gte('created_at', cutoff);
 
-        if ((existingNotifs.data ?? []).length > 0) return false;
+          if ((existingNotifs.data ?? []).length > 0) return false;
 
-        await supabaseAdmin.from('notifications').insert({
-          recipient,
-          tenant_id: tenant.id,
-          property_id: propertyId,
-          admin_email: notificationAdminEmail || landlordEmail || null,
-          type,
-          message,
-          status: 'sent',
-          created_at: new Date().toISOString(),
-        });
+          const insertResult = await supabaseAdmin.from('notifications').insert({
+            recipient,
+            tenant_id: tenant.id,
+            property_id: propertyId,
+            admin_email: notificationAdminEmail || landlordEmail || null,
+            type,
+            message,
+            status: 'sent',
+            created_at: new Date().toISOString(),
+          });
 
-        return true;
+          if (insertResult.error) {
+            console.warn('Recurring notification insert failed, using payments fallback:', insertResult.error);
+            await supabaseAdmin.from('payments').insert({
+              tenant_id: tenant.id,
+              property_id: propertyId,
+              description: message,
+              transaction_type: recipient === 'tenant' ? 'notification' : 'landlord_notification',
+              amount: 0,
+              balance_remaining: 0,
+              admin_email: notificationAdminEmail || landlordEmail || null,
+              month_due: monthDueLabel,
+              due_date: dueDateStr,
+              paid_at: new Date().toISOString(),
+            });
+          }
+
+          return true;
+        } catch (e: any) {
+          console.warn('ensureRecurringNotification failed:', e.message);
+          try {
+            await supabaseAdmin.from('payments').insert({
+              tenant_id: tenant.id,
+              property_id: propertyId,
+              description: message,
+              transaction_type: recipient === 'tenant' ? 'notification' : 'landlord_notification',
+              amount: 0,
+              balance_remaining: 0,
+              admin_email: notificationAdminEmail || landlordEmail || null,
+              month_due: monthDueLabel,
+              due_date: dueDateStr,
+              paid_at: new Date().toISOString(),
+            });
+          } catch (fallbackErr: any) {
+            console.error('Fallback recurring notification insert also failed:', fallbackErr.message);
+          }
+          return false;
+        }
       }
 
       const daysPastDue = Math.floor((todayStart.getTime() - dueDateObj.getTime()) / dayMs);
