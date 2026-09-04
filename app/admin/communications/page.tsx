@@ -26,6 +26,8 @@ interface Notification {
   tenant_id?: string;
   tenant_name?: string;
   tenant_email?: string;
+  property_id?: string;
+  tenants?: { full_name?: string; email?: string };
 }
 
 interface ReplyItem {
@@ -225,30 +227,81 @@ export default function CommunicationsPage() {
     setStarredIds((current) => (current.includes(messageId) ? current.filter((id) => id !== messageId) : [...current, messageId]));
   }
 
-  function handleSendReply(messageId: string) {
+  async function handleSendReply(messageId: string) {
     const draft = (replyDrafts[messageId] || '').trim();
     if (!draft) return;
 
-    setMessages((current) => current.map((message) => message.id === messageId
-      ? {
-          ...message,
-          isUnread: false,
-          preview: draft,
-          thread: [
-            ...message.thread,
-            {
-              id: `${message.id}-reply-${Date.now()}`,
-              role: 'You',
-              text: draft,
-              createdAt: new Date().toISOString(),
-            },
-          ],
-        }
-      : message));
+    const message = messages.find((m) => m.id === messageId);
+    const tenantId = message?.tenant_id;
+    const propertyId = message?.property_id;
+    const adminEmail = message?.admin_email;
 
     setReplyDrafts((current) => ({ ...current, [messageId]: '' }));
     setSelectedMessageId(messageId);
-    setMessage('Reply sent to the thread.');
+
+    if (tenantId && propertyId) {
+      setSending(true);
+      const headers = await getAuthHeaders();
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          recipient: 'tenant',
+          tenantId,
+          propertyId,
+          type: 'reply',
+          message: draft,
+          adminEmail: adminEmail || '',
+        }),
+      });
+
+      const result = await response.json();
+      setSending(false);
+
+      if (!response.ok) {
+        setError(result.message ?? 'Unable to send reply to tenant.');
+        setReplyDrafts((current) => ({ ...current, [messageId]: draft }));
+        return;
+      }
+
+      setMessages((current) => current.map((message) => message.id === messageId
+        ? {
+            ...message,
+            isUnread: false,
+            preview: draft,
+            thread: [
+              ...message.thread,
+              {
+                id: result.notification?.id || `${message.id}-reply-${Date.now()}`,
+                role: 'You',
+                text: draft,
+                createdAt: result.notification?.created_at || new Date().toISOString(),
+              },
+            ],
+          }
+        : message));
+      setMessage('Reply sent to tenant.');
+    } else {
+      setMessages((current) => current.map((message) => message.id === messageId
+        ? {
+            ...message,
+            isUnread: false,
+            preview: draft,
+            thread: [
+              ...message.thread,
+              {
+                id: `${message.id}-reply-${Date.now()}`,
+                role: 'You',
+                text: draft,
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }
+        : message));
+      setMessage('Reply added to the thread.');
+    }
+
+    await loadNotifications();
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>, messageId: string) {
@@ -402,7 +455,12 @@ export default function CommunicationsPage() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <strong style={{ fontSize: '13px' }}>{message.roleLabel}</strong>
+                      <strong style={{ fontSize: '13px' }}>
+                        {message.roleLabel}
+                        {message.roleLabel === 'Tenant' && (message.tenants?.full_name || message.tenant_name) && (
+                          <span style={{ fontSize: '11px', color: 'var(--ink-3)', fontWeight: 400 }}> — {message.tenants?.full_name || message.tenant_name}</span>
+                        )}
+                      </strong>
                       <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(message.created_at).toLocaleDateString()}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -420,7 +478,11 @@ export default function CommunicationsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                     <div>
                       <div style={{ fontSize: '12px', color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Conversation</div>
-                      <h4 style={{ margin: '4px 0 2px' }}>{selectedMessage.roleLabel} update</h4>
+                      <h4 style={{ margin: '4px 0 2px' }}>
+                        {selectedMessage.roleLabel === 'Tenant' && (selectedMessage.tenants?.full_name || selectedMessage.tenant_name)
+                          ? `${selectedMessage.tenants?.full_name || selectedMessage.tenant_name} — Reply`
+                          : `${selectedMessage.roleLabel} update`}
+                      </h4>
                       <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{selectedMessage.type}</p>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -461,8 +523,8 @@ export default function CommunicationsPage() {
                       style={{ width: '100%', borderRadius: 10, border: '1px solid #a7f3d0', padding: '10px 12px', resize: 'vertical' }}
                     />
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                      <button type="button" onClick={() => handleSendReply(selectedMessage.id)} style={{ padding: '8px 14px', borderRadius: 999, border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
-                        Send reply
+                      <button type="button" onClick={() => handleSendReply(selectedMessage.id)} disabled={sending} style={{ padding: '8px 14px', borderRadius: 999, border: 'none', background: sending ? '#6ee7b7' : '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+                        {sending ? 'Sending…' : 'Send reply'}
                       </button>
                     </div>
                     <p style={{ margin: '8px 0 0', fontSize: '11px', color: 'var(--ink-3)' }}>Tip: press ⌘/Ctrl + Enter to send instantly.</p>
