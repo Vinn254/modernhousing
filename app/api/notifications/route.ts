@@ -158,7 +158,12 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (recipient === 'landlord' || recipient === 'project_manager') {
-      query = query.eq('recipient', 'project_manager');
+      if (adminEmail) {
+        query = query.or(`recipient.eq.project_manager,recipient.eq.tenant`);
+        query = query.eq('admin_email', adminEmail);
+      } else {
+        query = query.eq('recipient', 'project_manager');
+      }
     } else if (recipient === 'tenant') {
       query = query.eq('recipient', 'tenant');
     } else if (recipient === 'agent') {
