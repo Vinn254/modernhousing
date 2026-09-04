@@ -344,7 +344,7 @@ export async function GET(request: NextRequest) {
 
         await ensureNotification(
           'overdue',
-          `Your lease for ${propertyName} - rent of KSH ${rentAmount} for ${monthDueLabel} was due on ${dueDateStr} and has not been received. Please pay immediately.`,
+          `Your lease for ${propertyName} (${tenant.lease_start} → ${tenant.lease_end}) - rent of KSH ${rentAmount} for ${monthDueLabel} was due on ${dueDateStr} and has not been received. Please pay immediately.`,
           'tenant'
         );
 
@@ -358,7 +358,7 @@ export async function GET(request: NextRequest) {
         if (daysPastDue >= OVERDUE_WEEKS_WARNING * 7) {
           await ensureNotification(
             'long_overdue',
-            `Your lease for ${propertyName} - rent of KSH ${rentAmount} for ${monthDueLabel} was due on ${dueDateStr} and is now over ${OVERDUE_WEEKS_WARNING} weeks overdue.`,
+            `Your lease for ${propertyName} (${tenant.lease_start} → ${tenant.lease_end}) - rent of KSH ${rentAmount} for ${monthDueLabel} was due on ${dueDateStr} and is now over ${OVERDUE_WEEKS_WARNING} weeks overdue.`,
             'tenant'
           );
           await ensureNotification(

@@ -286,20 +286,22 @@ const rentOwedByTenant = useMemo(() => {
         if (!tid) return;
         
         if (!byTenant.has(tid)) {
-          const t = tenantMap.get(tid) || {};
-          byTenant.set(tid, {
-            id: tid,
-            full_name: t.full_name || p.tenant_name || p.tenant || '',
-            email: t.email || p.tenant_email || '',
-            unit: t.unit || p.unit_number || p.unit || null,
-            property: t.property || p.property_name || p.property || null,
-            balance_remaining: 0,
-            paid_amount: 0,
-            paid_overdue_amount: 0,
-            last_payment: p.created_at || null,
-            payments: [] as any[],
-          });
-        }
+           const t = tenantMap.get(tid) || {};
+           byTenant.set(tid, {
+             id: tid,
+             full_name: t.full_name || p.tenant_name || p.tenant || '',
+             email: t.email || p.tenant_email || '',
+             unit: t.unit || p.unit_number || p.unit || null,
+             property: t.property || p.property_name || p.property || null,
+             lease_start: t.lease_start || null,
+             lease_end: t.lease_end || null,
+             balance_remaining: 0,
+             paid_amount: 0,
+             paid_overdue_amount: 0,
+             last_payment: p.created_at || null,
+             payments: [] as any[],
+           });
+         }
         const entry = byTenant.get(tid);
         entry.payments.push(p);
         
@@ -412,15 +414,40 @@ return Array.from(byTenant.values())
           });
         });
 
-        const merged = (rentOwedByTenant ?? []).map((t) => {
-          const info = overdueMap.get(t.id);
-          return {
-            ...t,
-            rent_amount: info?.rent_amount ?? 0,
-            next_due_date: info?.next_due_date ?? null,
-            overdue_dates: info?.overdue_dates ?? [],
-          };
-        });
+         const merged = (rentOwedByTenant ?? []).map((t) => {
+           const info = overdueMap.get(t.id);
+
+           let calculatedDueDate = info?.next_due_date ?? null;
+           let calculatedOverdueDates = info?.overdue_dates ?? [];
+
+           if (!info && t.lease_start) {
+             const RENT_PERIOD_DAYS = 30;
+             const dayMs = 24 * 60 * 60 * 1000;
+             const today = new Date();
+             today.setHours(0, 0, 0, 0);
+
+             const leaseStart = new Date(t.lease_start + 'T00:00:00');
+             let dueDate = new Date(leaseStart.getTime() + RENT_PERIOD_DAYS * dayMs);
+             while (dueDate <= today) {
+               dueDate = new Date(dueDate.getTime() + RENT_PERIOD_DAYS * dayMs);
+             }
+             const lastDueDate = new Date(dueDate.getTime() - RENT_PERIOD_DAYS * dayMs);
+             const daysPastDue = Math.floor((today.getTime() - lastDueDate.getTime()) / dayMs);
+
+             calculatedDueDate = lastDueDate.toISOString().slice(0, 10);
+             if (daysPastDue >= 0) {
+               const monthLabel = `${lastDueDate.toLocaleString('default', { month: 'long' })} ${lastDueDate.getFullYear()}`;
+               calculatedOverdueDates = [{ month_due: monthLabel, due_date: calculatedDueDate, days_overdue: daysPastDue }];
+             }
+           }
+
+           return {
+             ...t,
+             rent_amount: info?.rent_amount ?? 0,
+             next_due_date: calculatedDueDate,
+             overdue_dates: calculatedOverdueDates,
+           };
+         });
         setRentOwedTenants(merged);
       }
     } catch (e) {
