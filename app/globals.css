@@ -925,15 +925,15 @@ textarea:focus {
   background: var(--surface);
 }
 .card-feat-1 { 
-  grid-column: span 4; 
+  grid-column: span 1; 
   background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
 }
 .card-feat-2 { 
-  grid-column: span 4; 
+  grid-column: span 1; 
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
 }
 .card-feat-3 { 
-  grid-column: span 4; 
+  grid-column: span 1; 
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
 }
 .card-feat-4 {
@@ -966,7 +966,7 @@ textarea:focus {
 }
 @media (max-width: 900px) {
    .card-pm, .card-agent, .card-feat-1, .card-feat-2, .card-feat-3, .card-feat-4, .card-feat-5, .card-feat-6, .card-feat-7, .card-feat-8, .card-feat-9, .card-feat-10 {
-      grid-column: span 12;
+      grid-column: 1 / -1;
       grid-row: auto;
     }
   }
@@ -2521,7 +2521,7 @@ textarea:focus {
 
 @media (max-width: 900px) {
    .card-pm, .card-agent, .card-feat-1, .card-feat-2, .card-feat-3, .card-feat-4, .card-feat-5, .card-feat-6, .card-feat-7, .card-feat-8, .card-feat-9, .card-feat-10 {
-      grid-column: span 12;
+      grid-column: 1 / -1;
       grid-row: auto;
     }
 }
