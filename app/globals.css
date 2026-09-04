@@ -2469,6 +2469,16 @@ textarea:focus {
   margin: 24px auto 0;
 }
 
+.card-grid > .card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-grid .card-cta {
+  margin-top: auto;
+}
+
 @media (min-width: 1024px) {
   .card-grid {
     grid-template-columns: repeat(3, 1fr) !important;
