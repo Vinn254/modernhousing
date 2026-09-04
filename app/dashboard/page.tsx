@@ -410,10 +410,14 @@ return Array.from(byTenant.values())
       const key = `${year}-${String(month).padStart(2, '0')}`;
       return tenantPayments.some((p: any) => {
         if (p.transaction_type === 'complaint' || p.transaction_type === 'notification') return false;
+        const balance = Number(p.balance_remaining ?? p.balance ?? 0);
+        if (balance > 0) return false;
         const mk = p.month_due?.substring(0, 7) || '';
-        if (mk === key) {
-          const balance = Number(p.balance_remaining ?? p.balance ?? 0);
-          return balance <= 0;
+        if (mk === key) return true;
+        const paidAt = p.paid_at || p.created_at || p.payment_date || '';
+        if (paidAt) {
+          const pd = new Date(paidAt);
+          if (!isNaN(pd.getTime()) && pd.getFullYear() === year && pd.getMonth() + 1 === month) return true;
         }
         return false;
       });
@@ -422,7 +426,7 @@ return Array.from(byTenant.values())
     let dueDate = new Date(start.getTime() + RENT_PERIOD_DAYS * dayMs);
     let safety = 0;
 
-    while (dueDate <= today && safety < 100) {
+    while (dueDate <= today && safety < 300) {
       const d = new Date(dueDate);
       const paid = isMonthPaid(d.getFullYear(), d.getMonth() + 1);
       if (paid) {

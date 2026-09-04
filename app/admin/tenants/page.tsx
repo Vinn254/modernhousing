@@ -146,14 +146,20 @@ function calculateOverdueDate(leaseStart: string, tenantPayments: any[]): { dueD
 
   function isMonthPaid(year: number, month: number): boolean {
     const key = `${year}-${String(month).padStart(2, '0')}`;
-    const monthDueStr = `${monthNames[month - 1]} ${year}`;
     return tenantPayments.some((p: any) => {
       if (p.transaction_type === 'complaint' || p.transaction_type === 'notification') return false;
+      const balance = Number(p.balance_remaining ?? p.balance ?? 0);
+      if (balance > 0) return false;
+
       const mk = p.month_due?.substring(0, 7) || '';
-      if (mk === key) {
-        const balance = Number(p.balance_remaining ?? p.balance ?? 0);
-        return balance <= 0;
+      if (mk === key) return true;
+
+      const paidAt = p.paid_at || p.created_at || p.payment_date || '';
+      if (paidAt) {
+        const pd = new Date(paidAt);
+        if (!isNaN(pd.getTime()) && pd.getFullYear() === year && pd.getMonth() + 1 === month) return true;
       }
+
       return false;
     });
   }
