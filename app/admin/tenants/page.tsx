@@ -63,6 +63,7 @@ function TenantsPageContent() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingBills, setLoadingBills] = useState(false);
   const [error, setError] = useState('');
@@ -119,7 +120,7 @@ const filteredBills = bills.filter(bill => {
 const RENT_PERIOD_DAYS = 30;
 const dayMs = 24 * 60 * 60 * 1000;
 
-function calculateOverdueDate(leaseStart: string): { dueDate: string; daysOverdue: number; monthLabel: string; isOverdue: boolean } | null {
+function calculateOverdueDate(leaseStart: string, tenantPayments: any[]): { dueDate: string; daysOverdue: number; monthLabel: string; isOverdue: boolean; isPaid: boolean } | null {
   if (!leaseStart) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -127,37 +128,79 @@ function calculateOverdueDate(leaseStart: string): { dueDate: string; daysOverdu
   const start = new Date(leaseStart + 'T00:00:00');
   let dueDate = new Date(start.getTime() + RENT_PERIOD_DAYS * dayMs);
 
-  while (dueDate <= today) {
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function parseMonthDue(monthDue: string): { year: number; month: number } | null {
+    if (!monthDue) return null;
+    const trimmed = monthDue.trim();
+    const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})$/);
+    if (ymdMatch) return { year: parseInt(ymdMatch[1], 10), month: parseInt(ymdMatch[2], 10) };
+    const parts = trimmed.split(' ');
+    if (parts.length >= 2) {
+      const monthName = parts[0].toLowerCase();
+      const monthIdx = monthNames.findIndex(m => m.toLowerCase() === monthName);
+      if (monthIdx >= 0) return { year: Number(parts[1]) || today.getFullYear(), month: monthIdx + 1 };
+    }
+    return null;
+  }
+
+  function isMonthPaid(year: number, month: number): boolean {
+    const key = `${year}-${String(month).padStart(2, '0')}`;
+    const monthDueStr = `${monthNames[month - 1]} ${year}`;
+    return tenantPayments.some((p: any) => {
+      if (p.transaction_type === 'complaint' || p.transaction_type === 'notification') return false;
+      const mk = p.month_due?.substring(0, 7) || '';
+      if (mk === key) {
+        const balance = Number(p.balance_remaining ?? p.balance ?? 0);
+        return balance <= 0;
+      }
+      return false;
+    });
+  }
+
+  while (true) {
+    const d = new Date(dueDate);
+    const monthKey = { year: d.getFullYear(), month: d.getMonth() + 1 };
+    const paid = isMonthPaid(monthKey.year, monthKey.month);
+    if (!paid && dueDate <= today) {
+      const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / dayMs);
+      const monthLabel = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      return {
+        dueDate: dueDate.toISOString().slice(0, 10),
+        daysOverdue,
+        monthLabel,
+        isOverdue: true,
+        isPaid: false,
+      };
+    }
+    if (paid) {
+      dueDate = new Date(dueDate.getTime() + RENT_PERIOD_DAYS * dayMs);
+      if (dueDate > today) {
+        const d2 = new Date(dueDate);
+        const monthLabel = `${monthNames[d2.getMonth()]} ${d2.getFullYear()}`;
+        return {
+          dueDate: dueDate.toISOString().slice(0, 10),
+          daysOverdue: 0,
+          monthLabel,
+          isOverdue: false,
+          isPaid: true,
+        };
+      }
+      continue;
+    }
+    if (dueDate > today) {
+      const d3 = new Date(dueDate);
+      const monthLabel = `${monthNames[d3.getMonth()]} ${d3.getFullYear()}`;
+      return {
+        dueDate: dueDate.toISOString().slice(0, 10),
+        daysOverdue: 0,
+        monthLabel,
+        isOverdue: false,
+        isPaid: false,
+      };
+    }
     dueDate = new Date(dueDate.getTime() + RENT_PERIOD_DAYS * dayMs);
   }
-
-  const prevDue = new Date(dueDate.getTime() - RENT_PERIOD_DAYS * dayMs);
-  const timeAgo = prevDue.getTime();
-  const daysPastPrev = Math.floor((today.getTime() - prevDue.getTime()) / dayMs);
-
-  const isCurrentlyOverdue = daysPastPrev >= 0;
-  let displayDate: Date;
-  let daysOverdue: number;
-  let monthLabel: string;
-
-  if (isCurrentlyOverdue) {
-    displayDate = prevDue;
-    daysOverdue = daysPastPrev;
-    const d = new Date(prevDue);
-    monthLabel = `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`;
-  } else {
-    displayDate = dueDate;
-    daysOverdue = 0;
-    const d = new Date(dueDate);
-    monthLabel = `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`;
-  }
-
-  return {
-    dueDate: displayDate.toISOString().slice(0, 10),
-    daysOverdue,
-    monthLabel,
-    isOverdue: isCurrentlyOverdue,
-  };
 }
 
 function formatDate(dateStr: string): string {
@@ -171,19 +214,22 @@ function formatDate(dateStr: string): string {
     setError('');
 
     try {
-      const [tenantsResponse, propertiesResponse, unitsResponse] = await Promise.all([
+      const [tenantsResponse, propertiesResponse, unitsResponse, paymentsResponse] = await Promise.all([
         fetch('/api/tenants', { headers: await getAuthHeaders() }),
         fetch('/api/properties', { headers: await getAuthHeaders() }),
         fetch('/api/units', { headers: await getAuthHeaders() }),
+        fetch('/api/payments', { headers: await getAuthHeaders() }),
       ]);
 
       const tenantsResult = await tenantsResponse.json();
       const propertiesResult = await propertiesResponse.json();
       const unitsResult = await unitsResponse.json();
+      const paymentsResult = await paymentsResponse.json();
 
       setTenants(tenantsResult.tenants ?? []);
       setProperties(propertiesResult.properties ?? []);
       setUnits(unitsResult.units ?? []);
+      setPayments(paymentsResult.payments ?? []);
     } catch (err: any) {
       setError(err.message ?? 'Unable to load data.');
     } finally {
@@ -563,24 +609,25 @@ function formatDate(dateStr: string): string {
                         <td>{tenant.unit}</td>
                         <td>{tenant.property}</td>
                          <td>{tenant.lease_start} → {tenant.lease_end}</td>
-                         <td>
-                           {(() => {
-                             const info = calculateOverdueDate(tenant.lease_start);
-                             if (!info) return <span style={{ color: 'var(--ink-3)', fontSize: '12px' }}>—</span>;
-                             if (info.isOverdue) {
-                               return (
-                                 <span style={{ color: '#dc2626', fontWeight: 600, fontSize: '12px' }}>
-                                   {formatDate(info.dueDate)} — {info.daysOverdue}d overdue ({info.monthLabel})
-                                 </span>
-                               );
-                             }
-                             return (
-                               <span style={{ color: 'var(--accent)', fontSize: '12px' }}>
-                                 Due: {formatDate(info.dueDate)} ({info.monthLabel})
-                               </span>
-                             );
-                           })()}
-                         </td>
+                          <td>
+                            {(() => {
+                              const tenantPayments = (payments || []).filter((p: any) => p.tenant_id === tenant.id);
+                              const info = calculateOverdueDate(tenant.lease_start, tenantPayments);
+                              if (!info) return <span style={{ color: 'var(--ink-3)', fontSize: '12px' }}>—</span>;
+                              if (info.isOverdue) {
+                                return (
+                                  <span style={{ color: '#dc2626', fontWeight: 600, fontSize: '12px' }}>
+                                    {formatDate(info.dueDate)} — {info.daysOverdue}d overdue ({info.monthLabel})
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span style={{ color: 'var(--accent)', fontSize: '12px' }}>
+                                  Due: {formatDate(info.dueDate)} ({info.monthLabel})
+                                </span>
+                              );
+                            })()}
+                          </td>
                          <td>
                            <span className={`status-pill ${tenant.status === 'active' || !tenant.status ? 'status-active' : 'status-pending'}`}>
                             {tenant.status ?? 'Active'}
