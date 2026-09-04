@@ -2550,13 +2550,13 @@ textarea:focus {
 .admin-no-hero.container {
   max-width: none !important;
   margin: 0 !important;
-  padding: 0 16px 80px;
+  padding: 80px 16px 80px;
 }
 
 @media (max-width: 768px) {
   .container:not(.admin-no-hero),
   .admin-no-hero.container {
-    padding: 12px 10px 80px;
+    padding: 80px 10px 80px;
   }
 }
 
@@ -2610,7 +2610,7 @@ textarea:focus {
 .admin-no-hero.page-layout {
   max-width: none !important;
   margin: 0 !important;
-  padding: 0 8px 80px;
+  padding: 80px 8px 80px;
 }
 
 .admin-no-hero.page-layout::before {
@@ -2619,13 +2619,14 @@ textarea:focus {
 
 @media (max-width: 768px) {
   .admin-no-hero.page-layout {
-    padding: 12px 8px 80px;
+    padding: 80px 8px 80px;
   }
 }
 
 .page-layout.auth-pattern-bg {
   background: linear-gradient(135deg, #eafff7 0%, #d1fae5 100%);
   min-height: 100vh;
+  padding-top: 80px;
 }
 
 .payments-form-grid {
@@ -2922,6 +2923,7 @@ body, #__next, .page-wrapper {
   position: sticky;
   top: 0;
   z-index: 100;
+  height: 76px;
   background: var(--navy-800);
 }
 

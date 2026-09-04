@@ -278,6 +278,7 @@ export async function GET(request: NextRequest) {
             .select('id')
             .eq('tenant_id', tenant.id)
             .eq('type', type)
+            .eq('recipient', recipient)
             .gte('created_at', dueDateStr + 'T00:00:00')
             .lte('created_at', new Date(dueDateObj.getTime() + dayMs).toISOString().slice(0, 10) + 'T23:59:59');
 
@@ -341,6 +342,7 @@ export async function GET(request: NextRequest) {
             .select('id')
             .eq('tenant_id', tenant.id)
             .eq('type', type)
+            .eq('recipient', recipient)
             .gte('created_at', cutoff);
 
           if ((existingNotifs.data ?? []).length > 0) return false;
