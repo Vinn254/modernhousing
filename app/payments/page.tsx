@@ -767,11 +767,12 @@ allPayments.sort((a, b) => {
           </div>
         </section>
 
-        {userRole !== 'tenant' && (
-          <article className="card" style={{ marginTop: 24, background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' }}>
+        <div className="card-grid" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: '1fr 1fr', gridAutoRows: '1fr', alignItems: 'stretch', gap: 20, width: '100%' }}>
+          {userRole !== 'tenant' && (
+          <article className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' }}>
             <div className="card-label">Payment Instructions</div>
             <h3 style={{ marginBottom: 16 }}>Tenant Payment Details</h3>
-            <p style={{ color: '#111827', marginBottom: 12 }}>Share these details with tenants for manual payments via M-Pesa Paybill. The account number is the short code assigned to each unit.</p>
+            <p style={{ color: '#111827', marginBottom: 12, flex: 1 }}>Share these details with tenants for manual payments via M-Pesa Paybill. The account number is the short code assigned to each unit.</p>
             <div style={{ padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '14px', color: '#111827' }}>
               {paybill && <div><strong>Paybill Number:</strong> {paybill}</div>}
               <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants should use the short code from their unit as the account number when paying via Paybill.</div>
@@ -779,9 +780,51 @@ allPayments.sort((a, b) => {
             </div>
             <button onClick={() => setShowSettings(true)} className="btn btn-ghost" style={{ marginTop: 12, fontSize: '14px', padding: '10px 16px', fontWeight: 600, background: '#f3f4f6', color: '#111827', border: '1px solid #d1d5db' }}>Edit Payment Details</button>
           </article>
-        )}
+          )}
 
-         {showSettings && (
+          <article className="bento-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '14px 16px', gap: 8, position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className="card-label">Revenue Trend</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 700 }}>KSH {currentMonthRevenue.toLocaleString()}</h3>
+                  <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{new Date().toLocaleString('en-US', { month: 'long' })}</p>
+                </div>
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: 999, background: 'rgba(16,185,129,0.15)', color: 'var(--accent)', flexShrink: 0 }}>
+                {percentageChange.sign}{percentageChange.value}%
+              </span>
+            </div>
+            <Suspense fallback={<div style={{ width: 340, height: 40 }} className="skeleton" />}><Sparkline data={monthlyData.length > 0 && monthlyData.some(d => d > 0) ? monthlyData : [0, 0, 0]} color="#10b981" w={340} h={40}/></Suspense>
+            <div style={{ display: 'flex', gap: '4px', marginTop: 8, flexWrap: 'wrap' }}>
+              {monthlyLabels.map((m, i) => {
+                const revenue = monthlyRevenue.months[m] || 0;
+                const label = monthlyLabelNames[i] || m;
+                const isLatest = m === currentMonthLabel;
+                const colors = ['#10b981', '#0d9488', '#0f766e', '#115e59', '#144e59', '#144e59', '#0ea5e9', '#0284c7', '#0369a1', '#07598c', '#0c4a6e', '#0b3a56'];
+                const monthColor = colors[i % colors.length];
+                return (
+                  <div key={m} onMouseEnter={() => setHoverMonth(m)} onMouseLeave={() => setHoverMonth(null)} style={{ flex: '1 0 30px', minWidth: 36, padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, borderRadius: 6, background: isLatest ? 'rgba(16,185,129,0.15)' : 'var(--card)', cursor: 'pointer', position: 'relative', border: `1px solid ${monthColor}30` }}>
+                    <div style={{ width: '100%', height: 16, display: 'flex', alignItems: 'flex-end' }}>
+                      <div style={{ width: '100%', height: '100%', background: monthColor, borderRadius: '2px', opacity: isLatest ? 1 : 0.3 }} />
+                    </div>
+                    <span style={{ fontSize: '10px', color: monthColor, fontWeight: isLatest ? 600 : 400 }}>{label}</span>
+                    {hoverMonth === m && (
+                      <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%) translateY(-4px)', background: 'var(--card)', border: `1px solid ${monthColor}`, borderRadius: '4px', padding: '4px 8px', fontSize: '10px', whiteSpace: 'nowrap', zIndex: 10 }}>
+                        KSH {(revenue || 0).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </article>
+        </div>
+
+        {showSettings && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
             <div className="card" style={{ maxWidth: 520, width: '100%', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', padding: 24 }}>
               <div className="card-label">Payment Settings</div>
@@ -842,47 +885,6 @@ allPayments.sort((a, b) => {
             </div>
           </div>
         )}
-
-        <article className="bento-card" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, position: 'relative', marginTop: 32, marginBottom: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M12 1v22"/><path d="M5 5h14"/><path d="M5 19h14"/></svg>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div className="card-label">Revenue Trend</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 700 }}>KSH {currentMonthRevenue.toLocaleString()}</h3>
-                <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{new Date().toLocaleString('en-US', { month: 'long' })}</p>
-              </div>
-            </div>
-            <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: 999, background: 'rgba(16,185,129,0.15)', color: 'var(--accent)', flexShrink: 0 }}>
-              {percentageChange.sign}{percentageChange.value}%
-            </span>
-          </div>
-          <Suspense fallback={<div style={{ width: 340, height: 40 }} className="skeleton" />}><Sparkline data={monthlyData.length > 0 && monthlyData.some(d => d > 0) ? monthlyData : [0, 0, 0]} color="#10b981" w={340} h={40}/></Suspense>
-          <div style={{ display: 'flex', gap: '4px', marginTop: 8, flexWrap: 'wrap' }}>
-            {monthlyLabels.map((m, i) => {
-              const revenue = monthlyRevenue.months[m] || 0;
-              const label = monthlyLabelNames[i] || m;
-              const isLatest = m === currentMonthLabel;
-              const colors = ['#10b981', '#0d9488', '#0f766e', '#115e59', '#144e59', '#144e59', '#0ea5e9', '#0284c7', '#0369a1', '#07598c', '#0c4a6e', '#0b3a56'];
-              const monthColor = colors[i % colors.length];
-              return (
-                <div key={m} onMouseEnter={() => setHoverMonth(m)} onMouseLeave={() => setHoverMonth(null)} style={{ flex: '1 0 30px', minWidth: 36, padding: '4px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, borderRadius: 6, background: isLatest ? 'rgba(16,185,129,0.15)' : 'var(--card)', cursor: 'pointer', position: 'relative', border: `1px solid ${monthColor}30` }}>
-                  <div style={{ width: '100%', height: 16, display: 'flex', alignItems: 'flex-end' }}>
-                    <div style={{ width: '100%', height: '100%', background: monthColor, borderRadius: '2px', opacity: isLatest ? 1 : 0.3 }} />
-                  </div>
-                  <span style={{ fontSize: '10px', color: monthColor, fontWeight: isLatest ? 600 : 400 }}>{label}</span>
-                  {hoverMonth === m && (
-                    <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%) translateY(-4px)', background: 'var(--card)', border: `1px solid ${monthColor}`, borderRadius: '4px', padding: '4px 8px', fontSize: '10px', whiteSpace: 'nowrap', zIndex: 10 }}>
-                      KSH {(revenue || 0).toLocaleString()}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </article>
 
         <article
           className="card"

@@ -2479,7 +2479,7 @@ textarea:focus {
   margin-top: auto;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .card-grid {
     grid-template-columns: 1fr;
   }
@@ -2507,7 +2507,6 @@ textarea:focus {
   .card-grid {
     min-width: 0;
     overflow-x: hidden;
-    grid-template-columns: 1fr !important;
   }
 
   .admin-no-hero .bento-grid .bento-card {
