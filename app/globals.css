@@ -937,31 +937,31 @@ textarea:focus {
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
 }
 .card-feat-4 {
-  grid-column: span 4;
+  grid-column: span 1;
   background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
 }
 .card-feat-5 {
-  grid-column: span 4;
+  grid-column: span 1;
   background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
 }
 .card-feat-6 {
-  grid-column: span 4;
+  grid-column: span 1;
   background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
 }
 .card-feat-7 {
-  grid-column: span 4;
+  grid-column: span 1;
   background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
 }
 .card-feat-8 {
-  grid-column: span 4;
+  grid-column: span 1;
   background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
 }
 .card-feat-9 {
-  grid-column: span 4;
+  grid-column: span 1;
   background: linear-gradient(135deg, #f5f5f4 0%, #e7e5e4 100%);
 }
 .card-feat-10 {
-  grid-column: span 4;
+  grid-column: span 1;
   background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
 }
 @media (max-width: 900px) {
