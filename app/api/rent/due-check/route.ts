@@ -269,6 +269,7 @@ export async function GET(request: NextRequest) {
       const propertyId = tenant.units?.property_id || null;
       const propertyName = tenant.units?.properties?.name || 'your property';
       const landlordEmail = landlordEmails.get(tenant.units?.properties?.created_by) || authContext.userEmail || null;
+      const OVERDUE_NOTIFY_INTERVAL_DAYS = 5;
 
       async function ensureNotification(type: string, message: string, recipient: 'tenant' | 'project_manager', notificationAdminEmail?: string) {
         const existingNotifs = await supabaseAdmin
@@ -295,18 +296,45 @@ export async function GET(request: NextRequest) {
         return true;
       }
 
+      async function ensureRecurringNotification(type: string, message: string, recipient: 'tenant' | 'project_manager', notificationAdminEmail?: string, intervalDays: number = OVERDUE_NOTIFY_INTERVAL_DAYS) {
+        const cutoff = new Date(todayStart.getTime() - intervalDays * dayMs).toISOString();
+        const existingNotifs = await supabaseAdmin
+          .from('notifications')
+          .select('id')
+          .eq('tenant_id', tenant.id)
+          .eq('type', type)
+          .gte('created_at', cutoff);
+
+        if ((existingNotifs.data ?? []).length > 0) return false;
+
+        await supabaseAdmin.from('notifications').insert({
+          recipient,
+          tenant_id: tenant.id,
+          property_id: propertyId,
+          admin_email: recipient === 'project_manager' ? (notificationAdminEmail || landlordEmail) : null,
+          type,
+          message,
+          status: 'sent',
+          created_at: new Date().toISOString(),
+        });
+
+        return true;
+      }
+
       const daysPastDue = Math.floor((todayStart.getTime() - dueDateObj.getTime()) / dayMs);
 
-      if (daysPastDue < 0) {
+       if (daysPastDue < 0) {
         if (todayStart >= reminderDate) {
+          const reminderMsg = `Your lease for ${propertyName} requires rent of KSH ${rentAmount} for ${monthDueLabel}. Payment was due on ${dueDateStr}. Pay within 2 days to avoid overdue fees.`;
+
           await ensureNotification(
             'rent_reminder',
-            `Your lease for ${propertyName} requires rent of KSH ${rentAmount} for ${monthDueLabel}. Payment was due on ${dueDateStr}. Pay within 2 days to avoid overdue fees.`,
+            reminderMsg,
             'tenant'
           );
           await ensureNotification(
             'rent_reminder',
-            `${tenant.full_name || 'Tenant'} (unit ${tenant.units?.unit_number ?? ''}, ${propertyName}) rent of KSH ${rentAmount} is due on ${dueDateStr}.`,
+            `[Notification to ${tenant.full_name || 'Tenant'} - ${propertyName}] ${reminderMsg}`,
             'project_manager',
             landlordEmail
           );
@@ -342,28 +370,32 @@ export async function GET(request: NextRequest) {
           );
         }
 
-        await ensureNotification(
+        const tenantOverdueMsg = `Your lease for ${propertyName} (${tenant.lease_start} → ${tenant.lease_end}) - rent of KSH ${rentAmount} for ${monthDueLabel} was due on ${dueDateStr} and has not been received. ${daysPastDue > 0 ? daysPastDue + ' days overdue.' : 'Please pay immediately.'}`;
+
+        await ensureRecurringNotification(
           'overdue',
-          `Your lease for ${propertyName} (${tenant.lease_start} → ${tenant.lease_end}) - rent of KSH ${rentAmount} for ${monthDueLabel} was due on ${dueDateStr} and has not been received. Please pay immediately.`,
+          tenantOverdueMsg,
           'tenant'
         );
 
-        await ensureNotification(
+        await ensureRecurringNotification(
           'overdue',
-          `${tenant.full_name || 'Tenant'} (unit ${tenant.units?.unit_number ?? ''}, ${propertyName}) rent of KSH ${rentAmount} is ${daysPastDue} days overdue. Due was ${dueDateStr}.`,
+          `[Notification to ${tenant.full_name || 'Tenant'} - ${propertyName} (${tenant.lease_start} → ${tenant.lease_end})] ${tenantOverdueMsg}`,
           'project_manager',
           landlordEmail
         );
 
         if (daysPastDue >= OVERDUE_WEEKS_WARNING * 7) {
-          await ensureNotification(
+          const tenantLongOverdueMsg = `Your lease for ${propertyName} (${tenant.lease_start} → ${tenant.lease_end}) - rent of KSH ${rentAmount} for ${monthDueLabel} was due on ${dueDateStr} and is now over ${OVERDUE_WEEKS_WARNING} weeks overdue (${daysPastDue}d total).`;
+
+          await ensureRecurringNotification(
             'long_overdue',
-            `Your lease for ${propertyName} (${tenant.lease_start} → ${tenant.lease_end}) - rent of KSH ${rentAmount} for ${monthDueLabel} was due on ${dueDateStr} and is now over ${OVERDUE_WEEKS_WARNING} weeks overdue.`,
+            tenantLongOverdueMsg,
             'tenant'
           );
-          await ensureNotification(
+          await ensureRecurringNotification(
             'long_overdue',
-            `${tenant.full_name || 'Tenant'} (${propertyName}) rent is ${daysPastDue} days overdue (${OVERDUE_WEEKS_WARNING}+ weeks). Contact tenant immediately.`,
+            `[Notification to ${tenant.full_name || 'Tenant'} - ${propertyName}] ${tenantLongOverdueMsg}`,
             'project_manager',
             landlordEmail
           );
