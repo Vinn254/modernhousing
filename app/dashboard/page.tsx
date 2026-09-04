@@ -362,9 +362,73 @@ return Array.from(byTenant.values())
           };
         })
         .filter((t: any) => t.net_balance > 0);
-      }, [payments, tenants]);
+  }, [payments, tenants]);
 
   const totalBalance = rentOwedByTenant.reduce((sum: number, t: any) => sum + Number(t.net_balance || 0), 0);
+
+  const [rentOwedTenants, setRentOwedTenants] = useState<Array<{
+    id: string;
+    full_name: string;
+    email: string;
+    unit: string;
+    property: string;
+    net_balance: number;
+    total_paid: number;
+    last_payment: string | null;
+    rent_amount: number;
+    next_due_date: string | null;
+    overdue_dates: Array<{ month_due: string; due_date: string; days_overdue: number }>;
+  }>>([]);
+  const [dueCheckLoading, setDueCheckLoading] = useState(false);
+
+  useEffect(() => {
+    void fetchOverdueInfo();
+  }, [roleLoaded, rentOwedByTenant]);
+
+  useEffect(() => {
+    if (!roleLoaded || loading || isAgent) return;
+    const interval = window.setInterval(() => {
+      void fetchOverdueInfo();
+    }, 300000);
+    return () => window.clearInterval(interval);
+  }, [roleLoaded, loading, isAgent]);
+
+  async function fetchOverdueInfo() {
+    setDueCheckLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+
+      const response = await fetch('/api/rent/due-check', { headers, cache: 'no-store' });
+      if (response.ok) {
+        const result = await response.json();
+        const overdueMap = new Map<string, any>();
+        (result.overdue_tenants ?? []).forEach((t: any) => {
+          overdueMap.set(t.tenant_id, {
+            rent_amount: t.rent_amount,
+            next_due_date: t.next_due_date,
+            overdue_dates: t.overdue_dates ?? [],
+          });
+        });
+
+        const merged = (rentOwedByTenant ?? []).map((t) => {
+          const info = overdueMap.get(t.id);
+          return {
+            ...t,
+            rent_amount: info?.rent_amount ?? 0,
+            next_due_date: info?.next_due_date ?? null,
+            overdue_dates: info?.overdue_dates ?? [],
+          };
+        });
+        setRentOwedTenants(merged);
+      }
+    } catch (e) {
+      // silent fail - due check is best-effort
+    } finally {
+      setDueCheckLoading(false);
+    }
+  }
 
   const monthlyPayments = useMemo(() => {
     const months: { label: string; value: number }[] = [];
@@ -912,13 +976,30 @@ return Array.from(byTenant.values())
 
             <SectionCard title="Tenants with Outstanding Balances" subtitle="Track overdue balances and keep collections moving.">
               {rentOwedByTenant && rentOwedByTenant.some((t) => t.net_balance > 0) ? (
-                <PremiumTable headers={['Tenant', 'Unit', 'Total Paid', 'Balance', 'Last Payment']}>
-                  {rentOwedByTenant.filter((t) => t.net_balance > 0).map((t) => (
+                <PremiumTable headers={['Tenant', 'Unit', 'Monthly Rent', 'Due Date', 'Overdue Dates', 'Total Paid', 'Balance', 'Last Payment']}>
+                  {(rentOwedTenants.length > 0 ? rentOwedTenants : rentOwedByTenant)
+                    .filter((t) => t.net_balance > 0)
+                    .map((t) => (
                     <tr key={t.id}>
                       <td>{t.full_name}</td>
                       <td>{t.unit}</td>
+                      <td>{formatCurrency(t.rent_amount ?? 0)}</td>
+                      <td>{t.next_due_date ? new Date(t.next_due_date).toLocaleDateString() : '—'}</td>
+                      <td>
+                        {(t.overdue_dates ?? []) && (t.overdue_dates as Array<{ month_due: string; due_date: string; days_overdue: number }>).length > 0
+                          ? (t.overdue_dates as Array<{ month_due: string; due_date: string; days_overdue: number }>)
+                              .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
+                              .slice(0, 3)
+                              .map((od) => (
+                                <div key={od.due_date} style={{ fontSize: '12px', marginBottom: '2px' }}>
+                                  <span style={{ color: od.days_overdue >= 14 ? '#dc2626' : '#f59e0b', fontWeight: 600 }}>{od.month_due}</span>
+                                  <span style={{ color: 'var(--ink-3)' }}> — {od.days_overdue}d overdue</span>
+                                </div>
+                              ))
+                          : <span style={{ color: 'var(--ink-3)', fontSize: '12px' }}>No overdue records</span>}
+                      </td>
                       <td>{formatCurrency(t.total_paid)}</td>
-                      <td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td>
+                      <td style={{ color: '#dc2626', fontWeight: 600 }}>{formatCurrency(t.net_balance)}</td>
                       <td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td>
                     </tr>
                   ))}

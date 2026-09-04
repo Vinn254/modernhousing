@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import NotificationBell from './NotificationBell';
 
 type Role = 'super_admin' | 'admin' | 'landlord' | 'agent' | 'tenant' | 'user';
 
@@ -271,22 +272,23 @@ export default function AppHeader() {
             <>
               <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
               <span className="user-name" style={{ fontSize: '14px' }}>{user.user_metadata?.full_name || user.email}</span>
-              <button
-                className="theme-toggle"
-                onClick={toggleDarkMode}
-                aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-              >
-                {darkMode ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 3v1m0 16v1m8.66-12.66l-.71.71M5.06 18.94l-.71.71M21 12h-1M4 12H3m15.36 5.64l-.71-.71M6.34 6.34l-.71-.71M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z" />
-                  </svg>
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />
-                  </svg>
-                )}
-              </button>
-              <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">☰</button>
+               <button
+                 className="theme-toggle"
+                 onClick={toggleDarkMode}
+                 aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+               >
+                 {darkMode ? (
+                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                     <path d="M12 3v1m0 16v1m8.66-12.66l-.71.71M5.06 18.94l-.71.71M21 12h-1M4 12H3m15.36 5.64l-.71-.71M6.34 6.34l-.71-.71M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z" />
+                   </svg>
+                 ) : (
+                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                     <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />
+                   </svg>
+                 )}
+               </button>
+               <NotificationBell role={isTenant ? 'tenant' : (isLandlord ? 'landlord' : (isSuperAdmin ? 'super_admin' : (isAgent ? 'agent' : 'tenant')))} />
+               <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">☰</button>
             </>
           )}
         </div>

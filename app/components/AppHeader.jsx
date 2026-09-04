@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import NotificationBell from './NotificationBell';
 function NavIcon({ name }) {
     const common = {
         width: 18,
@@ -198,6 +199,7 @@ export default function AppHeader() {
           {user && (<>
               <span className="user-avatar">{getInitials(user.user_metadata?.full_name || user.email)}</span>
               <span className="user-name" style={{ fontSize: '14px' }}>{user.user_metadata?.full_name || user.email}</span>
+              <NotificationBell role={isTenant ? 'tenant' : (isLandlord ? 'landlord' : (isSuperAdmin ? 'super_admin' : (isAgent ? 'agent' : 'tenant')))} />
               <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">☰</button>
             </>)}
         </div>
