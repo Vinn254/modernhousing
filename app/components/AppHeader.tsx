@@ -287,7 +287,12 @@ export default function AppHeader() {
                    </svg>
                  )}
                </button>
-               <NotificationBell role={isTenant ? 'tenant' : (isLandlord ? 'landlord' : (isSuperAdmin ? 'super_admin' : (isAgent ? 'agent' : 'tenant')))} />
+                <NotificationBell
+                  role={isTenant ? 'tenant' : (isLandlord ? 'landlord' : (isSuperAdmin ? 'super_admin' : (isAgent ? 'agent' : 'tenant')))}
+                  userEmail={user?.email}
+                  tenantId={user?.user_metadata?.tenant_id ?? user?.user_metadata?.tenantId}
+                  agentId={user?.user_metadata?.agent_id ?? user?.user_metadata?.agentId}
+                />
                <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">☰</button>
             </>
           )}

@@ -3,29 +3,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
-interface NotificationItem {
-  id: string;
-  message: string;
-  created_at: string;
-  status: string;
-  type?: string;
-  recipient: string;
-  tenant?: { full_name: string; email: string };
-}
-
-interface NotificationBellProps {
-  role: 'tenant' | 'landlord' | 'agent' | 'super_admin';
-  userEmail?: string;
-  tenantId?: string;
-  agentId?: string;
-}
-
-export default function NotificationBell({ role, userEmail, tenantId, agentId }: NotificationBellProps) {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+export default function NotificationBell({ role, userEmail, tenantId, agentId }) {
+  const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef(null);
   const POLL_INTERVAL = 30000;
 
   useEffect(() => {
@@ -40,8 +23,8 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
           return;
         }
 
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+        const headers = { 'Content-Type': 'application/json' };
+        if (session?.access_token) headers.Authorization = 'Bearer ' + session.access_token;
 
         const recipient = role === 'tenant' ? 'tenant' : role === 'agent' ? 'agent' : 'project_manager';
         const params = new URLSearchParams({ recipient });
@@ -49,7 +32,7 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
         if (role === 'landlord' && userEmail) params.set('adminEmail', userEmail);
         if (role === 'agent' && agentId) params.set('agentId', agentId);
 
-        const response = await fetch(`/api/notifications?${params.toString()}`, { headers });
+        const response = await fetch('/api/notifications?' + params.toString(), { headers });
 
         if (!response.ok) {
           setLoading(false);
@@ -57,19 +40,23 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
         }
 
         const result = await response.json();
-        const items: NotificationItem[] = (result.notifications ?? []).map((n: any) => ({
-          id: n.id,
-          message: n.message ?? n.description ?? '',
-          created_at: n.created_at ?? new Date().toISOString(),
-          status: n.status ?? 'sent',
-          type: n.type ?? (n.transaction_type === 'notification' ? 'message' : 'overdue'),
-          recipient: n.recipient ?? recipient,
-          tenant: n.tenants ? { full_name: n.tenants.full_name ?? '', email: n.tenants.email ?? '' } : undefined,
-        }));
+        const items = (result.notifications || []).map(function (n) {
+          return {
+            id: n.id,
+            message: n.message || n.description || '',
+            created_at: n.created_at || new Date().toISOString(),
+            status: n.status || 'sent',
+            type: n.type || (n.transaction_type === 'notification' ? 'message' : 'overdue'),
+            recipient: n.recipient || recipient,
+            tenant: n.tenants ? { full_name: n.tenants.full_name || '', email: n.tenants.email || '' } : undefined
+          };
+        });
 
-        const sorted = items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const sorted = items.sort(function (a, b) {
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
         setNotifications(sorted.slice(0, 10));
-        setUnreadCount(sorted.filter(n => n.status !== 'read').length);
+        setUnreadCount(sorted.filter(function (n) { return n.status !== 'read'; }).length);
         setLoading(false);
       } catch (e) {
         if (isActive) setLoading(false);
@@ -79,43 +66,33 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
     fetchNotifications();
     const interval = window.setInterval(fetchNotifications, POLL_INTERVAL);
 
-    const channel = supabase.channel(`notifications:${role}`);
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-      void fetchNotifications();
-    });
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => {
-      void fetchNotifications();
-    });
-    channel.subscribe();
-
-    return () => {
+    return function () {
       isActive = false;
       window.clearInterval(interval);
-      supabase.removeChannel(channel);
     };
   }, [role, userEmail, tenantId, agentId]);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return function () { return document.removeEventListener('mousedown', handleClickOutside); };
   }, []);
 
   async function markAllAsRead() {
     for (const notif of notifications) {
       if (notif.status !== 'read') {
-        await fetch(`/api/notifications?id=${notif.id}`, {
+        await fetch('/api/notifications?id=' + notif.id, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'read' }),
+          body: JSON.stringify({ status: 'read' })
         });
       }
     }
-    setNotifications(prev => prev.map(n => ({ ...n, status: 'read' })));
+    setNotifications(function (prev) { return prev.map(function (n) { return Object.assign({}, n, { status: 'read' }); }); });
     setUnreadCount(0);
   }
 
@@ -126,8 +103,8 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
     <div className="notification-bell-wrapper" ref={dropdownRef}>
       <button
         className="notification-bell"
-        onClick={() => setDropdownOpen(!dropdownOpen)}
-        aria-label={`Notifications (${unreadCount})`}
+        onClick={function () { return setDropdownOpen(!dropdownOpen); }}
+        aria-label={'Notifications (' + unreadCount + ')'}
         style={{
           position: 'relative',
           background: accentColor,
@@ -139,7 +116,7 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
           height: '40px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'center'
         }}
       >
         <svg
@@ -172,7 +149,7 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '0 4px',
+              padding: '0 4px'
             }}
           >
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -197,7 +174,7 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
             zIndex: 1000,
             overflow: 'hidden',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'column'
           }}
         >
           <div
@@ -207,7 +184,7 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: 'var(--surface-alt, #f8fafc)',
+              background: 'var(--surface-alt, #f8fafc)'
             }}
           >
             <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>
@@ -223,7 +200,7 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  padding: '4px 8px',
+                  padding: '4px 8px'
                 }}
               >
                 Mark all read
@@ -248,10 +225,17 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
               </div>
             )}
 
-            {!loading && notifications.map((notif) => {
+            {!loading && notifications.map(function (notif) {
               const isUnread = notif.status !== 'read';
               const isOverdue = notif.type === 'overdue' || notif.type === 'long_overdue';
               const timeAgo = formatTimeAgo(notif.created_at);
+
+              let typeLabel = notif.type || 'message';
+              let typeColor = 'var(--ink-3)';
+              if (notif.type === 'overdue') { typeLabel = '⚠️ Overdue'; typeColor = '#dc2626'; }
+              else if (notif.type === 'rent_reminder') { typeLabel = '🔔 Reminder'; typeColor = '#f59e0b'; }
+              else if (notif.type === 'reply') { typeLabel = '💬 Reply'; typeColor = 'var(--accent)'; }
+              else if (notif.type === 'long_overdue') { typeLabel = '🚨 Long Overdue'; typeColor = '#dc2626'; }
 
               return (
                 <div
@@ -260,25 +244,11 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
                     padding: '12px 16px',
                     borderBottom: '1px solid var(--line-soft)',
                     background: isUnread ? 'rgba(239, 68, 68, 0.04)' : 'transparent',
-                    cursor: 'pointer',
+                    cursor: 'pointer'
                   }}
                 >
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
-                    {notif.type === 'overdue' && (
-                      <span style={{ color: '#dc2626', fontSize: '12px' }}>⚠️ Overdue</span>
-                    )}
-                    {notif.type === 'rent_reminder' && (
-                      <span style={{ color: '#f59e0b', fontSize: '12px' }}>🔔 Reminder</span>
-                    )}
-                    {notif.type === 'reply' && (
-                      <span style={{ color: 'var(--accent)', fontSize: '12px' }}>💬 Reply</span>
-                    )}
-                    {notif.type === 'long_overdue' && (
-                      <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 700 }}>🚨 Long Overdue</span>
-                    )}
-                    {!['long_overdue', 'overdue', 'rent_reminder', 'reply'].includes(notif.type || '') && (
-                      <span style={{ color: 'var(--ink-3)', fontSize: '12px' }}>{notif.type || 'message'}</span>
-                    )}
+                    <span style={{ color: typeColor, fontSize: '12px' }}>{typeLabel}</span>
                   </div>
                   <p style={{ margin: '0 0 4px', fontSize: '13px', color: isUnread ? 'var(--ink)' : 'var(--ink-3)' }}>
                     {truncateMessage(notif.message, 120)}
@@ -305,9 +275,9 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
                   fontWeight: 600,
                   color: 'var(--accent)',
                   textDecoration: 'none',
-                  padding: '8px 0',
+                  padding: '8px 0'
                 }}
-                onClick={() => setDropdownOpen(false)}
+                onClick={function () { return setDropdownOpen(false); }}
               >
                 View all notifications →
               </a>
@@ -319,12 +289,12 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
   );
 }
 
-function truncateMessage(msg: string, maxLen: number): string {
+function truncateMessage(msg, maxLen) {
   if (msg.length <= maxLen) return msg;
   return msg.slice(0, maxLen) + '…';
 }
 
-function formatTimeAgo(dateStr: string): string {
+function formatTimeAgo(dateStr) {
   try {
     const date = new Date(dateStr);
     const now = new Date();
@@ -334,11 +304,11 @@ function formatTimeAgo(dateStr: string): string {
     const diffDays = Math.floor(diffHours / 24);
 
     if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 60) return diffMins + ' min ago';
+    if (diffHours < 24) return diffHours + 'h ago';
+    if (diffDays < 7) return diffDays + 'd ago';
     return date.toLocaleDateString();
-  } catch {
+  } catch (e) {
     return '';
   }
 }

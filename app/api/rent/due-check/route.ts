@@ -185,6 +185,23 @@ export async function GET(request: NextRequest) {
       .select('*, units(rent_amount, property_id, properties(name, address, created_by))')
       .in('unit_id', unitIds);
 
+    const landlordIds = new Set<string>();
+    for (const t of (tenants ?? []) as any[]) {
+      const lb = t?.units?.properties?.created_by;
+      if (lb) landlordIds.add(lb);
+    }
+
+    const landlordEmails = new Map<string, string>();
+    if (landlordIds.size > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id, email')
+        .in('user_id', Array.from(landlordIds));
+      for (const p of (profiles ?? []) as any[]) {
+        landlordEmails.set(p.user_id, p.email);
+      }
+    }
+
     if (tenantError) throw tenantError;
 
     const rentByUnit = new Map<string, number>();
@@ -249,7 +266,11 @@ export async function GET(request: NextRequest) {
       const dueDateStr = dueDateObj.toISOString().slice(0, 10);
       const monthDueLabel = monthLabel(dueDateObj);
 
-      async function ensureNotification(type: string, message: string, recipient: 'tenant' | 'project_manager') {
+      const propertyId = tenant.units?.property_id || null;
+      const propertyName = tenant.units?.properties?.name || 'your property';
+      const landlordEmail = landlordEmails.get(tenant.units?.properties?.created_by) || authContext.userEmail || null;
+
+      async function ensureNotification(type: string, message: string, recipient: 'tenant' | 'project_manager', notificationAdminEmail?: string) {
         const existingNotifs = await supabaseAdmin
           .from('notifications')
           .select('id')
@@ -260,15 +281,16 @@ export async function GET(request: NextRequest) {
 
         if ((existingNotifs.data ?? []).length > 0) return false;
 
-        await supabaseAdmin.from('notifications').insert({
-          recipient,
-          tenant_id: tenant.id,
-          property_id: tenant.units?.property_id || null,
-          type,
-          message,
-          status: 'sent',
-          created_at: new Date().toISOString(),
-        });
+         await supabaseAdmin.from('notifications').insert({
+           recipient,
+           tenant_id: tenant.id,
+           property_id: propertyId,
+           admin_email: recipient === 'project_manager' ? (notificationAdminEmail || landlordEmail) : null,
+           type,
+           message,
+           status: 'sent',
+           created_at: new Date().toISOString(),
+         });
 
         return true;
       }
@@ -279,13 +301,14 @@ export async function GET(request: NextRequest) {
         if (todayStart >= reminderDate) {
           await ensureNotification(
             'rent_reminder',
-            `Your rent payment of KSH ${rentAmount} was due on ${dueDateStr}. Pay within 2 days to avoid overdue fees.`,
+            `Your lease for ${propertyName} requires rent of KSH ${rentAmount} for ${monthDueLabel}. Payment was due on ${dueDateStr}. Pay within 2 days to avoid overdue fees.`,
             'tenant'
           );
           await ensureNotification(
             'rent_reminder',
-            `${tenant.full_name || 'Tenant'} (rent KSH ${rentAmount}) is due on ${dueDateStr}.`,
-            'project_manager'
+            `${tenant.full_name || 'Tenant'} (unit ${tenant.units?.unit_number ?? ''}, ${propertyName}) rent of KSH ${rentAmount} is due on ${dueDateStr}.`,
+            'project_manager',
+            landlordEmail
           );
         }
       } else {
@@ -321,26 +344,28 @@ export async function GET(request: NextRequest) {
 
         await ensureNotification(
           'overdue',
-          `Rent payment of KSH ${rentAmount} was due on ${dueDateStr} and has not been received. Please pay immediately to avoid further action.`,
+          `Your lease for ${propertyName} - rent of KSH ${rentAmount} for ${monthDueLabel} was due on ${dueDateStr} and has not been received. Please pay immediately.`,
           'tenant'
         );
 
         await ensureNotification(
           'overdue',
-          `${tenant.full_name || 'Tenant'} (unit ${tenant.units?.unit_number ?? ''}) rent of KSH ${rentAmount} is ${daysPastDue} days overdue. Due was ${dueDateStr}.`,
-          'project_manager'
+          `${tenant.full_name || 'Tenant'} (unit ${tenant.units?.unit_number ?? ''}, ${propertyName}) rent of KSH ${rentAmount} is ${daysPastDue} days overdue. Due was ${dueDateStr}.`,
+          'project_manager',
+          landlordEmail
         );
 
         if (daysPastDue >= OVERDUE_WEEKS_WARNING * 7) {
           await ensureNotification(
             'long_overdue',
-            `Rent payment of KSH ${rentAmount} was due on ${dueDateStr} and is now over ${OVERDUE_WEEKS_WARNING} weeks overdue. Urgent action required.`,
+            `Your lease for ${propertyName} - rent of KSH ${rentAmount} for ${monthDueLabel} was due on ${dueDateStr} and is now over ${OVERDUE_WEEKS_WARNING} weeks overdue.`,
             'tenant'
           );
           await ensureNotification(
             'long_overdue',
-            `${tenant.full_name || 'Tenant'} rent is ${daysPastDue} days overdue (${OVERDUE_WEEKS_WARNING}+ weeks). Contact tenant immediately.`,
-            'project_manager'
+            `${tenant.full_name || 'Tenant'} (${propertyName}) rent is ${daysPastDue} days overdue (${OVERDUE_WEEKS_WARNING}+ weeks). Contact tenant immediately.`,
+            'project_manager',
+            landlordEmail
           );
         }
 
