@@ -3,6 +3,21 @@ import type { Metadata, Viewport } from 'next';
 import AuthWrapper from './auth-wrapper';
 import { Inter } from 'next/font/google';
 
+if (typeof window !== 'undefined') {
+  ['log', 'warn', 'error', 'info', 'debug'].forEach((method) => {
+    (console as any)[method] = () => {};
+  });
+  console.trace = () => {};
+  console.group = () => {};
+  console.groupCollapsed = () => {};
+  console.table = () => {};
+  console.dir = () => {};
+  console.dirxml = () => {};
+  console.time = () => {};
+  console.timeEnd = () => {};
+  console.assert = () => {};
+}
+
 const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700','800'], display: 'swap' });
 
 export const metadata: Metadata = {

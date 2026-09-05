@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import './consoleGuard';
 
 const SMTP_HOST = process.env.SMTP_HOST ?? '';
 const SMTP_PORT = Number(process.env.SMTP_PORT ?? 587);
