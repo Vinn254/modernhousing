@@ -2480,8 +2480,9 @@ textarea:focus {
 }
 
 @media (max-width: 768px) {
-  .card-grid {
-    grid-template-columns: 1fr;
+  .card-grid,
+  .bento-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
