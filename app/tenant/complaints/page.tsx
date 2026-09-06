@@ -65,6 +65,8 @@ export default function TenantCommunicationComplaintsPage() {
   const [selectedMessageId, setSelectedMessageId] = useState('');
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [starredIds, setStarredIds] = useState<string[]>([]);
+  const [checkedIds, setCheckedIds] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
   const [sending, setSending] = useState(false);
   const [directForm, setDirectForm] = useState({ type: 'general', messageText: '' });
   const [complaintForm, setComplaintForm] = useState({
@@ -250,10 +252,46 @@ export default function TenantCommunicationComplaintsPage() {
 
     setMessages((current) => current.filter((item) => item.id !== messageId));
     setStarredIds((current) => current.filter((id) => id !== messageId));
+    setCheckedIds((current) => current.filter((id) => id !== messageId));
     if (selectedMessageId === messageId) {
       const remaining = messages.filter((item) => item.id !== messageId);
       setSelectedMessageId(remaining[0]?.id || '');
     }
+  }
+
+  function handleToggleCheck(messageId: string) {
+    setCheckedIds((current) => (current.includes(messageId) ? current.filter((id) => id !== messageId) : [...current, messageId]));
+  }
+
+  function handleToggleCheckAll() {
+    setCheckedIds((current) => (current.length === messages.length ? [] : messages.map((m) => m.id)));
+  }
+
+  async function handleDeleteSelected() {
+    if (checkedIds.length === 0) return;
+    setDeleting(true);
+    const headers = await getAuthHeaders();
+    await Promise.all(checkedIds.map((id) => fetch(`/api/notifications?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers }).catch(() => undefined)));
+    setMessages((current) => current.filter((item) => !checkedIds.includes(item.id)));
+    setStarredIds((current) => current.filter((id) => !checkedIds.includes(id)));
+    if (checkedIds.includes(selectedMessageId)) {
+      const remaining = messages.filter((item) => !checkedIds.includes(item.id));
+      setSelectedMessageId(remaining[0]?.id || '');
+    }
+    setCheckedIds([]);
+    setDeleting(false);
+  }
+
+  async function handleDeleteAll() {
+    if (messages.length === 0) return;
+    setDeleting(true);
+    const headers = await getAuthHeaders();
+    await Promise.all(messages.map((m) => fetch(`/api/notifications?id=${encodeURIComponent(m.id)}`, { method: 'DELETE', headers }).catch(() => undefined)));
+    setMessages([]);
+    setStarredIds([]);
+    setCheckedIds([]);
+    setSelectedMessageId('');
+    setDeleting(false);
   }
 
   function handleToggleStar(messageId: string) {
@@ -481,50 +519,79 @@ export default function TenantCommunicationComplaintsPage() {
               <div className="card-label">Inbox</div>
               <h3 style={{ margin: '4px 0 0' }}>Messages from your landlord</h3>
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unreadCount} unread</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {checkedIds.length > 0 && (
+                <button type="button" onClick={handleDeleteSelected} disabled={deleting} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '6px 12px', background: '#fff1f2', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                  {deleting ? 'Deleting…' : `Delete selected (${checkedIds.length})`}
+                </button>
+              )}
+              {messages.length > 0 && (
+                <button type="button" onClick={handleDeleteAll} disabled={deleting} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '6px 12px', background: '#fff', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                  Delete all
+                </button>
+              )}
+              <div style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unreadCount} unread</div>
+            </div>
           </div>
 
           <div className="communications-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', minHeight: 520 }}>
             <aside className="communications-sidebar" style={{ borderRight: '1px solid var(--line)', background: '#f9fafb' }}>
               {loading && <p className="landlord-muted" style={{ padding: 16 }}>Loading messages…</p>}
               {!loading && messages.length === 0 && <p className="landlord-empty" style={{ padding: 16 }}>No messages yet.</p>}
+              {!loading && messages.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderBottom: '1px solid #e5e7eb', background: '#f3f4f6' }}>
+                  <input type="checkbox" checked={checkedIds.length === messages.length && messages.length > 0} onChange={handleToggleCheckAll} style={{ cursor: 'pointer' }} />
+                  <span style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600 }}>Select all</span>
+                </div>
+              )}
               {!loading && messages.length > 0 && messages.map((item) => {
                 const isSelected = selectedMessage?.id === item.id;
+                const isChecked = checkedIds.includes(item.id);
                 return (
-                  <button
+                  <div
                     key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedMessageId(item.id);
-                      setMessages((current) => current.map((entry) => entry.id === item.id ? { ...entry, isUnread: false } : entry));
-                    }}
                     style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      border: 'none',
-                      borderBottom: '1px solid #e5e7eb',
-                      padding: '14px 16px',
-                      background: isSelected ? '#eefdf3' : 'transparent',
-                      cursor: 'pointer',
                       display: 'flex',
-                      flexDirection: 'column',
-                      gap: 6,
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      borderBottom: '1px solid #e5e7eb',
+                      background: isSelected ? '#eefdf3' : 'transparent',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <strong style={{ fontSize: '13px' }}>
-                        Landlord
-                        {context?.landlord?.name && (
-                          <span style={{ fontSize: '11px', color: 'var(--ink-3)', fontWeight: 400 }}> — {context.landlord.name}</span>
-                        )}
-                      </strong>
-                      <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(item.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '12px', color: '#111827', fontWeight: item.isUnread ? 700 : 500 }}>{item.preview.slice(0, 70)}{item.preview.length > 70 ? '…' : ''}</span>
-                      {item.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />}
-                    </div>
-                  </button>
+                    <input type="checkbox" checked={isChecked} onChange={() => handleToggleCheck(item.id)} onClick={(e) => e.stopPropagation()} style={{ margin: '16px 0 0 12px', cursor: 'pointer', flexShrink: 0 }} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMessageId(item.id);
+                        setMessages((current) => current.map((entry) => entry.id === item.id ? { ...entry, isUnread: false } : entry));
+                      }}
+                      style={{
+                        flex: 1,
+                        textAlign: 'left',
+                        border: 'none',
+                        padding: '14px 16px 14px 0',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <strong style={{ fontSize: '13px' }}>
+                          Landlord
+                          {context?.landlord?.name && (
+                            <span style={{ fontSize: '11px', color: 'var(--ink-3)', fontWeight: 400 }}> — {context.landlord.name}</span>
+                          )}
+                        </strong>
+                        <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(item.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '12px', color: '#111827', fontWeight: item.isUnread ? 700 : 500 }}>{item.preview.slice(0, 70)}{item.preview.length > 70 ? '…' : ''}</span>
+                        {item.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />}
+                      </div>
+                    </button>
+                  </div>
                 );
               })}
             </aside>

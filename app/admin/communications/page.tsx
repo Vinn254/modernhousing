@@ -53,6 +53,8 @@ export default function CommunicationsPage() {
   const [selectedMessageId, setSelectedMessageId] = useState('');
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [starredIds, setStarredIds] = useState<string[]>([]);
+  const [checkedIds, setCheckedIds] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
   const [notificationForm, setNotificationForm] = useState({
     type: 'announcement',
     messageText: '',
@@ -110,10 +112,45 @@ export default function CommunicationsPage() {
 
       const result = await response.json();
       const incoming = (result.notifications ?? []) as Notification[];
-      const firstId = incoming[0]?.id || '';
-      const nextMessages = incoming.map((item) => buildMessageItem(item, firstId));
+
+      // Group tenant-sent replies (recipient=project_manager with a tenant) under the
+      // matching tenant conversation so a landlord's reply thread reassembles instead
+      // of surfacing as separate inbox entries.
+      const conversationKeys = new Set(
+        incoming.filter((i) => i.recipient === 'tenant' && i.tenant_id).map((i) => i.tenant_id as string),
+      );
+      const threadByTenant: Record<string, Notification[]> = {};
+      const standalone: Notification[] = [];
+      incoming.forEach((item) => {
+        const isTenantReply = item.recipient === 'project_manager' && item.tenant_id && conversationKeys.has(item.tenant_id);
+        if (isTenantReply) {
+          (threadByTenant[item.tenant_id as string] ||= []).push(item);
+        } else {
+          standalone.push(item);
+        }
+      });
+
+      const nextMessages = standalone.map((item) => {
+        const built = buildMessageItem(item);
+        const extras = item.tenant_id ? threadByTenant[item.tenant_id] : undefined;
+        if (item.recipient === 'tenant' && extras && extras.length > 0) {
+          const additions = extras
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            .map((reply) => ({
+              id: reply.id,
+              role: 'Tenant' as const,
+              text: reply.message,
+              createdAt: reply.created_at || new Date().toISOString(),
+            }));
+          built.thread = [...built.thread, ...additions].sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          );
+        }
+        return built;
+      });
 
       setMessages(nextMessages);
+      const firstId = nextMessages[0]?.id || '';
       setSelectedMessageId((current) => (current && nextMessages.some((message) => message.id === current) ? current : firstId));
       setReplyDrafts((prev) => {
         const draftMap: Record<string, string> = { ...prev };
@@ -217,10 +254,45 @@ export default function CommunicationsPage() {
   function handleDeleteNotification(messageId: string) {
     setMessages((current) => current.filter((message) => message.id !== messageId));
     setStarredIds((current) => current.filter((id) => id !== messageId));
+    setCheckedIds((current) => current.filter((id) => id !== messageId));
     if (selectedMessageId === messageId) {
       const remaining = messages.filter((message) => message.id !== messageId);
       setSelectedMessageId(remaining[0]?.id || '');
     }
+    fetch(`/api/notifications?id=${encodeURIComponent(messageId)}`, { method: 'DELETE' }).catch(() => undefined);
+  }
+
+  function handleToggleCheck(messageId: string) {
+    setCheckedIds((current) => (current.includes(messageId) ? current.filter((id) => id !== messageId) : [...current, messageId]));
+  }
+
+  function handleToggleCheckAll() {
+    setCheckedIds((current) => (current.length === messages.length ? [] : messages.map((m) => m.id)));
+  }
+
+  async function handleDeleteSelected() {
+    if (checkedIds.length === 0) return;
+    setDeleting(true);
+    await Promise.all(checkedIds.map((id) => fetch(`/api/notifications?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => undefined)));
+    setMessages((current) => current.filter((message) => !checkedIds.includes(message.id)));
+    setStarredIds((current) => current.filter((id) => !checkedIds.includes(id)));
+    if (checkedIds.includes(selectedMessageId)) {
+      const remaining = messages.filter((message) => !checkedIds.includes(message.id));
+      setSelectedMessageId(remaining[0]?.id || '');
+    }
+    setCheckedIds([]);
+    setDeleting(false);
+  }
+
+  async function handleDeleteAll() {
+    if (messages.length === 0) return;
+    setDeleting(true);
+    await Promise.all(messages.map((m) => fetch(`/api/notifications?id=${encodeURIComponent(m.id)}`, { method: 'DELETE' }).catch(() => undefined)));
+    setMessages([]);
+    setStarredIds([]);
+    setCheckedIds([]);
+    setSelectedMessageId('');
+    setDeleting(false);
   }
 
   function handleToggleStar(messageId: string) {
@@ -242,6 +314,7 @@ export default function CommunicationsPage() {
     if (tenantId && propertyId) {
       setSending(true);
       const headers = await getAuthHeaders();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
       const response = await fetch('/api/notifications', {
         method: 'POST',
         headers,
@@ -251,7 +324,7 @@ export default function CommunicationsPage() {
           propertyId,
           type: 'reply',
           message: draft,
-          adminEmail: adminEmail || '',
+          adminEmail: adminEmail || authUser?.email || '',
         }),
       });
 
@@ -424,50 +497,79 @@ export default function CommunicationsPage() {
               <div className="card-label">Inbox</div>
               <h3 style={{ margin: '4px 0 0' }}>Shared communications</h3>
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unreadCount} unread</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {checkedIds.length > 0 && (
+                <button type="button" onClick={handleDeleteSelected} disabled={deleting} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '6px 12px', background: '#fff1f2', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                  {deleting ? 'Deleting…' : `Delete selected (${checkedIds.length})`}
+                </button>
+              )}
+              {messages.length > 0 && (
+                <button type="button" onClick={handleDeleteAll} disabled={deleting} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '6px 12px', background: '#fff', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                  Delete all
+                </button>
+              )}
+              <div style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unreadCount} unread</div>
+            </div>
           </div>
 
           <div className="communications-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', minHeight: 520 }}>
             <aside className="communications-sidebar" style={{ borderRight: '1px solid var(--line)', background: '#f9fafb' }}>
               {loading && <p className="landlord-muted" style={{ padding: 16 }}>Loading communications…</p>}
               {!loading && messages.length === 0 && <p className="landlord-empty" style={{ padding: 16 }}>No communications yet.</p>}
+              {!loading && messages.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderBottom: '1px solid #e5e7eb', background: '#f3f4f6' }}>
+                  <input type="checkbox" checked={checkedIds.length === messages.length && messages.length > 0} onChange={handleToggleCheckAll} style={{ cursor: 'pointer' }} />
+                  <span style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600 }}>Select all</span>
+                </div>
+              )}
               {!loading && messages.length > 0 && messages.map((message) => {
                 const isSelected = selectedMessage?.id === message.id;
+                const isChecked = checkedIds.includes(message.id);
                 return (
-                  <button
+                  <div
                     key={message.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedMessageId(message.id);
-                      setMessages((current) => current.map((item) => item.id === message.id ? { ...item, isUnread: false } : item));
-                    }}
                     style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      border: 'none',
-                      borderBottom: '1px solid #e5e7eb',
-                      padding: '14px 16px',
-                      background: isSelected ? '#eefdf3' : 'transparent',
-                      cursor: 'pointer',
                       display: 'flex',
-                      flexDirection: 'column',
-                      gap: 6,
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      borderBottom: '1px solid #e5e7eb',
+                      background: isSelected ? '#eefdf3' : 'transparent',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <strong style={{ fontSize: '13px' }}>
-                        {message.roleLabel}
-                        {message.roleLabel === 'Tenant' && (message.tenants?.full_name || message.tenant_name) && (
-                          <span style={{ fontSize: '11px', color: 'var(--ink-3)', fontWeight: 400 }}> — {message.tenants?.full_name || message.tenant_name}</span>
-                        )}
-                      </strong>
-                      <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(message.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '12px', color: '#111827', fontWeight: message.isUnread ? 700 : 500 }}>{message.preview.slice(0, 70)}{message.preview.length > 70 ? '…' : ''}</span>
-                      {message.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />}
-                    </div>
-                  </button>
+                    <input type="checkbox" checked={isChecked} onChange={() => handleToggleCheck(message.id)} onClick={(e) => e.stopPropagation()} style={{ margin: '16px 0 0 12px', cursor: 'pointer', flexShrink: 0 }} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMessageId(message.id);
+                        setMessages((current) => current.map((item) => item.id === message.id ? { ...item, isUnread: false } : item));
+                      }}
+                      style={{
+                        flex: 1,
+                        textAlign: 'left',
+                        border: 'none',
+                        padding: '14px 16px 14px 0',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <strong style={{ fontSize: '13px' }}>
+                          {message.roleLabel}
+                          {message.roleLabel === 'Tenant' && (message.tenants?.full_name || message.tenant_name) && (
+                            <span style={{ fontSize: '11px', color: 'var(--ink-3)', fontWeight: 400 }}> — {message.tenants?.full_name || message.tenant_name}</span>
+                          )}
+                        </strong>
+                        <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(message.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '12px', color: '#111827', fontWeight: message.isUnread ? 700 : 500 }}>{message.preview.slice(0, 70)}{message.preview.length > 70 ? '…' : ''}</span>
+                        {message.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />}
+                      </div>
+                    </button>
+                  </div>
                 );
               })}
             </aside>

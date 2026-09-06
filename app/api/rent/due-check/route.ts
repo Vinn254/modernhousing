@@ -336,6 +336,21 @@ export async function GET(request: NextRequest) {
 
       async function ensureRecurringNotification(type: string, message: string, recipient: 'tenant' | 'project_manager', notificationAdminEmail?: string, intervalDays: number = OVERDUE_NOTIFY_INTERVAL_DAYS) {
         try {
+          // Overdue alerts are capped at 2 per month — the first notice and one
+          // reminder — so tenants are not spammed daily while rent stays unpaid.
+          if (type === 'overdue') {
+            const monthStart = `${monthKey}-01T00:00:00.000Z`;
+            const { data: monthOverdue } = await supabaseAdmin
+              .from('notifications')
+              .select('id')
+              .eq('tenant_id', tenant.id)
+              .eq('type', 'overdue')
+              .eq('recipient', recipient)
+              .gte('created_at', monthStart);
+
+            if ((monthOverdue ?? []).length >= 2) return false;
+          }
+
           const cutoff = new Date(todayStart.getTime() - intervalDays * dayMs).toISOString();
           const existingNotifs = await supabaseAdmin
             .from('notifications')
