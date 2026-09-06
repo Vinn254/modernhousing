@@ -399,16 +399,15 @@ export default function TenantCommunicationComplaintsPage() {
               {!loading && messages.length === 0 && <p className="landlord-empty" style={{ padding: 16 }}>No messages yet.</p>}
               {!loading && messages.length > 0 && messages.map((item) => {
                 const isSelected = selectedMessage?.id === item.id;
-                return (<div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #e5e7eb', background: isSelected ? '#eefdf3' : 'transparent', padding: '12px 12px' }}>
+                return (<div key={item.id} style={{ position: 'relative', borderBottom: '1px solid #e5e7eb', background: isSelected ? '#eefdf3' : 'transparent' }}>
                     <button type="button" onClick={() => {
                         setSelectedMessageId(item.id);
                         setMessages((current) => current.map((entry) => entry.id === item.id ? { ...entry, isUnread: false } : entry));
                     }} style={{
-                        flex: 1,
-                        minWidth: 0,
+                        width: '100%',
                         textAlign: 'left',
                         border: 'none',
-                        padding: 0,
+                        padding: '14px 44px 14px 16px',
                         background: 'transparent',
                         cursor: 'pointer',
                         display: 'flex',
@@ -420,14 +419,14 @@ export default function TenantCommunicationComplaintsPage() {
                         Landlord
                         {context?.landlord?.name && (<span style={{ fontSize: '11px', color: 'var(--ink-3)', fontWeight: 400 }}> — {context.landlord.name}</span>)}
                       </strong>
-                      <span style={{ fontSize: '11px', color: 'var(--ink-3)', flexShrink: 0 }}>{new Date(item.created_at).toLocaleDateString()}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(item.created_at).toLocaleDateString()}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '12px', color: '#111827', fontWeight: item.isUnread ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.preview.slice(0, 70)}{item.preview.length > 70 ? '…' : ''}</span>
-                      {item.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', flexShrink: 0 }}/>}
+                      <span style={{ fontSize: '12px', color: '#111827', fontWeight: item.isUnread ? 700 : 500 }}>{item.preview.slice(0, 70)}{item.preview.length > 70 ? '…' : ''}</span>
+                      {item.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}/>}
                     </div>
                   </button>
-                  <button type="button" onClick={() => handleDeleteNotification(item.id)} title="Delete message" style={{ flexShrink: 0, border: '1px solid #fecaca', borderRadius: 999, width: 26, height: 26, background: '#fff1f2', color: '#b91c1c', cursor: 'pointer', fontSize: 14, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                  <button type="button" onClick={() => handleDeleteNotification(item.id)} title="Delete message" style={{ position: 'absolute', right: 10, top: 12, border: '1px solid #fecaca', borderRadius: 999, width: 24, height: 24, background: '#fff1f2', color: '#b91c1c', cursor: 'pointer', fontSize: 13, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                     ×
                   </button>
                 </div>);
