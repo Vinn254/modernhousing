@@ -498,16 +498,6 @@ export default function CommunicationsPage() {
               <h3 style={{ margin: '4px 0 0' }}>Shared communications</h3>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {checkedIds.length > 0 && (
-                <button type="button" onClick={handleDeleteSelected} disabled={deleting} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '6px 12px', background: '#fff1f2', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
-                  {deleting ? 'Deleting…' : `Delete selected (${checkedIds.length})`}
-                </button>
-              )}
-              {messages.length > 0 && (
-                <button type="button" onClick={handleDeleteAll} disabled={deleting} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '6px 12px', background: '#fff', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
-                  Delete all
-                </button>
-              )}
               <div style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unreadCount} unread</div>
             </div>
           </div>
@@ -517,9 +507,21 @@ export default function CommunicationsPage() {
               {loading && <p className="landlord-muted" style={{ padding: 16 }}>Loading communications…</p>}
               {!loading && messages.length === 0 && <p className="landlord-empty" style={{ padding: 16 }}>No communications yet.</p>}
               {!loading && messages.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderBottom: '1px solid #e5e7eb', background: '#f3f4f6' }}>
-                  <input type="checkbox" checked={checkedIds.length === messages.length && messages.length > 0} onChange={handleToggleCheckAll} style={{ cursor: 'pointer' }} />
-                  <span style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600 }}>Select all</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '8px 12px', borderBottom: '1px solid #e5e7eb', background: '#f3f4f6' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', margin: 0 }}>
+                    <input type="checkbox" checked={checkedIds.length === messages.length && messages.length > 0} onChange={handleToggleCheckAll} style={{ cursor: 'pointer', margin: 0 }} />
+                    <span style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600 }}>Select all</span>
+                  </label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {checkedIds.length > 0 && (
+                      <button type="button" onClick={handleDeleteSelected} disabled={deleting} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '3px 10px', background: '#fff1f2', color: '#b91c1c', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
+                        {deleting ? 'Deleting…' : `Delete (${checkedIds.length})`}
+                      </button>
+                    )}
+                    <button type="button" onClick={handleDeleteAll} disabled={deleting} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '3px 10px', background: '#fff', color: '#b91c1c', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
+                      Delete all
+                    </button>
+                  </div>
                 </div>
               )}
               {!loading && messages.length > 0 && messages.map((message) => {
@@ -530,13 +532,14 @@ export default function CommunicationsPage() {
                     key={message.id}
                     style={{
                       display: 'flex',
-                      alignItems: 'flex-start',
+                      alignItems: 'center',
                       gap: 8,
                       borderBottom: '1px solid #e5e7eb',
                       background: isSelected ? '#eefdf3' : 'transparent',
+                      padding: '12px 12px',
                     }}
                   >
-                    <input type="checkbox" checked={isChecked} onChange={() => handleToggleCheck(message.id)} onClick={(e) => e.stopPropagation()} style={{ margin: '16px 0 0 12px', cursor: 'pointer', flexShrink: 0 }} />
+                    <input type="checkbox" checked={isChecked} onChange={() => handleToggleCheck(message.id)} onClick={(e) => e.stopPropagation()} style={{ cursor: 'pointer', flexShrink: 0, margin: 0 }} />
                     <button
                       type="button"
                       onClick={() => {
@@ -545,9 +548,10 @@ export default function CommunicationsPage() {
                       }}
                       style={{
                         flex: 1,
+                        minWidth: 0,
                         textAlign: 'left',
                         border: 'none',
-                        padding: '14px 16px 14px 0',
+                        padding: 0,
                         background: 'transparent',
                         cursor: 'pointer',
                         display: 'flex',
@@ -562,12 +566,20 @@ export default function CommunicationsPage() {
                             <span style={{ fontSize: '11px', color: 'var(--ink-3)', fontWeight: 400 }}> — {message.tenants?.full_name || message.tenant_name}</span>
                           )}
                         </strong>
-                        <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>{new Date(message.created_at).toLocaleDateString()}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--ink-3)', flexShrink: 0 }}>{new Date(message.created_at).toLocaleDateString()}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: '12px', color: '#111827', fontWeight: message.isUnread ? 700 : 500 }}>{message.preview.slice(0, 70)}{message.preview.length > 70 ? '…' : ''}</span>
-                        {message.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />}
+                        <span style={{ fontSize: '12px', color: '#111827', fontWeight: message.isUnread ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message.preview.slice(0, 70)}{message.preview.length > 70 ? '…' : ''}</span>
+                        {message.isUnread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />}
                       </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteNotification(message.id)}
+                      title="Delete message"
+                      style={{ flexShrink: 0, border: '1px solid #fecaca', borderRadius: 999, width: 26, height: 26, background: '#fff1f2', color: '#b91c1c', cursor: 'pointer', fontSize: 14, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                    >
+                      ×
                     </button>
                   </div>
                 );
