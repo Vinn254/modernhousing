@@ -55,6 +55,27 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId })
         const sorted = items.sort(function (a, b) {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
+        // Landlords also see open complaints from their properties in the bell.
+        if (role === 'landlord') {
+          try {
+            const complaintsRes = await fetch('/api/comments', { headers });
+            if (complaintsRes.ok) {
+              const complaintsResult = await complaintsRes.json();
+              (complaintsResult.comments || []).forEach(function (c) {
+                sorted.push({
+                  id: 'complaint-' + c.id,
+                  message: c.message || '',
+                  created_at: c.created_at || new Date().toISOString(),
+                  status: c.status === 'open' ? 'sent' : 'read',
+                  type: 'complaint',
+                  recipient: 'project_manager',
+                  tenant: c.tenants ? { full_name: c.tenants.full_name || '', email: c.tenants.email || '' } : undefined
+                });
+              });
+              sorted.sort(function (a, b) { return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); });
+            }
+          } catch (e) {}
+        }
         setNotifications(sorted.slice(0, 10));
         setUnreadCount(sorted.filter(function (n) { return n.status !== 'read'; }).length);
         setLoading(false);
@@ -230,11 +251,12 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId })
               const isOverdue = notif.type === 'overdue' || notif.type === 'long_overdue';
               const timeAgo = formatTimeAgo(notif.created_at);
 
-              let typeLabel = notif.type || 'message';
-              let typeColor = 'var(--ink-3)';
+              let typeLabel = (notif.type || 'message').replace(/_/g, ' ');
+              let typeColor = 'var(--accent)';
               if (notif.type === 'overdue') { typeLabel = '⚠️ Overdue'; typeColor = '#dc2626'; }
               else if (notif.type === 'rent_reminder') { typeLabel = '🔔 Reminder'; typeColor = '#f59e0b'; }
               else if (notif.type === 'reply') { typeLabel = '💬 Reply'; typeColor = 'var(--accent)'; }
+              else if (notif.type === 'complaint') { typeLabel = '🛠️ Complaint'; typeColor = '#dc2626'; }
               else if (notif.type === 'long_overdue') { typeLabel = '🚨 Long Overdue'; typeColor = '#dc2626'; }
 
               return (
@@ -267,7 +289,7 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId })
           {notifications.length > 0 && (
             <div style={{ padding: '8px 16px', textAlign: 'center', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
               <a
-                href={role === 'tenant' ? '/tenant/notifications' : '/admin/communications'}
+                href={role === 'tenant' ? '/tenant/complaints' : '/admin/communications'}
                 style={{
                   display: 'block',
                   textAlign: 'center',

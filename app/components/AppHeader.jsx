@@ -126,7 +126,6 @@ export default function AppHeader() {
         { label: 'Payments', href: '/tenant/payments', icon: 'payments' },
         { label: 'Documents', href: '/tenant/documents', icon: 'documents' },
         { label: 'Communication & Complaints', href: '/tenant/complaints', icon: 'communications' },
-        { label: 'Notifications', href: '/tenant/notifications', icon: 'notifications' },
         { label: 'Help', href: '/help', icon: 'help' },
     ];
     const landlordPMLinks = [

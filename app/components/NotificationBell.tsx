@@ -67,6 +67,26 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
           tenant: n.tenants ? { full_name: n.tenants.full_name ?? '', email: n.tenants.email ?? '' } : undefined,
         }));
 
+        // Landlords also see open complaints from their properties in the bell.
+        if (role === 'landlord') {
+          try {
+            const complaintsRes = await fetch('/api/comments', { headers });
+            if (complaintsRes.ok) {
+              const complaintsResult = await complaintsRes.json();
+              const complaintItems: NotificationItem[] = (complaintsResult.comments ?? []).map((c: any) => ({
+                id: `complaint-${c.id}`,
+                message: c.message ?? '',
+                created_at: c.created_at ?? new Date().toISOString(),
+                status: c.status === 'open' ? 'sent' : 'read',
+                type: 'complaint',
+                recipient: 'project_manager',
+                tenant: c.tenants ? { full_name: c.tenants.full_name ?? '', email: c.tenants.email ?? '' } : undefined,
+              }));
+              items.push(...complaintItems);
+            }
+          } catch (e) {}
+        }
+
         const sorted = items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         setNotifications(sorted.slice(0, 10));
         setUnreadCount(sorted.filter(n => n.status !== 'read').length);
@@ -273,11 +293,14 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
                     {notif.type === 'reply' && (
                       <span style={{ color: 'var(--accent)', fontSize: '12px' }}>💬 Reply</span>
                     )}
+                    {notif.type === 'complaint' && (
+                      <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 600 }}>🛠️ Complaint</span>
+                    )}
                     {notif.type === 'long_overdue' && (
                       <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 700 }}>🚨 Long Overdue</span>
                     )}
-                    {!['long_overdue', 'overdue', 'rent_reminder', 'reply'].includes(notif.type || '') && (
-                      <span style={{ color: 'var(--ink-3)', fontSize: '12px' }}>{notif.type || 'message'}</span>
+                    {!['long_overdue', 'overdue', 'rent_reminder', 'reply', 'complaint'].includes(notif.type || '') && (
+                      <span style={{ color: 'var(--accent)', fontSize: '12px' }}>💬 {(notif.type || 'message').replace(/_/g, ' ')}</span>
                     )}
                   </div>
                   <p style={{ margin: '0 0 4px', fontSize: '13px', color: isUnread ? 'var(--ink)' : 'var(--ink-3)' }}>
@@ -297,7 +320,7 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
           {notifications.length > 0 && (
             <div style={{ padding: '8px 16px', textAlign: 'center', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
               <a
-                href={role === 'tenant' ? '/tenant/notifications' : '/admin/communications'}
+                href={role === 'tenant' ? '/tenant/complaints' : '/admin/communications'}
                 style={{
                   display: 'block',
                   textAlign: 'center',
