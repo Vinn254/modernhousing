@@ -394,7 +394,7 @@ export default function TenantCommunicationComplaintsPage() {
           </div>
 
           <div className="communications-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', minHeight: 520 }}>
-            <aside className="communications-sidebar" style={{ borderRight: '1px solid var(--line)', background: '#f9fafb' }}>
+            <aside className="communications-sidebar communications-scroll" style={{ borderRight: '1px solid var(--line)', background: '#f9fafb', maxHeight: 560, overflowY: 'auto' }}>
               {loading && <p className="landlord-muted" style={{ padding: 16 }}>Loading messages…</p>}
               {!loading && messages.length === 0 && <p className="landlord-empty" style={{ padding: 16 }}>No messages yet.</p>}
               {!loading && messages.length > 0 && messages.map((item) => {
