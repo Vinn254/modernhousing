@@ -284,8 +284,11 @@ export async function POST(request: NextRequest) {
       return badRequest('Notification message is required.');
     }
 
-    // Check for duplicate notification (same tenant/type already sent today)
-    if (tenantId && type) {
+    // Check for duplicate notification (same tenant/type already sent today).
+    // Chat-style messages (tenant → landlord and thread replies) are exempt so
+    // conversations are not blocked by the once-per-day alert guard.
+    const isChatMessage = recipient === 'project_manager' || type === 'reply';
+    if (tenantId && type && !isChatMessage) {
       const { data: existingNotification } = await supabaseAdmin
         .from('notifications')
         .select('id')

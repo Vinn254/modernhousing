@@ -125,7 +125,7 @@ export default function AppHeader() {
         { label: 'Dashboard', href: '/tenant/dashboard', icon: 'dashboard' },
         { label: 'Payments', href: '/tenant/payments', icon: 'payments' },
         { label: 'Documents', href: '/tenant/documents', icon: 'documents' },
-        { label: 'Complaints', href: '/tenant/complaints', icon: 'complaints' },
+        { label: 'Communication & Complaints', href: '/tenant/complaints', icon: 'communications' },
         { label: 'Notifications', href: '/tenant/notifications', icon: 'notifications' },
         { label: 'Help', href: '/help', icon: 'help' },
     ];
