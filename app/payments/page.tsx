@@ -79,6 +79,11 @@ export default function PaymentsPage() {
   const [consumerKey, setConsumerKey] = useState('');
   const [consumerSecret, setConsumerSecret] = useState('');
   const [passkey, setPasskey] = useState('');
+  const [sbmAccountNumber, setSbmAccountNumber] = useState('');
+  const [sbmIpnUsername, setSbmIpnUsername] = useState('');
+  const [sbmIpnPassword, setSbmIpnPassword] = useState('');
+  const [sbmSecretKey, setSbmSecretKey] = useState('');
+  const [sbmEnabled, setSbmEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [hoverMonth, setHoverMonth] = useState<string | null>(null);
 
@@ -396,6 +401,11 @@ allPayments.sort((a, b) => {
       setConsumerSecret(result.consumerSecret ?? '');
       setShortCode(result.shortCode ?? '');
       setPasskey(result.passkey ?? '');
+      setSbmAccountNumber(result.sbmAccountNumber ?? '');
+      setSbmIpnUsername(result.sbmIpnUsername ?? '');
+      setSbmIpnPassword(result.sbmIpnPassword ?? '');
+      setSbmSecretKey(result.sbmSecretKey ?? '');
+      setSbmEnabled(result.sbmEnabled ?? false);
     }
   }
 
@@ -406,6 +416,7 @@ allPayments.sort((a, b) => {
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         paybill, paybillAccount, shortCode, consumerKey, consumerSecret, passkey,
+        sbmAccountNumber, sbmIpnUsername, sbmIpnPassword, sbmSecretKey, sbmEnabled,
       }),
     });
 
@@ -840,6 +851,17 @@ allPayments.sort((a, b) => {
                 <input value={consumerSecret} onChange={e => setConsumerSecret(e.target.value)} placeholder="Consumer Secret" />
                 <input value={shortCode} onChange={e => setShortCode(e.target.value)} placeholder="Business ShortCode (e.g. 174347)" />
                 <input value={passkey} onChange={e => setPasskey(e.target.value)} placeholder="Passkey (Security Key)" />
+
+                <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>SBM Bank IPN (Instant Payment Notification)</h4>
+                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Optional. Enables recording tenant payments made directly to your SBM Bank account. Does not change how existing M-Pesa/manual payments are processed.</p>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px' }}>
+                  <input type="checkbox" checked={sbmEnabled} onChange={e => setSbmEnabled(e.target.checked)} />
+                  Enable SBM Bank IPN
+                </label>
+                <input value={sbmAccountNumber} onChange={e => setSbmAccountNumber(e.target.value)} placeholder="SBM Account Number" />
+                <input value={sbmIpnUsername} onChange={e => setSbmIpnUsername(e.target.value)} placeholder="IPN Username" />
+                <input value={sbmIpnPassword} onChange={e => setSbmIpnPassword(e.target.value)} placeholder="IPN Password" />
+                <input value={sbmSecretKey} onChange={e => setSbmSecretKey(e.target.value)} placeholder="IPN Secret Key" />
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button type="submit">Save Settings</button>

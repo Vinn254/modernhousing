@@ -5,3 +5,4 @@ out
 .env*
 .DS_Store
 tsconfig.tsbuildinfo
+smb.txt
