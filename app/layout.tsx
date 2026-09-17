@@ -21,7 +21,7 @@ if (typeof window !== 'undefined') {
 const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700','800'], display: 'swap' });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://modernhousing.vercel.app'),
+  metadataBase: new URL('https://www.springfield-realestate.com'),
   title: {
     default: 'Springfield Systems - Property Management Platform',
     template: '%s | Springfield Systems',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_KE',
-    url: 'https://modernhousing.vercel.app',
+    url: 'https://www.springfield-realestate.com',
     siteName: 'Springfield Systems',
     title: 'Springfield Systems - Property Management Platform',
     description: 'Manage properties, tenants, payments, and leases efficiently.',

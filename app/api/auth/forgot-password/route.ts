@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Email is required.' }, { status: 400 });
     }
 
-    const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL || 'https://modernhousing.vercel.app'}/reset-password`;
+    const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.springfield-realestate.com'}/reset-password`;
 
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,

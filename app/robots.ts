@@ -7,6 +7,6 @@ export default function robots() {
         disallow: ['/api/*', '/_next/*', '/admin/*', '/dashboard/*', '/profile/*', '/properties/*', '/payments/*', '/tenant/*', '/agent/*', '/super-admin/*'],
       },
     ],
-    sitemap: 'https://modernhousing.vercel.app/sitemap.xml',
+    sitemap: 'https://www.springfield-realestate.com/sitemap.xml',
   };
 }

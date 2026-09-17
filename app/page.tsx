@@ -9,7 +9,7 @@ export const metadata = {
   openGraph: {
     title: 'Springfield Systems - Property Management Platform',
     description: 'Comprehensive property management platform for landlords, agents, and tenants.',
-    url: 'https://modernhousing.vercel.app',
+    url: 'https://www.springfield-realestate.com',
     siteName: 'Springfield Systems',
     type: 'website',
   },
@@ -21,8 +21,8 @@ export default function HomePage() {
     '@type': 'Organization',
     name: 'Springfield Systems',
     description: 'Property management platform for landlords, agents, and tenants',
-    url: 'https://modernhousing.vercel.app',
-    logo: 'https://modernhousing.vercel.app/logo.png',
+    url: 'https://www.springfield-realestate.com',
+    logo: 'https://www.springfield-realestate.com/logo.png',
     sameAs: [],
     contactPoint: {
       '@type': 'ContactPoint',

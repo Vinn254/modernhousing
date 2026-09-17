@@ -3,31 +3,31 @@ import { MetadataRoute } from 'next';
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: 'https://modernhousing.vercel.app',
+      url: 'https://www.springfield-realestate.com',
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 1,
     },
     {
-      url: 'https://modernhousing.vercel.app/login',
+      url: 'https://www.springfield-realestate.com/login',
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
-      url: 'https://modernhousing.vercel.app/signup',
+      url: 'https://www.springfield-realestate.com/signup',
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
-      url: 'https://modernhousing.vercel.app/pricing',
+      url: 'https://www.springfield-realestate.com/pricing',
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.7,
     },
     {
-      url: 'https://modernhousing.vercel.app/help',
+      url: 'https://www.springfield-realestate.com/help',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.6,
