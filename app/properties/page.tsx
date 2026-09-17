@@ -116,7 +116,6 @@ const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
       if (response.ok) {
         setUnits(result.units ?? []);
       } else {
-        console.error('Failed to load units:', result.message);
         setError(result.message || 'Failed to load units.');
       }
     } catch (e) {

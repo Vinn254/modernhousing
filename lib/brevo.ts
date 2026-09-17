@@ -5,7 +5,6 @@ const BREVO_SMS_SENDER = process.env.BREVO_SMS_SENDER ?? '';
 
 export async function sendEmailBrevo(to: string, subject: string, html: string) {
   if (!BREVO_API_KEY) {
-    console.warn('BREVO_API_KEY not configured');
     return { success: false, error: 'Brevo API key not configured' };
   }
 
@@ -29,7 +28,6 @@ export async function sendEmailBrevo(to: string, subject: string, html: string) 
 
 export async function sendSMSBrevo(to: string, message: string) {
   if (!BREVO_API_KEY) {
-    console.warn('BREVO_API_KEY not configured');
     return { success: false, error: 'Brevo API key not configured' };
   }
 

@@ -251,7 +251,6 @@ function formatDate(dateStr: string): string {
       const result = await response.json();
       setBills(result.bills ?? []);
     } catch (err: any) {
-      console.error('Unable to load bills:', err.message);
     } finally {
       setLoadingBills(false);
     }

@@ -9,6 +9,18 @@ const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+const descriptionForType: Record<string, string> = {
+  tenancy_agreement: 'Tenancy Agreement Fee',
+  water: 'Water Payment',
+  garbage: 'Garbage Payment',
+  service_charge: 'Service Charge Payment',
+  parking: 'Parking Fee Payment',
+  security: 'Security Fee Payment',
+  internet: 'Internet Payment',
+  laundry: 'Laundry Payment',
+  pet_fees: 'Pet Fees Payment',
+};
+
 export async function POST(request: NextRequest) {
   try {
     const callbackData = await request.json();
@@ -73,31 +85,83 @@ export async function POST(request: NextRequest) {
       monthDue = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
     }
 
+    // Resolve tenant context for landlord notification and admin_email
+    const { data: tenant } = await supabaseAdmin
+      .from('tenants')
+      .select('units(property_id, properties(created_by))')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    const propertyId = tenant?.units?.property_id ?? null;
+    let landlordEmail: string | null = null;
+
+    if (propertyId) {
+      const { data: prop } = await supabaseAdmin
+        .from('properties')
+        .select('created_by')
+        .eq('id', propertyId)
+        .maybeSingle();
+
+      const createdBy = prop?.created_by;
+      if (createdBy) {
+        const { data: adminProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('email')
+          .eq('user_id', createdBy)
+          .maybeSingle();
+        landlordEmail = adminProfile?.email ?? null;
+      }
+    }
+
+    const desc = descriptionForType[paymentType] ?? 'Rent Payment';
+
     // Create payment record
     const { data: payment, error } = await supabaseAdmin.from('payments').insert({
       tenant_id: tenantId,
       amount: Number(amount),
       transaction_type: paymentType,
       transaction_code: transactionId,
-      description: paymentType === 'tenancy_agreement' ? 'Tenancy Agreement Fee' : 
-                   paymentType === 'water' ? 'Water Payment' : 
-                   paymentType === 'garbage' ? 'Garbage Payment' : 
-                   paymentType === 'service_charge' ? 'Service Charge Payment' :
-                   paymentType === 'parking' ? 'Parking Fee Payment' :
-                   paymentType === 'security' ? 'Security Fee Payment' :
-                   paymentType === 'internet' ? 'Internet Payment' :
-                   paymentType === 'laundry' ? 'Laundry Payment' :
-                   paymentType === 'pet_fees' ? 'Pet Fees Payment' : 'Utility Payment',
+      description: desc,
       balance_remaining: 0,
       month_due: monthDue,
       paid_at: transactionDate ? new Date(Number(transactionDate)).toISOString() : new Date().toISOString(),
       transaction_number: `MPESA-${Date.now().toString().slice(-6)}`,
+      admin_email: landlordEmail || null,
+      property_id: propertyId || null,
     }).select();
 
     if (error) {
-      console.error('Failed to record payment:', error);
       return NextResponse.json({ message: 'Failed to record payment' }, { status: 500 });
     }
+
+    // Send notifications to tenant and landlord
+    const notificationInserts: any[] = [
+      {
+        recipient: 'tenant',
+        tenant_id: tenantId,
+        property_id: propertyId,
+        admin_email: landlordEmail || null,
+        type: 'rent_payment',
+        message: `Your ${desc.toLowerCase()} payment of KSH ${amount} for ${monthDue || 'this month'} was received successfully.`,
+        status: 'sent',
+        created_at: new Date().toISOString(),
+      },
+    ];
+
+    if (landlordEmail) {
+      notificationInserts.push({
+        recipient: 'project_manager',
+        tenant_id: tenantId,
+        property_id: propertyId,
+        admin_email: landlordEmail,
+        type: 'rent_payment',
+        message: `Tenant payment of KSH ${amount} received for ${desc} (${monthDue || 'this month'}) via M-Pesa.`,
+        status: 'sent',
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    await supabaseAdmin.from('notifications').insert(notificationInserts);
 
     // Update tenant's outstanding balance if there are pending bills of matching type
     const { data: bills } = await supabaseAdmin.from('bills')
@@ -118,7 +182,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: 'Payment recorded successfully' });
   } catch (error: any) {
-    console.error('M-Pesa callback error:', error);
     return NextResponse.json({ message: error.message ?? 'Callback processing failed' }, { status: 500 });
   }
 }

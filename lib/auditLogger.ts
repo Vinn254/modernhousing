@@ -31,6 +31,5 @@ export async function logAuditEvent(
       created_at: new Date().toISOString(),
     });
   } catch (e) {
-    console.error('Audit log failed:', e);
   }
 }

@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
 
   const insertData: any = {
     tenant_id: tenantId,
-    description: description ?? `${transactionType || 'Rent'} payment`,
+    description: description ?? `${transactionType || 'rent'} payment`,
     transaction_type: transactionType || 'rent',
     amount: Number(amount || paidAmount) || 0,
     balance_remaining: Number(balanceRemaining) || 0,
@@ -228,6 +228,36 @@ export async function POST(request: NextRequest) {
     due_amount: Number(dueAmount) || null,
     transaction_code: transCode ?? null,
   };
+
+  // Resolve tenant context for admin_email and property_id
+  const { data: tenant } = await supabaseAdmin
+    .from('tenants')
+    .select('units(property_id, properties(created_by)), email, full_name')
+    .eq('id', tenantId)
+    .maybeSingle();
+
+  const propertyId = tenant?.units?.property_id ?? null;
+  let landlordEmail: string | null = null;
+
+  if (tenant?.units?.property_id) {
+    const { data: prop } = await supabaseAdmin
+      .from('properties')
+      .select('created_by')
+      .eq('id', tenant.units.property_id)
+      .maybeSingle();
+
+    if (prop?.created_by) {
+      const { data: adminProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('email')
+        .eq('user_id', prop.created_by)
+        .maybeSingle();
+      landlordEmail = adminProfile?.email ?? null;
+    }
+  }
+
+  insertData.admin_email = landlordEmail || authContext.userEmail || null;
+  insertData.property_id = propertyId || null;
 
 const result = await supabaseAdmin.from('payments').insert(insertData);
 
@@ -247,21 +277,34 @@ const result = await supabaseAdmin.from('payments').insert(insertData);
       { tenant_id: tenantId, amount: paidAmount, type: transactionType }
     );
 
-    const { data: tenant } = await supabaseAdmin
-    .from('tenants')
-    .select('email, full_name')
-    .eq('id', tenantId)
-    .single();
-
   if (tenant?.email) {
-    await supabaseAdmin.from('notifications').insert({
-      recipient: 'tenant',
-      tenant_id: tenantId,
-      type: 'rent_payment',
-      message: `Rent payment of KSH ${paidAmount} recorded.`,
-      status: 'sent',
-      created_at: new Date().toISOString(),
-    }).select();
+    const notificationInserts: any[] = [
+      {
+        recipient: 'tenant',
+        tenant_id: tenantId,
+        property_id: propertyId,
+        admin_email: landlordEmail || authContext.userEmail || null,
+        type: 'rent_payment',
+        message: `Rent payment of KSH ${paidAmount} recorded.`,
+        status: 'sent',
+        created_at: new Date().toISOString(),
+      },
+    ];
+
+    if (landlordEmail && landlordEmail !== tenant?.email) {
+      notificationInserts.push({
+        recipient: 'project_manager',
+        tenant_id: tenantId,
+        property_id: propertyId,
+        admin_email: landlordEmail,
+        type: 'rent_payment',
+        message: `Rent payment of KSH ${paidAmount} recorded for tenant ${tenant?.full_name || 'Tenant'}.`,
+        status: 'sent',
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    await supabaseAdmin.from('notifications').insert(notificationInserts);
   }
 
   return NextResponse.json({ message: 'Payment recorded.', payment: result.data?.[0] }, { status: 201 });

@@ -40,7 +40,6 @@ export function useDeactivationGuard() {
           });
         }
       } catch (err) {
-        console.error('Deactivation check failed:', err);
       } finally {
         setLoading(false);
       }

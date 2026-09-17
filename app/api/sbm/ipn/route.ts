@@ -106,12 +106,99 @@ function parseSbmDate(raw: string): Date {
   return new Date();
 }
 
+async function resolveTenantContext(tenantId: string) {
+  const { data: tenant } = await supabaseAdmin
+    .from('tenants')
+    .select('units(property_id, properties(created_by))')
+    .eq('id', tenantId)
+    .maybeSingle();
+
+  const propertyId = tenant?.units?.property_id ?? null;
+  let landlordEmail: string | null = null;
+
+  if (propertyId) {
+    const { data: prop } = await supabaseAdmin
+      .from('properties')
+      .select('created_by')
+      .eq('id', propertyId)
+      .maybeSingle();
+
+    if (prop?.created_by) {
+      const { data: adminProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('email')
+        .eq('user_id', prop.created_by)
+        .maybeSingle();
+      landlordEmail = adminProfile?.email ?? null;
+    }
+  }
+
+  return { tenant, propertyId, landlordEmail };
+}
+
+async function createPaymentNotification(
+  tenantId: string,
+  adminEmail: string,
+  propertyId: string | null,
+  amount: number,
+  paymentType: string,
+  monthDue: string,
+  method: 'sbm' | 'mpesa'
+) {
+  const desc = descriptionForType[paymentType] ?? 'Rent Payment';
+  const notificationInserts: any[] = [
+    {
+      recipient: 'tenant',
+      tenant_id: tenantId,
+      property_id: propertyId,
+      admin_email: adminEmail || null,
+      type: 'rent_payment',
+      message: `Your ${desc.toLowerCase()} payment of KSH ${amount} for ${monthDue} was received successfully.`,
+      status: 'sent',
+      created_at: new Date().toISOString(),
+    },
+  ];
+
+  if (adminEmail) {
+    notificationInserts.push({
+      recipient: 'project_manager',
+      tenant_id: tenantId,
+      property_id: propertyId,
+      admin_email: adminEmail,
+      type: 'rent_payment',
+      message: `Tenant payment of KSH ${amount} received for ${desc} (${monthDue}) via ${method.toUpperCase()}.`,
+      status: 'sent',
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  await supabaseAdmin.from('notifications').insert(notificationInserts);
+}
+
+async function updateTenantBills(tenantId: string, amount: number) {
+  const { data: bills } = await supabaseAdmin
+    .from('bills')
+    .select('id, due_amount, paid_amount, balance')
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (bills && bills.length > 0) {
+    for (const bill of bills) {
+      const newPaid = (bill.paid_amount || 0) + amount;
+      const newBalance = (bill.due_amount || 0) - newPaid;
+      await supabaseAdmin.from('bills')
+        .update({ paid_amount: newPaid, balance: Math.max(0, newBalance) })
+        .eq('id', bill.id);
+    }
+  }
+}
+
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
   const candidates = await candidateCredentials();
   if (candidates.length === 0) {
-    console.error('SBM IPN received but no SBM credentials are configured');
     return NextResponse.json({ message: 'SBM IPN not configured' }, { status: 500 });
   }
 
@@ -129,7 +216,6 @@ export async function POST(request: NextRequest) {
   }
 
   if (!decrypted || !matchedCredentials) {
-    console.error('SBM IPN: failed to decrypt payload with any configured secret key');
     return NextResponse.json({ message: 'Unable to decrypt IPN payload' }, { status: 400 });
   }
 
@@ -137,7 +223,6 @@ export async function POST(request: NextRequest) {
     decrypted.IPNUsername !== matchedCredentials.ipnUsername ||
     decrypted.IPNPassword !== matchedCredentials.ipnPassword
   ) {
-    console.error('SBM IPN: username/password mismatch');
     return NextResponse.json({ message: 'Invalid IPN credentials' }, { status: 401 });
   }
 
@@ -168,13 +253,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!tenantId) {
-      console.error('SBM IPN: unable to resolve tenant for transaction', item.reference);
       allSucceeded = false;
       continue;
     }
 
     const amount = Number(item.amount) || 0;
     const transactionDate = item.date ? parseSbmDate(String(item.date)) : new Date();
+
+    const { tenant, propertyId, landlordEmail } = await resolveTenantContext(tenantId);
     const monthDue = `${monthNames[transactionDate.getMonth()]} ${transactionDate.getFullYear()}`;
 
     const { error } = await supabaseAdmin.from('payments').insert({
@@ -187,31 +273,19 @@ export async function POST(request: NextRequest) {
       month_due: monthDue,
       paid_at: transactionDate.toISOString(),
       transaction_number: `SBM-${Date.now().toString().slice(-6)}`,
+      admin_email: landlordEmail || null,
+      property_id: propertyId || null,
     });
 
     if (error) {
-      console.error('SBM IPN: failed to record payment', error);
       allSucceeded = false;
       continue;
     }
 
-    const { data: bills } = await supabaseAdmin
-      .from('bills')
-      .select('id, due_amount, paid_amount, balance')
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (bills && bills.length > 0) {
-      for (const bill of bills) {
-        const newPaid = (bill.paid_amount || 0) + amount;
-        const newBalance = (bill.due_amount || 0) - newPaid;
-        await supabaseAdmin
-          .from('bills')
-          .update({ paid_amount: newPaid, balance: Math.max(0, newBalance) })
-          .eq('id', bill.id);
-      }
-    }
+    await Promise.all([
+      createPaymentNotification(tenantId, landlordEmail || '', propertyId, amount, paymentType, monthDue, 'sbm'),
+      updateTenantBills(tenantId, amount),
+    ]);
   }
 
   const responsePayload = {

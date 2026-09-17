@@ -57,7 +57,6 @@ export default function ResetPasswordPage() {
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
-        console.error('Password update error:', error);
         setError(error.message ?? 'Unable to reset password.');
       } else {
         setMessage('Password reset successfully. You can now sign in.');
@@ -66,7 +65,7 @@ export default function ResetPasswordPage() {
         setHasRecoverySession(false);
       }
     } catch (err: any) {
-      console.error('Password update exception:', err);
+      setError(err?.message ?? 'Unable to reset password.');
       setError(err.message ?? 'Request failed.');
     } finally {
       setLoading(false);

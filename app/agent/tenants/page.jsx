@@ -95,7 +95,6 @@ export default function AgentTenantsPage() {
             setBills(result.bills ?? []);
         }
         catch (err) {
-            console.error('Unable to load bills:', err.message);
         }
         finally {
             setLoadingBills(false);

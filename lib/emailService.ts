@@ -42,7 +42,6 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
 
   const mailer = getTransporter();
   if (!mailer) {
-    console.warn('Email not configured. Set SMTP or BREVO_API_KEY environment variables.');
     return { success: false, message: 'Email service is not configured.' };
   }
 
@@ -50,7 +49,6 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
     const info = await mailer.sendMail({ from: SMTP_FROM, to, subject, html, text });
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    console.error('Email send failed:', error);
     return { success: false, message: error.message ?? 'Failed to send email.' };
   }
 }
@@ -75,13 +73,11 @@ async function sendViaBrevo({ to, subject, html, text }: EmailOptions) {
     const result = await response.json();
 
     if (!response.ok) {
-      console.error('Brevo email failed:', result);
       return { success: false, message: result.message ?? 'Failed to send email via Brevo.' };
     }
 
     return { success: true, messageId: result.messageId };
   } catch (error: any) {
-    console.error('Brevo email error:', error);
     return { success: false, message: error.message ?? 'Failed to send email via Brevo.' };
   }
 }
