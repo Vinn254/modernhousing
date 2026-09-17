@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import AuthWrapper from './auth-wrapper';
+import GoogleAnalytics from './components/google-analytics';
 import { Inter } from 'next/font/google';
 
 if (typeof window !== 'undefined') {
@@ -91,6 +92,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthWrapper>{children}</AuthWrapper>
+        <GoogleAnalytics />
       </body>
     </html>
   );

@@ -5,6 +5,21 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { FormField } from '../components/dashboard-ui';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Login - Springfield Systems Property Management | Kenya',
+  description: 'Login to Springfield Systems property management platform. Access your landlord, agent, or tenant dashboard in Kenya.',
+  alternates: {
+    canonical: 'https://www.springfield-realestate.com/login',
+  },
+  openGraph: {
+    title: 'Login - Springfield Systems Property Management',
+    description: 'Access your landlord, agent, or tenant dashboard.',
+    url: 'https://www.springfield-realestate.com/login',
+    type: 'website',
+  },
+};
 
 type UserRole = 'admin' | 'agent' | 'tenant' | 'super_admin' | 'project_manager';
 

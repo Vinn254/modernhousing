@@ -1,3 +1,19 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Terms & Conditions - Springfield Systems | Kenya',
+  description: 'Read Springfield Systems terms and conditions for property management services in Kenya. Includes payment, data, and termination policies.',
+  alternates: {
+    canonical: 'https://www.springfield-realestate.com/terms',
+  },
+  openGraph: {
+    title: 'Terms & Conditions - Springfield Systems',
+    description: 'Terms and conditions for property management services in Kenya.',
+    url: 'https://www.springfield-realestate.com/terms',
+    type: 'website',
+  },
+};
+
 export default function TermsPage() {
   return (
     <main className="container" style={{ maxWidth: '800px' }}>
