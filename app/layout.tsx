@@ -4,6 +4,8 @@ import AuthWrapper from './auth-wrapper';
 import GoogleAnalytics from './components/google-analytics';
 import { Inter } from 'next/font/google';
 
+export const dynamic = 'force-dynamic';
+
 if (typeof window !== 'undefined') {
   ['log', 'warn', 'error', 'info', 'debug'].forEach((method) => {
     (console as any)[method] = () => {};

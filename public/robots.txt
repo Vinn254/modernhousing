@@ -1,0 +1,25 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /dashboard/*
+Disallow: /admin/*
+Disallow: /agent/*
+Disallow: /tenant/*
+Disallow: /super-admin/*
+Disallow: /reset-password/*
+
+# Googlebot
+User-agent: Googlebot
+Allow: /
+Disallow: /dashboard/*
+Disallow: /admin/*
+Disallow: /agent/*
+Disallow: /tenant/*
+Disallow: /super-admin/*
+Disallow: /reset-password/*
+
+# Host
+Host: https://www.springfield-realestate.com
+
+# Sitemaps
+Sitemap: https://www.springfield-realestate.com/sitemap.xml
