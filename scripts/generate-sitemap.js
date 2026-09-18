@@ -1,6 +1,13 @@
 const fs = require('fs');
 
-const manifest = JSON.parse(fs.readFileSync('.next/routes-manifest.json', 'utf8'));
+const manifestPath = '.next/routes-manifest.json';
+
+if (!fs.existsSync(manifestPath)) {
+  console.log('Sitemap generation skipped: routes manifest not found');
+  process.exit(0);
+}
+
+const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const routes = ['/'];
 for (const route of manifest.staticRoutes || []) {
   const page = route.page || '';
@@ -30,5 +37,9 @@ const sitemap = [
   ''
 ].join('\n');
 
-fs.writeFileSync('public/sitemap.xml', sitemap);
+const publicDir = 'public';
+if (!fs.existsSync(publicDir)) {
+  fs.mkdirSync(publicDir, { recursive: true });
+}
+fs.writeFileSync(`${publicDir}/sitemap.xml`, sitemap);
 console.log('Generated sitemap.xml with ' + urls.length + ' URLs');
