@@ -57,7 +57,7 @@ export default function HelpPage() {
             <ul style={{ marginLeft: '20px', color: 'var(--ink-3)' }}>
               <li><strong>Tenants</strong> - Add new tenants by entering their full name, email, phone, lease dates, and assigning a vacant unit. Record total paid amount for initial payments.</li>
               <li><strong>Complaints</strong> - View tenant complaints submitted from their dashboard. Each complaint shows tenant name, message, and status. Update status as you resolve issues.</li>
-              <li><strong>Notifications</strong> - See notices you've sent to tenants. Send overdue alerts for unpaid rent or general announcements. You can delete any notification to remove it from tenant view.</li>
+              <li><strong>Notifications</strong> - See notices you&apos;ve sent to tenants. Send overdue alerts for unpaid rent or general announcements. You can delete any notification to remove it from tenant view.</li>
               <li><strong>Utilities (Water Billing)</strong> - Go to each unit and record the current water meter reading. System auto-calculates bill: (current reading - previous reading) × KSH 150. Previous reading updates automatically after saving.</li>
             </ul>
           </div>
@@ -72,7 +72,7 @@ export default function HelpPage() {
 
             <h3 style={{ marginTop: '24px', marginBottom: '12px' }}>How to Use Each Feature</h3>
             <ul style={{ marginLeft: '20px', color: 'var(--ink-3)' }}>
-              <li><strong>Apartment Details</strong> - View your unit number, property name and address, and your assigned agent's contact information. Update your profile picture here.</li>
+               <li><strong>Apartment Details</strong> - View your unit number, property name and address, and your assigned agent&apos;s contact information. Update your profile picture here.</li>
               <li><strong>Payment History</strong> - Review all past payments made. Each entry shows payment date, amount, and description. See your running balance and next payment due date.</li>
               <li><strong>Due Dates</strong> - Your next rent payment date is shown on dashboard. Payments are typically due monthly starting from your lease start date.</li>
               <li><strong>Notices</strong> - Read announcements sent by your agent or landlord. These include payment reminders, lease updates, and property announcements.</li>
@@ -96,7 +96,7 @@ export default function HelpPage() {
               <span className="badge badge-pm">Getting Started</span>
             </div>
             <h3 style={{ marginBottom: '12px' }}>Select Your Role</h3>
-            <p>After logging in, you'll see help specific to your role. Available roles:</p>
+            <p>After logging in, you&apos;ll see help specific to your role. Available roles:</p>
             <ul style={{ marginLeft: '20px', color: 'var(--ink-3)' }}>
               <li><strong>Landlord/Project Manager</strong> - Full property and tenant management. Add properties, assign agents, view payments, and send communications.</li>
               <li><strong>Agent</strong> - Manage assigned property tenants and billing. Add tenants, record water meter readings, send notifications.</li>

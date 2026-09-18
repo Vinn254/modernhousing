@@ -63,5 +63,5 @@ export default function AgentNotificationsPage() {
           {error && <p className="landlord-error">{error}</p>}
         </div>
         </section>
-    </main>);
+    </main></>);
 }

@@ -787,7 +787,7 @@ allPayments.sort((a, b) => {
             <div style={{ padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '14px', color: '#111827' }}>
               {paybill && <div><strong>Paybill Number:</strong> {paybill}</div>}
               <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants should use the short code from their unit as the account number when paying via Paybill.</div>
-              {!paybill && <div>No paybill configured. Click "Edit Payment Details" to add.</div>}
+               {!paybill && <div>No paybill configured. Click &quot;Edit Payment Details&quot; to add.</div>}
             </div>
             <button onClick={() => setShowSettings(true)} className="btn btn-ghost" style={{ marginTop: 12, fontSize: '14px', padding: '10px 16px', fontWeight: 600, background: '#f3f4f6', color: '#111827', border: '1px solid #d1d5db' }}>Edit Payment Details</button>
           </article>
