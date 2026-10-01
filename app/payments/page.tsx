@@ -401,6 +401,22 @@ allPayments.sort((a, b) => {
 
   async function saveSettings(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError('');
+    setMessage('');
+
+    if (!coopPaybill.trim()) {
+      setError('Enter the Co-operative Bank Paybill number.');
+      return;
+    }
+    if (
+      coopEnabled &&
+      [coopConnectionId, coopConnectionPassword, coopServiceName, coopInstitutionCode, coopInstitutionName]
+        .some((value) => !value.trim())
+    ) {
+      setError('Complete all Co-operative Bank B2B credentials before enabling the integration.');
+      return;
+    }
+
     const response = await fetch('/api/payment-settings', {
       method: 'POST',
       headers: await getAuthHeaders(),
@@ -817,7 +833,8 @@ allPayments.sort((a, b) => {
             <div className="card" style={{ maxWidth: 520, width: '100%', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', padding: 24 }}>
               <div className="card-label">Payment Settings</div>
               <h3 style={{ marginBottom: 16 }}>Configure Co-operative Bank</h3>
-              <form onSubmit={saveSettings} className="form-grid">
+              <form onSubmit={saveSettings} className="form-grid" noValidate>
+                {error && <p className="landlord-error" style={{ margin: 0 }}>{error}</p>}
                 <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Enter the Co-operative Bank Paybill connected to your receiving account. Tenants will use this Paybill together with their assigned unit short code as the payment account number.</p>
                 <input value={coopPaybill} onChange={e => setCoopPaybill(e.target.value)} placeholder="Co-operative Bank Paybill Number" required />
                 <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>Co-operative Bank B2B Credentials</h4>
@@ -826,11 +843,11 @@ allPayments.sort((a, b) => {
                   <input type="checkbox" checked={coopEnabled} onChange={e => setCoopEnabled(e.target.checked)} />
                   Enable Co-operative Bank B2B
                 </label>
-                <input value={coopConnectionId} onChange={e => setCoopConnectionId(e.target.value)} placeholder="Connection ID" required={coopEnabled} />
-                <input type="password" value={coopConnectionPassword} onChange={e => setCoopConnectionPassword(e.target.value)} placeholder="Connection Password" required={coopEnabled} />
-                <input value={coopServiceName} onChange={e => setCoopServiceName(e.target.value)} placeholder="Service Name (e.g. IMMENSUS)" required={coopEnabled} />
-                <input value={coopInstitutionCode} onChange={e => setCoopInstitutionCode(e.target.value)} placeholder="Institution Code (e.g. 21000892)" required={coopEnabled} />
-                <input value={coopInstitutionName} onChange={e => setCoopInstitutionName(e.target.value)} placeholder="Institution Name (e.g. IMMENSUS)" required={coopEnabled} />
+                <input value={coopConnectionId} onChange={e => setCoopConnectionId(e.target.value)} placeholder="Connection ID" />
+                <input type="password" value={coopConnectionPassword} onChange={e => setCoopConnectionPassword(e.target.value)} placeholder="Connection Password" />
+                <input value={coopServiceName} onChange={e => setCoopServiceName(e.target.value)} placeholder="Service Name (e.g. IMMENSUS)" />
+                <input value={coopInstitutionCode} onChange={e => setCoopInstitutionCode(e.target.value)} placeholder="Institution Code (e.g. 21000892)" />
+                <input value={coopInstitutionName} onChange={e => setCoopInstitutionName(e.target.value)} placeholder="Institution Name (e.g. IMMENSUS)" />
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button type="submit">Save Settings</button>

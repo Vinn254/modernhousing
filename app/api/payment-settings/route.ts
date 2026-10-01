@@ -205,10 +205,7 @@ export async function GET(request: NextRequest) {
       }),
     });
   } catch (error: any) {
-    return NextResponse.json({
-      paybill: '',
-      tenantShortCode: '',
-    });
+    return NextResponse.json({ message: error.message ?? 'Unable to load payment settings.' }, { status: 500 });
   }
 }
 
