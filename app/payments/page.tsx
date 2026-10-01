@@ -413,6 +413,13 @@ allPayments.sort((a, b) => {
     Promise.all([loadPayments(), loadTenants(), loadSettings()]);
   }, []);
 
+  useEffect(() => {
+    const refreshTimer = window.setInterval(() => {
+      void loadPayments();
+    }, 30000);
+    return () => window.clearInterval(refreshTimer);
+  }, []);
+
   async function handleManualPayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
@@ -905,7 +912,7 @@ allPayments.sort((a, b) => {
                     <tr>
                       <th>Tenant</th>
                       <th>Month Due</th>
-                      <th>Trans Code</th>
+                      <th>Bank Reference</th>
                       <th>Due</th>
                       <th>Paid</th>
                       <th>Balance</th>

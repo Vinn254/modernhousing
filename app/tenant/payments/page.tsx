@@ -14,6 +14,7 @@ interface Bill {
   transaction_type: string;
   payment_date: string;
   transaction_number?: string;
+  transaction_code?: string;
   created_at: string;
 }
 
@@ -110,6 +111,7 @@ export default function TenantPaymentsPage() {
         transaction_type: b.transaction_type,
         payment_date: b.payment_date,
         transaction_number: b.transaction_number,
+        transaction_code: b.transaction_code,
         created_at: b.created_at,
       }));
     }
@@ -125,6 +127,7 @@ export default function TenantPaymentsPage() {
         penalty_fee: 0,
         transaction_type: p.transaction_type || 'rent',
         payment_date: p.paid_at?.split('T')[0] || null,
+        transaction_code: p.transaction_code,
         created_at: p.paid_at || p.created_at,
       }));
       allBills = [...allBills, ...legacyBills];
@@ -170,13 +173,26 @@ export default function TenantPaymentsPage() {
   }
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email) {
+    let active = true;
+    let refreshTimer: number | undefined;
+
+    void supabase.auth.getUser().then(({ data }) => {
+      const email = data.user?.email;
+      if (email) {
+        if (!active) return;
         setUser(data.user);
         const tenantId = data.user?.user_metadata?.tenant_id ?? null;
-        loadPayments(data.user.email, tenantId);
+        void loadPayments(email, tenantId);
+        refreshTimer = window.setInterval(() => {
+          void loadPayments(email, tenantId);
+        }, 30000);
       }
     });
+
+    return () => {
+      active = false;
+      if (refreshTimer) window.clearInterval(refreshTimer);
+    };
   }, []);
 
   const rentBills = bills.filter(b => ['rent', 'overdue', 'deposit', 'tenancy_agreement'].includes(b.transaction_type));
@@ -410,6 +426,7 @@ const getTypeLabel = (type: string) => {
                         <th>Penalty</th>
                         <th>Balance</th>
                         <th>Running Balance</th>
+                        <th>Bank Reference</th>
                         <th>Payment Date</th>
                       </tr>
                     </thead>
@@ -428,6 +445,7 @@ const getTypeLabel = (type: string) => {
                           <td style={{ color: bill.running_balance > 0 ? 'var(--accent)' : (bill.running_balance < 0 ? '#dc2626' : 'var(--ink-3)'), fontWeight: 600 }}>
                             {formatCurrency(bill.running_balance)}
                           </td>
+                          <td>{bill.transaction_code || '—'}</td>
                           <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString() : '-'}</td>
                         </tr>
                       ))}

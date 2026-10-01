@@ -126,11 +126,17 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
   }, []);
 
   async function markAllAsRead() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+
     for (const notif of notifications) {
       if (notif.status !== 'read') {
         await fetch(`/api/notifications?id=${notif.id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ status: 'read' }),
         });
       }
@@ -231,7 +237,7 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
             }}
           >
             <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>
-              {role === 'tenant' ? 'My Notifications' : 'Overdue Alerts'}
+              {role === 'tenant' ? 'My Notifications' : 'Notifications'}
             </h4>
             {unreadCount > 0 && (
               <button
@@ -296,10 +302,13 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
                     {notif.type === 'complaint' && (
                       <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 600 }}>🛠️ Complaint</span>
                     )}
+                    {notif.type === 'rent_payment' && (
+                      <span style={{ color: 'var(--accent)', fontSize: '12px', fontWeight: 600 }}>✓ Payment received</span>
+                    )}
                     {notif.type === 'long_overdue' && (
                       <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 700 }}>🚨 Long Overdue</span>
                     )}
-                    {!['long_overdue', 'overdue', 'rent_reminder', 'reply', 'complaint'].includes(notif.type || '') && (
+                    {!['long_overdue', 'overdue', 'rent_reminder', 'reply', 'complaint', 'rent_payment'].includes(notif.type || '') && (
                       <span style={{ color: 'var(--accent)', fontSize: '12px' }}>💬 {(notif.type || 'message').replace(/_/g, ' ')}</span>
                     )}
                   </div>

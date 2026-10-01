@@ -244,9 +244,22 @@ export async function recordCoopPayment({
     throw billsError;
   }
 
+  let remainingAmount = amount;
   for (const bill of bills ?? []) {
-    const paidAmount = Number(bill.paid_amount ?? 0) + amount;
-    const balance = Math.max(0, Number(bill.due_amount ?? 0) - paidAmount);
+    if (remainingAmount <= 0) {
+      break;
+    }
+
+    const dueAmount = Number(bill.due_amount ?? 0);
+    const currentPaidAmount = Number(bill.paid_amount ?? 0);
+    const outstandingAmount = Math.max(0, dueAmount - currentPaidAmount);
+    if (outstandingAmount <= 0) {
+      continue;
+    }
+
+    const appliedAmount = Math.min(remainingAmount, outstandingAmount);
+    const paidAmount = currentPaidAmount + appliedAmount;
+    const balance = outstandingAmount - appliedAmount;
     const { error: billError } = await supabaseAdmin
       .from('bills')
       .update({ paid_amount: paidAmount, balance })
@@ -254,6 +267,8 @@ export async function recordCoopPayment({
     if (billError) {
       throw billError;
     }
+
+    remainingAmount -= appliedAmount;
   }
 
   return { monthDue, unitCode };

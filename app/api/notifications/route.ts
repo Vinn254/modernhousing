@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { adminRequest, badRequest, isMissingTableError, requestError } from '../../../lib/supabaseAdmin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 if (!supabaseUrl || !serviceRoleKey) {
@@ -10,6 +11,75 @@ if (!supabaseUrl || !serviceRoleKey) {
 }
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+type NotificationAuthContext = {
+  userId: string;
+  email: string;
+  role: string;
+  tenantId: string | null;
+};
+
+async function getAuthContext(request: NextRequest): Promise<NotificationAuthContext | null> {
+  const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
+  const cookie = request.headers.get('cookie') ?? '';
+  let user = null;
+
+  if (authorization?.startsWith('Bearer ')) {
+    const { data, error } = await supabaseAdmin.auth.getUser(authorization.slice(7));
+    if (!error) {
+      user = data.user;
+    }
+  } else if (cookie && supabaseAnonKey) {
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { cookie } } });
+    const { data } = await supabaseAuth.auth.getUser();
+    user = data.user;
+  }
+
+  if (!user?.id || !user.email) {
+    return null;
+  }
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (profileError) {
+    throw profileError;
+  }
+
+  const role = profile?.role ?? 'tenant';
+  let tenantId: string | null = null;
+  if (role === 'tenant') {
+    const { data: tenant, error: tenantError } = await supabaseAdmin
+      .from('tenants')
+      .select('id')
+      .eq('email', user.email)
+      .maybeSingle();
+    if (tenantError) {
+      throw tenantError;
+    }
+    tenantId = tenant?.id ?? null;
+  }
+
+  return { userId: user.id, email: user.email, role, tenantId };
+}
+
+function notificationScope(query: any, auth: NotificationAuthContext) {
+  if (auth.role === 'super_admin') {
+    return query;
+  }
+  if (auth.role === 'tenant' && auth.tenantId) {
+    return query.eq('recipient', 'tenant').eq('tenant_id', auth.tenantId);
+  }
+  if (auth.role === 'project_manager') {
+    return query.eq('recipient', 'project_manager').eq('admin_email', auth.email);
+  }
+  if (auth.role === 'agent') {
+    return query.eq('recipient', 'agent').eq('agent_id', auth.userId);
+  }
+  return query.eq('id', '__not_authorized__');
+}
 
 async function ensureNotificationTable() {
   const { error } = await supabaseAdmin.from('notifications').select('id').limit(1);
@@ -170,10 +240,16 @@ async function getFallbackNotifications(propertyId?: string, tenantId?: string, 
 
 export async function GET(request: NextRequest) {
   try {
+    const authContext = await getAuthContext(request);
+    if (!authContext) {
+      return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+    }
+
     const recipient = request.nextUrl.searchParams.get('recipient');
     const propertyId = request.nextUrl.searchParams.get('propertyId');
-    const adminEmail = request.nextUrl.searchParams.get('adminEmail');
-    const agentId = request.nextUrl.searchParams.get('agentId') ?? request.nextUrl.searchParams.get('agent_id');
+    let adminEmail = request.nextUrl.searchParams.get('adminEmail');
+    let agentId = request.nextUrl.searchParams.get('agentId') ?? request.nextUrl.searchParams.get('agent_id');
+    let tenantId = request.nextUrl.searchParams.get('tenantId') ?? request.nextUrl.searchParams.get('tenant_id');
 
     let query: any = supabaseAdmin
       .from('notifications')
@@ -181,21 +257,58 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (recipient === 'landlord' || recipient === 'project_manager') {
-      if (adminEmail) {
-        query = query.or(`recipient.eq.project_manager,recipient.eq.tenant`);
-        query = query.eq('admin_email', adminEmail);
-      } else {
-        query = query.eq('recipient', 'project_manager');
+      if (!['project_manager', 'super_admin'].includes(authContext.role)) {
+        return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
+      }
+      query = query.eq('recipient', 'project_manager');
+      if (authContext.role !== 'super_admin') {
+        adminEmail = authContext.email;
       }
     } else if (recipient === 'tenant') {
+      if (!['tenant', 'super_admin'].includes(authContext.role) || (authContext.role === 'tenant' && !authContext.tenantId)) {
+        return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
+      }
       query = query.eq('recipient', 'tenant');
+      if (authContext.role === 'tenant') {
+        tenantId = authContext.tenantId;
+      } else if (!tenantId) {
+        return NextResponse.json({ notifications: [] });
+      }
+      query = query.eq('tenant_id', tenantId);
     } else if (recipient === 'agent') {
+      if (!['agent', 'super_admin'].includes(authContext.role)) {
+        return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
+      }
       query = query.eq('recipient', 'agent');
+      if (authContext.role === 'agent') {
+        agentId = authContext.userId;
+      }
+      query = query.eq('agent_id', agentId ?? '');
     } else if (agentId) {
+      if (authContext.role !== 'agent' || agentId !== authContext.userId) {
+        return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
+      }
       const orClause = propertyId
         ? `recipient.eq.agent,and(agent_id.eq.${agentId}),recipient.eq.tenant,and(agent_id.eq.${agentId},property_id.eq.${propertyId})`
         : `recipient.eq.agent,and(agent_id.eq.${agentId})`;
       query = query.or(orClause);
+    } else {
+      if (authContext.role === 'project_manager' && propertyId) {
+        const { data: property, error: propertyError } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('id', propertyId)
+          .eq('created_by', authContext.userId)
+          .maybeSingle();
+        if (propertyError) {
+          throw propertyError;
+        }
+        if (!property) {
+          return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
+        }
+      } else if (authContext.role !== 'super_admin') {
+        return NextResponse.json({ message: 'Notification recipient is required.' }, { status: 400 });
+      }
     }
 
     if (propertyId && recipient !== 'agent' && !agentId) {
@@ -206,7 +319,6 @@ export async function GET(request: NextRequest) {
       query = query.eq('admin_email', adminEmail);
     }
 
-    const tenantId = request.nextUrl.searchParams.get('tenantId') ?? request.nextUrl.searchParams.get('tenant_id');
     const { data, error } = await query;
     if (error) {
       if (recipient === 'landlord' || recipient === 'project_manager') {
@@ -226,9 +338,25 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const authContext = await getAuthContext(request);
+    if (!authContext) {
+      return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+    }
+
     const id = request.nextUrl.searchParams.get('id');
     if (!id) {
       return NextResponse.json({ message: 'Notification ID is required.' }, { status: 400 });
+    }
+
+    const scopedNotification = await notificationScope(
+      supabaseAdmin.from('notifications').select('id').eq('id', id),
+      authContext,
+    ).maybeSingle();
+    if (scopedNotification.error) {
+      throw scopedNotification.error;
+    }
+    if (!scopedNotification.data) {
+      return NextResponse.json({ message: 'Notification not found.' }, { status: 404 });
     }
 
     const result = await supabaseAdmin.from('notifications').delete().eq('id', id);
@@ -247,6 +375,11 @@ export async function DELETE(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const authContext = await getAuthContext(request);
+    if (!authContext) {
+      return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+    }
+
     const id = request.nextUrl.searchParams.get('id');
     const body = await request.json();
     const { status } = body;
@@ -255,7 +388,14 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Notification ID is required.' }, { status: 400 });
     }
 
-    const result = await supabaseAdmin.from('notifications').update({ status }).eq('id', id);
+    if (status !== 'read') {
+      return NextResponse.json({ message: 'Only the read status may be updated.' }, { status: 400 });
+    }
+
+    const result = await notificationScope(
+      supabaseAdmin.from('notifications').update({ status }).eq('id', id),
+      authContext,
+    );
 
     if (result.error) {
       return NextResponse.json({ message: result.error.message }, { status: 500 });

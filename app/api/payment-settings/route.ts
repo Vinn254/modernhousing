@@ -7,23 +7,6 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-function decodeJWT(token: string): any | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    let payload = parts[1];
-    payload = payload.replace(/-/g, '+').replace(/_/g, '/');
-    while (payload.length % 4) payload += '=';
-    try {
-      return JSON.parse(atob(payload));
-    } catch {
-      return JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
-    }
-  } catch {
-    return null;
-  }
-}
-
 async function getAuthContext(request: NextRequest) {
   const cookie = request.headers.get('cookie') ?? '';
   const authorization = request.headers.get('authorization') ?? request.headers.get('Authorization');
@@ -32,9 +15,9 @@ async function getAuthContext(request: NextRequest) {
 
   if (authorization?.startsWith('Bearer ')) {
     const token = authorization.split(' ')[1];
-    const decoded = decodeJWT(token);
-    if (decoded?.sub) {
-      sessionUser = { id: decoded.sub, email: decoded.email, user_metadata: decoded.user_metadata || {} };
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (!error) {
+      sessionUser = data.user;
     }
   }
 
@@ -222,7 +205,11 @@ export async function POST(request: NextRequest) {
       orgId = propData?.organization_id ?? null;
     }
     
-    if (!authContext.isSuperAdmin && !orgId) {
+    if (!authContext.isSuperAdmin && !authContext.isLandlord) {
+      return NextResponse.json({ message: 'Only project managers can update payment settings.' }, { status: 403 });
+    }
+
+    if (!orgId) {
       return NextResponse.json({ message: 'Unable to verify organization access.' }, { status: 403 });
     }
 
