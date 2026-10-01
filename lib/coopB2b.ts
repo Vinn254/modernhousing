@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+const defaultServiceName = 'IMMENSUS';
+const defaultInstitutionCode = '21000892';
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error('Missing Supabase server environment variables');
@@ -51,8 +53,8 @@ export async function candidateCredentials(): Promise<CoopCredentials[]> {
   const candidates: CoopCredentials[] = [];
   const connectionId = process.env.COOP_CONNECTION_ID?.trim() ?? '';
   const connectionPassword = process.env.COOP_CONNECTION_PASSWORD?.trim() ?? '';
-  const serviceName = process.env.COOP_SERVICE_NAME?.trim() ?? '';
-  const institutionCode = process.env.COOP_INSTITUTION_CODE?.trim() ?? '';
+  const serviceName = process.env.COOP_SERVICE_NAME?.trim() || defaultServiceName;
+  const institutionCode = process.env.COOP_INSTITUTION_CODE?.trim() || defaultInstitutionCode;
 
   if (connectionId && connectionPassword && serviceName && institutionCode) {
     candidates.push({
@@ -60,7 +62,7 @@ export async function candidateCredentials(): Promise<CoopCredentials[]> {
       connectionPassword,
       serviceName,
       institutionCode,
-      institutionName: process.env.COOP_INSTITUTION_NAME?.trim() || 'Springfield Real Estate',
+      institutionName: process.env.COOP_INSTITUTION_NAME?.trim() || defaultServiceName,
       organizationId: null,
     });
   }
@@ -86,7 +88,7 @@ export async function candidateCredentials(): Promise<CoopCredentials[]> {
         connectionPassword: row.coop_connection_password,
         serviceName: row.coop_service_name,
         institutionCode: row.coop_institution_code,
-        institutionName: row.coop_institution_name || 'Springfield Real Estate',
+        institutionName: row.coop_institution_name || defaultServiceName,
         organizationId: row.organization_id ?? null,
       });
     }
