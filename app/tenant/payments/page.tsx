@@ -73,13 +73,9 @@ export default function TenantPaymentsPage() {
     return seen;
   }, [bills]);
 
-  const [mpesaPhone, setMpesaPhone] = useState('');
-  const [mpesaAmount, setMpesaAmount] = useState('');
-  const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [paymentSettings, setPaymentSettings] = useState({ paybill: '', till: '', pochi: '', mobile: '', paybillAccount: '', tenantShortCode: '' });
-  const [paymentType, setPaymentType] = useState<'rent' | 'tenancy_agreement'>('rent');
+  const [paymentSettings, setPaymentSettings] = useState({ paybill: '', tenantShortCode: '' });
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
@@ -182,31 +178,6 @@ export default function TenantPaymentsPage() {
       }
     });
   }, []);
-
-  async function handleStkPush(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const { data: { session } } = await supabase.auth.getSession();
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-    setProcessing(true);
-    const response = await fetch('/api/mpesa/stk-push', {
-       method: 'POST', headers,
-      body: JSON.stringify({
-         phone: mpesaPhone,
-        amount: Number(mpesaAmount),
-         transactionType: activeTab === 'payments' ? paymentType : 'utility',
-        accountReference: user?.id || 'SPRINGFIELD',
-         transactionDesc: activeTab === 'payments' 
-           ? (paymentType === 'tenancy_agreement' ? 'Tenancy Agreement Fee' : 'Rent Payment')
-           : 'Utility Payment'
-       }),
-     });
-    const result = await response.json().catch(() => ({}));
-    setProcessing(false);
-    if (!response.ok) { setError(result.message ?? 'Payment failed - check landlord Daraja settings in Payment Settings'); return; }
-    setMessage('M-Pesa prompt sent. Complete payment on your phone.');
-    setMpesaPhone(''); setMpesaAmount('');
-  }
 
   const rentBills = bills.filter(b => ['rent', 'overdue', 'deposit', 'tenancy_agreement'].includes(b.transaction_type));
   const utilityBills = bills.filter(b => ['water', 'garbage', 'service_charge', 'parking', 'security', 'internet', 'laundry', 'pet_fees', 'other'].includes(b.transaction_type));
@@ -356,44 +327,20 @@ const getTypeLabel = (type: string) => {
             </div>
 
             <div className="card-label" style={{ marginBottom: 8 }}>
-              {activeTab === 'payments' ? 'Make Rent Payment' : activeTab === 'utilities' ? 'Make Utility Payment' : 'Invoices'}
+              {activeTab === 'invoices' ? 'Invoices' : 'Co-operative Bank M-Pesa Payment'}
             </div>
-            {activeTab === 'payments' && (
-              <form onSubmit={handleStkPush} className="form-grid">
-                <select value={paymentType} onChange={e => setPaymentType(e.target.value as any)} style={{ marginBottom: 8 }}>
-                  <option value="rent">Rent Payment</option>
-                  <option value="tenancy_agreement">Tenancy Agreement Fee</option>
-                </select>
-                {paymentSettings.tenantShortCode && (
-                  <div style={{ padding: '8px 12px', background: 'var(--surface)', borderRadius: 8, fontSize: '13px', border: '1px solid var(--line)' }}>
-                    <strong>Your Unit Code:</strong> {paymentSettings.tenantShortCode}
-                    <div style={{ fontSize: '12px', color: 'var(--ink-2)', marginTop: 4 }}>Use this as the account number when paying via Paybill.</div>
-                  </div>
-                )}
-                <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)" />
-                <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
-                <button type="submit" disabled={processing} className="action-button primary">{processing ? 'Processing…' : 'Pay Now'}</button>
-              </form>
-            )}
-            {activeTab === 'utilities' && (
-              <form onSubmit={handleStkPush} className="form-grid">
-                <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="M-Pesa Phone (07XX XXX XXX)" />
-                <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
-                <button type="submit" disabled={processing} className="action-button primary">{processing ? 'Processing…' : 'Pay Now'}</button>
-              </form>
-            )}
-            {activeTab === 'payments' && (
+            {activeTab !== 'invoices' && (
               <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
-                <strong>Payment Details:</strong>
-                {paymentSettings.paybill && (
+                <strong>Payment Instructions:</strong>
+                {paymentSettings.paybill && paymentSettings.tenantShortCode ? (
                   <div>
-                    <div><strong>Paybill Number:</strong> {paymentSettings.paybill}</div>
+                    <div style={{ marginTop: 6 }}><strong>Co-operative Bank Paybill:</strong> {paymentSettings.paybill}</div>
                     <div style={{ marginTop: 6, fontSize: '12px', color: 'var(--ink-2)' }}>
-                      Use your unit code <strong>{paymentSettings.tenantShortCode || paymentSettings.paybillAccount || '____'}</strong> as the account number when paying via Paybill.
+                      Make your payment to this Paybill. When prompted for the account number, enter your unit code <strong>{paymentSettings.tenantShortCode}</strong>.
                     </div>
                   </div>
-                )}
-                {!paymentSettings.paybill && <div style={{ color: 'var(--ink-3)' }}>Contact landlord for payment details.</div>}
+                ) : null}
+                {(!paymentSettings.paybill || !paymentSettings.tenantShortCode) && <div style={{ color: 'var(--ink-3)', marginTop: 6 }}>Your landlord has not completed Co-operative Bank Paybill setup. Please contact them for payment details.</div>}
               </div>
             )}
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}

@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
     if (tenantId) {
       orgId = await getTenantOrganizationId(tenantId);
       
-      // Get the tenant's unit short code (used as paybill account number)
+      // Get the tenant's unit short code (used as the payment account number)
       const { data: tenantData } = await supabaseAdmin
         .from('tenants')
         .select('unit_id')
@@ -185,39 +185,25 @@ export async function GET(request: NextRequest) {
 
     if (!orgId) {
       return NextResponse.json({
-        paybill: '', paybillAccount: '', shortCode: '',
+        paybill: '',
         tenantShortCode: tenantShortCode ?? '',
-        consumerKey: '', consumerSecret: '', passkey: '',
-        sbmAccountNumber: '', sbmIpnUsername: '', sbmIpnPassword: '', sbmSecretKey: '', sbmEnabled: false,
       });
     }
 
     const { data: settings } = await supabaseAdmin
       .from('payment_settings')
-      .select('paybill, paybill_account, shortcode, consumer_key, consumer_secret, passkey, sbm_account_number, sbm_ipn_username, sbm_ipn_password, sbm_secret_key, sbm_enabled')
+      .select('paybill')
       .eq('organization_id', orgId)
       .maybeSingle();
 
     return NextResponse.json({
       paybill: settings?.paybill ?? '',
-      paybillAccount: settings?.paybill_account ?? '',
-      shortCode: settings?.shortcode ?? '',
       tenantShortCode: tenantShortCode ?? '',
-      consumerKey: settings?.consumer_key ?? '',
-      consumerSecret: settings?.consumer_secret ?? '',
-      passkey: settings?.passkey ?? '',
-      sbmAccountNumber: settings?.sbm_account_number ?? '',
-      sbmIpnUsername: settings?.sbm_ipn_username ?? '',
-      sbmIpnPassword: settings?.sbm_ipn_password ?? '',
-      sbmSecretKey: settings?.sbm_secret_key ?? '',
-      sbmEnabled: settings?.sbm_enabled ?? false,
     });
   } catch (error: any) {
     return NextResponse.json({
-      paybill: '', paybillAccount: '', shortCode: '',
+      paybill: '',
       tenantShortCode: '',
-      consumerKey: '', consumerSecret: '', passkey: '',
-      sbmAccountNumber: '', sbmIpnUsername: '', sbmIpnPassword: '', sbmSecretKey: '', sbmEnabled: false,
     });
   }
 }
@@ -240,11 +226,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unable to verify organization access.' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const {
-      paybill, paybillAccount, shortCode, consumerKey, consumerSecret, passkey,
-      sbmAccountNumber, sbmIpnUsername, sbmIpnPassword, sbmSecretKey, sbmEnabled,
-    } = body;
+    const { paybill } = await request.json();
+    if (typeof paybill !== 'string' || !paybill.trim()) {
+      return NextResponse.json({ message: 'A Co-operative Bank Paybill number is required.' }, { status: 400 });
+    }
 
     const { data: existing } = await supabaseAdmin
       .from('payment_settings')
@@ -255,17 +240,7 @@ export async function POST(request: NextRequest) {
 
     const data = {
       organization_id: orgId ?? '',
-      paybill: paybill ?? '',
-      paybill_account: paybillAccount ?? '',
-      shortcode: shortCode ?? '',
-      consumer_key: consumerKey ?? '',
-      consumer_secret: consumerSecret ?? '',
-      passkey: passkey ?? '',
-      sbm_account_number: sbmAccountNumber ?? '',
-      sbm_ipn_username: sbmIpnUsername ?? '',
-      sbm_ipn_password: sbmIpnPassword ?? '',
-      sbm_secret_key: sbmSecretKey ?? '',
-      sbm_enabled: sbmEnabled ?? false,
+      paybill: paybill.trim(),
       updated_at: new Date().toISOString(),
     };
 

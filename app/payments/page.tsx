@@ -10,6 +10,7 @@ interface TenantOption {
   full_name: string;
   email: string;
   unit?: string;
+  short_code?: string;
   property?: string;
 }
 
@@ -49,9 +50,6 @@ export default function PaymentsPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [mpesaPhone, setMpesaPhone] = useState('');
-  const [mpesaAmount, setMpesaAmount] = useState('');
-  const [processing, setProcessing] = useState(false);
   const [userRole, setUserRole] = useState('');
   const [selectedTenantKey, setSelectedTenantKey] = useState<string | null>(null);
   const [selectedTenantName, setSelectedTenantName] = useState('');
@@ -73,17 +71,7 @@ export default function PaymentsPage() {
     { value: 'tenancy_agreement', label: 'Tenancy Agreement Fee' },
   ];
 
-  const [paybill, setPaybill] = useState('');
-  const [paybillAccount, setPaybillAccount] = useState('');
-  const [shortCode, setShortCode] = useState('');
-  const [consumerKey, setConsumerKey] = useState('');
-  const [consumerSecret, setConsumerSecret] = useState('');
-  const [passkey, setPasskey] = useState('');
-  const [sbmAccountNumber, setSbmAccountNumber] = useState('');
-  const [sbmIpnUsername, setSbmIpnUsername] = useState('');
-  const [sbmIpnPassword, setSbmIpnPassword] = useState('');
-  const [sbmSecretKey, setSbmSecretKey] = useState('');
-  const [sbmEnabled, setSbmEnabled] = useState(false);
+  const [coopPaybill, setCoopPaybill] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [hoverMonth, setHoverMonth] = useState<string | null>(null);
 
@@ -395,17 +383,7 @@ allPayments.sort((a, b) => {
     const response = await fetch('/api/payment-settings', { headers: await getAuthHeaders() });
     const result = await response.json();
     if (response.ok) {
-      setPaybill(result.paybill ?? '');
-      setPaybillAccount(result.paybillAccount ?? '');
-      setConsumerKey(result.consumerKey ?? '');
-      setConsumerSecret(result.consumerSecret ?? '');
-      setShortCode(result.shortCode ?? '');
-      setPasskey(result.passkey ?? '');
-      setSbmAccountNumber(result.sbmAccountNumber ?? '');
-      setSbmIpnUsername(result.sbmIpnUsername ?? '');
-      setSbmIpnPassword(result.sbmIpnPassword ?? '');
-      setSbmSecretKey(result.sbmSecretKey ?? '');
-      setSbmEnabled(result.sbmEnabled ?? false);
+      setCoopPaybill(result.paybill ?? '');
     }
   }
 
@@ -415,8 +393,7 @@ allPayments.sort((a, b) => {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify({
-        paybill, paybillAccount, shortCode, consumerKey, consumerSecret, passkey,
-        sbmAccountNumber, sbmIpnUsername, sbmIpnPassword, sbmSecretKey, sbmEnabled,
+        paybill: coopPaybill,
       }),
     });
 
@@ -435,34 +412,6 @@ allPayments.sort((a, b) => {
     });
     Promise.all([loadPayments(), loadTenants(), loadSettings()]);
   }, []);
-
-  async function handleStkPush(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setProcessing(true);
-    
-    const response = await fetch('/api/mpesa/stk-push', {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({
-        phone: mpesaPhone,
-        amount: Number(mpesaAmount),
-        accountReference: 'SPRINGFIELD',
-        transactionDesc: 'Rent Payment'
-      }),
-    });
-
-    const result = await response.json();
-    setProcessing(false);
-
-    if (!response.ok) {
-      setError(result.message ?? 'STK push failed');
-      return;
-    }
-
-    setMessage('M-Pesa prompt sent successfully.');
-    setMpesaPhone('');
-    setMpesaAmount('');
-  }
 
   async function handleManualPayment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -766,16 +715,6 @@ allPayments.sort((a, b) => {
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </div>
 
-          <div className="card" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
-            <div className="card-label">M-Pesa Payment</div>
-            <h3 style={{ marginBottom: 16 }}>Send STK Prompt</h3>
-            <form onSubmit={handleStkPush} className="form-grid">
-              <input type="tel" value={mpesaPhone} onChange={e => setMpesaPhone(e.target.value)} required placeholder="Tenant Phone (07XX XXX XXX)" />
-              <input type="number" value={mpesaAmount} onChange={e => setMpesaAmount(e.target.value)} required placeholder="Amount (KES)" min="1" />
-              <button type="submit" disabled={processing} style={{ gridColumn: 'span 2' }}>{processing ? 'Sending…' : 'Send Prompt'}</button>
-            </form>
-            {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}
-          </div>
         </section>
 
         <div className="card-grid" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: '1fr 1fr', gridAutoRows: '1fr', alignItems: 'stretch', gap: 20, width: '100%' }}>
@@ -783,11 +722,24 @@ allPayments.sort((a, b) => {
           <article className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' }}>
             <div className="card-label">Payment Instructions</div>
             <h3 style={{ marginBottom: 16 }}>Tenant Payment Details</h3>
-            <p style={{ color: '#111827', marginBottom: 12, flex: 1 }}>Share these details with tenants for manual payments via M-Pesa Paybill. The account number is the short code assigned to each unit.</p>
+            <p style={{ color: '#111827', marginBottom: 12, flex: 1 }}>Configure the Co-operative Bank Paybill connected to your receiving account. Tenants use this Paybill and their own unit code as the account number.</p>
             <div style={{ padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '14px', color: '#111827' }}>
-              {paybill && <div><strong>Paybill Number:</strong> {paybill}</div>}
-              <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants should use the short code from their unit as the account number when paying via Paybill.</div>
-               {!paybill && <div>No paybill configured. Click &quot;Edit Payment Details&quot; to add.</div>}
+              {coopPaybill && <div><strong>Co-operative Bank Paybill:</strong> {coopPaybill}</div>}
+              <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants pay to this Paybill and must enter their unit short code as the account number.</div>
+              {coopPaybill && tenants.some((tenant) => tenant.short_code) && (
+                <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+                  <strong style={{ fontSize: '13px' }}>Tenant Unit Codes</strong>
+                  <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                    {tenants.filter((tenant) => tenant.short_code).map((tenant) => (
+                      <div key={tenant.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '13px' }}>
+                        <span>{tenant.full_name} — Unit {tenant.unit || 'Unassigned'}</span>
+                        <strong>{tenant.short_code}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!coopPaybill && <div>Set your Co-operative Bank Paybill before tenants make payments.</div>}
             </div>
             <button onClick={() => setShowSettings(true)} className="btn btn-ghost" style={{ marginTop: 12, fontSize: '14px', padding: '10px 16px', fontWeight: 600, background: '#f3f4f6', color: '#111827', border: '1px solid #d1d5db' }}>Edit Payment Details</button>
           </article>
@@ -839,29 +791,10 @@ allPayments.sort((a, b) => {
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
             <div className="card" style={{ maxWidth: 520, width: '100%', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', padding: 24 }}>
               <div className="card-label">Payment Settings</div>
-              <h3 style={{ marginBottom: 16 }}>Configure Paybill & Daraja</h3>
+              <h3 style={{ marginBottom: 16 }}>Configure Co-operative Bank</h3>
               <form onSubmit={saveSettings} className="form-grid">
-                <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>M-Pesa Paybill Number</h4>
-                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>This is the paybill number that tenants will use to make payments. The account number is the short code of each unit (configured when adding units).</p>
-                <input value={paybill} onChange={e => setPaybill(e.target.value)} placeholder="Paybill Number" required />
-                <input value={paybillAccount} onChange={e => setPaybillAccount(e.target.value)} placeholder="Default Account Number (optional - usually unit short code)" />
-
-                <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>M-Pesa Daraja Keys</h4>
-                <input value={consumerKey} onChange={e => setConsumerKey(e.target.value)} placeholder="Consumer Key" />
-                <input value={consumerSecret} onChange={e => setConsumerSecret(e.target.value)} placeholder="Consumer Secret" />
-                <input value={shortCode} onChange={e => setShortCode(e.target.value)} placeholder="Business ShortCode (e.g. 174347)" />
-                <input value={passkey} onChange={e => setPasskey(e.target.value)} placeholder="Passkey (Security Key)" />
-
-                <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>SBM Bank IPN (Instant Payment Notification)</h4>
-                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Optional. Enables recording tenant payments made directly to your SBM Bank account. Does not change how existing M-Pesa/manual payments are processed.</p>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px' }}>
-                  <input type="checkbox" checked={sbmEnabled} onChange={e => setSbmEnabled(e.target.checked)} />
-                  Enable SBM Bank IPN
-                </label>
-                <input value={sbmAccountNumber} onChange={e => setSbmAccountNumber(e.target.value)} placeholder="SBM Account Number" />
-                <input value={sbmIpnUsername} onChange={e => setSbmIpnUsername(e.target.value)} placeholder="IPN Username" />
-                <input value={sbmIpnPassword} onChange={e => setSbmIpnPassword(e.target.value)} placeholder="IPN Password" />
-                <input value={sbmSecretKey} onChange={e => setSbmSecretKey(e.target.value)} placeholder="IPN Secret Key" />
+                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Enter the Co-operative Bank Paybill connected to your receiving account. Tenants will use this Paybill together with their assigned unit short code as the payment account number.</p>
+                <input value={coopPaybill} onChange={e => setCoopPaybill(e.target.value)} placeholder="Co-operative Bank Paybill Number" required />
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button type="submit">Save Settings</button>

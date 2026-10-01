@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
       if (unitIds.length > 0) {
         const { data, error } = await supabaseAdmin
           .from('tenants')
-          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, properties(id, name, address))')
+          .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, short_code, properties(id, name, address))')
           .in('unit_id', unitIds)
           .order('created_at', { ascending: false });
 
@@ -112,6 +112,7 @@ export async function GET(request: NextRequest) {
           email: tenant.email,
           phone: tenant.phone,
           unit: tenant.units?.unit_number ?? '',
+          short_code: tenant.units?.short_code ?? '',
           property: tenant.units?.properties?.name ?? '',
           property_id: tenant.units?.properties?.id ?? '',
           address: tenant.units?.properties?.address ?? '',
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
         if (unitIds.length > 0) {
           const { data, error } = await supabaseAdmin
             .from('tenants')
-.select('id, full_name, email, phone, unit_id, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, properties(id, name, address))')
+.select('id, full_name, email, phone, unit_id, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, short_code, properties(id, name, address))')
             .in('unit_id', unitIds)
             .order('created_at', { ascending: false });
 
@@ -161,6 +162,7 @@ export async function GET(request: NextRequest) {
             email: tenant.email,
             phone: tenant.phone,
             unit: tenant.units?.unit_number ?? '',
+            short_code: tenant.units?.short_code ?? '',
             unit_id: tenant.unit_id,
             property: tenant.units?.properties?.name ?? '',
             property_id: tenant.units?.properties?.id ?? '',
@@ -184,7 +186,7 @@ export async function GET(request: NextRequest) {
     // Super admin sees all tenants
     const { data, error } = await supabaseAdmin
       .from('tenants')
-      .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, properties(id, name, address))')
+      .select('id, full_name, email, phone, lease_start, lease_end, national_id, kra_pin, next_of_kin_name, next_of_kin_id, next_of_kin_phone, picture_url, units!inner(unit_number, short_code, properties(id, name, address))')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -195,6 +197,7 @@ export async function GET(request: NextRequest) {
       email: tenant.email,
       phone: tenant.phone,
       unit: tenant.units?.unit_number ?? '',
+      short_code: tenant.units?.short_code ?? '',
       property: tenant.units?.properties?.name ?? '',
       property_id: tenant.units?.properties?.id ?? '',
       address: tenant.units?.properties?.address ?? '',
