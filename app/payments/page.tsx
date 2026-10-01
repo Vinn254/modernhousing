@@ -72,6 +72,12 @@ export default function PaymentsPage() {
   ];
 
   const [coopPaybill, setCoopPaybill] = useState('');
+  const [coopConnectionId, setCoopConnectionId] = useState('');
+  const [coopConnectionPassword, setCoopConnectionPassword] = useState('');
+  const [coopServiceName, setCoopServiceName] = useState('');
+  const [coopInstitutionCode, setCoopInstitutionCode] = useState('');
+  const [coopInstitutionName, setCoopInstitutionName] = useState('');
+  const [coopEnabled, setCoopEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [hoverMonth, setHoverMonth] = useState<string | null>(null);
 
@@ -384,6 +390,12 @@ allPayments.sort((a, b) => {
     const result = await response.json();
     if (response.ok) {
       setCoopPaybill(result.paybill ?? '');
+      setCoopConnectionId(result.coopConnectionId ?? '');
+      setCoopConnectionPassword(result.coopConnectionPassword ?? '');
+      setCoopServiceName(result.coopServiceName ?? '');
+      setCoopInstitutionCode(result.coopInstitutionCode ?? '');
+      setCoopInstitutionName(result.coopInstitutionName ?? '');
+      setCoopEnabled(result.coopEnabled ?? false);
     }
   }
 
@@ -394,6 +406,12 @@ allPayments.sort((a, b) => {
       headers: await getAuthHeaders(),
       body: JSON.stringify({
         paybill: coopPaybill,
+        coopConnectionId,
+        coopConnectionPassword,
+        coopServiceName,
+        coopInstitutionCode,
+        coopInstitutionName,
+        coopEnabled,
       }),
     });
 
@@ -802,6 +820,17 @@ allPayments.sort((a, b) => {
               <form onSubmit={saveSettings} className="form-grid">
                 <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Enter the Co-operative Bank Paybill connected to your receiving account. Tenants will use this Paybill together with their assigned unit short code as the payment account number.</p>
                 <input value={coopPaybill} onChange={e => setCoopPaybill(e.target.value)} placeholder="Co-operative Bank Paybill Number" required />
+                <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>Co-operative Bank B2B Credentials</h4>
+                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Enter the credentials and institution details issued for your own bank integration. They apply only to your organization.</p>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px' }}>
+                  <input type="checkbox" checked={coopEnabled} onChange={e => setCoopEnabled(e.target.checked)} />
+                  Enable Co-operative Bank B2B
+                </label>
+                <input value={coopConnectionId} onChange={e => setCoopConnectionId(e.target.value)} placeholder="Connection ID" required={coopEnabled} />
+                <input type="password" value={coopConnectionPassword} onChange={e => setCoopConnectionPassword(e.target.value)} placeholder="Connection Password" required={coopEnabled} />
+                <input value={coopServiceName} onChange={e => setCoopServiceName(e.target.value)} placeholder="Service Name (e.g. IMMENSUS)" required={coopEnabled} />
+                <input value={coopInstitutionCode} onChange={e => setCoopInstitutionCode(e.target.value)} placeholder="Institution Code (e.g. 21000892)" required={coopEnabled} />
+                <input value={coopInstitutionName} onChange={e => setCoopInstitutionName(e.target.value)} placeholder="Institution Name (e.g. IMMENSUS)" required={coopEnabled} />
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button type="submit">Save Settings</button>

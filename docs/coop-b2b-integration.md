@@ -9,14 +9,13 @@ The unit `short_code` is the account number. A successful validation response re
 
 ## Configuration
 
-Run [`db/add_coop_b2b_settings.sql`](../db/add_coop_b2b_settings.sql). Each landlord then sets the Co-operative Bank Paybill connected to their receiving bank account in **Payments → Payment Settings**. Tenants see that Paybill and use their assigned unit short code as the payment account number.
+Run [`db/add_coop_b2b_settings.sql`](../db/add_coop_b2b_settings.sql). Each landlord sets their own Paybill and Co-operative Bank B2B credentials in **Payments → Edit Payment Details**. These values are stored per organization, so configuring Sarah Odongo's IMMENSUS details does not configure any other landlord.
 
-The configured bank identity is:
+For Sarah Odongo, enter:
 
 - Institution Code: `21000892`
 - Institution and Service Name: `IMMENSUS`
-
-Configure the confidential callback credentials securely in the deployment environment using `COOP_CONNECTION_ID` and `COOP_CONNECTION_PASSWORD`. The optional `COOP_SERVICE_NAME`, `COOP_INSTITUTION_CODE`, and `COOP_INSTITUTION_NAME` variables override the configured values only when a different bank environment requires them.
+- The Connection ID and Connection Password issued for Sarah's Co-operative Bank integration
 
 The incoming `connectionID`, `connectionPassword`, `serviceName`, and request `InstitutionCode` must all match configured values. Do not expose these values to clients or commit them to source control.
 

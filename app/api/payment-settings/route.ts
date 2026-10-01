@@ -130,11 +130,19 @@ async function getTenantOrganizationId(tenantId: string): Promise<string | null>
 
 export async function GET(request: NextRequest) {
   try {
+    const authContext = await getAuthContext(request);
+    if (!authContext.sessionUser) {
+      return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+    }
+
     const tenantId = request.nextUrl.searchParams.get('tenantId');
     let orgId: string | null = null;
     let tenantShortCode: string | null = null;
 
     if (tenantId) {
+      if (!authContext.isSuperAdmin && authContext.userMetadata.tenant_id !== tenantId) {
+        return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
+      }
       orgId = await getTenantOrganizationId(tenantId);
       
       // Get the tenant's unit short code (used as the payment account number)
@@ -154,7 +162,9 @@ export async function GET(request: NextRequest) {
         tenantShortCode = unitData?.short_code ?? null;
       }
     } else {
-      const authContext = await getAuthContext(request);
+      if (!authContext.isSuperAdmin && !authContext.isLandlord) {
+        return NextResponse.json({ message: 'Forbidden.' }, { status: 403 });
+      }
       orgId = authContext.organizationId;
       if (!orgId && authContext.isLandlord && authContext.userId) {
         const { data: propData } = await supabaseAdmin
@@ -173,15 +183,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const settingsFields = tenantId
+      ? 'paybill'
+      : 'paybill, coop_connection_id, coop_connection_password, coop_service_name, coop_institution_code, coop_institution_name, coop_enabled';
     const { data: settings } = await supabaseAdmin
       .from('payment_settings')
-      .select('paybill')
+      .select(settingsFields)
       .eq('organization_id', orgId)
       .maybeSingle();
 
     return NextResponse.json({
       paybill: settings?.paybill ?? '',
       tenantShortCode: tenantShortCode ?? '',
+      ...(tenantId ? {} : {
+        coopConnectionId: settings?.coop_connection_id ?? '',
+        coopConnectionPassword: settings?.coop_connection_password ?? '',
+        coopServiceName: settings?.coop_service_name ?? '',
+        coopInstitutionCode: settings?.coop_institution_code ?? '',
+        coopInstitutionName: settings?.coop_institution_name ?? '',
+        coopEnabled: settings?.coop_enabled ?? false,
+      }),
     });
   } catch (error: any) {
     return NextResponse.json({
@@ -213,9 +234,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unable to verify organization access.' }, { status: 403 });
     }
 
-    const { paybill } = await request.json();
+    const {
+      paybill,
+      coopConnectionId,
+      coopConnectionPassword,
+      coopServiceName,
+      coopInstitutionCode,
+      coopInstitutionName,
+      coopEnabled,
+    } = await request.json();
     if (typeof paybill !== 'string' || !paybill.trim()) {
       return NextResponse.json({ message: 'A Co-operative Bank Paybill number is required.' }, { status: 400 });
+    }
+    if (
+      coopEnabled === true &&
+      [coopConnectionId, coopConnectionPassword, coopServiceName, coopInstitutionCode, coopInstitutionName]
+        .some((value) => typeof value !== 'string' || !value.trim())
+    ) {
+      return NextResponse.json({ message: 'Complete all Co-operative Bank credentials before enabling the integration.' }, { status: 400 });
     }
 
     const { data: existing } = await supabaseAdmin
@@ -228,6 +264,12 @@ export async function POST(request: NextRequest) {
     const data = {
       organization_id: orgId ?? '',
       paybill: paybill.trim(),
+      coop_connection_id: typeof coopConnectionId === 'string' ? coopConnectionId.trim() : '',
+      coop_connection_password: typeof coopConnectionPassword === 'string' ? coopConnectionPassword.trim() : '',
+      coop_service_name: typeof coopServiceName === 'string' ? coopServiceName.trim() : '',
+      coop_institution_code: typeof coopInstitutionCode === 'string' ? coopInstitutionCode.trim() : '',
+      coop_institution_name: typeof coopInstitutionName === 'string' ? coopInstitutionName.trim() : '',
+      coop_enabled: coopEnabled === true,
       updated_at: new Date().toISOString(),
     };
 
