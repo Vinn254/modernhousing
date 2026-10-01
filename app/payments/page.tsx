@@ -79,6 +79,7 @@ export default function PaymentsPage() {
   const [coopInstitutionName, setCoopInstitutionName] = useState('');
   const [coopEnabled, setCoopEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [hoverMonth, setHoverMonth] = useState<string | null>(null);
 
   const monthlyRevenue = useMemo(() => {
@@ -417,26 +418,35 @@ allPayments.sort((a, b) => {
       return;
     }
 
-    const response = await fetch('/api/payment-settings', {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({
-        paybill: coopPaybill,
-        coopConnectionId,
-        coopConnectionPassword,
-        coopServiceName,
-        coopInstitutionCode,
-        coopInstitutionName,
-        coopEnabled,
-      }),
-    });
+    setSavingSettings(true);
+    try {
+      const response = await fetch('/api/payment-settings', {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({
+          paybill: coopPaybill,
+          coopConnectionId,
+          coopConnectionPassword,
+          coopServiceName,
+          coopInstitutionCode,
+          coopInstitutionName,
+          coopEnabled,
+        }),
+      });
 
-    const result = await response.json();
-    if (response.ok) {
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.message ?? 'Unable to save settings.');
+        return;
+      }
+
+      await loadSettings();
       setMessage('Payment settings saved.');
       setShowSettings(false);
-    } else {
-      setError(result.message ?? 'Unable to save settings.');
+    } catch {
+      setError('Unable to reach the server. Check your connection and try again.');
+    } finally {
+      setSavingSettings(false);
     }
   }
 
@@ -850,8 +860,8 @@ allPayments.sort((a, b) => {
                 <input value={coopInstitutionName} onChange={e => setCoopInstitutionName(e.target.value)} placeholder="Institution Name (e.g. IMMENSUS)" />
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                  <button type="submit">Save Settings</button>
-                  <button type="button" onClick={() => setShowSettings(false)} className="btn btn-ghost">Cancel</button>
+                  <button type="submit" disabled={savingSettings}>{savingSettings ? 'Saving…' : 'Save Settings'}</button>
+                  <button type="button" onClick={() => setShowSettings(false)} className="btn btn-ghost" disabled={savingSettings}>Cancel</button>
                 </div>
               </form>
             </div>
