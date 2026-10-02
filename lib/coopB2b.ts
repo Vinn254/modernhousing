@@ -163,6 +163,22 @@ export async function findTenantByUnitCode(
     landlordEmail = profile?.email ?? null;
   }
 
+  // Legacy properties may have no created_by. Fall back to the organization's
+  // project manager so landlord notifications and payment attribution still work.
+  if (!landlordEmail && property.organization_id) {
+    const { data: orgProfiles, error: orgProfileError } = await supabaseAdmin
+      .from('profiles')
+      .select('email')
+      .eq('organization_id', property.organization_id)
+      .eq('role', 'project_manager')
+      .limit(1);
+
+    if (orgProfileError) {
+      throw orgProfileError;
+    }
+    landlordEmail = orgProfiles?.[0]?.email ?? null;
+  }
+
   return {
     tenantId: tenant.id,
     tenantName: tenant.full_name,
