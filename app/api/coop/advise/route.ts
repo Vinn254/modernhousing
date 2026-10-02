@@ -94,7 +94,8 @@ export async function POST(request: NextRequest) {
       AdditionalInfo: unitCode,
       TotalAmount: amount.toFixed(2),
     }, 200);
-  } catch {
+  } catch (error) {
+    console.error('[coop/advise] error', error);
     return response(messageID, '405', 'Server error', {}, 405);
   }
 }

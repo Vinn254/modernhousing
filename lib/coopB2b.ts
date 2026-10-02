@@ -112,16 +112,20 @@ export async function findTenantByUnitCode(
   unitCode: string,
   organizationId: string | null,
 ): Promise<TenantPaymentContext | null> {
-  const { data: tenant, error } = await supabaseAdmin
+  // A unit short code should map to one active tenant, but guard against
+  // historical rows so a duplicate never turns into a 500 for the bank.
+  const { data: tenants, error } = await supabaseAdmin
     .from('tenants')
-    .select('id, full_name, unit_id, units!inner(property_id, short_code)')
+    .select('id, full_name, unit_id, created_at, units!inner(property_id, short_code)')
     .eq('units.short_code', unitCode)
-    .maybeSingle();
+    .order('created_at', { ascending: false })
+    .limit(1);
 
   if (error) {
     throw error;
   }
 
+  const tenant = tenants?.[0];
   if (!tenant) {
     return null;
   }
@@ -230,45 +234,9 @@ export async function recordCoopPayment({
 
   const { error: notificationError } = await supabaseAdmin.from('notifications').insert(notifications);
   if (notificationError) {
-    throw notificationError;
-  }
-
-  const { data: bills, error: billsError } = await supabaseAdmin
-    .from('bills')
-    .select('id, due_amount, paid_amount')
-    .eq('tenant_id', tenant.tenantId)
-    .order('created_at', { ascending: false })
-    .limit(5);
-
-  if (billsError) {
-    throw billsError;
-  }
-
-  let remainingAmount = amount;
-  for (const bill of bills ?? []) {
-    if (remainingAmount <= 0) {
-      break;
-    }
-
-    const dueAmount = Number(bill.due_amount ?? 0);
-    const currentPaidAmount = Number(bill.paid_amount ?? 0);
-    const outstandingAmount = Math.max(0, dueAmount - currentPaidAmount);
-    if (outstandingAmount <= 0) {
-      continue;
-    }
-
-    const appliedAmount = Math.min(remainingAmount, outstandingAmount);
-    const paidAmount = currentPaidAmount + appliedAmount;
-    const balance = outstandingAmount - appliedAmount;
-    const { error: billError } = await supabaseAdmin
-      .from('bills')
-      .update({ paid_amount: paidAmount, balance })
-      .eq('id', bill.id);
-    if (billError) {
-      throw billError;
-    }
-
-    remainingAmount -= appliedAmount;
+    // The rent payment is already recorded; do not fail the bank advice
+    // because a notification could not be written. Surface it in logs instead.
+    console.error('[coop] notification insert failed', notificationError);
   }
 
   return { monthDue, unitCode };

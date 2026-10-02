@@ -33,7 +33,12 @@ export async function POST(request: NextRequest) {
     const connectionID = requiredString(header.connectionID);
     const connectionPassword = requiredString(header.connectionPassword);
     const serviceName = requiredString(header.serviceName);
-    const unitCode = requiredString(requestBody.TransactionReferenceCode);
+    // The paybill account number the tenant entered is the unit short code.
+    // Co-op may carry it in AccountNumber or DocumentReferenceNumber; accept either.
+    const unitCode = requiredString(requestBody.AccountNumber) ??
+      requiredString(requestBody.DocumentReferenceNumber) ??
+      requiredString(requestBody.TransactionReferenceCode);
+    const transactionReference = requiredString(requestBody.TransactionReferenceCode);
     const transactionDate = requiredString(requestBody.TransactionDate);
     const institutionCode = requiredString(requestBody.InstitutionCode);
 
@@ -53,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     return response(messageID, '200', 'Successfully validated customer', {
-      TransactionReferenceCode: unitCode,
+      TransactionReferenceCode: transactionReference ?? unitCode,
       TransactionDate: transactionDate,
       TotalAmount: 0,
       Currency: 'KES',
@@ -63,7 +68,8 @@ export async function POST(request: NextRequest) {
       InstitutionCode: credential.institutionCode,
       InstitutionName: credential.institutionName,
     }, 200);
-  } catch {
+  } catch (error) {
+    console.error('[coop/validate] error', error);
     return response(messageID, '405', 'Server error', {}, 405);
   }
 }

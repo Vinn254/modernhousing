@@ -23,4 +23,4 @@ The incoming `connectionID`, `connectionPassword`, `serviceName`, and request `I
 
 `/api/coop/advise` accepts `DocumentReferenceNumber` as the unit code and `PaymentReferenceCode` (or `TransactionReferenceCode` when the former is absent) as the bank transaction identity. The payment reference is unique, so repeat advice requests return HTTP/status code `402` and do not record a second payment.
 
-Successful advice is recorded as a `rent` payment in KES, updates the tenant's outstanding bills using the existing payment workflow, and creates notifications for the tenant and landlord. Validation and advice return the supplied `messageID` in their response header.
+Successful advice is recorded as a `rent` payment in KES and creates notifications for both the tenant and the landlord, so the payment appears in each side's payment history and notification bell automatically. Only rent is handled for now; bills are not touched by this flow. Validation and advice return the supplied `messageID` in their response header.
