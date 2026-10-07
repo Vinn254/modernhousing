@@ -637,6 +637,7 @@ for (let i = 0; i < 12; i++) {
                 <thead>
                   <tr>
                     <th>Unit</th>
+                    <th>Short Code</th>
                     <th>Type</th>
                     <th>Property</th>
                     <th>Rent</th>
@@ -657,6 +658,7 @@ for (let i = 0; i < 12; i++) {
                      return (
                        <tr key={unit.id} style={{ background: rowColor }}>
                         <td className="landlord-name">{unit.unit_number}</td>
+                        <td>{unit.short_code || '—'}</td>
                         <td style={{ fontSize: '13px', color: 'var(--ink-3)' }}>{unitTypeLabel}</td>
                         <td>{property?.name ?? '—'}</td>
                         <td>KSH {Number(unit.rent_amount ?? 0).toLocaleString()}</td>

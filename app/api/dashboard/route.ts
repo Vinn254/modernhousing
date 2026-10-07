@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     const isSuperAdmin = authContext.isSuperAdmin;
 
     let propertiesQuery: any = supabaseAdmin.from('properties').select('id, name, created_by');
-    let unitsQuery: any = supabaseAdmin.from('units').select('id, occupancy_status, property_id, rent_amount, unit_number');
+    let unitsQuery: any = supabaseAdmin.from('units').select('id, occupancy_status, property_id, rent_amount, unit_number, short_code');
     let tenantsQuery: any = supabaseAdmin.from('tenants').select('id, lease_start, deposit_amount, unit_id');
     let paymentsQuery: any = supabaseAdmin.from('payments').select('id, tenant_id, amount, balance_remaining, created_at, transaction_type');
     let subscriptionsQuery: any = supabaseAdmin.from('subscriptions').select('id, admin_id, status, email, plan, amount').eq('status', 'paid');
@@ -167,6 +167,7 @@ export async function GET(request: NextRequest) {
       .filter((u: any) => u.occupancy_status === 'vacant')
       .map((u: any) => ({
         unit_number: u.unit_number,
+        short_code: u.short_code ?? null,
         property_name: (propertiesData ?? []).find((p: any) => p.id === u.property_id)?.name ?? '',
         rent_amount: toNumber(u.rent_amount)
       }));
