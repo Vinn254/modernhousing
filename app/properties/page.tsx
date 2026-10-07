@@ -220,7 +220,7 @@ const merged = [...(paymentsResult.payments ?? []).map((p: any) => ({
     }
 
     if (!unitForm.shortCode || !unitForm.shortCode.trim()) {
-      setError('Short code is required for each unit. This is used as the paybill account number.');
+      setError('Short Code is required for each unit.');
       return;
     }
 
@@ -524,7 +524,7 @@ for (let i = 0; i < 12; i++) {
 <form onSubmit={handleAddUnits} className="form-grid">
             <FormField label="Property"><select value={unitForm.propertyId} onChange={(e) => setUnitForm(f => ({ ...f, propertyId: e.target.value }))} required><option value="">Select property</option>{properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></FormField>
             <FormField label="Unit numbers"><input value={unitForm.unitNumbers} onChange={(e) => setUnitForm(f => ({ ...f, unitNumbers: e.target.value }))} required placeholder="Unit numbers (A1, A2, B1, ...)" /></FormField>
-            <FormField label="Short code (Paybill account number)"><input value={unitForm.shortCode} onChange={(e) => setUnitForm(f => ({ ...f, shortCode: e.target.value }))} required placeholder="Short code (e.g. UNI-001)" /></FormField>
+            <FormField label="Short Code"><input value={unitForm.shortCode} onChange={(e) => setUnitForm(f => ({ ...f, shortCode: e.target.value }))} required placeholder="Short Code (e.g. UNI-001)" /></FormField>
             <FormField label="Rent amount"><input type="number" value={unitForm.rentAmount} onChange={(e) => setUnitForm(f => ({ ...f, rentAmount: e.target.value }))} placeholder="Rent amount (KSH)" /></FormField>
             <FormField label="Unit type"><select value={unitForm.unitType} onChange={(e) => setUnitForm(f => ({ ...f, unitType: e.target.value }))}><option value="">Unit Type (optional)</option><option value="single-room">Single Room</option><option value="bedsitter">Bedsitter</option><option value="one-bedroom">One Bedroom</option><option value="two-bedroom">Two Bedroom</option><option value="three-bedroom">Three Bedroom</option></select></FormField>
             <button type="submit">Add Units</button>
@@ -696,7 +696,7 @@ for (let i = 0; i < 12; i++) {
                 <input value={unitEditForm.unitNumber} onChange={e => setUnitEditForm(f => ({ ...f, unitNumber: e.target.value }))} required placeholder="e.g., A1" />
               </div>
               <div className="field-group">
-                <label>Short Code (Paybill Account Number)</label>
+                <label>Short Code</label>
                 <input value={unitEditForm.shortCode} onChange={e => setUnitEditForm(f => ({ ...f, shortCode: e.target.value }))} required placeholder="e.g., UNI-001" />
               </div>
               <div className="field-group">
@@ -741,4 +741,3 @@ for (let i = 0; i < 12; i++) {
     </>
   );
 }
-

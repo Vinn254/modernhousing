@@ -773,17 +773,17 @@ allPayments.sort((a, b) => {
           <article className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' }}>
             <div className="card-label">Payment Instructions</div>
             <h3 style={{ marginBottom: 16 }}>Tenant Payment Details</h3>
-            <p style={{ color: '#111827', marginBottom: 12, flex: 1 }}>Configure the Co-operative Bank Paybill connected to your receiving account. Tenants use this Paybill and their own unit code as the account number.</p>
+            <p style={{ color: '#111827', marginBottom: 12, flex: 1 }}>Configure the Co-operative Bank Paybill connected to your receiving account. Tenants pay to this Paybill and enter their assigned Short Code as the account number/reference.</p>
             <div style={{ padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '14px', color: '#111827' }}>
               {coopPaybill && <div><strong>Co-operative Bank Paybill:</strong> {coopPaybill}</div>}
-              <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants pay to this Paybill and must enter their unit short code as the account number.</div>
+              <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants must enter their assigned Short Code as the payment account number/reference.</div>
               {coopPaybill && tenants.some((tenant) => tenant.short_code) && (
                 <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
                   <strong style={{ fontSize: '13px' }}>Tenant Unit Codes</strong>
                   <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
                     {tenants.filter((tenant) => tenant.short_code).map((tenant) => (
                       <div key={tenant.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '13px' }}>
-                        <span>{tenant.full_name} — Unit {tenant.unit || 'Unassigned'}</span>
+                        <span>{tenant.full_name} — Short Code</span>
                         <strong>{tenant.short_code}</strong>
                       </div>
                     ))}
@@ -845,7 +845,7 @@ allPayments.sort((a, b) => {
               <h3 style={{ marginBottom: 16 }}>Configure Co-operative Bank</h3>
               <form onSubmit={saveSettings} className="form-grid" noValidate>
                 {error && <p className="landlord-error" style={{ margin: 0 }}>{error}</p>}
-                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Enter the Co-operative Bank Paybill connected to your receiving account. Tenants will use this Paybill together with their assigned unit short code as the payment account number.</p>
+                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Enter the Co-operative Bank Paybill connected to your receiving account. Tenants pay to this Paybill and use their assigned Short Code as the payment account number/reference.</p>
                 <input value={coopPaybill} onChange={e => setCoopPaybill(e.target.value)} placeholder="Co-operative Bank Paybill Number" required />
                 <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>Co-operative Bank B2B Credentials</h4>
                 <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Enter the credentials and institution details issued for your own bank integration. They apply only to your organization.</p>

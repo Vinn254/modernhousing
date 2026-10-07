@@ -352,7 +352,7 @@ const getTypeLabel = (type: string) => {
                   <div>
                     <div style={{ marginTop: 6 }}><strong>Co-operative Bank Paybill:</strong> {paymentSettings.paybill}</div>
                     <div style={{ marginTop: 6, fontSize: '12px', color: 'var(--ink-2)' }}>
-                      Make your payment to this Paybill. When prompted for the account number, enter your unit code <strong>{paymentSettings.tenantShortCode}</strong>.
+                      Make your payment to this Paybill. When prompted for the account number/reference, enter your Short Code <strong>{paymentSettings.tenantShortCode}</strong>.
                     </div>
                   </div>
                 ) : null}
