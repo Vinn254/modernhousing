@@ -1,14 +1,15 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 
-export const metadata = {
-  title: 'Springfield Systems - Property Management Platform',
-  description: 'Comprehensive property management platform for landlords, agents, and tenants. Manage properties, tenants, payments, and leases in one workspace.',
+export const metadata: Metadata = {
+  title: 'Property Management Software in Kenya | Springfield Systems',
+  description: 'Manage rental properties in Kenya with Springfield Systems. Landlords and agents can organize units, tenants, rent payments, leases, and maintenance in one platform.',
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: 'Springfield Systems - Property Management Platform',
-    description: 'Comprehensive property management platform for landlords, agents, and tenants.',
+    title: 'Property Management Software in Kenya | Springfield Systems',
+    description: 'Manage rental properties, tenants, rent payments, leases, and maintenance in one platform built for property teams in Kenya.',
     url: 'https://www.springfield-realestate.com',
     siteName: 'Springfield Systems',
     type: 'website',
@@ -54,8 +55,8 @@ export default function HomePage() {
 
         <div className="hero-inner">
           <span className="eyebrow"><span className="pulse"></span> Project management platform</span>
-          <h1>Project Manager, agent, and tenant workflows in one secure portal.</h1>
-          <p className="hero-sub">Manage properties, assign agents, onboard tenants, collect payments, send notices, and track house problems from a single dashboard.</p>
+          <h1>Property management software for landlords, agents, and tenants.</h1>
+          <p className="hero-sub">Manage rental properties in Kenya, assign agents, onboard tenants, track rent payments, manage leases, and coordinate maintenance from one platform.</p>
           <div className="hero-ctas">
             <Link href="/login" className="btn btn-primary">Log In</Link>
             <Link href="/tenant/register" className="btn btn-ghost">Tenant Registration</Link>

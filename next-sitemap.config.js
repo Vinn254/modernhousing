@@ -9,10 +9,6 @@ module.exports = {
         priority: 1.0,
         changefreq: 'monthly',
       },
-      '/login': {
-        priority: 0.9,
-        changefreq: 'monthly',
-      },
       '/pricing': {
         priority: 0.9,
         changefreq: 'monthly',
@@ -27,7 +23,7 @@ module.exports = {
       },
     },
   },
-  exclude: ['/dashboard/*', '/admin/*', '/agent/*', '/tenant/*', '/super-admin/*', '/properties/*', '/profile/*', '/reset-password/*'],
+  exclude: ['/login', '/signup', '/tenant/register', '/dashboard/*', '/admin/*', '/agent/*', '/tenant/*', '/super-admin/*', '/properties/*', '/profile/*', '/reset-password/*'],
   robotsTxtOptions: {
     additionalSitemaps: [
       'https://www.springfield-realestate.com/sitemap.xml',
@@ -36,12 +32,12 @@ module.exports = {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/dashboard/*', '/admin/*', '/agent/*', '/tenant/*', '/super-admin/*', '/reset-password/*'],
+        disallow: ['/login', '/signup', '/tenant/register', '/dashboard/*', '/admin/*', '/agent/*', '/tenant/*', '/super-admin/*', '/reset-password/*'],
       },
       {
         userAgent: 'Googlebot',
         allow: '/',
-        disallow: ['/dashboard/*', '/admin/*', '/agent/*', '/tenant/*', '/super-admin/*', '/reset-password/*'],
+        disallow: ['/login', '/signup', '/tenant/register', '/dashboard/*', '/admin/*', '/agent/*', '/tenant/*', '/super-admin/*', '/reset-password/*'],
       },
     ],
   },
