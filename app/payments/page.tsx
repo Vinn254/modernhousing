@@ -88,6 +88,7 @@ export default function PaymentsPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [hoverMonth, setHoverMonth] = useState<string | null>(null);
+  const [settingsBankMethod, setSettingsBankMethod] = useState<'coop' | 'sbm'>('coop');
   const selectedPaymentTenant = tenants.find((tenant) => tenant.id === tenantId);
 
   const monthlyRevenue = useMemo(() => {
@@ -797,8 +798,8 @@ allPayments.sort((a, b) => {
                 <option value="Cash">Cash</option>
                 <option value="M-pesa">M-pesa</option>
                 <option value="Bank Transfer">Bank Transfer</option>
-                {coopPaybill && <option value="Co-operative Bank">Co-operative Bank</option>}
-                {sbmEnabled && sbmAccountNumber && <option value="SBM Bank">SBM Bank</option>}
+                <option value="Co-operative Bank">Co-operative Bank</option>
+                <option value="SBM Bank">SBM Bank</option>
               </select>
               {(manualPaymentMethod === 'Co-operative Bank' || manualPaymentMethod === 'SBM Bank') && (
                 <div style={{ gridColumn: '1 / -1', padding: 12, border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)' }}>
@@ -914,31 +915,43 @@ allPayments.sort((a, b) => {
               <h3 style={{ marginBottom: 16 }}>Configure Bank Payment Methods</h3>
               <form onSubmit={saveSettings} className="form-grid" noValidate>
                 {error && <p className="landlord-error" style={{ margin: 0 }}>{error}</p>}
-                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Enter the Co-operative Bank Paybill connected to your receiving account. Tenants pay to this Paybill and use their assigned Short Code as the payment account number/reference.</p>
-                <input value={coopPaybill} onChange={e => setCoopPaybill(e.target.value)} placeholder="Co-operative Bank Paybill Number" required />
-                <h4 style={{ margin: '12px 0 6px', fontSize: '14px' }}>Co-operative Bank B2B Credentials</h4>
-                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Enter the credentials and institution details issued for your own bank integration. They apply only to your organization.</p>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px' }}>
-                  <input type="checkbox" checked={coopEnabled} onChange={e => setCoopEnabled(e.target.checked)} />
-                  Enable Co-operative Bank B2B
+                <label style={{ gridColumn: '1 / -1', fontSize: 13 }}>
+                  Payment method to configure
+                  <select value={settingsBankMethod} onChange={e => setSettingsBankMethod(e.target.value === 'sbm' ? 'sbm' : 'coop')} style={{ display: 'block', width: '100%', marginTop: 6 }}>
+                    <option value="coop">Co-operative Bank</option>
+                    <option value="sbm">SBM Bank</option>
+                  </select>
                 </label>
-                <input value={coopConnectionId} onChange={e => setCoopConnectionId(e.target.value)} placeholder="Connection ID" />
-                <input type="password" value={coopConnectionPassword} onChange={e => setCoopConnectionPassword(e.target.value)} placeholder="Connection Password" />
-                <input value={coopServiceName} onChange={e => setCoopServiceName(e.target.value)} placeholder="Service Name (e.g. IMMENSUS)" />
-                <input value={coopInstitutionCode} onChange={e => setCoopInstitutionCode(e.target.value)} placeholder="Institution Code (e.g. 21000892)" />
-                <input value={coopInstitutionName} onChange={e => setCoopInstitutionName(e.target.value)} placeholder="Institution Name (e.g. IMMENSUS)" />
-
-                <hr style={{ gridColumn: '1 / -1', width: '100%', border: 0, borderTop: '1px solid var(--line)' }} />
-                <h4 style={{ margin: '4px 0', fontSize: '14px' }}>SBM Bank IPN</h4>
-                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: 0 }}>Configure the SBM receiving account and credentials issued for your IPN integration. These credentials are stored for your organization and used only by the server callback.</p>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px' }}>
-                  <input type="checkbox" checked={sbmEnabled} onChange={e => setSbmEnabled(e.target.checked)} />
-                  Enable SBM Bank payments
-                </label>
-                <input value={sbmAccountNumber} onChange={e => setSbmAccountNumber(e.target.value)} placeholder="SBM receiving account number" />
-                <input value={sbmIpnUsername} onChange={e => setSbmIpnUsername(e.target.value)} placeholder="SBM IPN username" />
-                <input type="password" value={sbmIpnPassword} onChange={e => setSbmIpnPassword(e.target.value)} placeholder={sbmIpnPasswordConfigured ? 'SBM IPN password saved (leave blank to keep)' : 'SBM IPN password'} />
-                <input type="password" value={sbmSecretKey} onChange={e => setSbmSecretKey(e.target.value)} placeholder={sbmSecretKeyConfigured ? 'SBM encryption key saved (leave blank to keep)' : 'SBM IPN encryption secret key'} />
+                {settingsBankMethod === 'coop' ? (
+                  <>
+                    <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: 0 }}>Enter the Co-operative Bank Paybill connected to your receiving account. Tenants use their assigned Short Code as the payment account/reference.</p>
+                    <input value={coopPaybill} onChange={e => setCoopPaybill(e.target.value)} placeholder="Co-operative Bank Paybill Number" />
+                    <h4 style={{ gridColumn: '1 / -1', margin: '8px 0 0', fontSize: '14px' }}>Co-operative Bank B2B Credentials</h4>
+                    <p style={{ gridColumn: '1 / -1', fontSize: '12px', color: 'var(--ink-3)', margin: 0 }}>Credentials and institution details issued for your organization.</p>
+                    <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px' }}>
+                      <input type="checkbox" checked={coopEnabled} onChange={e => setCoopEnabled(e.target.checked)} />
+                      Enable Co-operative Bank B2B
+                    </label>
+                    <input value={coopConnectionId} onChange={e => setCoopConnectionId(e.target.value)} placeholder="Connection ID" />
+                    <input type="password" value={coopConnectionPassword} onChange={e => setCoopConnectionPassword(e.target.value)} placeholder="Connection Password" />
+                    <input value={coopServiceName} onChange={e => setCoopServiceName(e.target.value)} placeholder="Service Name (e.g. IMMENSUS)" />
+                    <input value={coopInstitutionCode} onChange={e => setCoopInstitutionCode(e.target.value)} placeholder="Institution Code (e.g. 21000892)" />
+                    <input value={coopInstitutionName} onChange={e => setCoopInstitutionName(e.target.value)} placeholder="Institution Name (e.g. IMMENSUS)" />
+                  </>
+                ) : (
+                  <>
+                    <h4 style={{ gridColumn: '1 / -1', margin: '8px 0 0', fontSize: '14px' }}>SBM Bank IPN</h4>
+                    <p style={{ gridColumn: '1 / -1', fontSize: '12px', color: 'var(--ink-3)', margin: 0 }}>Configure the SBM receiving account and IPN credentials for your organization.</p>
+                    <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px' }}>
+                      <input type="checkbox" checked={sbmEnabled} onChange={e => setSbmEnabled(e.target.checked)} />
+                      Enable SBM Bank payments
+                    </label>
+                    <input value={sbmAccountNumber} onChange={e => setSbmAccountNumber(e.target.value)} placeholder="SBM receiving account number" />
+                    <input value={sbmIpnUsername} onChange={e => setSbmIpnUsername(e.target.value)} placeholder="SBM IPN username" />
+                    <input type="password" value={sbmIpnPassword} onChange={e => setSbmIpnPassword(e.target.value)} placeholder={sbmIpnPasswordConfigured ? 'SBM IPN password saved (leave blank to keep)' : 'SBM IPN password'} />
+                    <input type="password" value={sbmSecretKey} onChange={e => setSbmSecretKey(e.target.value)} placeholder={sbmSecretKeyConfigured ? 'SBM encryption key saved (leave blank to keep)' : 'SBM IPN encryption secret key'} />
+                  </>
+                )}
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button type="submit" disabled={savingSettings}>{savingSettings ? 'Saving…' : 'Save Settings'}</button>
