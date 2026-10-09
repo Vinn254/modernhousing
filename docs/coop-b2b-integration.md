@@ -5,7 +5,11 @@ This application exposes the following JSON endpoints for Co-operative Bank M-Pe
 - `POST /api/coop/validate` validates a unit short code before payment.
 - `POST /api/coop/advise` records a cleared payment and sends tenant and landlord notifications.
 
-Both endpoints use the plain JSON request and response format in Co-operative Bank's B2B specification. They do not use AES encryption or expect a base64-encoded request or response. Configure the bank callback as `Content-Type: application/json` and do not enable payload decryption for these URLs.
+Both Co-operative Bank endpoints use the plain JSON request and response format in the B2B specification. They do not use AES encryption or expect a base64-encoded request or response. Configure those bank callbacks as `Content-Type: application/json` and do not enable payload decryption for the Co-op URLs. The separate `/api/sbm/ipn` endpoint is for SBM's encrypted IPN protocol.
+
+## SBM IPN (separate integration)
+
+The SBM callback remains available at `POST /api/sbm/ipn`. Configure its credentials using the server-only `SBM_IPN_USERNAME`, `SBM_IPN_PASSWORD`, `SBM_SECRET_KEY`, and optional `SBM_ACCOUNT_NUMBER` environment variables, or enable and populate the corresponding `sbm_*` columns in `payment_settings`. Never put these credentials in client-side code or source control. If the SBM settings columns were removed from Supabase, run [`db/add_sbm_ipn_settings.sql`](../db/add_sbm_ipn_settings.sql) to add them again. Do not send Co-op callbacks to the SBM endpoint.
 
 The unit `short_code` is the account number. A successful validation response returns the assigned tenant's full name in both `AccountName` and `AdditionalInfo`.
 
