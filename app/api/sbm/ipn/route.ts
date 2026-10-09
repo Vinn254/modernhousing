@@ -204,18 +204,21 @@ export async function POST(request: NextRequest) {
 
   let decrypted: any = null;
   let matchedCredentials: SbmCredentials | null = null;
+  let decryptError: unknown = null;
 
   for (const credentials of candidates) {
     try {
       decrypted = decryptIpnPayload(rawBody.trim(), credentials.secretKey);
       matchedCredentials = credentials;
       break;
-    } catch {
+    } catch (error) {
       // try next candidate secret key
+      decryptError = error;
     }
   }
 
   if (!decrypted || !matchedCredentials) {
+    console.error('[sbm/ipn] unable to decrypt request', decryptError instanceof Error ? decryptError.message : 'unknown decryption error');
     return NextResponse.json({ message: 'Unable to decrypt IPN payload' }, { status: 400 });
   }
 

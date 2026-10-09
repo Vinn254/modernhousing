@@ -76,7 +76,7 @@ export default function TenantPaymentsPage() {
 
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [paymentSettings, setPaymentSettings] = useState({ paybill: '', tenantShortCode: '' });
+  const [paymentSettings, setPaymentSettings] = useState({ paybill: '', tenantShortCode: '', sbmAccountNumber: '', sbmEnabled: false });
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(value);
 
@@ -343,7 +343,7 @@ const getTypeLabel = (type: string) => {
             </div>
 
             <div className="card-label" style={{ marginBottom: 8 }}>
-              {activeTab === 'invoices' ? 'Invoices' : 'Co-operative Bank M-Pesa Payment'}
+              {activeTab === 'invoices' ? 'Invoices' : 'Bank Payment Instructions'}
             </div>
             {activeTab !== 'invoices' && (
               <div style={{ marginTop: 12, padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '13px' }}>
@@ -356,7 +356,15 @@ const getTypeLabel = (type: string) => {
                     </div>
                   </div>
                 ) : null}
-                {(!paymentSettings.paybill || !paymentSettings.tenantShortCode) && <div style={{ color: 'var(--ink-3)', marginTop: 6 }}>Your landlord has not completed Co-operative Bank Paybill setup. Please contact them for payment details.</div>}
+                {paymentSettings.sbmEnabled && paymentSettings.sbmAccountNumber && paymentSettings.tenantShortCode && (
+                  <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+                    <div><strong>SBM Bank account:</strong> {paymentSettings.sbmAccountNumber}</div>
+                    <div style={{ marginTop: 6, fontSize: '12px', color: 'var(--ink-2)' }}>
+                      Use your Short Code <strong>{paymentSettings.tenantShortCode}</strong> as the payment reference/account identifier.
+                    </div>
+                  </div>
+                )}
+                {(!paymentSettings.tenantShortCode || (!paymentSettings.paybill && !paymentSettings.sbmEnabled)) && <div style={{ color: 'var(--ink-3)', marginTop: 6 }}>Your landlord has not completed bank payment setup. Please contact them for payment details.</div>}
               </div>
             )}
             {message && <p className="landlord-success" style={{ marginTop: 16 }}>{message}</p>}

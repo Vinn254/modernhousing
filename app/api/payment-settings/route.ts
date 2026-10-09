@@ -184,8 +184,8 @@ export async function GET(request: NextRequest) {
     }
 
     const settingsFields = tenantId
-      ? 'paybill'
-      : 'paybill, coop_connection_id, coop_connection_password, coop_service_name, coop_institution_code, coop_institution_name, coop_enabled';
+      ? 'paybill, sbm_account_number, sbm_enabled'
+      : 'paybill, coop_connection_id, coop_connection_password, coop_service_name, coop_institution_code, coop_institution_name, coop_enabled, sbm_account_number, sbm_ipn_username, sbm_ipn_password, sbm_secret_key, sbm_enabled';
     const { data: settings } = await supabaseAdmin
       .from('payment_settings')
       .select(settingsFields)
@@ -194,14 +194,19 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       paybill: settings?.paybill ?? '',
+      sbmAccountNumber: settings?.sbm_enabled ? settings?.sbm_account_number ?? '' : '',
+      sbmEnabled: settings?.sbm_enabled ?? false,
       tenantShortCode: tenantShortCode ?? '',
       ...(tenantId ? {} : {
-        coopConnectionId: settings?.coop_connection_id ?? '',
+      coopConnectionId: settings?.coop_connection_id ?? '',
         coopConnectionPassword: settings?.coop_connection_password ?? '',
         coopServiceName: settings?.coop_service_name ?? '',
         coopInstitutionCode: settings?.coop_institution_code ?? '',
         coopInstitutionName: settings?.coop_institution_name ?? '',
         coopEnabled: settings?.coop_enabled ?? false,
+        sbmIpnUsername: settings?.sbm_ipn_username ?? '',
+        sbmIpnPasswordConfigured: Boolean(settings?.sbm_ipn_password),
+        sbmSecretKeyConfigured: Boolean(settings?.sbm_secret_key),
       }),
     });
   } catch (error: any) {
@@ -239,8 +244,21 @@ export async function POST(request: NextRequest) {
       coopInstitutionCode,
       coopInstitutionName,
       coopEnabled,
+      sbmAccountNumber,
+      sbmIpnUsername,
+      sbmIpnPassword,
+      sbmSecretKey,
+      sbmEnabled,
     } = await request.json();
-    if (typeof paybill !== 'string' || !paybill.trim()) {
+    const { data: existing, error: existingError } = await supabaseAdmin
+      .from('payment_settings')
+      .select('id, sbm_ipn_password, sbm_secret_key')
+      .eq('organization_id', orgId ?? '')
+      .limit(1)
+      .maybeSingle();
+    if (existingError) throw existingError;
+
+    if ((coopEnabled === true && (typeof paybill !== 'string' || !paybill.trim())) || (typeof paybill !== 'string' && paybill !== undefined)) {
       return NextResponse.json({ message: 'A Co-operative Bank Paybill number is required.' }, { status: 400 });
     }
     if (
@@ -250,23 +268,39 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ message: 'Complete all Co-operative Bank credentials before enabling the integration.' }, { status: 400 });
     }
-
-    const { data: existing } = await supabaseAdmin
-      .from('payment_settings')
-      .select('id')
-      .eq('organization_id', orgId ?? '')
-      .limit(1)
-      .maybeSingle();
+    if (
+      sbmEnabled === true &&
+      (
+        [sbmAccountNumber, sbmIpnUsername]
+          .some((value) => typeof value !== 'string' || !value.trim()) ||
+        (typeof sbmIpnPassword !== 'string' || !sbmIpnPassword.trim()) && !existing?.sbm_ipn_password ||
+        (typeof sbmSecretKey !== 'string' || !sbmSecretKey.trim()) && !existing?.sbm_secret_key
+      )
+    ) {
+      return NextResponse.json({ message: 'Complete the SBM account number, IPN username, IPN password, and secret key before enabling the integration.' }, { status: 400 });
+    }
+    if (coopEnabled !== true && sbmEnabled !== true && !(typeof paybill === 'string' && paybill.trim())) {
+      return NextResponse.json({ message: 'Configure at least one bank payment method before saving.' }, { status: 400 });
+    }
 
     const data = {
       organization_id: orgId ?? '',
-      paybill: paybill.trim(),
+      paybill: typeof paybill === 'string' ? paybill.trim() : '',
       coop_connection_id: typeof coopConnectionId === 'string' ? coopConnectionId.trim() : '',
       coop_connection_password: typeof coopConnectionPassword === 'string' ? coopConnectionPassword.trim() : '',
       coop_service_name: typeof coopServiceName === 'string' ? coopServiceName.trim() : '',
       coop_institution_code: typeof coopInstitutionCode === 'string' ? coopInstitutionCode.trim() : '',
       coop_institution_name: typeof coopInstitutionName === 'string' ? coopInstitutionName.trim() : '',
       coop_enabled: coopEnabled === true,
+      sbm_account_number: typeof sbmAccountNumber === 'string' ? sbmAccountNumber.trim() : '',
+      sbm_ipn_username: typeof sbmIpnUsername === 'string' ? sbmIpnUsername.trim() : '',
+      sbm_ipn_password: typeof sbmIpnPassword === 'string' && sbmIpnPassword.trim()
+        ? sbmIpnPassword.trim()
+        : existing?.sbm_ipn_password ?? '',
+      sbm_secret_key: typeof sbmSecretKey === 'string' && sbmSecretKey.trim()
+        ? sbmSecretKey.trim()
+        : existing?.sbm_secret_key ?? '',
+      sbm_enabled: sbmEnabled === true,
       updated_at: new Date().toISOString(),
     };
 

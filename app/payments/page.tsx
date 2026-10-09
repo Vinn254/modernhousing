@@ -78,6 +78,13 @@ export default function PaymentsPage() {
   const [coopInstitutionCode, setCoopInstitutionCode] = useState('');
   const [coopInstitutionName, setCoopInstitutionName] = useState('');
   const [coopEnabled, setCoopEnabled] = useState(false);
+  const [sbmAccountNumber, setSbmAccountNumber] = useState('');
+  const [sbmIpnUsername, setSbmIpnUsername] = useState('');
+  const [sbmIpnPassword, setSbmIpnPassword] = useState('');
+  const [sbmSecretKey, setSbmSecretKey] = useState('');
+  const [sbmIpnPasswordConfigured, setSbmIpnPasswordConfigured] = useState(false);
+  const [sbmSecretKeyConfigured, setSbmSecretKeyConfigured] = useState(false);
+  const [sbmEnabled, setSbmEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [hoverMonth, setHoverMonth] = useState<string | null>(null);
@@ -397,6 +404,13 @@ allPayments.sort((a, b) => {
       setCoopInstitutionCode(result.coopInstitutionCode ?? '');
       setCoopInstitutionName(result.coopInstitutionName ?? '');
       setCoopEnabled(result.coopEnabled ?? false);
+      setSbmAccountNumber(result.sbmAccountNumber ?? '');
+      setSbmIpnUsername(result.sbmIpnUsername ?? '');
+      setSbmIpnPassword('');
+      setSbmSecretKey('');
+      setSbmIpnPasswordConfigured(result.sbmIpnPasswordConfigured ?? false);
+      setSbmSecretKeyConfigured(result.sbmSecretKeyConfigured ?? false);
+      setSbmEnabled(result.sbmEnabled ?? false);
     }
   }
 
@@ -405,16 +419,27 @@ allPayments.sort((a, b) => {
     setError('');
     setMessage('');
 
-    if (!coopPaybill.trim()) {
-      setError('Enter the Co-operative Bank Paybill number.');
+    if (coopEnabled && (
+      !coopPaybill.trim() ||
+      [coopConnectionId, coopConnectionPassword, coopServiceName, coopInstitutionCode, coopInstitutionName]
+        .some((value) => !value.trim())
+    )) {
+      setError('Complete all Co-operative Bank B2B credentials before enabling the integration.');
       return;
     }
     if (
-      coopEnabled &&
-      [coopConnectionId, coopConnectionPassword, coopServiceName, coopInstitutionCode, coopInstitutionName]
-        .some((value) => !value.trim())
+      sbmEnabled &&
+      (
+        [sbmAccountNumber, sbmIpnUsername].some((value) => !value.trim()) ||
+        (!sbmIpnPassword.trim() && !sbmIpnPasswordConfigured) ||
+        (!sbmSecretKey.trim() && !sbmSecretKeyConfigured)
+      )
     ) {
-      setError('Complete all Co-operative Bank B2B credentials before enabling the integration.');
+      setError('Complete the SBM account number and IPN credentials before enabling the integration.');
+      return;
+    }
+    if (!coopEnabled && !sbmEnabled && !coopPaybill.trim()) {
+      setError('Configure at least one payment method before saving.');
       return;
     }
 
@@ -431,6 +456,11 @@ allPayments.sort((a, b) => {
           coopInstitutionCode,
           coopInstitutionName,
           coopEnabled,
+          sbmAccountNumber,
+          sbmIpnUsername,
+          sbmIpnPassword,
+          sbmSecretKey,
+          sbmEnabled,
         }),
       });
 
@@ -773,9 +803,10 @@ allPayments.sort((a, b) => {
           <article className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' }}>
             <div className="card-label">Payment Instructions</div>
             <h3 style={{ marginBottom: 16 }}>Tenant Payment Details</h3>
-            <p style={{ color: '#111827', marginBottom: 12, flex: 1 }}>Configure the Co-operative Bank Paybill connected to your receiving account. Tenants pay to this Paybill and enter their assigned Short Code as the account number/reference.</p>
+            <p style={{ color: '#111827', marginBottom: 12, flex: 1 }}>Configure your enabled bank payment methods. Tenants use their assigned Short Code as the payment account/reference.</p>
             <div style={{ padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '14px', color: '#111827' }}>
               {coopPaybill && <div><strong>Co-operative Bank Paybill:</strong> {coopPaybill}</div>}
+              {sbmEnabled && sbmAccountNumber && <div style={{ marginTop: 6 }}><strong>SBM account:</strong> {sbmAccountNumber}</div>}
               <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants must enter their assigned Short Code as the payment account number/reference.</div>
               {coopPaybill && tenants.some((tenant) => tenant.short_code) && (
                 <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
@@ -790,7 +821,7 @@ allPayments.sort((a, b) => {
                   </div>
                 </div>
               )}
-              {!coopPaybill && <div>Set your Co-operative Bank Paybill before tenants make payments.</div>}
+              {!coopPaybill && !sbmEnabled && <div>Set up a bank payment method before tenants make payments.</div>}
             </div>
             <button onClick={() => setShowSettings(true)} className="btn btn-ghost" style={{ marginTop: 12, fontSize: '14px', padding: '10px 16px', fontWeight: 600, background: '#f3f4f6', color: '#111827', border: '1px solid #d1d5db' }}>Edit Payment Details</button>
           </article>
@@ -842,7 +873,7 @@ allPayments.sort((a, b) => {
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
             <div className="card" style={{ maxWidth: 520, width: '100%', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', padding: 24 }}>
               <div className="card-label">Payment Settings</div>
-              <h3 style={{ marginBottom: 16 }}>Configure Co-operative Bank</h3>
+              <h3 style={{ marginBottom: 16 }}>Configure Bank Payment Methods</h3>
               <form onSubmit={saveSettings} className="form-grid" noValidate>
                 {error && <p className="landlord-error" style={{ margin: 0 }}>{error}</p>}
                 <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: '0 0 6px 0' }}>Enter the Co-operative Bank Paybill connected to your receiving account. Tenants pay to this Paybill and use their assigned Short Code as the payment account number/reference.</p>
@@ -858,6 +889,18 @@ allPayments.sort((a, b) => {
                 <input value={coopServiceName} onChange={e => setCoopServiceName(e.target.value)} placeholder="Service Name (e.g. IMMENSUS)" />
                 <input value={coopInstitutionCode} onChange={e => setCoopInstitutionCode(e.target.value)} placeholder="Institution Code (e.g. 21000892)" />
                 <input value={coopInstitutionName} onChange={e => setCoopInstitutionName(e.target.value)} placeholder="Institution Name (e.g. IMMENSUS)" />
+
+                <hr style={{ gridColumn: '1 / -1', width: '100%', border: 0, borderTop: '1px solid var(--line)' }} />
+                <h4 style={{ margin: '4px 0', fontSize: '14px' }}>SBM Bank IPN</h4>
+                <p style={{ fontSize: '12px', color: 'var(--ink-3)', margin: 0 }}>Configure the SBM receiving account and credentials issued for your IPN integration. These credentials are stored for your organization and used only by the server callback.</p>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px' }}>
+                  <input type="checkbox" checked={sbmEnabled} onChange={e => setSbmEnabled(e.target.checked)} />
+                  Enable SBM Bank payments
+                </label>
+                <input value={sbmAccountNumber} onChange={e => setSbmAccountNumber(e.target.value)} placeholder="SBM receiving account number" />
+                <input value={sbmIpnUsername} onChange={e => setSbmIpnUsername(e.target.value)} placeholder="SBM IPN username" />
+                <input type="password" value={sbmIpnPassword} onChange={e => setSbmIpnPassword(e.target.value)} placeholder={sbmIpnPasswordConfigured ? 'SBM IPN password saved (leave blank to keep)' : 'SBM IPN password'} />
+                <input type="password" value={sbmSecretKey} onChange={e => setSbmSecretKey(e.target.value)} placeholder={sbmSecretKeyConfigured ? 'SBM encryption key saved (leave blank to keep)' : 'SBM IPN encryption secret key'} />
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button type="submit" disabled={savingSettings}>{savingSettings ? 'Saving…' : 'Save Settings'}</button>
