@@ -88,6 +88,7 @@ export default function PaymentsPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [hoverMonth, setHoverMonth] = useState<string | null>(null);
+  const selectedPaymentTenant = tenants.find((tenant) => tenant.id === tenantId);
 
   const monthlyRevenue = useMemo(() => {
     const months: Record<string, number> = {};
@@ -499,6 +500,14 @@ allPayments.sort((a, b) => {
     setMessage('');
     setError('');
 
+    if (
+      (manualPaymentMethod === 'Co-operative Bank' || manualPaymentMethod === 'SBM Bank') &&
+      !manualTransCode.trim()
+    ) {
+      setError('Enter the bank transaction reference before recording this payment.');
+      return;
+    }
+
     let monthDueValue = manualMonth;
     if (manualMonth && manualMonth.includes('-')) {
       const [year, month] = manualMonth.split('-');
@@ -788,9 +797,38 @@ allPayments.sort((a, b) => {
                 <option value="Cash">Cash</option>
                 <option value="M-pesa">M-pesa</option>
                 <option value="Bank Transfer">Bank Transfer</option>
+                {coopPaybill && <option value="Co-operative Bank">Co-operative Bank</option>}
+                {sbmEnabled && sbmAccountNumber && <option value="SBM Bank">SBM Bank</option>}
               </select>
+              {(manualPaymentMethod === 'Co-operative Bank' || manualPaymentMethod === 'SBM Bank') && (
+                <div style={{ gridColumn: '1 / -1', padding: 12, border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)' }}>
+                  <strong>{manualPaymentMethod} payment details</strong>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 10 }}>
+                    <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                      Receiving account
+                      <input readOnly value={manualPaymentMethod === 'Co-operative Bank' ? coopPaybill : sbmAccountNumber} style={{ marginTop: 4 }} />
+                    </label>
+                    <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                      Tenant Short Code
+                      <input readOnly value={selectedPaymentTenant?.short_code ?? ''} placeholder="Select a tenant with a Short Code" style={{ marginTop: 4 }} />
+                    </label>
+                  </div>
+                  <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--ink-3)' }}>
+                    Enter the bank transaction reference below. The Short Code is displayed for reference and is not submitted as the transaction reference.
+                  </p>
+                </div>
+              )}
               <input value={manualTransNumber} onChange={(event) => setManualTransNumber(event.target.value)} placeholder="Transaction/Receipt Number (optional)" />
-              <input value={manualTransCode} onChange={(event) => setManualTransCode(event.target.value)} placeholder="Transaction Code (MPESA code)" />
+              <input
+                value={manualTransCode}
+                onChange={(event) => setManualTransCode(event.target.value)}
+                placeholder={
+                  manualPaymentMethod === 'Co-operative Bank' || manualPaymentMethod === 'SBM Bank'
+                    ? 'Bank transaction reference (required)'
+                    : 'Transaction Code (MPESA code)'
+                }
+                required={manualPaymentMethod === 'Co-operative Bank' || manualPaymentMethod === 'SBM Bank'}
+              />
               <button type="submit" style={{ gridColumn: 'span 2' }}>Record Payment</button>
             </form>
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
