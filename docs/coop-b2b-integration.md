@@ -5,6 +5,8 @@ This application exposes the following JSON endpoints for Co-operative Bank M-Pe
 - `POST /api/coop/validate` validates a unit short code before payment.
 - `POST /api/coop/advise` records a cleared payment and sends tenant and landlord notifications.
 
+Both endpoints use the plain JSON request and response format in Co-operative Bank's B2B specification. They do not use AES encryption or expect a base64-encoded request or response. Configure the bank callback as `Content-Type: application/json` and do not enable payload decryption for these URLs. The separate `/api/sbm/ipn` endpoint is for SBM's encrypted IPN protocol and is not the Co-operative Bank callback.
+
 The unit `short_code` is the account number. A successful validation response returns the assigned tenant's full name in both `AccountName` and `AdditionalInfo`.
 
 ## Configuration
