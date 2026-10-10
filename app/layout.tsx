@@ -93,6 +93,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var d=document.documentElement;d.setAttribute('data-theme',localStorage.getItem('theme')==='dark'?'dark':'light');var p=(location.pathname.replace(/\\/+$/,'')||'/');var pub=['/','/pricing','/terms','/refund-policy','/help','/login','/signup','/forgot-password','/reset-password','/tenant/register','/login/otp'];var isPub=pub.some(function(x){return x==='/'?p==='/':(p===x||p.indexOf(x+'/')===0);});d.setAttribute('data-page',isPub?'public':'auth');}catch(e){}})();`,
+          }}
+        />
         <AuthWrapper>{children}</AuthWrapper>
         <GoogleAnalytics />
       </body>

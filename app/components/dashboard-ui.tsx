@@ -1,6 +1,7 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode } from 'react';
+import { useTheme } from './useTheme';
 
 type SectionCardProps = {
   title: string;
@@ -123,21 +124,7 @@ export function DashboardHeader({ title, subtitle, action }: DashboardHeaderProp
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
-  useEffect(() => {
-    const savedTheme = window.localStorage.getItem('dashboard-theme') as 'light' | 'dark' | null;
-    const resolvedTheme = savedTheme === 'dark' ? 'dark' : 'light';
-    setTheme(resolvedTheme);
-    document.documentElement.setAttribute('data-theme', resolvedTheme);
-  }, []);
-
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    document.documentElement.setAttribute('data-theme', nextTheme);
-    window.localStorage.setItem('dashboard-theme', nextTheme);
-  };
+  const { theme, toggle: toggleTheme } = useTheme();
 
   return (
     <button type="button" className="icon-button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>

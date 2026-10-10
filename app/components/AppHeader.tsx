@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import NotificationBell from './NotificationBell';
+import { useTheme } from './useTheme';
 
 type Role = 'super_admin' | 'admin' | 'landlord' | 'agent' | 'tenant' | 'user';
 
@@ -83,26 +84,7 @@ export default function AppHeader() {
   const [role, setRole] = useState<Role>('user');
   const [roleLoaded, setRoleLoaded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-      setDarkMode(true);
-      document.documentElement.setAttribute('data-theme', 'dark');
-      return;
-    }
-
-    setDarkMode(false);
-    document.documentElement.setAttribute('data-theme', 'light');
-  }, []);
-
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    localStorage.setItem('theme', newMode ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', newMode ? 'dark' : 'light');
-  };
+  const { isDark: darkMode, toggle: toggleDarkMode } = useTheme();
 
   const resolveRole = (currentUser: any): Role => {
     if (currentUser?.email === 'vin.oumaotieno@gmail.com') return 'super_admin';
