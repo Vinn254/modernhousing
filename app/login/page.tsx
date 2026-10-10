@@ -151,7 +151,7 @@ function LoginForm() {
   if (restricted || subscribe) {
     return (
       <main className="auth-page">
-        <div className="auth-bg" aria-hidden="true"></div>
+        <div className="login-bg-layer" aria-hidden="true"></div>
         <div className="auth-layout">
           <section className="auth-visual" aria-hidden="true">
             <div className="auth-brand-lockup">
@@ -211,7 +211,7 @@ function LoginForm() {
 
   return (
     <main className="auth-page">
-      <div className="auth-bg" aria-hidden="true" style={loginBgStyle}></div>
+      <div className="login-bg-layer" aria-hidden="true" style={loginBgStyle}></div>
       {redirecting && (
         <div style={{
           position: 'fixed',

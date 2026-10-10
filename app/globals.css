@@ -3316,8 +3316,8 @@ body, #__next, .page-wrapper {
   isolation: isolate;
 }
 
-/* Animated background image layer (zoom-out entrance, then slow drift) */
-.auth-bg {
+/* Animated background image layer (zoom-out entrance, then slow drift) — login only */
+.login-bg-layer {
   position: absolute;
   inset: 0;
   z-index: -1;
@@ -3329,7 +3329,7 @@ body, #__next, .page-wrapper {
   will-change: transform;
   animation: bgZoomOut 2.6s cubic-bezier(0.22, 1, 0.36, 1) both, bgDrift 26s ease-in-out 2.6s infinite alternate;
 }
-.auth-bg::after {
+.login-bg-layer::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -3338,7 +3338,7 @@ body, #__next, .page-wrapper {
 
 @media (prefers-reduced-motion: reduce) {
   .hero-bg,
-  .auth-bg { animation: none !important; transform: scale(1.04); }
+  .login-bg-layer { animation: none !important; transform: scale(1.04); }
 }
 
 /* Floating ambient orbs */
