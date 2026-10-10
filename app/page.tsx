@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getSiteSettings, type SiteSettings } from '../lib/siteSettings';
 
 export const metadata: Metadata = {
   title: 'Property Management Software in Kenya | Springfield Systems',
@@ -16,7 +17,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const settings: SiteSettings = await getSiteSettings();
+  const heroBgStyle: React.CSSProperties | undefined = settings.hero_bg_url
+    ? ({ '--hero-bg': `url('${settings.hero_bg_url}')` } as React.CSSProperties)
+    : undefined;
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -40,6 +45,7 @@ export default function HomePage() {
       />
       <main>
       <section className="hero">
+        <div className="hero-bg" aria-hidden="true" style={heroBgStyle}></div>
         <nav className="nav">
           <Link href="/" className="logo">
             <span className="logo-mark">
@@ -54,12 +60,12 @@ export default function HomePage() {
         </nav>
 
         <div className="hero-inner">
-          <span className="eyebrow"><span className="pulse"></span> Project management platform</span>
-          <h1>Property management software for landlords, agents, and tenants.</h1>
-          <p className="hero-sub">Manage rental properties in Kenya, assign agents, onboard tenants, track rent payments, manage leases, and coordinate maintenance from one platform.</p>
+          <span className="eyebrow"><span className="pulse"></span> {settings.hero_eyebrow}</span>
+          <h1>{settings.hero_title}</h1>
+          <p className="hero-sub">{settings.hero_subtitle}</p>
           <div className="hero-ctas">
-            <Link href="/login" className="btn btn-primary">Log In</Link>
-            <Link href="/tenant/register" className="btn btn-ghost">Tenant Registration</Link>
+            <Link href={settings.hero_cta_primary_href} className="btn btn-primary">{settings.hero_cta_primary_label}</Link>
+            <Link href={settings.hero_cta_secondary_href} className="btn btn-ghost">{settings.hero_cta_secondary_label}</Link>
           </div>
         </div>
 

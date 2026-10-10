@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
@@ -25,7 +25,21 @@ function LoginForm() {
   const [paying, setPaying] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'landlord' | 'agent' | ''>('');
   const [redirecting, setRedirecting] = useState(false);
+  const [loginBg, setLoginBg] = useState<string | null>(null);
   const router = useRouter();
+
+  const loginBgStyle: React.CSSProperties | undefined = loginBg
+    ? ({ '--login-bg': `url('${loginBg}')` } as React.CSSProperties)
+    : undefined;
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/site-settings')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (active && data?.settings?.login_bg_url) setLoginBg(data.settings.login_bg_url); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const subscribe = searchParams.get('subscribe');
@@ -137,6 +151,7 @@ function LoginForm() {
   if (restricted || subscribe) {
     return (
       <main className="auth-page">
+        <div className="auth-bg" aria-hidden="true"></div>
         <div className="auth-layout">
           <section className="auth-visual" aria-hidden="true">
             <div className="auth-brand-lockup">
@@ -196,6 +211,7 @@ function LoginForm() {
 
   return (
     <main className="auth-page">
+      <div className="auth-bg" aria-hidden="true" style={loginBgStyle}></div>
       {redirecting && (
         <div style={{
           position: 'fixed',
