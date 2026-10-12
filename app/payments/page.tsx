@@ -966,10 +966,12 @@ allPayments.sort((a, b) => {
                     </label>
                     <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
                       IPN Password *
+                      {sbmIpnPasswordConfigured && <span style={{ display: 'block', marginTop: 4, color: 'var(--accent)' }}>Saved securely. The value is hidden; leave blank to keep it.</span>}
                       <input required={sbmEnabled && !sbmIpnPasswordConfigured} type="password" value={sbmIpnPassword} onChange={e => setSbmIpnPassword(e.target.value)} placeholder={sbmIpnPasswordConfigured ? 'Saved; leave blank to keep' : 'Password issued by SBM'} style={{ display: 'block', width: '100%', marginTop: 4 }} />
                     </label>
                     <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
                       Secret Key (16 bytes) *
+                      {sbmSecretKeyConfigured && <span style={{ display: 'block', marginTop: 4, color: 'var(--accent)' }}>Saved securely. The value is hidden; leave blank to keep it.</span>}
                       <input required={sbmEnabled && !sbmSecretKeyConfigured} type="password" value={sbmSecretKey} onChange={e => setSbmSecretKey(e.target.value)} placeholder={sbmSecretKeyConfigured ? 'Saved; leave blank to keep' : 'AES-128 key issued by SBM'} style={{ display: 'block', width: '100%', marginTop: 4 }} />
                     </label>
                   </>
