@@ -941,15 +941,27 @@ allPayments.sort((a, b) => {
                 ) : (
                   <>
                     <h4 style={{ gridColumn: '1 / -1', margin: '8px 0 0', fontSize: '14px' }}>SBM Bank IPN</h4>
-                    <p style={{ gridColumn: '1 / -1', fontSize: '12px', color: 'var(--ink-3)', margin: 0 }}>Configure the SBM receiving account and IPN credentials for your organization.</p>
+                    <p style={{ gridColumn: '1 / -1', fontSize: '12px', color: 'var(--ink-3)', margin: 0 }}>Enter your active SBM receiving account and the three IPN credentials SBM issued for this account: username, password, and 16-byte secret key.</p>
                     <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px' }}>
                       <input type="checkbox" checked={sbmEnabled} onChange={e => setSbmEnabled(e.target.checked)} />
                       Enable SBM Bank payments
                     </label>
-                    <input value={sbmAccountNumber} onChange={e => setSbmAccountNumber(e.target.value)} placeholder="SBM receiving account number" />
-                    <input value={sbmIpnUsername} onChange={e => setSbmIpnUsername(e.target.value)} placeholder="SBM IPN username" />
-                    <input type="password" value={sbmIpnPassword} onChange={e => setSbmIpnPassword(e.target.value)} placeholder={sbmIpnPasswordConfigured ? 'SBM IPN password saved (leave blank to keep)' : 'SBM IPN password'} />
-                    <input type="password" value={sbmSecretKey} onChange={e => setSbmSecretKey(e.target.value)} placeholder={sbmSecretKeyConfigured ? 'SBM encryption key saved (leave blank to keep)' : 'SBM IPN encryption secret key'} />
+                    <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                      SBM receiving account number *
+                      <input required={sbmEnabled} value={sbmAccountNumber} onChange={e => setSbmAccountNumber(e.target.value)} placeholder="Active account registered with SBM" style={{ display: 'block', width: '100%', marginTop: 4 }} />
+                    </label>
+                    <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                      IPN Username *
+                      <input required={sbmEnabled} value={sbmIpnUsername} onChange={e => setSbmIpnUsername(e.target.value)} placeholder="Username issued by SBM" style={{ display: 'block', width: '100%', marginTop: 4 }} />
+                    </label>
+                    <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                      IPN Password *
+                      <input required={sbmEnabled && !sbmIpnPasswordConfigured} type="password" value={sbmIpnPassword} onChange={e => setSbmIpnPassword(e.target.value)} placeholder={sbmIpnPasswordConfigured ? 'Saved; leave blank to keep' : 'Password issued by SBM'} style={{ display: 'block', width: '100%', marginTop: 4 }} />
+                    </label>
+                    <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                      Secret Key (16 bytes) *
+                      <input required={sbmEnabled && !sbmSecretKeyConfigured} type="password" value={sbmSecretKey} onChange={e => setSbmSecretKey(e.target.value)} placeholder={sbmSecretKeyConfigured ? 'Saved; leave blank to keep' : 'AES-128 key issued by SBM'} style={{ display: 'block', width: '100%', marginTop: 4 }} />
+                    </label>
                   </>
                 )}
 
