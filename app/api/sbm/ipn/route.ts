@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import '../../../../lib/consoleGuard';
-import { decryptIpnPayload, encryptIpnResponse, type SbmAesMode } from '../../../../lib/sbmCrypto';
+import { decryptIpnPayload, encryptIpnResponse } from '../../../../lib/sbmCrypto';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -196,7 +196,6 @@ async function updateTenantBills(tenantId: string, amount: number) {
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-  const configuredMode = process.env.SBM_AES_MODE?.toLowerCase() === 'cbc' ? 'cbc' : 'ecb';
 
   const candidates = await candidateCredentials();
   if (candidates.length === 0) {
@@ -205,14 +204,11 @@ export async function POST(request: NextRequest) {
 
   let decrypted: any = null;
   let matchedCredentials: SbmCredentials | null = null;
-  let matchedMode: SbmAesMode = configuredMode;
   let decryptError: unknown = null;
 
   for (const credentials of candidates) {
     try {
-      const result = decryptIpnPayload(rawBody, credentials.secretKey);
-      decrypted = result.payload;
-      matchedMode = result.mode;
+      decrypted = decryptIpnPayload(rawBody, credentials.secretKey);
       matchedCredentials = credentials;
       break;
     } catch (error) {
@@ -227,7 +223,7 @@ export async function POST(request: NextRequest) {
       status: '99',
       reference: '',
       DebitAc: candidates[0].accountNumber ?? '',
-    }, candidates[0].secretKey, configuredMode);
+    }, candidates[0].secretKey);
     return new NextResponse(encryptedResponse, {
       status: 200,
       headers: { 'Content-Type': 'text/plain' },
@@ -243,7 +239,7 @@ export async function POST(request: NextRequest) {
       status: '99',
       reference: firstItem?.reference ?? '',
       DebitAc: firstItem?.DebitAc ?? matchedCredentials.accountNumber ?? '',
-    }, matchedCredentials.secretKey, matchedMode);
+    }, matchedCredentials.secretKey);
     return new NextResponse(encryptedResponse, {
       status: 200,
       headers: { 'Content-Type': 'text/plain' },
@@ -318,7 +314,7 @@ export async function POST(request: NextRequest) {
     DebitAc: lastDebitAc,
   };
 
-  const encryptedResponse = encryptIpnResponse(responsePayload, matchedCredentials.secretKey, matchedMode);
+  const encryptedResponse = encryptIpnResponse(responsePayload, matchedCredentials.secretKey);
   return new NextResponse(encryptedResponse, {
     status: 200,
     headers: { 'Content-Type': 'text/plain' },

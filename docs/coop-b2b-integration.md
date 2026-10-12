@@ -11,19 +11,17 @@ Both Co-operative Bank endpoints use the plain JSON request and response format 
 
 The SBM callback remains available at `POST /api/sbm/ipn`. Each landlord can configure its receiving account and IPN credentials in **Payments → Edit Payment Details**. The callback also accepts the server-only `SBM_IPN_USERNAME`, `SBM_IPN_PASSWORD`, `SBM_SECRET_KEY`, and optional `SBM_ACCOUNT_NUMBER` environment variables. Never put credentials in client-side code or source control. Run [`db/add_sbm_ipn_settings.sql`](../db/add_sbm_ipn_settings.sql) in Supabase before enabling the SBM option. Do not send Co-op callbacks to the SBM endpoint.
 
-The SBM crypto helper expects a raw Base64 request body containing AES ciphertext. It accepts standard or URL-safe Base64 (`-` is treated as `+`, not discarded), optional line wrapping, and raw AES keys of 16, 24, or 32 bytes. It attempts AES-ECB or AES-CBC with a zero IV and encrypts a successful decryption response using the detected mode. These remain provisional compatibility assumptions because the guide does not specify the cipher mode, IV, key encoding, or padding. Set the server-only `SBM_AES_MODE` environment variable to `ecb` or `cbc` to select the mode for encrypted failure responses when the request cannot be decrypted; the default is `ecb`. The callback logs a sanitized reason when the body is invalid and returns an encrypted `status: "99"` response when a credential is available. Confirm the crypto settings with SBM before production.
+SBM confirmed that requests and responses use Base64-encoded AES-128-ECB with a 16-byte secret key, UTF-8 JSON, and the cipher library's standard block padding. The callback uses this exact algorithm in both directions. The key may be stored as a 16-byte UTF-8 string, 32-character hex string, or canonical Base64 encoding of 16 bytes. The callback accepts standard or URL-safe Base64 ciphertext and ignores whitespace/line wrapping.
 
 Before production testing, request from SBM:
 
 - Sandbox IPN username, IPN password, encryption key, and the receiving account number to configure.
-- The exact request body format: raw base64 ciphertext or a JSON wrapper, and the required `Content-Type`.
-- AES variant and key handling: AES-128/192/256, ECB or CBC, PKCS#7/PKCS#5 padding, key as UTF-8/base64/hex, and any key derivation rules.
-- For CBC, how the 16-byte IV is provided (fixed, separate field/header, or prefixed to ciphertext).
-- Whether the response must be encrypted; if yes, the exact cipher/key/IV/padding and expected response JSON fields and HTTP status.
+- Confirm whether the supplied 16-byte key should be entered as raw UTF-8, 32-character hex, or Base64.
+- Confirm the expected HTTP status and content type for the bare Base64-encrypted response.
 - One sanitized known-good encrypted sandbox request plus the expected decrypted response, and confirmation of which payment fields carry the tenant short code and bank transaction reference.
 - Any source-IP allowlisting or TLS certificate requirements for the callback URL.
 
-The AES block-length error means the bytes passed to AES decryption are not a whole number of 16-byte blocks. Common causes include decrypting a JSON/error body instead of ciphertext, an incorrect base64/envelope format, or using the wrong IV/cipher framing. Share the sanitized HTTP request/response and SBM's crypto specification to identify which case applies; do not send real passwords or production encryption keys by email.
+The AES block-length error means the bytes passed to AES decryption are not a whole number of 16-byte blocks. Check whether the error occurs while SBM decrypts our response: the callback returns a bare Base64-encoded AES-128-ECB ciphertext string with no JSON wrapper. Also ensure the SBM secret is configured as exactly 16 key bytes (or its documented hex/Base64 representation). Do not send real passwords or production encryption keys by email.
 
 The unit `short_code` is the account number. A successful validation response returns the assigned tenant's full name in both `AccountName` and `AdditionalInfo`.
 

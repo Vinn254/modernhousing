@@ -1,41 +1,27 @@
 import crypto from 'crypto';
 
 /**
- * SBM Bank Kenya IPN messages are exchanged as BASE64(AES(json)) using a secret key
- * issued per registered 3rd-party account. The reference document does not state the
- * exact key size/cipher mode, so the current integration accepts a raw/base64 AES key
- * and tries ECB or CBC with a zero IV. Confirm the final framing with SBM before production.
+ * SBM specifies Base64(AES-128-ECB(JSON)) with a 16-byte secret key.
  */
 function deriveKey(secretKey: string): Buffer {
   const trimmed = secretKey.trim();
 
-  // If the secret key is already valid base64 that decodes to a valid AES key length, use it as-is.
-  if (/^[A-Za-z0-9+/]+={0,2}$/.test(trimmed) && trimmed.length % 4 === 0) {
-    try {
-      const decoded = Buffer.from(trimmed, 'base64');
-      if ([16, 24, 32].includes(decoded.length)) return decoded;
-    } catch {
-      // fall through
-    }
+  const utf8 = Buffer.from(trimmed, 'utf8');
+  if (utf8.length === 16) return utf8;
+
+  if (/^[a-fA-F0-9]{32}$/.test(trimmed)) {
+    return Buffer.from(trimmed, 'hex');
   }
 
-  const utf8 = Buffer.from(trimmed, 'utf8');
-  if ([16, 24, 32].includes(utf8.length)) return utf8;
+  if (/^[A-Za-z0-9+/]{22}==$/.test(trimmed)) {
+    const decoded = Buffer.from(trimmed, 'base64');
+    if (decoded.length === 16 && decoded.toString('base64') === trimmed) return decoded;
+  }
 
-  throw new Error('SBM secret key must decode to 16, 24, or 32 bytes; confirm its encoding with SBM');
+  throw new Error('SBM secret key must represent exactly 16 bytes (AES-128)');
 }
 
-function algorithmForKey(key: Buffer, mode: 'ecb' | 'cbc'): string {
-  const bits = key.length * 8;
-  return `aes-${bits}-${mode}`;
-}
-
-export type SbmAesMode = 'ecb' | 'cbc';
-
-export function decryptIpnPayload(
-  base64Cipher: string,
-  secretKey: string,
-): { payload: any; mode: SbmAesMode } {
+export function decryptIpnPayload(base64Cipher: string, secretKey: string): any {
   const key = deriveKey(secretKey);
   const normalizedCipher = base64Cipher
     .replace(/\s+/g, '')
@@ -57,41 +43,15 @@ export function decryptIpnPayload(
     throw new Error(`SBM decoded ciphertext is ${cipherBuffer.length} bytes; AES ciphertext must be a multiple of 16 bytes`);
   }
 
-  const attempts: Array<{ mode: SbmAesMode; decrypt: () => string }> = [
-    {
-      mode: 'ecb',
-      decrypt: () => {
-        const decipher = crypto.createDecipheriv(algorithmForKey(key, 'ecb'), key, null);
-        return Buffer.concat([decipher.update(cipherBuffer), decipher.final()]).toString('utf8');
-      },
-    },
-    {
-      mode: 'cbc',
-      decrypt: () => {
-        const iv = Buffer.alloc(16, 0);
-        const decipher = crypto.createDecipheriv(algorithmForKey(key, 'cbc'), key, iv);
-        return Buffer.concat([decipher.update(cipherBuffer), decipher.final()]).toString('utf8');
-      },
-    },
-  ];
-
-  for (const attempt of attempts) {
-    try {
-      const json = attempt.decrypt();
-      return { payload: JSON.parse(json), mode: attempt.mode };
-    } catch {
-      // try next mode
-    }
-  }
-
-  throw new Error('Unable to decrypt SBM IPN payload with configured secret key');
+  const decipher = crypto.createDecipheriv('aes-128-ecb', key, null);
+  const json = Buffer.concat([decipher.update(cipherBuffer), decipher.final()]).toString('utf8');
+  return JSON.parse(json);
 }
 
-export function encryptIpnResponse(payload: any, secretKey: string, mode: SbmAesMode = 'ecb'): string {
+export function encryptIpnResponse(payload: any, secretKey: string): string {
   const key = deriveKey(secretKey);
   const json = JSON.stringify(payload);
-  const iv = mode === 'cbc' ? Buffer.alloc(16, 0) : null;
-  const cipher = crypto.createCipheriv(algorithmForKey(key, mode), key, iv);
+  const cipher = crypto.createCipheriv('aes-128-ecb', key, null);
   const encrypted = Buffer.concat([cipher.update(json, 'utf8'), cipher.final()]);
   return encrypted.toString('base64');
 }
