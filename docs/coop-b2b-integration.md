@@ -9,13 +9,13 @@ Both Co-operative Bank endpoints use the plain JSON request and response format 
 
 ## SBM IPN (separate integration)
 
-The SBM callback remains available at `POST /api/sbm/ipn`. Each landlord can configure its receiving account and IPN credentials in **Payments → Edit Payment Details**. The callback also accepts the server-only `SBM_IPN_USERNAME`, `SBM_IPN_PASSWORD`, `SBM_SECRET_KEY`, and optional `SBM_ACCOUNT_NUMBER` environment variables. Never put credentials in client-side code or source control. Run [`db/add_sbm_ipn_settings.sql`](../db/add_sbm_ipn_settings.sql) in Supabase before enabling the SBM option. Do not send Co-op callbacks to the SBM endpoint.
+The SBM callback remains available at `POST /api/sbm/ipn`. The receiving account is registered with SBM and is not required in landlord settings. Landlords may optionally enter it; the required SBM settings are the bank-issued IPN username, IPN password, and secret key in **Payments → Edit Payment Details**. The callback can also use the server-only `SBM_IPN_USERNAME`, `SBM_IPN_PASSWORD`, and `SBM_SECRET_KEY` environment variables. Never put credentials in client-side code or source control. Run [`db/add_sbm_ipn_settings.sql`](../db/add_sbm_ipn_settings.sql) in Supabase before enabling the SBM option. Do not send Co-op callbacks to the SBM endpoint.
 
 SBM confirmed that requests and responses use Base64-encoded AES-128-ECB with a 16-byte secret key, UTF-8 JSON, and the cipher library's standard block padding. The callback uses this exact algorithm in both directions. The key may be stored as a 16-byte UTF-8 string, 32-character hex string, or canonical Base64 encoding of 16 bytes. The callback accepts standard or URL-safe Base64 ciphertext and ignores whitespace/line wrapping.
 
 Before production testing, request from SBM:
 
-- Sandbox IPN username, IPN password, encryption key, and the receiving account number to configure.
+- Sandbox IPN username, IPN password, and encryption key for the bank-registered receiving account.
 - Confirm whether the supplied 16-byte key should be entered as raw UTF-8, 32-character hex, or Base64.
 - Confirm the expected HTTP status and content type for the bare Base64-encrypted response.
 - One sanitized known-good encrypted sandbox request plus the expected decrypted response, and confirmation of which payment fields carry the tenant short code and bank transaction reference.

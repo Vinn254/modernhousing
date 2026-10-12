@@ -184,7 +184,7 @@ export async function GET(request: NextRequest) {
     }
 
     const settingsFields = tenantId
-      ? 'paybill, sbm_account_number, sbm_enabled'
+      ? 'paybill, sbm_enabled'
       : 'paybill, coop_connection_id, coop_connection_password, coop_service_name, coop_institution_code, coop_institution_name, coop_enabled, sbm_account_number, sbm_ipn_username, sbm_ipn_password, sbm_secret_key, sbm_enabled';
     const { data: settings } = await supabaseAdmin
       .from('payment_settings')
@@ -194,7 +194,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       paybill: settings?.paybill ?? '',
-      sbmAccountNumber: settings?.sbm_enabled ? settings?.sbm_account_number ?? '' : '',
       sbmEnabled: settings?.sbm_enabled ?? false,
       tenantShortCode: tenantShortCode ?? '',
       ...(tenantId ? {} : {
@@ -204,6 +203,7 @@ export async function GET(request: NextRequest) {
         coopInstitutionCode: settings?.coop_institution_code ?? '',
         coopInstitutionName: settings?.coop_institution_name ?? '',
         coopEnabled: settings?.coop_enabled ?? false,
+        sbmAccountNumber: settings?.sbm_account_number ?? '',
         sbmIpnUsername: settings?.sbm_ipn_username ?? '',
         sbmIpnPasswordConfigured: Boolean(settings?.sbm_ipn_password),
         sbmSecretKeyConfigured: Boolean(settings?.sbm_secret_key),
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
     } = await request.json();
     const { data: existing, error: existingError } = await supabaseAdmin
       .from('payment_settings')
-      .select('id, sbm_ipn_password, sbm_secret_key')
+      .select('id, sbm_account_number, sbm_ipn_password, sbm_secret_key')
       .eq('organization_id', orgId ?? '')
       .limit(1)
       .maybeSingle();
@@ -271,13 +271,12 @@ export async function POST(request: NextRequest) {
     if (
       sbmEnabled === true &&
       (
-        [sbmAccountNumber, sbmIpnUsername]
-          .some((value) => typeof value !== 'string' || !value.trim()) ||
+        (typeof sbmIpnUsername !== 'string' || !sbmIpnUsername.trim()) ||
         (typeof sbmIpnPassword !== 'string' || !sbmIpnPassword.trim()) && !existing?.sbm_ipn_password ||
-        (typeof sbmSecretKey !== 'string' || !sbmSecretKey.trim()) && !existing?.sbm_secret_key
+        (typeof sbmSecretKey !== 'string' || sbmSecretKey.length === 0) && !existing?.sbm_secret_key
       )
     ) {
-      return NextResponse.json({ message: 'Complete the SBM account number, IPN username, IPN password, and secret key before enabling the integration.' }, { status: 400 });
+      return NextResponse.json({ message: 'Complete the SBM IPN username, password, and secret key before enabling the integration.' }, { status: 400 });
     }
     if (coopEnabled !== true && sbmEnabled !== true && !(typeof paybill === 'string' && paybill.trim())) {
       return NextResponse.json({ message: 'Configure at least one bank payment method before saving.' }, { status: 400 });
@@ -292,13 +291,15 @@ export async function POST(request: NextRequest) {
       coop_institution_code: typeof coopInstitutionCode === 'string' ? coopInstitutionCode.trim() : '',
       coop_institution_name: typeof coopInstitutionName === 'string' ? coopInstitutionName.trim() : '',
       coop_enabled: coopEnabled === true,
-      sbm_account_number: typeof sbmAccountNumber === 'string' ? sbmAccountNumber.trim() : '',
+      sbm_account_number: typeof sbmAccountNumber === 'string'
+        ? sbmAccountNumber.trim()
+        : existing?.sbm_account_number ?? '',
       sbm_ipn_username: typeof sbmIpnUsername === 'string' ? sbmIpnUsername.trim() : '',
       sbm_ipn_password: typeof sbmIpnPassword === 'string' && sbmIpnPassword.trim()
         ? sbmIpnPassword.trim()
         : existing?.sbm_ipn_password ?? '',
-      sbm_secret_key: typeof sbmSecretKey === 'string' && sbmSecretKey.trim()
-        ? sbmSecretKey.trim()
+      sbm_secret_key: typeof sbmSecretKey === 'string' && sbmSecretKey.length > 0
+        ? sbmSecretKey
         : existing?.sbm_secret_key ?? '',
       sbm_enabled: sbmEnabled === true,
       updated_at: new Date().toISOString(),
@@ -312,6 +313,9 @@ export async function POST(request: NextRequest) {
         .select()
         .maybeSingle();
       if (result.error) throw result.error;
+      if (sbmSecretKey && !result.data?.sbm_secret_key) {
+        throw new Error('SBM secret key was not confirmed as saved. Check that the sbm_secret_key column exists in Supabase.');
+      }
     } else {
       const result = await supabaseAdmin
         .from('payment_settings')
@@ -319,6 +323,9 @@ export async function POST(request: NextRequest) {
         .select()
         .maybeSingle();
       if (result.error) throw result.error;
+      if (sbmSecretKey && !result.data?.sbm_secret_key) {
+        throw new Error('SBM secret key was not confirmed as saved. Check that the sbm_secret_key column exists in Supabase.');
+      }
     }
 
     return NextResponse.json({ message: 'Payment settings saved.' });

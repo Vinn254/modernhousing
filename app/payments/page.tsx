@@ -432,12 +432,12 @@ allPayments.sort((a, b) => {
     if (
       sbmEnabled &&
       (
-        [sbmAccountNumber, sbmIpnUsername].some((value) => !value.trim()) ||
+        !sbmIpnUsername.trim() ||
         (!sbmIpnPassword.trim() && !sbmIpnPasswordConfigured) ||
         (!sbmSecretKey.trim() && !sbmSecretKeyConfigured)
       )
     ) {
-      setError('Complete the SBM account number and IPN credentials before enabling the integration.');
+      setError('Complete the SBM IPN username, password, and secret key before enabling the integration.');
       return;
     }
     if (!coopEnabled && !sbmEnabled && !coopPaybill.trim()) {
@@ -472,6 +472,16 @@ allPayments.sort((a, b) => {
         return;
       }
 
+      const savedSettingsResponse = await fetch('/api/payment-settings', { headers: await getAuthHeaders() });
+      const savedSettings = await savedSettingsResponse.json();
+      if (!savedSettingsResponse.ok) {
+        setError(savedSettings.message ?? 'Settings were saved, but could not be reloaded for confirmation.');
+        return;
+      }
+      if (sbmSecretKey.length > 0 && !savedSettings.sbmSecretKeyConfigured) {
+        setError('The SBM secret key was not confirmed as saved. Verify the Supabase sbm_secret_key column and try again.');
+        return;
+      }
       await loadSettings();
       setMessage('Payment settings saved.');
       setShowSettings(false);
@@ -807,7 +817,7 @@ allPayments.sort((a, b) => {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 10 }}>
                     <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
                       Receiving account
-                      <input readOnly value={manualPaymentMethod === 'Co-operative Bank' ? coopPaybill : sbmAccountNumber} style={{ marginTop: 4 }} />
+                      <input readOnly value={manualPaymentMethod === 'Co-operative Bank' ? coopPaybill : 'SBM receiving account registered with the bank'} style={{ marginTop: 4 }} />
                     </label>
                     <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
                       Tenant Short Code
@@ -845,7 +855,7 @@ allPayments.sort((a, b) => {
             <p style={{ color: '#111827', marginBottom: 12, flex: 1 }}>Configure your enabled bank payment methods. Tenants use their assigned Short Code as the payment account/reference.</p>
             <div style={{ padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '14px', color: '#111827' }}>
               {coopPaybill && <div><strong>Co-operative Bank Paybill:</strong> {coopPaybill}</div>}
-              {sbmEnabled && sbmAccountNumber && <div style={{ marginTop: 6 }}><strong>SBM account:</strong> {sbmAccountNumber}</div>}
+              {sbmEnabled && <div style={{ marginTop: 6 }}><strong>SBM account:</strong> Registered with SBM</div>}
               <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants must enter their assigned Short Code as the payment account number/reference.</div>
               {coopPaybill && tenants.some((tenant) => tenant.short_code) && (
                 <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
@@ -941,14 +951,14 @@ allPayments.sort((a, b) => {
                 ) : (
                   <>
                     <h4 style={{ gridColumn: '1 / -1', margin: '8px 0 0', fontSize: '14px' }}>SBM Bank IPN</h4>
-                    <p style={{ gridColumn: '1 / -1', fontSize: '12px', color: 'var(--ink-3)', margin: 0 }}>Enter your active SBM receiving account and the three IPN credentials SBM issued for this account: username, password, and 16-byte secret key.</p>
+                    <p style={{ gridColumn: '1 / -1', fontSize: '12px', color: 'var(--ink-3)', margin: 0 }}>SBM already has your registered receiving account. Enter only the IPN credentials SBM issued for it: username, password, and 16-byte secret key.</p>
                     <label style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px' }}>
                       <input type="checkbox" checked={sbmEnabled} onChange={e => setSbmEnabled(e.target.checked)} />
                       Enable SBM Bank payments
                     </label>
                     <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-                      SBM receiving account number *
-                      <input required={sbmEnabled} value={sbmAccountNumber} onChange={e => setSbmAccountNumber(e.target.value)} placeholder="Active account registered with SBM" style={{ display: 'block', width: '100%', marginTop: 4 }} />
+                      Receiving account number (optional)
+                      <input value={sbmAccountNumber} onChange={e => setSbmAccountNumber(e.target.value)} placeholder="Optional — SBM has the registered account" style={{ display: 'block', width: '100%', marginTop: 4 }} />
                     </label>
                     <label style={{ fontSize: 12, color: 'var(--ink-3)' }}>
                       IPN Username *
