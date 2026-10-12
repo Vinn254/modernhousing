@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import '../../../../lib/consoleGuard';
-import { decryptIpnPayload, encryptIpnResponse } from '../../../../lib/sbmCrypto';
+import { decryptIpnPayload, encryptIpnResponse, type SbmAesMode } from '../../../../lib/sbmCrypto';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -196,6 +196,7 @@ async function updateTenantBills(tenantId: string, amount: number) {
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
+  const configuredMode = process.env.SBM_AES_MODE?.toLowerCase() === 'cbc' ? 'cbc' : 'ecb';
 
   const candidates = await candidateCredentials();
   if (candidates.length === 0) {
@@ -204,11 +205,14 @@ export async function POST(request: NextRequest) {
 
   let decrypted: any = null;
   let matchedCredentials: SbmCredentials | null = null;
+  let matchedMode: SbmAesMode = configuredMode;
   let decryptError: unknown = null;
 
   for (const credentials of candidates) {
     try {
-      decrypted = decryptIpnPayload(rawBody.trim(), credentials.secretKey);
+      const result = decryptIpnPayload(rawBody, credentials.secretKey);
+      decrypted = result.payload;
+      matchedMode = result.mode;
       matchedCredentials = credentials;
       break;
     } catch (error) {
@@ -219,14 +223,31 @@ export async function POST(request: NextRequest) {
 
   if (!decrypted || !matchedCredentials) {
     console.error('[sbm/ipn] unable to decrypt request', decryptError instanceof Error ? decryptError.message : 'unknown decryption error');
-    return NextResponse.json({ message: 'Unable to decrypt IPN payload' }, { status: 400 });
+    const encryptedResponse = encryptIpnResponse({
+      status: '99',
+      reference: '',
+      DebitAc: candidates[0].accountNumber ?? '',
+    }, candidates[0].secretKey, configuredMode);
+    return new NextResponse(encryptedResponse, {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' },
+    });
   }
 
   if (
     decrypted.IPNUsername !== matchedCredentials.ipnUsername ||
     decrypted.IPNPassword !== matchedCredentials.ipnPassword
   ) {
-    return NextResponse.json({ message: 'Invalid IPN credentials' }, { status: 401 });
+    const firstItem = Array.isArray(decrypted.Data) ? decrypted.Data[0] : null;
+    const encryptedResponse = encryptIpnResponse({
+      status: '99',
+      reference: firstItem?.reference ?? '',
+      DebitAc: firstItem?.DebitAc ?? matchedCredentials.accountNumber ?? '',
+    }, matchedCredentials.secretKey, matchedMode);
+    return new NextResponse(encryptedResponse, {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' },
+    });
   }
 
   const items: any[] = Array.isArray(decrypted.Data) ? decrypted.Data : [];
@@ -297,7 +318,7 @@ export async function POST(request: NextRequest) {
     DebitAc: lastDebitAc,
   };
 
-  const encryptedResponse = encryptIpnResponse(responsePayload, matchedCredentials.secretKey);
+  const encryptedResponse = encryptIpnResponse(responsePayload, matchedCredentials.secretKey, matchedMode);
   return new NextResponse(encryptedResponse, {
     status: 200,
     headers: { 'Content-Type': 'text/plain' },
