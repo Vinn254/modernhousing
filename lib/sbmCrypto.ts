@@ -38,7 +38,6 @@ export function decryptIpnPayload(
 ): { payload: any; mode: SbmAesMode } {
   const key = deriveKey(secretKey);
   const normalizedCipher = base64Cipher
-    .replace(/-\s*(?:\r?\n)/g, '')
     .replace(/\s+/g, '')
     .replace(/-/g, '+')
     .replace(/_/g, '/');
