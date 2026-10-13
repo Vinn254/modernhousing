@@ -85,6 +85,7 @@ function TenantsPageContent() {
   });
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
    const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+  const [previewTenant, setPreviewTenant] = useState<Tenant | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
 
@@ -109,6 +110,15 @@ function TenantsPageContent() {
   const [activeFilter, setActiveFilter] = useState('All');
   const formRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!previewTenant) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPreviewTenant(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewTenant]);
 
 const totalCharged = bills.reduce((sum, bill) => sum + (bill.due_amount || 0), 0);
 const totalPaidTenant = bills.reduce((sum, bill) => sum + (bill.paid_amount || 0), 0);
@@ -617,8 +627,8 @@ function formatDate(dateStr: string): string {
                 <table className="landlord-table" style={{ fontSize: '13px' }}>
                    <thead>
                      <tr>
-                       <th>Name</th>
                        <th>Profile Photo</th>
+                       <th>Name</th>
                        <th>Email</th>
                        <th>Phone</th>
                        <th>Unit</th>
@@ -635,14 +645,33 @@ function formatDate(dateStr: string): string {
                        const rowColor = rowColors[idx % rowColors.length];
                        return (
                        <tr key={tenant.id} style={{ background: rowColor }}>
-                        <td className="landlord-name">{tenant.full_name}</td>
                         <td>
-                          <img
-                            src={tenant.picture_url || '/placeholder-avatar.png'}
-                            alt={`${tenant.full_name} profile`}
-                            style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
-                          />
+                          <button
+                            type="button"
+                            onClick={() => setPreviewTenant(tenant)}
+                            aria-label={`View ${tenant.full_name}'s profile photo`}
+                            title="View profile photo"
+                            style={{ display: 'inline-flex', padding: 0, border: 0, borderRadius: '50%', background: 'transparent', cursor: 'zoom-in' }}
+                          >
+                            {tenant.picture_url ? (
+                              <img
+                                src={tenant.picture_url}
+                                alt=""
+                                style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <span
+                                aria-hidden="true"
+                                style={{ width: 42, height: 42, borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#dfe5e7', color: '#667781' }}
+                              >
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M12 12a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Zm0 2c-4.14 0-7.5 2.2-7.5 4.9V21h15v-2.1c0-2.7-3.36-4.9-7.5-4.9Z" />
+                                </svg>
+                              </span>
+                            )}
+                          </button>
                         </td>
+                        <td className="landlord-name">{tenant.full_name}</td>
                         <td>{tenant.email}</td>
                         <td>{tenant.phone || '-'}</td>
                         <td>{tenant.unit}</td>
@@ -688,6 +717,45 @@ function formatDate(dateStr: string): string {
             )}
           </article>
         </section>
+
+        {previewTenant && (
+          <div
+            role="presentation"
+            onClick={() => setPreviewTenant(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'grid', placeItems: 'center', padding: 24, background: 'rgba(0, 0, 0, 0.72)' }}
+          >
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${previewTenant.full_name}'s profile photo`}
+              onClick={event => event.stopPropagation()}
+              style={{ position: 'relative', width: 'min(90vw, 420px)', padding: 24, borderRadius: 16, background: '#fff', textAlign: 'center' }}
+            >
+              <button
+                type="button"
+                onClick={() => setPreviewTenant(null)}
+                aria-label="Close profile photo preview"
+                style={{ position: 'absolute', top: 10, right: 12, border: 0, background: 'transparent', fontSize: 28, cursor: 'pointer', color: '#475569' }}
+              >
+                ×
+              </button>
+              {previewTenant.picture_url ? (
+                <img
+                  src={previewTenant.picture_url}
+                  alt={`${previewTenant.full_name} profile`}
+                  style={{ width: 'min(70vw, 320px)', height: 'min(70vw, 320px)', borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div style={{ width: 'min(70vw, 320px)', height: 'min(70vw, 320px)', margin: '0 auto', borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#dfe5e7', color: '#667781' }}>
+                  <svg width="45%" height="45%" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 12a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Zm0 2c-4.14 0-7.5 2.2-7.5 4.9V21h15v-2.1c0-2.7-3.36-4.9-7.5-4.9Z" />
+                  </svg>
+                </div>
+              )}
+              <p style={{ margin: '16px 0 0', fontWeight: 600, color: '#111827' }}>{previewTenant.full_name}</p>
+            </section>
+          </div>
+        )}
 
         {selectedTenant && (
           <section className="card-grid-item" style={{ marginTop: 24 }} ref={formRef}>
