@@ -316,16 +316,16 @@ function formatDate(dateStr: string): string {
 
     const headers = await getAuthHeaders();
     let requestBody: BodyInit;
-    if (editingTenant) {
-      requestBody = JSON.stringify(body);
-    } else {
+    if (profilePhoto) {
       const formData = new FormData();
       Object.entries(body).forEach(([key, value]) => {
         formData.append(key, value == null ? '' : String(value));
       });
-      if (profilePhoto) formData.append('profilePhoto', profilePhoto);
+      formData.append('profilePhoto', profilePhoto);
       delete headers['Content-Type'];
       requestBody = formData;
+    } else {
+      requestBody = JSON.stringify(body);
     }
 
     const response = await fetch(url, { method, headers, body: requestBody });
@@ -370,6 +370,8 @@ function formatDate(dateStr: string): string {
 
   function handleEdit(tenant: Tenant) {
     setEditingTenant(tenant);
+    setProfilePhoto(null);
+    if (profilePhotoInputRef.current) profilePhotoInputRef.current.value = '';
     setForm({
       fullName: tenant.full_name,
       email: tenant.email,
@@ -391,6 +393,8 @@ function formatDate(dateStr: string): string {
   function resetForm() {
     setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinName: '', nextOfKinId: '', nextOfKinPhone: '', nextOfKinRelationship: '' });
     setEditingTenant(null);
+    setProfilePhoto(null);
+    if (profilePhotoInputRef.current) profilePhotoInputRef.current.value = '';
     setMessage('');
     setError('');
   }
@@ -568,9 +572,15 @@ function formatDate(dateStr: string): string {
               <input value={form.nextOfKinName} onChange={e => setForm(f => ({ ...f, nextOfKinName: e.target.value }))} placeholder="Next of Kin Name (Optional)" />
               <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Next of Kin ID (Optional)" />
               <input value={form.nextOfKinPhone} onChange={e => setForm(f => ({ ...f, nextOfKinPhone: e.target.value }))} placeholder="Next of Kin Phone (Optional)" />
-              {!editingTenant && (
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <span>Tenant profile photo (Optional)</span>
+              <label style={{ display: 'grid', gap: 6 }}>
+                  <span>{editingTenant ? 'Change tenant profile photo (Optional)' : 'Tenant profile photo (Optional)'}</span>
+                  {editingTenant?.picture_url && !profilePhoto && (
+                    <img
+                      src={editingTenant.picture_url}
+                      alt={`${editingTenant.full_name} current profile`}
+                      style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  )}
                   <input
                     ref={profilePhotoInputRef}
                     type="file"
@@ -578,8 +588,7 @@ function formatDate(dateStr: string): string {
                     onChange={e => setProfilePhoto(e.target.files?.[0] ?? null)}
                   />
                   <small style={{ color: 'var(--ink-3)' }}>JPEG, PNG, or WebP; maximum 5 MB.</small>
-                </label>
-              )}
+              </label>
               <select value={form.nextOfKinRelationship} onChange={e => setForm(f => ({ ...f, nextOfKinRelationship: e.target.value }))} style={{ marginLeft: '8px' }}>
                 <option value="">Next of Kin Relationship (Optional)</option>
                 <option value="partner">Partner</option>
@@ -702,7 +711,7 @@ function formatDate(dateStr: string): string {
                           </span>
                         </td>
                         <td>
-                          <div className="landlord-actions">
+                          <div className="landlord-actions" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
                             <button className="action-button warn" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleEdit(tenant)}>Edit</button>
                             <button className="action-button secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleViewBills(tenant)}>Bills</button>
                             <button className="action-button danger" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => handleRemove(tenant.id)}>Remove</button>

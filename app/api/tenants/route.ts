@@ -527,11 +527,30 @@ const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'Jul
 
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { id, fullName, email, phone, leaseStart, leaseEnd, status, nationalId, kraPin, nextOfKinName, nextOfKinId, nextOfKinPhone } = body;
+    let body: Record<string, string>;
+    let profilePhoto: File | null = null;
+    if (request.headers.get('content-type')?.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const fields: [string, string][] = [];
+      for (const [key, value] of formData.entries()) {
+        if (key === 'profilePhoto') {
+          if (typeof value !== 'string') profilePhoto = value;
+        } else if (typeof value === 'string') {
+          fields.push([key, value]);
+        }
+      }
+      body = Object.fromEntries(fields);
+    } else {
+      body = await request.json();
+    }
+    const { id, fullName, email, phone, leaseStart, leaseEnd, status, nationalId, kraPin, nextOfKinName, nextOfKinId, nextOfKinPhone, nextOfKinRelationship } = body;
 
     if (!id) {
       return NextResponse.json({ message: 'Tenant ID is required.' }, { status: 400 });
+    }
+
+    if (profilePhoto && (!['image/jpeg', 'image/png', 'image/webp'].includes(profilePhoto.type) || profilePhoto.size > 5 * 1024 * 1024)) {
+      return NextResponse.json({ message: 'Profile photo must be a JPEG, PNG, or WebP image up to 5 MB.' }, { status: 400 });
     }
 
     const authContext = await getAuthContext(request);
@@ -601,10 +620,39 @@ export async function PATCH(request: NextRequest) {
     if (nextOfKinName !== undefined) updates.next_of_kin_name = nextOfKinName || null;
     if (nextOfKinId !== undefined) updates.next_of_kin_id = nextOfKinId || null;
     if (nextOfKinPhone !== undefined) updates.next_of_kin_phone = nextOfKinPhone || null;
+    if (nextOfKinRelationship !== undefined) updates.next_of_kin_relationship = nextOfKinRelationship || null;
+
+    let uploadedPhotoPath: string | null = null;
+    if (profilePhoto) {
+      if (!authContext.userId) {
+        return NextResponse.json({ message: 'You must be signed in to upload a tenant photo.' }, { status: 401 });
+      }
+      const extensionByType: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+      };
+      uploadedPhotoPath = `tenant-profiles/${randomUUID()}.${extensionByType[profilePhoto.type]}`;
+      const { data: photoData, error: photoError } = await supabaseAdmin.storage
+        .from('documents')
+        .upload(uploadedPhotoPath, Buffer.from(await profilePhoto.arrayBuffer()), {
+          contentType: profilePhoto.type,
+          upsert: false,
+        });
+      if (photoError) {
+        console.error('Tenant profile photo update failed:', photoError.message);
+        return NextResponse.json({ message: 'Unable to upload tenant profile photo.' }, { status: 500 });
+      }
+      updates.picture_url = supabaseAdmin.storage.from('documents').getPublicUrl(photoData.path).data.publicUrl;
+    }
 
     const result = await supabaseAdmin.from('tenants').update(updates).eq('id', id).select().single();
 
     if (result.error) {
+      if (uploadedPhotoPath) {
+        const { error: cleanupError } = await supabaseAdmin.storage.from('documents').remove([uploadedPhotoPath]);
+        if (cleanupError) console.error('Unable to remove orphaned tenant profile photo:', cleanupError.message);
+      }
       return NextResponse.json({ message: result.error.message }, { status: 500 });
     }
 
