@@ -152,14 +152,6 @@ const [payments, notifications, comments, documents] = await Promise.all([
        getTenantDocuments(tenant.id),
      ]);
 
-// Always get profile picture from profiles table to ensure consistency with upload
-    if (userId) {
-      const { data: profile } = await supabaseAdmin.from('profiles').select('picture_url').eq('user_id', userId).single();
-      if (profile?.picture_url) {
-        tenant.picture_url = profile.picture_url;
-      }
-    }
-
     const firstPayment = [...payments]
       .sort((a, b) => new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime())[0];
 

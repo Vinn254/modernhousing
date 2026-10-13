@@ -85,6 +85,8 @@ function TenantsPageContent() {
   });
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
    const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const profilePhotoInputRef = useRef<HTMLInputElement>(null);
 
   const [payForm, setPayForm] = useState({
     billId: '',
@@ -302,11 +304,21 @@ function formatDate(dateStr: string): string {
         }
       : { ...form, propertyId, depositAmount: Number(form.depositAmount) || 0, nationalId: form.nationalId || null, kraPin: form.kraPin || null, nextOfKinName: form.nextOfKinName || null, nextOfKinId: form.nextOfKinId || null, nextOfKinPhone: form.nextOfKinPhone || null, nextOfKinRelationship: form.nextOfKinRelationship || null };
 
-    const response = await fetch(url, {
-      method,
-      headers: await getAuthHeaders(),
-      body: JSON.stringify(body),
-    });
+    const headers = await getAuthHeaders();
+    let requestBody: BodyInit;
+    if (editingTenant) {
+      requestBody = JSON.stringify(body);
+    } else {
+      const formData = new FormData();
+      Object.entries(body).forEach(([key, value]) => {
+        formData.append(key, value == null ? '' : String(value));
+      });
+      if (profilePhoto) formData.append('profilePhoto', profilePhoto);
+      delete headers['Content-Type'];
+      requestBody = formData;
+    }
+
+    const response = await fetch(url, { method, headers, body: requestBody });
 
     const result = await response.json();
 
@@ -317,6 +329,8 @@ function formatDate(dateStr: string): string {
 
     setMessage(editingTenant ? 'Tenant updated.' : 'Tenant registered.');
     setForm({ fullName: '', email: '', phone: '', unitId: '', leaseStart: '', leaseEnd: '', depositAmount: '', nationalId: '', kraPin: '', nextOfKinName: '', nextOfKinId: '', nextOfKinPhone: '', nextOfKinRelationship: '' });
+    setProfilePhoto(null);
+    if (profilePhotoInputRef.current) profilePhotoInputRef.current.value = '';
     setEditingTenant(null);
     await loadData();
   }
@@ -544,6 +558,18 @@ function formatDate(dateStr: string): string {
               <input value={form.nextOfKinName} onChange={e => setForm(f => ({ ...f, nextOfKinName: e.target.value }))} placeholder="Next of Kin Name (Optional)" />
               <input value={form.nextOfKinId} onChange={e => setForm(f => ({ ...f, nextOfKinId: e.target.value }))} placeholder="Next of Kin ID (Optional)" />
               <input value={form.nextOfKinPhone} onChange={e => setForm(f => ({ ...f, nextOfKinPhone: e.target.value }))} placeholder="Next of Kin Phone (Optional)" />
+              {!editingTenant && (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <span>Tenant profile photo (Optional)</span>
+                  <input
+                    ref={profilePhotoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={e => setProfilePhoto(e.target.files?.[0] ?? null)}
+                  />
+                  <small style={{ color: 'var(--ink-3)' }}>JPEG, PNG, or WebP; maximum 5 MB.</small>
+                </label>
+              )}
               <select value={form.nextOfKinRelationship} onChange={e => setForm(f => ({ ...f, nextOfKinRelationship: e.target.value }))} style={{ marginLeft: '8px' }}>
                 <option value="">Next of Kin Relationship (Optional)</option>
                 <option value="partner">Partner</option>
@@ -592,6 +618,7 @@ function formatDate(dateStr: string): string {
                    <thead>
                      <tr>
                        <th>Name</th>
+                       <th>Profile Photo</th>
                        <th>Email</th>
                        <th>Phone</th>
                        <th>Unit</th>
@@ -609,6 +636,13 @@ function formatDate(dateStr: string): string {
                        return (
                        <tr key={tenant.id} style={{ background: rowColor }}>
                         <td className="landlord-name">{tenant.full_name}</td>
+                        <td>
+                          <img
+                            src={tenant.picture_url || '/placeholder-avatar.png'}
+                            alt={`${tenant.full_name} profile`}
+                            style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
+                          />
+                        </td>
                         <td>{tenant.email}</td>
                         <td>{tenant.phone || '-'}</td>
                         <td>{tenant.unit}</td>

@@ -12,9 +12,6 @@ export default function TenantDashboardPage() {
     const [user, setUser] = useState(null);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [profilePicture, setProfilePicture] = useState(null);
-    const [uploadingPicture, setUploadingPicture] = useState(false);
-    const [pictureMessage, setPictureMessage] = useState('');
     async function loadDashboard(currentUser) {
         if (!currentUser?.email)
             return;
@@ -26,30 +23,6 @@ export default function TenantDashboardPage() {
         }
         setData(result);
         setLoading(false);
-    }
-    async function handlePictureUpload(event) {
-        event.preventDefault();
-        if (!profilePicture || !user?.id)
-            return;
-        setUploadingPicture(true);
-        setPictureMessage('');
-        const formData = new FormData();
-        formData.append('file', profilePicture);
-        formData.append('userId', user.id);
-        const response = await fetch('/api/profile/upload', { method: 'POST', body: formData });
-        const result = await response.json();
-        if (response.ok) {
-            setData((prev) => prev ? {
-                ...prev,
-                tenant: { ...prev.tenant, picture_url: result.pictureUrl ?? prev.tenant.picture_url }
-            } : prev);
-            setPictureMessage('Profile picture uploaded.');
-            setProfilePicture(null);
-        }
-        else {
-            setPictureMessage(result.message ?? 'Upload failed.');
-        }
-        setUploadingPicture(false);
     }
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => {
@@ -127,17 +100,11 @@ export default function TenantDashboardPage() {
                {tenant.next_of_kin_name && <div><strong>Next of Kin:</strong> {tenant.next_of_kin_name}</div>}
                {tenant.next_of_kin_phone && <div><strong>Next of Kin Phone:</strong> {tenant.next_of_kin_phone}</div>}
              </div>
-            <form onSubmit={handlePictureUpload} style={{ marginTop: 16 }}>
-              <label style={{ fontSize: '12px', color: 'var(--ink-3)', marginBottom: 6, display: 'block' }}>Upload Profile Picture</label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <input type="file" accept="image/*" onChange={(e) => setProfilePicture(e.target.files?.[0] ?? null)} style={{ flex: 1, minWidth: 160 }}/>
-                {profilePicture && <span style={{ fontSize: '12px', color: 'var(--ink-3)' }}>{profilePicture.name} ({Math.round(profilePicture.size / 1024)}KB)</span>}
-                <button type="submit" disabled={uploadingPicture || !profilePicture} className="btn btn-ghost" style={{ color: 'var(--ink)', border: '1px solid var(--line)', padding: '8px 14px' }}>
-                  {uploadingPicture ? 'Uploading…' : 'Upload'}
-                </button>
-              </div>
-              {pictureMessage && <p style={{ fontSize: '12px', marginTop: 8, color: pictureMessage.includes('failed') ? '#dc2626' : 'var(--accent)' }}>{pictureMessage}</p>}
-            </form>
+            <div style={{ marginTop: 16 }}>
+              <p style={{ fontSize: '12px', color: 'var(--ink-3)' }}>
+                Profile photo {tenant.picture_url ? 'managed by your landlord.' : 'has not been added yet.'}
+              </p>
+            </div>
           </div>
 
           <div className="card">

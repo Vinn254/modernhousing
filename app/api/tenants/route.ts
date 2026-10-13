@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logAuditEvent } from '../../../lib/auditLogger';
+import { randomUUID } from 'crypto';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -218,11 +219,35 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  let body: Record<string, string>;
+  let profilePhoto: File | null = null;
+  if (request.headers.get('content-type')?.includes('multipart/form-data')) {
+    const formData = await request.formData();
+    const fields: [string, string][] = [];
+    for (const [key, value] of formData.entries()) {
+      if (key === 'profilePhoto') {
+        if (typeof value !== 'string') profilePhoto = value;
+      } else if (typeof value === 'string') {
+        fields.push([key, value]);
+      }
+    }
+    body = Object.fromEntries(fields);
+  } else {
+    body = await request.json();
+  }
   const { fullName, email, phone, unitId, propertyId, leaseStart, leaseEnd, depositAmount, unitNumber, nationalId, kraPin, nextOfKinName, nextOfKinId, nextOfKinPhone, nextOfKinRelationship } = body;
 
   if (!fullName || !email || !leaseStart || !leaseEnd) {
     return NextResponse.json({ message: 'Missing required tenant fields.' }, { status: 400 });
+  }
+
+  if (profilePhoto) {
+    if (!profilePhoto.type || !['image/jpeg', 'image/png', 'image/webp'].includes(profilePhoto.type)) {
+      return NextResponse.json({ message: 'Profile photo must be a JPEG, PNG, or WebP image.' }, { status: 400 });
+    }
+    if (profilePhoto.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ message: 'Profile photo must be 5 MB or smaller.' }, { status: 400 });
+    }
   }
 
   // Check for duplicate email, phone, national_id, kra_pin in tenants
@@ -338,11 +363,33 @@ export async function POST(request: NextRequest) {
     finalUnitId = unitResult.data.id;
   }
 
-  if (finalUnitId) {
-    await supabaseAdmin
-      .from('units')
-      .update({ occupancy_status: 'occupied' })
-      .eq('id', finalUnitId);
+  let pictureUrl: string | null = null;
+  let uploadedPhotoPath: string | null = null;
+  if (profilePhoto) {
+    if (!authContext.userId) {
+      return NextResponse.json({ message: 'You must be signed in to upload a tenant photo.' }, { status: 401 });
+    }
+    if (!propertyId || !finalUnitId) {
+      return NextResponse.json({ message: 'A property and unit are required to upload a tenant photo.' }, { status: 400 });
+    }
+
+    const extensionByType: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+    };
+    uploadedPhotoPath = `tenant-profiles/${randomUUID()}.${extensionByType[profilePhoto.type]}`;
+    const { data: photoData, error: photoError } = await supabaseAdmin.storage
+      .from('documents')
+      .upload(uploadedPhotoPath, Buffer.from(await profilePhoto.arrayBuffer()), {
+        contentType: profilePhoto.type,
+        upsert: false,
+      });
+      if (photoError) {
+        console.error('Tenant profile photo upload failed:', photoError.message);
+        return NextResponse.json({ message: 'Unable to upload tenant profile photo.' }, { status: 500 });
+      }
+    pictureUrl = supabaseAdmin.storage.from('documents').getPublicUrl(photoData.path).data.publicUrl;
   }
 
   const result = await supabaseAdmin.from('tenants').insert({
@@ -359,13 +406,24 @@ export async function POST(request: NextRequest) {
     next_of_kin_id: nextOfKinId || null,
     next_of_kin_phone: nextOfKinPhone || null,
     next_of_kin_relationship: nextOfKinRelationship || null,
+    picture_url: pictureUrl,
   }).select('id').single();
 
   if (result.error) {
+    if (uploadedPhotoPath) {
+      const { error: cleanupError } = await supabaseAdmin.storage.from('documents').remove([uploadedPhotoPath]);
+      if (cleanupError) console.error('Unable to remove orphaned tenant profile photo:', cleanupError.message);
+    }
     return NextResponse.json({ message: result.error.message }, { status: 500 });
   }
 
   const tenantId = result.data?.id;
+  if (finalUnitId) {
+    await supabaseAdmin
+      .from('units')
+      .update({ occupancy_status: 'occupied' })
+      .eq('id', finalUnitId);
+  }
 
   // Ensure the property's organization_id is set so tenant->unit->property->organization resolution works.
   try {
