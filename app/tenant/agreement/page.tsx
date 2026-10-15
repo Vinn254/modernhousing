@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { generateAgreementPdf, downloadBlob, type AgreementItem } from '../../../lib/agreementPdf';
 
 interface AgreementDocument {
   id: string;
@@ -11,6 +12,27 @@ interface AgreementDocument {
   status: string;
   notes?: string;
   created_at: string;
+}
+
+interface MyAgreement {
+  id: string;
+  title: string;
+  description?: string | null;
+  selected_item_ids: string[];
+  tenant_checks: string[];
+  tenant_acknowledged: boolean;
+  status: string;
+  submitted_at?: string | null;
+  items?: AgreementItem[];
+  tenant_name?: string;
+  tenant_email?: string;
+  tenant_phone?: string;
+  tenant_national_id?: string;
+  tenant_kra_pin?: string;
+  tenant_address?: string;
+  unit_number?: string;
+  property_name?: string;
+  tenant_picture_url?: string;
 }
 
 export default function TenantDocumentsPage() {
@@ -27,6 +49,14 @@ export default function TenantDocumentsPage() {
   const [nextOfKinId, setNextOfKinId] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  // Tenancy agreement (builder flow)
+  const [myAgreements, setMyAgreements] = useState<MyAgreement[]>([]);
+  const [checkedItems, setCheckedItems] = useState<Record<string, string[]>>({});
+  const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [agreementError, setAgreementError] = useState('');
+  const [agreementMessage, setAgreementMessage] = useState('');
+
   async function loadDocuments() {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
@@ -40,18 +70,32 @@ export default function TenantDocumentsPage() {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
     
-    const [docsResponse, bundlesResponse] = await Promise.all([
+    const [docsResponse, bundlesResponse, agreementsResponse] = await Promise.all([
       session?.user?.id ? fetch(`/api/documents?tenantId=${tenantId}`, { headers }).catch(() => null) : null,
       tenantId ? fetch(`/api/document-bundles?tenantId=${tenantId}`, { headers }).catch(() => null) : null,
+      fetch('/api/agreements', { headers }).catch(() => null),
     ]);
     
-    const [docsResult, bundlesResult] = await Promise.all([
+    const [docsResult, bundlesResult, agreementsResult] = await Promise.all([
       docsResponse?.json() ?? Promise.resolve({ documents: [] }),
       bundlesResponse?.json() ?? Promise.resolve({ bundles: [] }),
+      agreementsResponse?.json() ?? Promise.resolve({ agreements: [] }),
     ]);
     
     if (docsResponse?.ok) setDocuments(docsResult.documents ?? []);
     if (bundlesResponse?.ok) setBundles(bundlesResult.bundles ?? []);
+    const ags: MyAgreement[] = agreementsResult.agreements ?? [];
+    setMyAgreements(ags);
+    setCheckedItems((prev) => {
+      const next = { ...prev };
+      ags.forEach((a) => { if (!next[a.id]) next[a.id] = a.tenant_checks ?? []; });
+      return next;
+    });
+    setAcknowledged((prev) => {
+      const next = { ...prev };
+      ags.forEach((a) => { if (next[a.id] === undefined) next[a.id] = !!a.tenant_acknowledged; });
+      return next;
+    });
     setLoading(false);
   }
 
@@ -128,6 +172,67 @@ export default function TenantDocumentsPage() {
     }
   }
 
+  function toggleItem(agreementId: string, itemId: string) {
+    setCheckedItems((prev) => {
+      const cur = prev[agreementId] ?? [];
+      return { ...prev, [agreementId]: cur.includes(itemId) ? cur.filter((x) => x !== itemId) : [...cur, itemId] };
+    });
+  }
+
+  async function submitAgreement(ag: MyAgreement) {
+    setAgreementError('');
+    setAgreementMessage('');
+    const selected = ag.items ?? [];
+    const checks = checkedItems[ag.id] ?? [];
+    const allChecked = selected.every((i) => checks.includes(i.id));
+    if (!allChecked) { setAgreementError('Please tick every item before submitting.'); return; }
+    if (!acknowledged[ag.id]) { setAgreementError('You must acknowledge the agreement before submitting.'); return; }
+    setSubmittingId(ag.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      const response = await fetch('/api/agreements', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ id: ag.id, action: 'submit', tenantChecks: checks, acknowledged: true }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? 'Unable to submit agreement.');
+      setAgreementMessage('Agreement submitted to your landlord.');
+      loadDocuments();
+    } catch (err: any) {
+      setAgreementError(err.message);
+    } finally {
+      setSubmittingId(null);
+    }
+  }
+
+  async function downloadMyAgreement(ag: MyAgreement) {
+    setAgreementError('');
+    try {
+      const blob = await generateAgreementPdf({
+        title: ag.title,
+        description: ag.description,
+        items: ag.items ?? [],
+        tenant_checks: checkedItems[ag.id] ?? ag.tenant_checks ?? [],
+        tenant_name: ag.tenant_name,
+        tenant_email: ag.tenant_email,
+        tenant_phone: ag.tenant_phone,
+        tenant_national_id: ag.tenant_national_id,
+        tenant_kra_pin: ag.tenant_kra_pin,
+        tenant_address: ag.tenant_address,
+        unit_number: ag.unit_number,
+        property_name: ag.property_name,
+        tenant_picture_url: ag.tenant_picture_url,
+        submitted_at: ag.submitted_at,
+      });
+      downloadBlob(blob, `tenancy-agreement-${(ag.tenant_name || 'tenant').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.pdf`);
+    } catch (err: any) {
+      setAgreementError(err.message ?? 'Unable to generate PDF.');
+    }
+  }
+
   const agreementDocs = documents.filter(d => d.document_type === 'agreement');
   const signedAgreementDocs = documents.filter(d => d.document_type === 'signed_agreement');
   const idDocs = documents.filter(d => d.document_type === 'id_document');
@@ -182,6 +287,95 @@ export default function TenantDocumentsPage() {
 
       {loading ? <p>Loading documents…</p> : (
         <>
+            {myAgreements.length > 0 && (
+              <section style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {myAgreements.map((ag) => {
+                  const items = ag.items ?? [];
+                  const checks = checkedItems[ag.id] ?? [];
+                  const allChecked = items.length > 0 && items.every((i) => checks.includes(i.id));
+                  const isSent = ag.status === 'sent' || ag.status === 'draft';
+                  const byCategory = Array.from(new Set(items.map((i) => i.category)));
+                  return (
+                    <article key={ag.id} className="card" style={{ background: 'linear-gradient(135deg, #ecfeff 0%, #cffafe 100%)' }}>
+                      <div className="card-label">
+                        <span className={`status-pill ${ag.status === 'submitted' ? 'status-pending' : ag.status === 'reviewed' || ag.status === 'completed' ? 'status-active' : 'status-pending'}`} style={{ textTransform: 'capitalize' }}>
+                          {ag.status}
+                        </span>
+                      </div>
+                      <h3 style={{ marginBottom: 8 }}>{ag.title}</h3>
+
+                      {ag.description && (
+                        <p style={{ fontSize: '13px', whiteSpace: 'pre-wrap', marginBottom: 16, color: 'var(--ink-2)' }}>{ag.description}</p>
+                      )}
+
+                      <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: 8 }}>
+                        {isSent ? 'Tick each item below to confirm you have read and accept it.' : 'Items confirmed for this agreement:'}
+                      </p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                        {byCategory.map((category) => (
+                          <div key={category}>
+                            <strong style={{ fontSize: '12px', color: 'var(--ink-2)', display: 'block', marginBottom: 6 }}>{category}</strong>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {items.filter((i) => i.category === category).map((item) => (
+                                <label key={item.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '12px', cursor: isSent ? 'pointer' : 'default' }}>
+                                  <input
+                                    type="checkbox"
+                                    disabled={!isSent}
+                                    checked={checks.includes(item.id)}
+                                    onChange={() => toggleItem(ag.id, item.id)}
+                                    style={{ marginTop: 2 }}
+                                  />
+                                  <span><strong>{item.label}</strong>{item.body_text ? ` — ${item.body_text}` : ''}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {isSent && (
+                        <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '13px', fontWeight: 600, marginBottom: 16, cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={!!acknowledged[ag.id]}
+                            onChange={(e) => setAcknowledged((prev) => ({ ...prev, [ag.id]: e.target.checked }))}
+                            style={{ marginTop: 2 }}
+                          />
+                          <span>I acknowledge that I have read and understood this tenancy agreement.</span>
+                        </label>
+                      )}
+
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        {isSent && (
+                          <button
+                            type="button"
+                            className="action-button primary"
+                            disabled={submittingId === ag.id || !allChecked || !acknowledged[ag.id]}
+                            onClick={() => submitAgreement(ag)}
+                          >
+                            {submittingId === ag.id ? 'Submitting…' : 'Submit to Landlord'}
+                          </button>
+                        )}
+                        <button type="button" className="action-button secondary" onClick={() => downloadMyAgreement(ag)}>Download PDF</button>
+                      </div>
+
+                      {!isSent && ag.submitted_at && (
+                        <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 12 }}>
+                          Submitted {new Date(ag.submitted_at).toLocaleString('en-GB')}. Awaiting landlord review.
+                        </p>
+                      )}
+                      {isSent && !allChecked && (
+                        <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 12 }}>Tick all items and acknowledge to enable submission.</p>
+                      )}
+                    </article>
+                  );
+                })}
+                {agreementMessage && <p className="landlord-success">{agreementMessage}</p>}
+                {agreementError && <p className="landlord-error">{agreementError}</p>}
+              </section>
+            )}
+
             {agreementDocs.length > 0 && (
               <section style={{ marginTop: 24 }}>
                 <article className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)' }}>
@@ -199,7 +393,7 @@ export default function TenantDocumentsPage() {
             </section>
           )}
 
-            {agreementDocs.length === 0 && (
+            {agreementDocs.length === 0 && myAgreements.length === 0 && (
               <section className="card" style={{ marginTop: 24, background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100)' }}>
                 <p className="landlord-empty">No agreement assigned yet. Contact your landlord.</p>
               </section>

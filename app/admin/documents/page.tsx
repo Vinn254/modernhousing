@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { generateAgreementPdf, downloadBlob, type AgreementItem } from '../../../lib/agreementPdf';
 
 interface Tenant {
   id: string;
@@ -9,6 +10,31 @@ interface Tenant {
   email: string;
   property: string;
   unit: string;
+}
+
+interface Agreement {
+  id: string;
+  tenant_id: string;
+  property_id?: string | null;
+  title: string;
+  description?: string | null;
+  selected_item_ids: string[];
+  tenant_checks: string[];
+  tenant_acknowledged: boolean;
+  tenant_notes?: string | null;
+  status: string;
+  submitted_at?: string | null;
+  created_at: string;
+  tenant_name?: string;
+  tenant_email?: string;
+  tenant_phone?: string;
+  tenant_national_id?: string;
+  tenant_kra_pin?: string;
+  tenant_picture_url?: string;
+  tenant_address?: string;
+  unit_number?: string;
+  property_name?: string;
+  items?: AgreementItem[];
 }
 
 interface Document {
@@ -53,6 +79,17 @@ export default function LandlordDocumentsPage() {
   });
   const [uploading, setUploading] = useState(false);
 
+  // Tenancy agreement builder
+  const [itemLibrary, setItemLibrary] = useState<AgreementItem[]>([]);
+  const [agreements, setAgreements] = useState<Agreement[]>([]);
+  const [builderTenantId, setBuilderTenantId] = useState('');
+  const [builderTitle, setBuilderTitle] = useState('Tenancy Agreement');
+  const [builderDescription, setBuilderDescription] = useState('');
+  const [builderSelected, setBuilderSelected] = useState<string[]>([]);
+  const [builderBusy, setBuilderBusy] = useState(false);
+  const [expandedAgreement, setExpandedAgreement] = useState<string | null>(null);
+  const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
+
   async function getAuthHeaders() {
     const { data } = await supabase.auth.getSession();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -65,19 +102,25 @@ export default function LandlordDocumentsPage() {
     setError('');
 
     try {
-      const [docsResponse, bundlesResponse, tenantsResponse] = await Promise.all([
+      const [docsResponse, bundlesResponse, tenantsResponse, itemsResponse, agreementsResponse] = await Promise.all([
         fetch('/api/documents', { headers: await getAuthHeaders() }),
         fetch('/api/document-bundles', { headers: await getAuthHeaders() }).catch(() => null),
         fetch('/api/tenants', { headers: await getAuthHeaders() }),
+        fetch('/api/agreement-items', { headers: await getAuthHeaders() }).catch(() => null),
+        fetch('/api/agreements', { headers: await getAuthHeaders() }).catch(() => null),
       ]);
 
       const docsResult = await docsResponse.json();
       const bundlesResult = bundlesResponse ? await bundlesResponse.json() : { bundles: [] };
       const tenantsResult = await tenantsResponse.json();
+      const itemsResult = itemsResponse ? await itemsResponse.json() : { items: [] };
+      const agreementsResult = agreementsResponse ? await agreementsResponse.json() : { agreements: [] };
 
       setDocuments(docsResult.documents ?? []);
       setBundles(bundlesResult.bundles ?? []);
       setTenants(tenantsResult.tenants ?? []);
+      setItemLibrary(itemsResult.items ?? []);
+      setAgreements(agreementsResult.agreements ?? []);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -204,6 +247,125 @@ export default function LandlordDocumentsPage() {
     }
   }
 
+  const toggleBuilderItem = (itemId: string) => {
+    setBuilderSelected((prev) => prev.includes(itemId) ? prev.filter((x) => x !== itemId) : [...prev, itemId]);
+  };
+
+  const toggleBuilderCategory = (category: string) => {
+    const ids = itemLibrary.filter((i) => i.category === category).map((i) => i.id);
+    const allSelected = ids.every((id) => builderSelected.includes(id));
+    setBuilderSelected((prev) => allSelected ? prev.filter((x) => !ids.includes(x)) : Array.from(new Set([...prev, ...ids])));
+  };
+
+  function resetBuilder() {
+    setBuilderTenantId('');
+    setBuilderTitle('Tenancy Agreement');
+    setBuilderDescription('');
+    setBuilderSelected([]);
+  }
+
+  async function saveAgreement(send: boolean) {
+    setMessage('');
+    setError('');
+    if (!builderTenantId) { setError('Select a tenant for the agreement.'); return; }
+    if (builderSelected.length === 0) { setError('Select at least one agreement item.'); return; }
+    setBuilderBusy(true);
+    try {
+      const response = await fetch('/api/agreements', {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({
+          tenantId: builderTenantId,
+          title: builderTitle,
+          description: builderDescription,
+          selectedItemIds: builderSelected,
+          send,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? 'Unable to save agreement.');
+      setMessage(send ? 'Agreement sent to tenant.' : 'Draft saved.');
+      resetBuilder();
+      loadData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBuilderBusy(false);
+    }
+  }
+
+  async function reviewAgreement(id: string, completed: boolean) {
+    setMessage('');
+    setError('');
+    const response = await fetch('/api/agreements', {
+      method: 'PATCH',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ id, action: 'review', completed }),
+    });
+    const result = await response.json();
+    if (!response.ok) { setError(result.message ?? 'Unable to update agreement.'); return; }
+    setMessage(`Agreement marked as ${completed ? 'completed' : 'reviewed'}.`);
+    loadData();
+  }
+
+  async function deleteAgreement(id: string) {
+    if (!confirm('Delete this agreement?')) return;
+    const response = await fetch('/api/agreements', {
+      method: 'DELETE',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ id }),
+    });
+    const result = await response.json();
+    if (!response.ok) { setError(result.message ?? 'Unable to delete agreement.'); return; }
+    setMessage('Agreement deleted.');
+    loadData();
+  }
+
+  async function downloadAgreementPdf(agreement: Agreement) {
+    setPdfBusyId(agreement.id);
+    setError('');
+    try {
+      const blob = await generateAgreementPdf({
+        title: agreement.title,
+        description: agreement.description,
+        items: agreement.items ?? itemLibrary.filter((i) => agreement.selected_item_ids.includes(i.id)),
+        tenant_checks: agreement.tenant_checks ?? [],
+        tenant_name: agreement.tenant_name,
+        tenant_email: agreement.tenant_email,
+        tenant_phone: agreement.tenant_phone,
+        tenant_national_id: agreement.tenant_national_id,
+        tenant_kra_pin: agreement.tenant_kra_pin,
+        tenant_address: agreement.tenant_address,
+        unit_number: agreement.unit_number,
+        property_name: agreement.property_name,
+        tenant_picture_url: agreement.tenant_picture_url,
+        submitted_at: agreement.submitted_at,
+      });
+      const safeName = (agreement.tenant_name || 'tenant').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      downloadBlob(blob, `tenancy-agreement-${safeName}.pdf`);
+    } catch (err: any) {
+      setError(err.message ?? 'Unable to generate PDF.');
+    } finally {
+      setPdfBusyId(null);
+    }
+  }
+
+  const agreementStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      draft: 'status-pending',
+      sent: 'status-pending',
+      submitted: 'status-pending',
+      reviewed: 'status-active',
+      completed: 'status-active',
+    };
+    return styles[status] || '';
+  };
+
+  const libraryCategories = Array.from(new Set(itemLibrary.map((i) => i.category))).sort((a, b) => {
+    const first = (c: string) => itemLibrary.find((i) => i.category === c)?.sort_order ?? 0;
+    return first(a) - first(b);
+  });
+
   const formatType = (type: string) => {
     const map: Record<string, string> = {
       agreement: 'Agreement',
@@ -309,6 +471,162 @@ export default function LandlordDocumentsPage() {
               <button type="submit" disabled={uploading} style={{ width: '100%' }}>Upload & Assign</button>
             </form>
             <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 8 }}>Upload agreement PDF and assign to tenant.</p>
+          </article>
+
+          {/* Tenancy Agreement Builder */}
+          <article className="card" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, #fef9c3 0%, #fef08a 40%, #fde68a 100%)' }}>
+            <div className="card-label">
+              <span className="badge badge-pm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </span>Agreement Builder
+            </div>
+            <h3 style={{ marginBottom: 8 }}>Build a Tenancy Agreement</h3>
+            <p style={{ fontSize: '12px', color: 'var(--ink-2)', marginBottom: 16 }}>
+              Write the agreement description, then pick the items the tenant must check. The tenant ticks each item,
+              acknowledges and submits it back to you for review.
+            </p>
+
+            <div className="form-grid" style={{ marginBottom: 16 }}>
+              <select value={builderTenantId} onChange={(e) => setBuilderTenantId(e.target.value)} style={{ width: '100%', minWidth: 0 }}>
+                <option value="">Select tenant</option>
+                {tenants.map((t) => <option key={t.id} value={t.id}>{t.full_name} - {t.property} · Unit {t.unit}</option>)}
+              </select>
+              <input value={builderTitle} onChange={(e) => setBuilderTitle(e.target.value)} placeholder="Agreement title" style={{ width: '100%' }} />
+            </div>
+
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: 6 }}>Description (the agreement story — editable, varies per landlord)</label>
+            <textarea
+              value={builderDescription}
+              onChange={(e) => setBuilderDescription(e.target.value)}
+              rows={5}
+              placeholder="Write the tenancy description shown to the tenant..."
+              style={{ width: '100%', minWidth: 0, marginBottom: 16, padding: 10, borderRadius: 8, border: '1px solid var(--line)', fontFamily: 'inherit', fontSize: '13px' }}
+            />
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+              <label style={{ fontSize: '13px', fontWeight: 700 }}>Checklist items ({builderSelected.length} selected)</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" onClick={() => setBuilderSelected(itemLibrary.map((i) => i.id))} className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>Select all</button>
+                <button type="button" onClick={() => setBuilderSelected([])} className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>Clear</button>
+              </div>
+            </div>
+
+            <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 10, padding: 12, background: 'rgba(255,255,255,0.6)', marginBottom: 16 }}>
+              {itemLibrary.length === 0 && <p className="landlord-muted">Loading item library…</p>}
+              {libraryCategories.map((category) => {
+                const items = itemLibrary.filter((i) => i.category === category);
+                const allSel = items.every((i) => builderSelected.includes(i.id));
+                return (
+                  <div key={category} style={{ marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <input type="checkbox" checked={allSel} onChange={() => toggleBuilderCategory(category)} />
+                      <strong style={{ fontSize: '12px', color: 'var(--ink-2)' }}>{category}</strong>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 6, paddingLeft: 4 }}>
+                      {items.map((item) => (
+                        <label key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: '12px', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={builderSelected.includes(item.id)} onChange={() => toggleBuilderItem(item.id)} style={{ marginTop: 2 }} />
+                          <span title={item.body_text ?? ''}>{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button type="button" disabled={builderBusy} onClick={() => saveAgreement(false)} className="action-button secondary">Save Draft</button>
+              <button type="button" disabled={builderBusy} onClick={() => saveAgreement(true)} className="action-button primary">{builderBusy ? 'Saving…' : 'Send to Tenant'}</button>
+            </div>
+          </article>
+
+          {/* Agreement Review */}
+          <article className="card" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)' }}>
+            <div className="card-label">
+              <span className="badge badge-agent">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </span>Agreement Review
+            </div>
+            <h3 style={{ marginBottom: 16 }}>Tenant Agreements</h3>
+
+            {loading && <p className="landlord-muted">Loading agreements…</p>}
+            {!loading && agreements.length === 0 && <p className="landlord-empty">No agreements created yet.</p>}
+
+            {!loading && agreements.length > 0 && (
+              <div className="table-shell">
+                <table className="landlord-table" style={{ fontSize: '12px' }}>
+                  <thead>
+                    <tr>
+                      <th>Tenant</th>
+                      <th>Title</th>
+                      <th>Items</th>
+                      <th>Checked</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {agreements.map((ag) => (
+                      <tr key={ag.id}>
+                        <td>{ag.tenant_name || tenants.find((t) => t.id === ag.tenant_id)?.full_name || '-'}</td>
+                        <td>{ag.title}</td>
+                        <td>{ag.selected_item_ids?.length ?? 0}</td>
+                        <td>{ag.tenant_checks?.length ?? 0}</td>
+                        <td>
+                          <span className={`status-pill ${agreementStatusBadge(ag.status)}`} style={{ textTransform: 'capitalize' }}>{ag.status}</span>
+                        </td>
+                        <td>
+                          <div className="landlord-actions">
+                            <button className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => setExpandedAgreement(expandedAgreement === ag.id ? null : ag.id)}>
+                              {expandedAgreement === ag.id ? 'Hide' : 'View'}
+                            </button>
+                            <button className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px' }} disabled={pdfBusyId === ag.id} onClick={() => downloadAgreementPdf(ag)}>
+                              {pdfBusyId === ag.id ? 'Preparing…' : 'Download PDF'}
+                            </button>
+                            {ag.status === 'submitted' && (
+                              <button className="action-button info" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => reviewAgreement(ag.id, false)}>Mark Reviewed</button>
+                            )}
+                            {(ag.status === 'reviewed' || ag.status === 'submitted') && (
+                              <button className="action-button warn" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => reviewAgreement(ag.id, true)}>Complete</button>
+                            )}
+                            {ag.status === 'draft' && (
+                              <button className="action-button warn" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={async () => {
+                                const r = await fetch('/api/agreements', { method: 'PATCH', headers: await getAuthHeaders(), body: JSON.stringify({ id: ag.id, action: 'send' }) });
+                                if (r.ok) { setMessage('Agreement sent to tenant.'); loadData(); } else { const j = await r.json(); setError(j.message ?? 'Unable to send.'); }
+                              }}>Send</button>
+                            )}
+                            <button className="action-button danger" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => deleteAgreement(ag.id)}>Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {expandedAgreement && (() => {
+              const ag = agreements.find((a) => a.id === expandedAgreement);
+              if (!ag) return null;
+              const checkedSet = new Set(ag.tenant_checks ?? []);
+              const items = ag.items ?? itemLibrary.filter((i) => ag.selected_item_ids.includes(i.id));
+              return (
+                <div style={{ marginTop: 16, padding: 16, background: 'rgba(255,255,255,0.7)', borderRadius: 10, border: '1px solid var(--line)' }}>
+                  <h4 style={{ marginBottom: 8 }}>{ag.title} — {ag.tenant_name}</h4>
+                  {ag.description && <p style={{ fontSize: '12px', whiteSpace: 'pre-wrap', marginBottom: 12, color: 'var(--ink-2)' }}>{ag.description}</p>}
+                  {ag.tenant_notes && <p style={{ fontSize: '12px', marginBottom: 12, fontStyle: 'italic' }}>Tenant notes: {ag.tenant_notes}</p>}
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
+                    {items.map((item) => (
+                      <li key={item.id} style={{ fontSize: '12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                        <span style={{ fontWeight: 700, color: checkedSet.has(item.id) ? '#16a34a' : '#9ca3af' }}>{checkedSet.has(item.id) ? '✔' : '○'}</span>
+                        <span><strong>{item.label}</strong>{item.body_text ? ` — ${item.body_text}` : ''}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
           </article>
 
           <article className="card" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100)' }}>
