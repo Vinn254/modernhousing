@@ -39,6 +39,19 @@ The incoming `connectionID`, `connectionPassword`, `serviceName`, and request `I
 
 ## Callback behavior
 
-`/api/coop/advise` accepts `DocumentReferenceNumber` as the unit code and `PaymentReferenceCode` (or `TransactionReferenceCode` when the former is absent) as the bank transaction identity. The payment reference is unique, so repeat advice requests return HTTP/status code `402` and do not record a second payment.
+`/api/coop/advise` accepts the unit code from `DocumentReferenceNumber`, `AccountNumber` or `TransactionReferenceCode` (the first that matches a unit) and `PaymentReferenceCode` (or `TransactionReferenceCode` when the former is absent) as the bank transaction identity. The payment reference is unique, so repeat advice requests return HTTP/status code `402` and do not record a second payment.
+
+## Which value must the bank send?
+
+The value Co-op validates is the **unit `short_code`**, entered by the tenant as the paybill account number. It is stored on the unit and maintained on the Property page - nothing in the sandbox sample data is a valid code unless a unit carries exactly that value. Co-op's own test references (for example `L3`, `MH-BS`) will return `404 Unit code not found` unless a unit in Sarah's organization uses that short code.
+
+Matching trims surrounding spaces and ignores case. A `404` is returned for any of these, each logged with a distinct `reason`:
+
+- `unit_not_found` - no unit carries that short code (wrong field, typo, or a bank sample value).
+- `unit_has_no_tenant` - the unit exists but no tenant is assigned to it, so there is nobody to credit.
+- `unit_has_no_property` - the unit is not linked to a property.
+- `organization_mismatch` - the property belongs to a different organization than the credentials row the request authenticated against.
+
+Rejections are written by `console.warn` from the `/api/coop/validate` and `/api/coop/advise` functions; read them in Vercel **Observability → Logs** (or `vercel logs <deployment>`) while the bank replays a request, and the log names every field and value that was tried.
 
 Successful advice is recorded as a `rent` payment in KES and creates notifications for both the tenant and the landlord, so the payment appears in each side's payment history and notification bell automatically. Only rent is handled for now; bills are not touched by this flow. Validation and advice return the supplied `messageID` in their response header.

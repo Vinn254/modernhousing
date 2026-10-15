@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   authenticateHeader,
   candidateCredentials,
-  findTenantByUnitCode,
+  collectUnitCodeCandidates,
   isRecord,
   recordCoopPayment,
   requiredString,
+  resolveTenantFromUnitCodes,
   supabaseAdmin,
 } from '../../../../lib/coopB2b';
 
@@ -38,14 +39,18 @@ export async function POST(request: NextRequest) {
     const bankReference = requiredString(requestBody.PaymentReferenceCode) ?? requiredString(requestBody.TransactionReferenceCode);
     const transactionDate = requiredString(requestBody.TransactionDate);
     const paymentDate = requiredString(requestBody.PaymentDate);
-    const unitCode = requiredString(requestBody.DocumentReferenceNumber) ?? requiredString(requestBody.AccountNumber);
+    const codeCandidates = collectUnitCodeCandidates(requestBody, [
+      'DocumentReferenceNumber',
+      'AccountNumber',
+      'TransactionReferenceCode',
+    ]);
     const institutionCode = requiredString(requestBody.InstitutionCode);
     const currency = requiredString(requestBody.Currency);
     const amount = Number(requestBody.PaymentAmount ?? requestBody.TotalAmount);
 
     if (
       !messageID || !connectionID || !connectionPassword || !serviceName || !bankReference || !transactionDate ||
-      !paymentDate || !unitCode || !institutionCode || currency !== 'KES' || !Number.isFinite(amount) || amount <= 0 ||
+      !paymentDate || codeCandidates.length === 0 || !institutionCode || currency !== 'KES' || !Number.isFinite(amount) || amount <= 0 ||
       Number.isNaN(Date.parse(transactionDate)) || Number.isNaN(Date.parse(paymentDate))
     ) {
       return response(messageID, '400', 'Invalid parameters', {}, 400);
@@ -69,10 +74,22 @@ export async function POST(request: NextRequest) {
       return response(messageID, '402', 'Duplicate transaction', {}, 402);
     }
 
-    const tenant = await findTenantByUnitCode(unitCode, credential.organizationId);
-    if (!tenant) {
+    const lookup = await resolveTenantFromUnitCodes(codeCandidates, credential.organizationId);
+    if (lookup.status !== 'found') {
+      console.warn('[coop/advise] rejected', {
+        messageID,
+        reason: lookup.status,
+        tried: codeCandidates.map((candidate) => `${candidate.field}=${candidate.value}`),
+        bankReference,
+        organizationId: credential.organizationId ?? null,
+        ...(lookup.status === 'organization_mismatch' ? { propertyOrganizationId: lookup.propertyOrganizationId } : {}),
+      });
       return response(messageID, '404', 'Unit code not found', {}, 404);
     }
+
+    const tenant = lookup.tenant;
+    const unitCode = lookup.candidate.value;
+    console.log('[coop/advise] matched', { messageID, field: lookup.candidate.field, unitCode, bankReference, amount });
 
     await recordCoopPayment({
       tenant,

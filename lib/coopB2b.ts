@@ -108,45 +108,110 @@ export function authenticateHeader(
   ) ?? null;
 }
 
-export async function findTenantByUnitCode(
-  unitCode: string,
+export type UnitCodeCandidate = { field: string; value: string };
+
+export type UnitCodeLookup =
+  | { status: 'found'; tenant: TenantPaymentContext; candidate: UnitCodeCandidate }
+  | { status: 'unit_not_found'; candidates: UnitCodeCandidate[] }
+  | { status: 'unit_has_no_tenant'; candidate: UnitCodeCandidate }
+  | { status: 'unit_has_no_property'; candidate: UnitCodeCandidate }
+  | { status: 'organization_mismatch'; candidate: UnitCodeCandidate; propertyOrganizationId: string | null };
+
+type UnitRow = { id: string; short_code: string | null; property_id: string | null };
+
+function normalizeCode(value: string) {
+  return value.trim().toLowerCase();
+}
+
+// Co-op has been seen to carry the tenant's paybill account in more than one field, and
+// sandbox samples arrive in a different case to the stored code, so every plausible field
+// is tried and matched case-insensitively.
+export function collectUnitCodeCandidates(
+  requestBody: Record<string, unknown>,
+  fields: string[],
+): UnitCodeCandidate[] {
+  const candidates: UnitCodeCandidate[] = [];
+  const seen = new Set<string>();
+
+  for (const field of fields) {
+    const value = requiredString(requestBody[field]);
+    if (!value) continue;
+    const key = normalizeCode(value);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    candidates.push({ field, value });
+  }
+
+  return candidates;
+}
+
+export async function resolveTenantFromUnitCodes(
+  candidates: UnitCodeCandidate[],
   organizationId: string | null,
-): Promise<TenantPaymentContext | null> {
-  // A unit short code should map to one active tenant, but guard against
-  // historical rows so a duplicate never turns into a 500 for the bank.
-  const { data: tenants, error } = await supabaseAdmin
+): Promise<UnitCodeLookup> {
+  const variants = [...new Set(candidates.flatMap((candidate) => [candidate.value, candidate.value.toUpperCase(), candidate.value.toLowerCase()]))];
+  if (variants.length === 0) {
+    return { status: 'unit_not_found', candidates };
+  }
+
+  const { data: unitData, error: unitError } = await supabaseAdmin
+    .from('units')
+    .select('id, short_code, property_id')
+    .in('short_code', variants);
+  if (unitError) {
+    throw unitError;
+  }
+
+  const units = (unitData ?? []) as UnitRow[];
+  const matched = candidates.find((candidate) =>
+    units.some((unit) => normalizeCode(unit.short_code ?? '') === normalizeCode(candidate.value)),
+  );
+
+  if (!matched) {
+    return { status: 'unit_not_found', candidates };
+  }
+
+  const matchedUnits = units.filter((unit) => normalizeCode(unit.short_code ?? '') === normalizeCode(matched.value));
+  if (matchedUnits.length > 1) {
+    console.warn('[coop] more than one unit shares this short code', { code: matched.value, unitIds: matchedUnits.map((unit) => unit.id) });
+  }
+
+  const { data: tenantData, error: tenantError } = await supabaseAdmin
     .from('tenants')
-    .select('id, full_name, unit_id, created_at, units!inner(property_id, short_code)')
-    .eq('units.short_code', unitCode)
+    .select('id, full_name, unit_id, created_at')
+    .in('unit_id', matchedUnits.map((unit) => unit.id))
     .order('created_at', { ascending: false })
     .limit(1);
-
-  if (error) {
-    throw error;
+  if (tenantError) {
+    throw tenantError;
   }
 
-  const tenant = tenants?.[0];
+  const tenant = (tenantData ?? [])[0] as { id: string; full_name: string; unit_id: string | null } | undefined;
   if (!tenant) {
-    return null;
+    return { status: 'unit_has_no_tenant', candidate: matched };
   }
 
-  const propertyId = tenant.units?.property_id ?? null;
-  if (!propertyId) {
-    return null;
+  const unit = matchedUnits.find((row) => row.id === tenant.unit_id) ?? matchedUnits[0];
+  if (!unit.property_id) {
+    return { status: 'unit_has_no_property', candidate: matched };
   }
+  const propertyId = unit.property_id;
 
   const { data: property, error: propertyError } = await supabaseAdmin
     .from('properties')
     .select('organization_id, created_by')
     .eq('id', propertyId)
     .maybeSingle();
-
   if (propertyError) {
     throw propertyError;
   }
 
-  if (!property || (organizationId && property.organization_id !== organizationId)) {
-    return null;
+  if (!property) {
+    return { status: 'unit_has_no_property', candidate: matched };
+  }
+
+  if (organizationId && property.organization_id !== organizationId) {
+    return { status: 'organization_mismatch', candidate: matched, propertyOrganizationId: property.organization_id ?? null };
   }
 
   let landlordEmail: string | null = null;
@@ -180,10 +245,14 @@ export async function findTenantByUnitCode(
   }
 
   return {
-    tenantId: tenant.id,
-    tenantName: tenant.full_name,
-    propertyId,
-    landlordEmail,
+    status: 'found',
+    candidate: matched,
+    tenant: {
+      tenantId: tenant.id,
+      tenantName: tenant.full_name,
+      propertyId,
+      landlordEmail,
+    },
   };
 }
 

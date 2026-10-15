@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   authenticateHeader,
   candidateCredentials,
-  findTenantByUnitCode,
+  collectUnitCodeCandidates,
   isRecord,
   requiredString,
+  resolveTenantFromUnitCodes,
 } from '../../../../lib/coopB2b';
 
 function response(messageID: string, statusCode: string, statusDescription: string, body: Record<string, unknown>, status: number) {
@@ -33,16 +34,18 @@ export async function POST(request: NextRequest) {
     const connectionID = requiredString(header.connectionID);
     const connectionPassword = requiredString(header.connectionPassword);
     const serviceName = requiredString(header.serviceName);
-    // The paybill account number the tenant entered is the unit short code.
-    // Co-op may carry it in AccountNumber or DocumentReferenceNumber; accept either.
-    const unitCode = requiredString(requestBody.AccountNumber) ??
-      requiredString(requestBody.DocumentReferenceNumber) ??
-      requiredString(requestBody.TransactionReferenceCode);
+    // The paybill account the tenant enters is the unit short code. Co-op has carried it
+    // in AccountNumber, DocumentReferenceNumber and TransactionReferenceCode, so try each.
+    const codeCandidates = collectUnitCodeCandidates(requestBody, [
+      'AccountNumber',
+      'DocumentReferenceNumber',
+      'TransactionReferenceCode',
+    ]);
     const transactionReference = requiredString(requestBody.TransactionReferenceCode);
     const transactionDate = requiredString(requestBody.TransactionDate);
     const institutionCode = requiredString(requestBody.InstitutionCode);
 
-    if (!messageID || !connectionID || !connectionPassword || !serviceName || !unitCode || !transactionDate || !institutionCode || Number.isNaN(Date.parse(transactionDate))) {
+    if (!messageID || !connectionID || !connectionPassword || !serviceName || codeCandidates.length === 0 || !transactionDate || !institutionCode || Number.isNaN(Date.parse(transactionDate))) {
       return response(messageID, '400', 'Invalid parameters', {}, 400);
     }
 
@@ -52,10 +55,22 @@ export async function POST(request: NextRequest) {
       return response(messageID, '401', 'Unauthorized', {}, 401);
     }
 
-    const tenant = await findTenantByUnitCode(unitCode, credential.organizationId);
-    if (!tenant) {
+    const lookup = await resolveTenantFromUnitCodes(codeCandidates, credential.organizationId);
+    if (lookup.status !== 'found') {
+      console.warn('[coop/validate] rejected', {
+        messageID,
+        reason: lookup.status,
+        tried: codeCandidates.map((candidate) => `${candidate.field}=${candidate.value}`),
+        institutionCode,
+        organizationId: credential.organizationId ?? null,
+        ...(lookup.status === 'organization_mismatch' ? { propertyOrganizationId: lookup.propertyOrganizationId } : {}),
+      });
       return response(messageID, '404', 'Unit code not found', {}, 404);
     }
+
+    const tenant = lookup.tenant;
+    const unitCode = lookup.candidate.value;
+    console.log('[coop/validate] matched', { messageID, field: lookup.candidate.field, unitCode, tenantName: tenant.tenantName });
 
     return response(messageID, '200', 'Successfully validated customer', {
       TransactionReferenceCode: transactionReference ?? unitCode,
