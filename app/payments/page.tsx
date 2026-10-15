@@ -971,20 +971,7 @@ allPayments.sort((a, b) => {
             <div style={{ padding: 12, background: 'var(--surface)', borderRadius: 8, fontSize: '14px', color: '#111827' }}>
               {coopPaybill && <div><strong>Co-operative Bank Paybill:</strong> {coopPaybill}</div>}
               {sbmEnabled && <div style={{ marginTop: 6 }}><strong>SBM account:</strong> Registered with SBM</div>}
-              <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants must enter their assigned Short Code as the payment account number/reference.</div>
-              {coopPaybill && tenants.some((tenant) => tenant.short_code) && (
-                <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
-                  <strong style={{ fontSize: '13px' }}>Tenant Unit Codes</strong>
-                  <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-                    {tenants.filter((tenant) => tenant.short_code).map((tenant) => (
-                      <div key={tenant.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '13px' }}>
-                        <span>{tenant.full_name} — Short Code</span>
-                        <strong>{tenant.short_code}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div style={{ marginTop: 8, fontSize: '13px', color: 'var(--ink-3)' }}>Tenants must enter their assigned Short Code as the payment account number/reference. The code is held on the unit and is managed on the Property page.</div>
               {!coopPaybill && !sbmEnabled && <div>Set up a bank payment method before tenants make payments.</div>}
             </div>
             <button onClick={() => setShowSettings(true)} className="action-button ghost" style={{ marginTop: 12 }}>Edit Payment Details</button>

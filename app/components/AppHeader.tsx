@@ -86,6 +86,12 @@ export default function AppHeader() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isDark: darkMode, toggle: toggleDarkMode } = useTheme();
 
+  // On wide screens the drawer takes space from the page instead of covering it.
+  useEffect(() => {
+    document.body.classList.toggle('sidebar-open', sidebarOpen);
+    return () => document.body.classList.remove('sidebar-open');
+  }, [sidebarOpen]);
+
   const resolveRole = (currentUser: any): Role => {
     if (currentUser?.email === 'vin.oumaotieno@gmail.com') return 'super_admin';
     const metadataRole = currentUser?.user_metadata?.role;
@@ -274,7 +280,7 @@ export default function AppHeader() {
                   tenantId={user?.user_metadata?.tenant_id ?? user?.user_metadata?.tenantId}
                   agentId={user?.user_metadata?.agent_id ?? user?.user_metadata?.agentId}
                 />
-               <button className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">☰</button>
+               <button className="menu-toggle" onClick={() => setSidebarOpen((open) => !open)} aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}>{sidebarOpen ? '✕' : '☰'}</button>
             </>
           )}
         </div>

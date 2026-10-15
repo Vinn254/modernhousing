@@ -46,7 +46,7 @@ body {
 
 .admin-no-hero .bento-grid,
 .admin-no-hero .card-grid {
-  max-width: 100vw;
+  max-width: 100%;
 }
 
 [data-theme="dark"] {
@@ -350,7 +350,8 @@ button {
 }
 
 .table-shell {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-elevated);
@@ -3128,7 +3129,7 @@ body, #__next, .page-wrapper {
    position: fixed;
    inset: 0 auto 0 0;
    z-index: 90;
-   width: 280px;
+   width: var(--sidebar-width, 280px);
    padding: 76px 16px 24px;
    background: linear-gradient(180deg, var(--navy-900), var(--navy-800));
    color: #fff;
@@ -3287,12 +3288,12 @@ body, #__next, .page-wrapper {
   min-width: 0;
 }
 
-.role-landlord .card,
+.role-landlord .card:not([class*="card-tint"]),
 .role-landlord .bento-card {
   border-top-color: #10b981 !important;
 }
 
-.role-tenant .card,
+.role-tenant .card:not([class*="card-tint"]),
 .role-tenant .bento-card {
   border-top-color: #f59e0b !important;
 }
@@ -5860,4 +5861,50 @@ body,
 
 [data-theme="dark"] .agreement-room-row td {
   background: var(--navy-600);
+}
+
+/* ============================================================
+   Sidebar drawer on wide screens: the page slides and narrows to
+   make room instead of being covered by the drawer.
+   ============================================================ */
+:root {
+  --sidebar-width: 280px;
+}
+
+.page-wrapper {
+  transition: margin-left .28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 1100px) {
+  body.sidebar-open .page-wrapper {
+    margin-left: var(--sidebar-width);
+  }
+
+  /* The dim layer is only for small screens where the drawer floats. */
+  body.sidebar-open .overlay {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  body.sidebar-open .sidebar {
+    box-shadow: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 22px;
+  }
+}
+
+/* Bento grids inside the app follow the same auto-fit rhythm as card grids. */
+@media (min-width: 1024px) {
+  .admin-no-hero .bento-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+  }
+}
+
+/* Wide tables scroll inside their card instead of bursting out of it. Flex
+   items default to a content-based min-width, which is what let the table
+   stretch the card past its grid track. */
+.admin-no-hero .card .table-shell,
+.admin-no-hero .bento-card .table-shell {
+  min-width: 0;
+  max-width: 100%;
 }
