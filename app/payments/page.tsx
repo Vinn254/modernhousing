@@ -690,17 +690,65 @@ allPayments.sort((a, b) => {
     const docId = `STMT-${Date.now().toString().slice(-8)}`;
     const dateStr = new Date().toLocaleDateString('en-GB');
 
-    page.drawText('SPRINGFIELD SYSTEMS', { x: 50, y, font: boldFont, size: 24, color: rgb(0.08, 0.08, 0.15) });
-    y -= 30;
-    page.drawText('OFFICIAL PAYMENT STATEMENT', { x: 50, y, font: boldFont, size: 16, color: rgb(0.16, 0.16, 0.25) });
-    y -= 15;
-    page.drawText(`Generated: ${dateStr} | Document ID: ${docId}`, { x: 50, y, font, size: 10, color: rgb(0.3, 0.3, 0.3) });
-    y -= 30;
+    const navy = rgb(0.11, 0.23, 0.52);
+    const teal = rgb(0.05, 0.55, 0.55);
+    const grayText = rgb(0.4, 0.42, 0.47);
+    const LEFT = 50;
+    const RIGHT = 650;
 
-    // Tenant profile block: picture (left) + details (right)
+    // Top accent bar
+    page.drawRectangle({ x: 0, y: 841.89 - 8, width: 700, height: 8, color: navy });
+
+    // Header: title/subtitle left, meta right-aligned
+    page.drawText('SPRINGFIELD SYSTEMS', { x: LEFT, y: 790, font: boldFont, size: 22, color: navy });
+    page.drawText('OFFICIAL PAYMENT STATEMENT', { x: LEFT, y: 771, font: boldFont, size: 12, color: teal });
+
+    const meta1 = `Generated: ${dateStr}`;
+    const meta2 = `Document ID: ${docId}`;
+    page.drawText(meta1, { x: RIGHT - font.widthOfTextAtSize(meta1, 9), y: 790, font, size: 9, color: grayText });
+    page.drawText(meta2, { x: RIGHT - font.widthOfTextAtSize(meta2, 9), y: 777, font, size: 9, color: grayText });
+
+    // Header divider
+    y = 758;
+    page.drawLine({ start: { x: LEFT, y }, end: { x: RIGHT, y }, thickness: 1.2, color: navy });
+    y -= 28;
+
+    // Tenant profile block: bordered box with picture (left) + aligned details (right)
     if (selectedTenant) {
-      const blockTop = y;
-      let pictureBottom = blockTop;
+      const details: [string, string][] = [];
+      const push = (label: string, value?: string | null) => { if (value) details.push([label, String(value).substring(0, 55)]); };
+      push('Name', selectedTenant.full_name);
+      push('Email', selectedTenant.email);
+      push('Phone', selectedTenant.phone);
+      push('National ID', selectedTenant.national_id);
+      push('KRA PIN', selectedTenant.kra_pin);
+      push('Property', selectedTenant.property);
+      push('Unit', selectedTenant.unit || selectedTenant.short_code);
+      push('Address', selectedTenant.address);
+
+      const boxX = LEFT;
+      const boxW = RIGHT - LEFT;
+      const pad = 14;
+      const picSize = 78;
+      const picX = boxX + pad;
+      const boxTop = y;
+      const detailX = boxX + pad + picSize + 22;
+      const valueX = detailX + 82;
+      const rowGap = 15;
+
+      const headerY = boxTop - pad - 8;
+      const firstRowY = headerY - 18;
+      const contentBottom = firstRowY - (details.length - 1) * rowGap - 4;
+      const pictureBottom = boxTop - pad - picSize;
+      const boxBottom = Math.min(contentBottom, pictureBottom) - pad;
+
+      // Box background + border (drawn first so text sits on top)
+      page.drawRectangle({
+        x: boxX, y: boxBottom, width: boxW, height: boxTop - boxBottom,
+        color: rgb(0.98, 0.985, 0.995), borderColor: rgb(0.78, 0.83, 0.92), borderWidth: 1,
+      });
+      // Left accent stripe on the box
+      page.drawRectangle({ x: boxX, y: boxBottom, width: 4, height: boxTop - boxBottom, color: teal });
 
       if (selectedTenant.picture_url) {
         try {
@@ -711,43 +759,32 @@ allPayments.sort((a, b) => {
             const isJpg = bytes[0] === 0xff && bytes[1] === 0xd8;
             if (isPng || isJpg) {
               const img = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
-              const box = 70;
-              const scale = Math.min(box / img.width, box / img.height);
+              const scale = Math.min(picSize / img.width, picSize / img.height);
               const w = img.width * scale;
               const h = img.height * scale;
-              page.drawImage(img, { x: 50, y: blockTop - h, width: w, height: h });
-              pictureBottom = blockTop - h;
+              const px = picX + (picSize - w) / 2;
+              const py = boxTop - pad - (picSize + h) / 2;
+              page.drawImage(img, { x: px, y: py, width: w, height: h });
             }
           }
         } catch (e) {
           // Unsupported image format (e.g. WebP) or fetch failure — continue without picture.
         }
+      } else {
+        page.drawRectangle({ x: picX, y: boxTop - pad - picSize, width: picSize, height: picSize, color: rgb(0.9, 0.92, 0.95), borderColor: rgb(0.78, 0.83, 0.92), borderWidth: 1 });
       }
 
-      const detailX = 140;
-      let dy = blockTop - 4;
-      const detail = (label: string, value?: string | null) => {
-        if (!value) return;
-        page.drawText(label, { x: detailX, y: dy, font: boldFont, size: 9, color: rgb(0.35, 0.35, 0.4) });
-        page.drawText(String(value).substring(0, 45), { x: detailX + 78, y: dy, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
-        dy -= 14;
-      };
-      page.drawText('TENANT PROFILE', { x: detailX, y: dy, font: boldFont, size: 11, color: rgb(0.16, 0.16, 0.25) });
-      dy -= 16;
-      detail('Name:', selectedTenant.full_name);
-      detail('Email:', selectedTenant.email);
-      detail('Phone:', selectedTenant.phone);
-      detail('National ID:', selectedTenant.national_id);
-      detail('KRA PIN:', selectedTenant.kra_pin);
-      detail('Property:', selectedTenant.property);
-      detail('Unit:', selectedTenant.unit || selectedTenant.short_code);
-      detail('Address:', selectedTenant.address);
+      page.drawText('TENANT PROFILE', { x: detailX, y: headerY, font: boldFont, size: 11, color: navy });
+      let dy = firstRowY;
+      details.forEach(([label, value]) => {
+        page.drawText(label, { x: detailX, y: dy, font: boldFont, size: 9, color: grayText });
+        page.drawText(value, { x: valueX, y: dy, font, size: 9, color: rgb(0.1, 0.1, 0.12) });
+        dy -= rowGap;
+      });
 
-      y = Math.min(pictureBottom, dy) - 20;
-      page.drawLine({ start: { x: 50, y }, end: { x: 650, y }, thickness: 0.5, color: rgb(0.8, 0.8, 0.8) });
-      y -= 24;
+      y = boxBottom - 26;
     } else {
-      y -= 10;
+      y -= 6;
     }
 
     const totalPaid = recordsToDownload.reduce((sum, p) => sum + (p.amount || 0), 0);
