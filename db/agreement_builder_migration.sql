@@ -115,5 +115,5 @@ select * from (values
   ('Property Condition - Restroom/Bathroom', 'Bathroom: Door Lock', 'Condition of the bathroom door lock.', 308),
   ('Property Condition - Restroom/Bathroom', 'Bathroom: Door Keys', 'Presence and condition of the bathroom door keys.', 309),
   ('Property Condition - Restroom/Bathroom', 'Bathroom: Bathroom Switch', 'Condition of the bathroom switch.', 310)
-as seed(category, label, body_text, sort_order)
+) as seed(category, label, body_text, sort_order)
 where not exists (select 1 from agreement_items);
