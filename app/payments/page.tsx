@@ -12,6 +12,11 @@ interface TenantOption {
   unit?: string;
   short_code?: string;
   property?: string;
+  phone?: string;
+  national_id?: string;
+  kra_pin?: string;
+  address?: string;
+  picture_url?: string;
 }
 
 interface Payment {
@@ -677,6 +682,10 @@ allPayments.sort((a, b) => {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
+    const selectedTenant = selectedTenantKey
+      ? tenants.find((t) => (t.email || t.full_name || '').toLowerCase() === selectedTenantKey.toLowerCase())
+      : undefined;
+
     let y = 800;
     const docId = `STMT-${Date.now().toString().slice(-8)}`;
     const dateStr = new Date().toLocaleDateString('en-GB');
@@ -686,7 +695,60 @@ allPayments.sort((a, b) => {
     page.drawText('OFFICIAL PAYMENT STATEMENT', { x: 50, y, font: boldFont, size: 16, color: rgb(0.16, 0.16, 0.25) });
     y -= 15;
     page.drawText(`Generated: ${dateStr} | Document ID: ${docId}`, { x: 50, y, font, size: 10, color: rgb(0.3, 0.3, 0.3) });
-    y -= 40;
+    y -= 30;
+
+    // Tenant profile block: picture (left) + details (right)
+    if (selectedTenant) {
+      const blockTop = y;
+      let pictureBottom = blockTop;
+
+      if (selectedTenant.picture_url) {
+        try {
+          const imgRes = await fetch(selectedTenant.picture_url);
+          if (imgRes.ok) {
+            const bytes = new Uint8Array(await imgRes.arrayBuffer());
+            const isPng = bytes[0] === 0x89 && bytes[1] === 0x50;
+            const isJpg = bytes[0] === 0xff && bytes[1] === 0xd8;
+            if (isPng || isJpg) {
+              const img = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
+              const box = 70;
+              const scale = Math.min(box / img.width, box / img.height);
+              const w = img.width * scale;
+              const h = img.height * scale;
+              page.drawImage(img, { x: 50, y: blockTop - h, width: w, height: h });
+              pictureBottom = blockTop - h;
+            }
+          }
+        } catch (e) {
+          // Unsupported image format (e.g. WebP) or fetch failure — continue without picture.
+        }
+      }
+
+      const detailX = 140;
+      let dy = blockTop - 4;
+      const detail = (label: string, value?: string | null) => {
+        if (!value) return;
+        page.drawText(label, { x: detailX, y: dy, font: boldFont, size: 9, color: rgb(0.35, 0.35, 0.4) });
+        page.drawText(String(value).substring(0, 45), { x: detailX + 78, y: dy, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
+        dy -= 14;
+      };
+      page.drawText('TENANT PROFILE', { x: detailX, y: dy, font: boldFont, size: 11, color: rgb(0.16, 0.16, 0.25) });
+      dy -= 16;
+      detail('Name:', selectedTenant.full_name);
+      detail('Email:', selectedTenant.email);
+      detail('Phone:', selectedTenant.phone);
+      detail('National ID:', selectedTenant.national_id);
+      detail('KRA PIN:', selectedTenant.kra_pin);
+      detail('Property:', selectedTenant.property);
+      detail('Unit:', selectedTenant.unit || selectedTenant.short_code);
+      detail('Address:', selectedTenant.address);
+
+      y = Math.min(pictureBottom, dy) - 20;
+      page.drawLine({ start: { x: 50, y }, end: { x: 650, y }, thickness: 0.5, color: rgb(0.8, 0.8, 0.8) });
+      y -= 24;
+    } else {
+      y -= 10;
+    }
 
     const totalPaid = recordsToDownload.reduce((sum, p) => sum + (p.amount || 0), 0);
     const finalBalance = recordsToDownload.length > 0 ? (recordsToDownload[recordsToDownload.length - 1] as any).running_balance ?? recordsToDownload[recordsToDownload.length - 1].balance_remaining : 0;

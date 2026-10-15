@@ -119,6 +119,15 @@ export async function GET(request: NextRequest) {
           .select('id')
           .eq('created_by', authContext.userId);
         propertyIds = (userProps ?? []).map((p: any) => p.id);
+
+        // Legacy properties may have no created_by; fall back to organization_id
+        if (propertyIds.length === 0 && authContext.organizationId) {
+          const { data: orgProps } = await supabaseAdmin
+            .from('properties')
+            .select('id')
+            .eq('organization_id', authContext.organizationId);
+          propertyIds = (orgProps ?? []).map((p: any) => p.id);
+        }
       }
 
       // If no properties found, return empty

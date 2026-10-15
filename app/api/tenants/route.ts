@@ -136,13 +136,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ tenants: [] });
     }
 
-    // Landlords: only properties they created (not by organization)
+    // Landlords: properties they created, falling back to their organization
     if (!authContext.isSuperAdmin && authContext.userId) {
       const { data: userProps } = await supabaseAdmin
         .from('properties')
         .select('id')
         .eq('created_by', authContext.userId);
-      const propIds = (userProps ?? []).map((p: any) => p.id);
+      let propIds = (userProps ?? []).map((p: any) => p.id);
+
+      // Legacy properties may have no created_by; fall back to organization_id
+      if (propIds.length === 0 && authContext.organizationId) {
+        const { data: orgProps } = await supabaseAdmin
+          .from('properties')
+          .select('id')
+          .eq('organization_id', authContext.organizationId);
+        propIds = (orgProps ?? []).map((p: any) => p.id);
+      }
 
       if (propIds.length > 0) {
         const { data: orgUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
