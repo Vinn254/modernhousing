@@ -205,32 +205,33 @@ button {
 }
 
 /* Professional admin card tints: clean surface + soft color wash + top accent.
-   Replaces the loud full-card pastel gradients for a calmer, consistent look. */
-.card-tint {
+   Replaces the loud full-card pastel gradients for a calmer, consistent look.
+   Selectors carry `.card` so they outrank the generic `.card` glass rule. */
+.card.card-tint {
   border: 1px solid var(--line);
   box-shadow: 0 10px 28px rgba(6, 21, 40, 0.06);
 }
-.card-tint--teal {
+.card.card-tint--teal {
   border-top: 3px solid var(--accent);
   background: linear-gradient(180deg, rgba(16, 185, 129, 0.06), rgba(16, 185, 129, 0) 140px), var(--surface);
 }
-.card-tint--blue {
+.card.card-tint--blue {
   border-top: 3px solid #3b82f6;
   background: linear-gradient(180deg, rgba(59, 130, 246, 0.06), rgba(59, 130, 246, 0) 140px), var(--surface);
 }
-.card-tint--violet {
+.card.card-tint--violet {
   border-top: 3px solid #8b5cf6;
   background: linear-gradient(180deg, rgba(139, 92, 246, 0.06), rgba(139, 92, 246, 0) 140px), var(--surface);
 }
-.card-tint--amber {
+.card.card-tint--amber {
   border-top: 3px solid var(--amber);
   background: linear-gradient(180deg, rgba(245, 158, 11, 0.07), rgba(245, 158, 11, 0) 140px), var(--surface);
 }
-.card-tint--neutral {
+.card.card-tint--neutral {
   border-top: 3px solid var(--ink-4);
   background: linear-gradient(180deg, rgba(148, 163, 184, 0.07), rgba(148, 163, 184, 0) 140px), var(--surface);
 }
-[data-theme="dark"] .card-tint {
+[data-theme="dark"] .card.card-tint {
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
 }
 
@@ -5429,4 +5430,434 @@ body,
 @media (prefers-reduced-motion: reduce) {
   .home-bento .card,
   .home-bento .card .feat-icon { animation: none !important; opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   AUTHENTICATED SURFACE LAYER
+   Every signed-in page renders a page-layout admin-no-hero main, so this layer
+   governs landlord, agent, tenant and super-admin screens together without
+   touching the marketing pages. It replaces the per-card inline pastel gradients
+   with the shared tint vocabulary and gives card grids, tables and forms one
+   consistent rhythm.
+   ============================================================ */
+
+/* Tints missing from the original set */
+.card.card-tint--rose {
+  border-top: 3px solid var(--rose);
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.06), rgba(244, 63, 94, 0) 140px), var(--surface);
+}
+.card.card-tint--danger {
+  border-top: 3px solid var(--error);
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.06), rgba(220, 38, 38, 0) 140px), var(--surface);
+}
+.card.card-tint--green {
+  border-top: 3px solid var(--accent);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.07), rgba(16, 185, 129, 0) 140px), var(--surface);
+}
+
+/* Card grids: fit the available width instead of a hard-wired three columns */
+.admin-no-hero .card-grid,
+.admin-no-hero .bento-grid {
+  max-width: none;
+  margin-top: 24px;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  align-items: stretch;
+}
+
+/* A card that needs the whole row wins over the auto-fit track sizing */
+.admin-no-hero .card-grid > .card-full,
+.admin-no-hero .bento-grid > .card-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .admin-no-hero .card-grid,
+  .admin-no-hero .bento-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Card anatomy: one padding scale, one title scale, one gap rhythm */
+.admin-no-hero .card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 18px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Untinted cards get the plain surface; card-tint--* keeps its own wash */
+.admin-no-hero .card:not([class*="card-tint"]) {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 18px rgba(6, 21, 40, 0.05);
+}
+
+.admin-no-hero .card[class*="card-tint--"] {
+  border-radius: 18px;
+}
+
+.admin-no-hero .card .card-label {
+  order: -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.admin-no-hero .card h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.admin-no-hero .card h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.admin-no-hero .card p {
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+/* Data-heavy admin cards should sit still: no lift, just a crisper edge */
+.admin-no-hero .card:hover {
+  transform: none;
+  border-color: rgba(16, 185, 129, 0.32);
+  box-shadow: 0 10px 26px rgba(6, 21, 40, 0.08);
+}
+
+.admin-no-hero .card form,
+.admin-no-hero .card .table-shell {
+  width: 100%;
+}
+
+.admin-no-hero .card .table-shell {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+/* Inputs and selects inside cards line up and stop overflowing */
+.admin-no-hero .card input,
+.admin-no-hero .card select,
+.admin-no-hero .card textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 9px 11px;
+}
+
+.admin-no-hero .card textarea {
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.admin-no-hero .card label {
+  color: var(--ink-2);
+}
+
+.admin-no-hero .card .landlord-actions {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Page header band reads as one unit with the cards under it */
+.admin-no-hero .card-admin-header {
+  padding: 26px 28px;
+  border-radius: 20px;
+  box-shadow: 0 14px 34px rgba(6, 21, 40, 0.16);
+}
+
+.admin-no-hero .card-admin-header .heading,
+.admin-no-hero .card-admin-header .subheading {
+  margin: 0;
+}
+
+.admin-no-hero .card-admin-header .heading {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.admin-no-hero .card-admin-header .subheading {
+  margin-top: 6px;
+  opacity: 0.85;
+  font-size: 0.9rem;
+}
+
+[data-theme="dark"] .admin-no-hero .card:not([class*="card-tint"]) {
+  background: var(--surface);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+}
+
+/* Tinted cards in dark mode: keep the accent edge, drop the pastel wash */
+[data-theme="dark"] .admin-no-hero .card[class*="card-tint--"] {
+  background: var(--surface);
+  border-left-color: rgba(255, 255, 255, 0.09);
+  border-right-color: rgba(255, 255, 255, 0.09);
+  border-bottom-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+}
+
+[data-theme="dark"] .admin-no-hero .card:hover {
+  border-color: rgba(52, 211, 153, 0.34);
+}
+
+[data-theme="dark"] .admin-no-hero .card input,
+[data-theme="dark"] .admin-no-hero .card select,
+[data-theme="dark"] .admin-no-hero .card textarea {
+  background: var(--navy-800);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+
+/* ============================================================
+   TENANCY AGREEMENT — clause table and Appendix 1 checklist
+   ============================================================ */
+.agreement-body {
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  background: var(--surface-elevated);
+}
+
+.agreement-body-label {
+  margin: 0 0 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.agreement-body-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  color: var(--ink-2);
+}
+
+.agreement-tables {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.agreement-table {
+  overflow-x: auto;
+  background: var(--surface);
+}
+
+.agreement-table table {
+  min-width: 620px;
+}
+
+.agreement-condition-table {
+  min-width: 860px;
+}
+
+.agreement-table-caption {
+  caption-side: top;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--surface-elevated);
+  border-bottom: 1px solid var(--line);
+}
+
+.agreement-table th {
+  background: var(--surface-elevated);
+  color: var(--ink-2);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  vertical-align: bottom;
+  border-bottom: 1px solid var(--line);
+}
+
+.agreement-table td {
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+  font-size: 12px;
+}
+
+.agreement-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.agreement-col-item {
+  width: 170px;
+  min-width: 150px;
+}
+
+.agreement-col-condition {
+  min-width: 130px;
+}
+
+.agreement-col-tick {
+  width: 92px;
+  text-align: center;
+}
+
+.agreement-clause-body {
+  line-height: 1.65;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+.agreement-room-row td {
+  background: var(--navy-700);
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 9px 14px;
+}
+
+.agreement-condition-cell {
+  color: var(--ink-4);
+  font-size: 11px;
+}
+
+.agreement-condition-cell--end {
+  border-left: 1px dashed var(--line);
+}
+
+.agreement-table tbody tr.is-confirmed td {
+  background: rgba(16, 185, 129, 0.07);
+}
+
+.agreement-tick {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.agreement-ack {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-elevated);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.agreement-ack input {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--accent);
+}
+
+.agreement-library {
+  margin-bottom: 18px;
+}
+
+.builder-items-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.builder-items-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.builder-items-actions .action-button {
+  padding: 6px 12px;
+  font-size: 11.5px;
+}
+
+.agreement-preview {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.agreement-preview--editing {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.07);
+}
+
+.agreement-edit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agreement-edit-head h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+[data-theme="dark"] .agreement-preview--editing {
+  border-color: rgba(52, 211, 153, 0.34);
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.06);
+}
+
+[data-theme="dark"] .agreement-body,
+[data-theme="dark"] .agreement-preview,
+[data-theme="dark"] .agreement-ack {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .agreement-table-caption,
+[data-theme="dark"] .agreement-table th {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .agreement-table tbody tr.is-confirmed td {
+  background: rgba(52, 211, 153, 0.1);
+}
+
+[data-theme="dark"] .agreement-room-row td {
+  background: var(--navy-600);
 }

@@ -195,7 +195,7 @@ export default function AgentNotificationsPage() {
           <div><p className="heading">Tenant Communications</p><p className="subheading">Reply to tenants and send direct messages.</p></div>
         </div>
 
-        <section className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.18)', boxShadow: '0 0 20px rgba(16, 185, 129, 0.08)', background: 'linear-gradient(135deg, rgba(240,253,244,0.95), rgba(255,255,255,0.98))' }}>
+        <section className="card card-tint--green" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.18)', boxShadow: '0 0 20px rgba(16, 185, 129, 0.08)' }}>
           <div style={{ padding: 16, borderBottom: '1px solid var(--line)', background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(14,165,233,0.15))' }}>
             <div className="card-label">Inbox</div>
             <h3 style={{ margin: '4px 0' }}>Tenant Messages</h3>
@@ -241,7 +241,7 @@ export default function AgentNotificationsPage() {
                   style={{ width: '100%', borderRadius: 10, border: '1px solid #a7f3d0', padding: '10px 12px', resize: 'vertical' }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                  <button type="button" onClick={handleSendNewMessage} disabled={sending || !recipientTenant} style={{ padding: '8px 14px', borderRadius: 999, border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+                  <button type="button" onClick={handleSendNewMessage} disabled={sending || !recipientTenant} className="action-button primary">
                     {sending ? 'Sending…' : 'Send message'}
                   </button>
                 </div>
@@ -265,7 +265,7 @@ export default function AgentNotificationsPage() {
                         style={{ width: '100%', borderRadius: 10, border: '1px solid #a7f3d0', padding: '10px 12px', resize: 'vertical' }}
                       />
                       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                        <button type="button" onClick={handleSendReply} disabled={sending} style={{ padding: '8px 14px', borderRadius: 999, border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+                        <button type="button" onClick={handleSendReply} disabled={sending} className="action-button primary">
                           {sending ? 'Sending…' : 'Send reply'}
                         </button>
                       </div>

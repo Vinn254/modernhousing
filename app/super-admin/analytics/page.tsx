@@ -132,7 +132,7 @@ export default function AnalyticsPage() {
                   borderRadius: 999,
                   padding: '8px 12px',
                   fontWeight: 700,
-                  cursor: 'pointer',
+                  cursor: 'pointer'
                 }}
               >
                 {item}
@@ -232,7 +232,7 @@ export default function AnalyticsPage() {
                 <div style={{ fontSize: 13, opacity: 0.8 }}>Top properties</div>
               </div>
             </div>
-            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            <div className="table-shell" style={{ maxHeight: '200px', overflowY: 'auto' }}>
               <table className="landlord-table" style={{ fontSize: '12px' }}>
                 <thead>
                   <tr>

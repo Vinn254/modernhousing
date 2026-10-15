@@ -162,8 +162,8 @@ export default function AgentsPage() {
           </div>
         </div>
 
-    <section className="card-grid" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 20, width: '100%' }}>
-          <div className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)' }}>
+    <section className="card-grid">
+          <div className="card card-tint--teal">
             <div ref={formRef} className="card-label"><span className="badge badge-pm">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </span>Add Agent</div>
@@ -183,7 +183,7 @@ export default function AgentsPage() {
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </div>
 
-          <div className="card" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
+          <div className="card card-tint--blue">
             <div className="card-label"><span className="badge badge-agent">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13 a4 0 0 1 0 7.75"/></svg>
             </span>Assigned Agents</div>

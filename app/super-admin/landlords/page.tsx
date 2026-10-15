@@ -525,8 +525,8 @@ export default function LandlordManagementPage() {
         </div>
 
         <section className="bento-section">
-          <div className="bento">
-            <article className="card" style={{ gridColumn: '1 / -1' }}>
+          <div className="bento-grid">
+            <article className="card card-full">
               <div className="card-label"><span className="badge badge-pm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>Project Manager Accounts</div>
               <h3 style={{ marginBottom: 16 }}>Workspace Accounts and Subscriptions</h3>
 
@@ -568,7 +568,7 @@ export default function LandlordManagementPage() {
                         <div style={{ color: 'var(--ink-3)', fontSize: '13px' }}>{landlord.email}</div>
                         <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                           <span className={`renewal-pill ${risk}`}>{getRiskLabel(subscription)}</span>
-                          <span className="status-pill" style={{ background: landlord.status === 'active' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: landlord.status === 'active' ? '#059669' : '#d97706' }}>{landlord.status}</span>
+                          <span className={`status-pill ${landlord.status === 'active' ? 'status-active' : 'status-pending'}`}>{landlord.status}</span>
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }}>

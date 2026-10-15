@@ -381,8 +381,8 @@ export default function TenantCommunicationComplaintsPage() {
           </div>
         </div>
 
-        <section className="card-grid" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', alignItems: 'stretch', gap: 20, width: '100%' }}>
-          <article className="card" style={{ minHeight: 260, display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
+        <section className="card-grid">
+          <article className="card card-tint--teal" style={{ minHeight: 260, display: 'flex', flexDirection: 'column' }}>
             <div className="card-label">
               <span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z" /></svg>
@@ -410,7 +410,7 @@ export default function TenantCommunicationComplaintsPage() {
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </article>
 
-          <article className="card" style={{ minHeight: 260, display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
+          <article className="card card-tint--blue" style={{ minHeight: 260, display: 'flex', flexDirection: 'column' }}>
             <div className="card-label">
               <span className="badge badge-agent">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
@@ -471,7 +471,7 @@ export default function TenantCommunicationComplaintsPage() {
             )}
           </article>
 
-          <article className="card" style={{ minHeight: 260, display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)' }}>
+          <article className="card card-tint--amber" style={{ minHeight: 260, display: 'flex', flexDirection: 'column' }}>
             <div className="card-label">
               <span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
@@ -536,11 +536,11 @@ export default function TenantCommunicationComplaintsPage() {
                   </label>
                   <div style={{ display: 'flex', gap: 6 }}>
                     {checkedIds.length > 0 && (
-                      <button type="button" onClick={handleDeleteSelected} disabled={deleting} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '3px 10px', background: '#fff1f2', color: '#b91c1c', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
+                      <button type="button" onClick={handleDeleteSelected} disabled={deleting} className="action-button danger">
                         {deleting ? 'Deleting…' : `Delete (${checkedIds.length})`}
                       </button>
                     )}
-                    <button type="button" onClick={handleDeleteAll} disabled={deleting} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '3px 10px', background: '#fff', color: '#b91c1c', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
+                    <button type="button" onClick={handleDeleteAll} disabled={deleting} className="action-button danger">
                       Delete all
                     </button>
                   </div>
@@ -555,7 +555,7 @@ export default function TenantCommunicationComplaintsPage() {
                     style={{
                       position: 'relative',
                       borderBottom: '1px solid #e5e7eb',
-                      background: isSelected ? '#eefdf3' : 'transparent',
+                      background: isSelected ? '#eefdf3' : 'transparent'
                     }}
                   >
                     <button
@@ -573,7 +573,7 @@ export default function TenantCommunicationComplaintsPage() {
                         cursor: 'pointer',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 6,
+                        gap: 6
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -623,7 +623,7 @@ export default function TenantCommunicationComplaintsPage() {
                       <button type="button" onClick={() => handleToggleStar(selectedMessage.id)} style={{ border: '1px solid #d1d5db', borderRadius: 999, padding: '6px 10px', background: starredIds.includes(selectedMessage.id) ? '#fef3c7' : '#fff', cursor: 'pointer' }}>
                         {starredIds.includes(selectedMessage.id) ? '★ Starred' : '☆ Star'}
                       </button>
-                      <button type="button" onClick={() => handleDeleteNotification(selectedMessage.id)} style={{ border: '1px solid #fecaca', borderRadius: 999, padding: '6px 10px', background: '#fff1f2', color: '#b91c1c', cursor: 'pointer' }}>
+                      <button type="button" onClick={() => handleDeleteNotification(selectedMessage.id)} className="action-button danger">
                         Delete
                       </button>
                     </div>
@@ -657,7 +657,7 @@ export default function TenantCommunicationComplaintsPage() {
                       style={{ width: '100%', borderRadius: 10, border: '1px solid #a7f3d0', padding: '10px 12px', resize: 'vertical' }}
                     />
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                      <button type="button" onClick={() => handleSendReply(selectedMessage.id)} disabled={sending || !context?.landlord} style={{ padding: '8px 14px', borderRadius: 999, border: 'none', background: sending ? '#6ee7b7' : '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+                      <button type="button" onClick={() => handleSendReply(selectedMessage.id)} disabled={sending || !context?.landlord} className="action-button primary">
                         {sending ? 'Sending…' : 'Send reply'}
                       </button>
                     </div>

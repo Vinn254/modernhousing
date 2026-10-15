@@ -40,7 +40,7 @@ export default function AgentComplaintsPage() {
       </div>
 
       <section className="bento-grid">
-        <article className="card" style={{ gridColumn: '1 / -1' }}>
+        <article className="card card-full">
           <div className="card-label">Complaints</div>
             <h3 style={{ marginBottom: 16 }}>House Problems Raised</h3>
             {loading && <p className="landlord-muted">Loading complaints...</p>}

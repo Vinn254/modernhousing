@@ -76,20 +76,20 @@ export default function SuperAdminAuditPage() {
   return (
     <>
       <main className="container admin-no-hero" style={{ overflowX: 'hidden' }}>
-        <div className="card-admin-header" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', borderRadius: 16, padding: '16px 20px', marginBottom: 16, border: '1px solid rgba(124, 58, 237, 0.35)' }}>
+        <div className="card-admin-header" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div>
-              <p className="heading" style={{ color: '#fff', marginBottom: 4, fontSize: 20 }}>System Audit Logs</p>
-              <p className="subheading" style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>Monitor all activities across the platform for security and compliance.</p>
+              <p className="heading">System Audit Logs</p>
+              <p className="subheading">Monitor all activities across the platform for security and compliance.</p>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button onClick={loadAuditLogs} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Refresh</button>
-              <button onClick={downloadCSV} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.95)', color: '#4f46e5', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>Download CSV</button>
+            <div className="landlord-actions">
+              <button onClick={loadAuditLogs} className="action-button secondary">Refresh</button>
+              <button onClick={downloadCSV} className="action-button primary">Download CSV</button>
             </div>
           </div>
         </div>
 
-        <section className="card" style={{ marginBottom: 16, background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', border: '1px solid #e2e8f0' }}>
+        <section className="card card-tint--neutral" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', minWidth: 140, fontSize: 13, flex: '1 1 140px' }}>
               <option value="">All Resources</option>
@@ -109,23 +109,23 @@ export default function SuperAdminAuditPage() {
               <option value="login">Login</option>
               <option value="logout">Logout</option>
             </select>
-            <button onClick={loadAuditLogs} style={{ padding: '8px 18px', borderRadius: 8, background: '#4f46e5', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, flex: '0 0 auto', fontSize: 13 }}>Apply Filters</button>
+            <button onClick={loadAuditLogs} className="action-button secondary" style={{ flex: '0 0 auto' }}>Apply Filters</button>
           </div>
         </section>
 
         {loading && (
-          <div className="card" style={{ textAlign: 'center', padding: '16px', background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
+          <div className="card card-tint--teal" style={{ textAlign: 'center', padding: '16px' }}>
             <p style={{ color: '#065f46', fontWeight: 600, fontSize: 14 }}>Loading audit logs...</p>
           </div>
         )}
         {error && (
-          <div className="card" style={{ padding: '12px', background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)', border: '1px solid #fecaca', marginBottom: 16 }}>
+          <div className="card card-tint--danger" style={{ padding: '12px', marginBottom: 16 }}>
             <p style={{ color: '#991b1b', fontWeight: 600, fontSize: 14 }}>{error}</p>
           </div>
         )}
 
         {!loading && auditLogs.length === 0 && (
-          <div className="card" style={{ textAlign: 'center', padding: '24px 16px', background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', border: '1px solid #fde68a' }}>
+          <div className="card card-tint--amber" style={{ textAlign: 'center', padding: '24px 16px' }}>
             <p style={{ color: '#92400e', fontWeight: 600, marginBottom: 4, fontSize: 14 }}>No audit logs found</p>
             <p style={{ color: '#b45309', fontSize: 12 }}>System activity will appear here as actions are performed.</p>
           </div>

@@ -141,8 +141,8 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style
         <div><p className="heading">Utility Payments</p><p className="subheading">Water meter readings and utility billing management.</p></div>
       </div>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
-        <article className="card" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' }}>
+      <section className="card-grid-single">
+        <article className="card card-tint--amber">
           <div className="card-label">Water Meter Billing</div>
             <h3>Record Water Reading</h3>
             <p style={{ fontSize: '13px', color: 'var(--ink-3)', marginBottom: 12 }}>Water rates: 1-6 units = 88 KSH, 7-20 units = 132 KSH, 21-50 units = 137 KSH, 51-100 units = 148 KSH, 101-300 units = 165 KSH.</p>
@@ -159,7 +159,7 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style
                     <span style={{ width: 100, fontSize: '12px', color: 'var(--ink-3)', textAlign: 'right' }}>
                       {waterMeterReadings[unit.id] ? `${calculateWaterBill(Number(waterMeterReadings[unit.id]) - (unit.previous_water_reading ?? 0)).toLocaleString()} KSH` : '\u00A0'}
                     </span>
-                    <button type="button" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id]} style={{ padding: '6px 12px', fontSize: '12px' }}>Bill</button>
+                    <button type="button" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id]} className="action-button secondary">Bill</button>
                   </div>
                 ))}
               </div>
@@ -168,7 +168,7 @@ const formatCurrency = (value: number) => new Intl.NumberFormat('en-KE', { style
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </article>
 
-          <article className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
+          <article className="card card-tint--teal">
             <div className="card-label">Record Other Utilities</div>
             <h3>Utility Billing</h3>
             <form onSubmit={handleAddUtility} className="form-grid">

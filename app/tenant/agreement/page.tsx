@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { generateAgreementPdf, downloadBlob, type AgreementItem } from '../../../lib/agreementPdf';
+import AgreementItemsTable from '../../components/AgreementItemsTable';
 
 interface AgreementDocument {
   id: string;
@@ -259,7 +260,7 @@ export default function TenantDocumentsPage() {
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            maxWidth: 180,
+            maxWidth: 180
           }}
         >
           {file ? file.name : 'Choose File'}
@@ -294,9 +295,8 @@ export default function TenantDocumentsPage() {
                   const checks = checkedItems[ag.id] ?? [];
                   const allChecked = items.length > 0 && items.every((i) => checks.includes(i.id));
                   const isSent = ag.status === 'sent' || ag.status === 'draft';
-                  const byCategory = Array.from(new Set(items.map((i) => i.category)));
                   return (
-                    <article key={ag.id} className="card" style={{ background: 'linear-gradient(135deg, #ecfeff 0%, #cffafe 100%)' }}>
+                    <article key={ag.id} className="card card-tint--teal">
                       <div className="card-label">
                         <span className={`status-pill ${ag.status === 'submitted' ? 'status-pending' : ag.status === 'reviewed' || ag.status === 'completed' ? 'status-active' : 'status-pending'}`} style={{ textTransform: 'capitalize' }}>
                           {ag.status}
@@ -305,44 +305,32 @@ export default function TenantDocumentsPage() {
                       <h3 style={{ marginBottom: 8 }}>{ag.title}</h3>
 
                       {ag.description && (
-                        <p style={{ fontSize: '13px', whiteSpace: 'pre-wrap', marginBottom: 16, color: 'var(--ink-2)' }}>{ag.description}</p>
+                        <div className="agreement-body">
+                          <p className="agreement-body-label">Agreement</p>
+                          <p className="agreement-body-text">{ag.description}</p>
+                        </div>
                       )}
 
                       <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: 8 }}>
-                        {isSent ? 'Tick each item below to confirm you have read and accept it.' : 'Items confirmed for this agreement:'}
+                        {isSent ? 'Tick every row below to confirm you have read and accepted it.' : 'Items confirmed for this agreement:'}
                       </p>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-                        {byCategory.map((category) => (
-                          <div key={category}>
-                            <strong style={{ fontSize: '12px', color: 'var(--ink-2)', display: 'block', marginBottom: 6 }}>{category}</strong>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              {items.filter((i) => i.category === category).map((item) => (
-                                <label key={item.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '12px', cursor: isSent ? 'pointer' : 'default' }}>
-                                  <input
-                                    type="checkbox"
-                                    disabled={!isSent}
-                                    checked={checks.includes(item.id)}
-                                    onChange={() => toggleItem(ag.id, item.id)}
-                                    style={{ marginTop: 2 }}
-                                  />
-                                  <span><strong>{item.label}</strong>{item.body_text ? ` — ${item.body_text}` : ''}</span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <AgreementItemsTable
+                        items={items}
+                        mode="confirm"
+                        checked={checks}
+                        onToggle={(itemId) => toggleItem(ag.id, itemId)}
+                        disabled={!isSent}
+                      />
 
                       {isSent && (
-                        <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '13px', fontWeight: 600, marginBottom: 16, cursor: 'pointer' }}>
+                        <label className="agreement-ack">
                           <input
                             type="checkbox"
                             checked={!!acknowledged[ag.id]}
                             onChange={(e) => setAcknowledged((prev) => ({ ...prev, [ag.id]: e.target.checked }))}
-                            style={{ marginTop: 2 }}
                           />
-                          <span>I acknowledge that I have read and understood this tenancy agreement.</span>
+                          <span>I acknowledge that I have read and understood this tenancy agreement in its entirety.</span>
                         </label>
                       )}
 
@@ -378,7 +366,7 @@ export default function TenantDocumentsPage() {
 
             {agreementDocs.length > 0 && (
               <section style={{ marginTop: 24 }}>
-                <article className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)' }}>
+                <article className="card card-tint--teal">
                 <div className="card-label">
                   <span className="status-pill status-pending">Awaiting Signature</span>
                 </div>
@@ -394,12 +382,12 @@ export default function TenantDocumentsPage() {
           )}
 
             {agreementDocs.length === 0 && myAgreements.length === 0 && (
-              <section className="card" style={{ marginTop: 24, background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100)' }}>
+              <section className="card card-tint--amber" style={{ marginTop: 24 }}>
                 <p className="landlord-empty">No agreement assigned yet. Contact your landlord.</p>
               </section>
             )}
 
-            <section className="card" style={{ marginTop: 24, background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100)' }}>
+            <section className="card card-tint--blue" style={{ marginTop: 24 }}>
             <div className="card-label">
               <span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -441,7 +429,7 @@ export default function TenantDocumentsPage() {
             {error && <p className="landlord-error" style={{ marginTop: 16 }}>{error}</p>}
           </section>
 
-            <section className="card" style={{ marginTop: 24, overflowX: 'auto', background: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100)' }}>
+            <section className="card card-tint--rose" style={{ marginTop: 24, overflowX: 'auto' }}>
             <div className="card-label">Your Submitted Documents</div>
             <h3 style={{ marginBottom: 12 }}>Document Status</h3>
             

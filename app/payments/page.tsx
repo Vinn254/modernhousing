@@ -790,8 +790,15 @@ allPayments.sort((a, b) => {
     const totalPaid = recordsToDownload.reduce((sum, p) => sum + (p.amount || 0), 0);
     const finalBalance = recordsToDownload.length > 0 ? (recordsToDownload[recordsToDownload.length - 1] as any).running_balance ?? recordsToDownload[recordsToDownload.length - 1].balance_remaining : 0;
 
-    const headers = ['Tenant', 'Month Due', 'Trans Code', 'Due', 'Paid', 'Running Balance', 'Date'];
-    const colX = [50, 190, 280, 365, 445, 520, 580];
+    // The tenant profile box above already names the tenant, so the repeated
+    // "Tenant" column is dropped for single-tenant statements.
+    const showTenantColumn = !selectedTenant;
+    const headers = showTenantColumn
+      ? ['Tenant', 'Month Due', 'Trans Code', 'Due', 'Paid', 'Running Balance', 'Date']
+      : ['Month Due', 'Trans Code', 'Due', 'Paid', 'Running Balance', 'Date'];
+    const colX = showTenantColumn
+      ? [50, 190, 280, 365, 445, 520, 580]
+      : [50, 210, 330, 405, 480, 570];
     headers.forEach((h, i) => {
       page.drawText(h, { x: colX[i], y, font: boldFont, size: 10, color: rgb(0.25, 0.25, 0.25) });
     });
@@ -803,15 +810,24 @@ allPayments.sort((a, b) => {
       if (idx % 2 === 0) {
         page.drawRectangle({ x: 48, y: y - 4, width: 604, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
       }
-      page.drawText(payment.tenant.substring(0, 25), { x: 50, y, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
-      page.drawText((payment as any).month_due || payment.description || '—', { x: 190, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: 280, y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
-      page.drawText(formatCurrency((payment as any).due_amount || payment.amount).replace('KES', ''), { x: 365, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-      page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: 445, y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
-      page.drawText(formatCurrency((payment as any).running_balance ?? payment.balance_remaining).replace('KES', ''), { x: 520, y, font, size: 9, color: ((payment as any).running_balance ?? payment.balance_remaining) < 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
+      let ci = 0;
+      if (showTenantColumn) {
+        page.drawText(payment.tenant.substring(0, 25), { x: colX[ci], y, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
+        ci += 1;
+      }
+      page.drawText((payment as any).month_due || payment.description || '—', { x: colX[ci], y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      ci += 1;
+      page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: colX[ci], y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
+      ci += 1;
+      page.drawText(formatCurrency((payment as any).due_amount || payment.amount).replace('KES', ''), { x: colX[ci], y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+      ci += 1;
+      page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: colX[ci], y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
+      ci += 1;
+      page.drawText(formatCurrency((payment as any).running_balance ?? payment.balance_remaining).replace('KES', ''), { x: colX[ci], y, font, size: 9, color: ((payment as any).running_balance ?? payment.balance_remaining) < 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
+      ci += 1;
       page.drawText((payment as any).source === 'bills'
         ? ((payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString('en-GB') : '—')
-        : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: 580, y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
+        : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: colX[ci], y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
       y -= 16;
     });
 
@@ -887,7 +903,7 @@ allPayments.sort((a, b) => {
         {error && <p style={{ color: '#dc2626', fontWeight: 700, marginBottom: 16 }}>{error}</p>}
 
         <section className="card-grid">
-          <div className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
+          <div className="card card-tint--teal">
             <div className="card-label">Manual Payment Entry</div>
             <h3 style={{ marginBottom: 16 }}>Record Direct Payment</h3>
             <form onSubmit={handleManualPayment} className="form-grid">
@@ -946,9 +962,9 @@ allPayments.sort((a, b) => {
 
         </section>
 
-        <div className="card-grid" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: '1fr 1fr', gridAutoRows: '1fr', alignItems: 'stretch', gap: 20, width: '100%' }}>
+        <div className="card-grid">
           {userRole !== 'tenant' && (
-          <article className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' }}>
+          <article className="card card-tint--danger" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div className="card-label">Payment Instructions</div>
             <h3 style={{ marginBottom: 16 }}>Tenant Payment Details</h3>
             <p style={{ color: '#111827', marginBottom: 12, flex: 1 }}>Configure your enabled bank payment methods. Tenants use their assigned Short Code as the payment account/reference.</p>
@@ -971,7 +987,7 @@ allPayments.sort((a, b) => {
               )}
               {!coopPaybill && !sbmEnabled && <div>Set up a bank payment method before tenants make payments.</div>}
             </div>
-            <button onClick={() => setShowSettings(true)} className="btn btn-ghost" style={{ marginTop: 12, fontSize: '14px', padding: '10px 16px', fontWeight: 600, background: '#f3f4f6', color: '#111827', border: '1px solid #d1d5db' }}>Edit Payment Details</button>
+            <button onClick={() => setShowSettings(true)} className="action-button ghost" style={{ marginTop: 12 }}>Edit Payment Details</button>
           </article>
           )}
 
@@ -987,7 +1003,7 @@ allPayments.sort((a, b) => {
                   <p style={{ margin: 0, color: 'var(--ink-3)', fontSize: '13px' }}>{new Date().toLocaleString('en-US', { month: 'long' })}</p>
                 </div>
               </div>
-              <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: 999, background: 'rgba(16,185,129,0.15)', color: 'var(--accent)', flexShrink: 0 }}>
+              <span className="status-pill status-active" style={{ flexShrink: 0 }}>
                 {percentageChange.sign}{percentageChange.value}%
               </span>
             </div>
@@ -1122,12 +1138,11 @@ allPayments.sort((a, b) => {
         )}
 
         <article
-          className="card"
+          className="card card-tint--green"
           style={{
             marginTop: 24,
             border: '1px solid rgba(16, 185, 129, 0.35)',
-            boxShadow: '0 0 0 1px rgba(16, 185, 129, 0.12), 0 0 22px rgba(16, 185, 129, 0.18)',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(240,253,244,0.95))',
+            boxShadow: '0 0 0 1px rgba(16, 185, 129, 0.12), 0 0 22px rgba(16, 185, 129, 0.18)'
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -1168,7 +1183,7 @@ allPayments.sort((a, b) => {
                     color: '#1e3a8a',
                     fontWeight: 700,
                     boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
-                    outline: 'none',
+                    outline: 'none'
                   }}
                 >
                   <option value="">All tenants</option>
@@ -1246,8 +1261,8 @@ allPayments.sort((a, b) => {
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
                           <td>{(payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—')}</td>
                           <td>
-                            <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 8, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(payment)}>Edit</button>
-                            <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
+                            <button className="action-button warn" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 8 }} onClick={() => handleShowEditForm(payment)}>Edit</button>
+                            <button className="action-button danger" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDeletePayment(payment)}>Delete</button>
                           </td>
                         </tr>
                       );

@@ -66,33 +66,33 @@ export default function SuperAdminPaymentsPage() {
   return (
     <>
       <main className="container admin-no-hero" style={{ paddingBottom: 32 }}>
-        <div className="card-admin-header" style={{ marginBottom: 20, padding: '24px 28px', borderRadius: 24, background: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)', border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 18px 45px rgba(15, 23, 42, 0.12)', color: '#fff' }}>
+        <div className="card-admin-header" style={{ marginBottom: 20 }}>
           <div>
             <p className="heading">Payments</p>
-            <p className="subheading" style={{ color: 'rgba(255,255,255,0.9)' }}>Review subscriptions, renewals, overdue access payments, and revenue in one clean overview.</p>
+            <p className="subheading">Review subscriptions, renewals, overdue access payments, and revenue in one clean overview.</p>
           </div>
         </div>
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 20 }}>
-          <article className="card" style={{ padding: 20, borderRadius: 20, background: 'linear-gradient(135deg, #ecfdf5 0%, #f8fffb 100%)', border: '1px solid rgba(16, 185, 129, 0.16)' }}>
+          <article className="card card-tint--green">
             <div className="card-label">Revenue</div>
             <h3 style={{ fontSize: '30px', margin: '6px 0 4px' }}>KSH {totalSubscriptions.toLocaleString()}</h3>
             <p style={{ margin: 0, color: 'var(--ink-3)' }}>Total landlord system access payments.</p>
           </article>
 
-          <article className="card" style={{ padding: 20, borderRadius: 20, background: 'linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%)', border: '1px solid rgba(59, 130, 246, 0.16)' }}>
+          <article className="card card-tint--blue">
             <div className="card-label">Active</div>
             <h3 style={{ fontSize: '30px', margin: '6px 0 4px' }}>{activeSubscriptions}</h3>
             <p style={{ margin: 0, color: 'var(--ink-3)' }}>Landlords with active access.</p>
           </article>
 
-          <article className="card" style={{ padding: 20, borderRadius: 20, background: 'linear-gradient(135deg, #fff7ed 0%, #fffdf8 100%)', border: '1px solid rgba(245, 158, 11, 0.18)' }}>
+          <article className="card card-tint--amber">
             <div className="card-label">Pending</div>
             <h3 style={{ fontSize: '30px', margin: '6px 0 4px', color: 'var(--amber)' }}>{expiringSubscriptions}</h3>
             <p style={{ margin: 0, color: 'var(--ink-3)' }}>Payments awaiting confirmation.</p>
           </article>
 
-          <article className="card" style={{ padding: 20, borderRadius: 20, background: 'linear-gradient(135deg, #fef2f2 0%, #fff8f8 100%)', border: '1px solid rgba(239, 68, 68, 0.16)' }}>
+          <article className="card card-tint--danger">
             <div className="card-label">Overdue</div>
             <h3 style={{ fontSize: '30px', margin: '6px 0 4px', color: 'var(--rose)' }}>{overdueSubscriptions}</h3>
             <p style={{ margin: 0, color: 'var(--ink-3)' }}>Renewals requiring follow-up.</p>

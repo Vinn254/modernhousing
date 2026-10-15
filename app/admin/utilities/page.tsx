@@ -383,8 +383,8 @@ async function handleWaterMeterReading(unitId: string) {
           </div>
         </div>
 
-        <section className="card-grid" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 20, width: '100%' }}>
-          <article className="card" style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)' }}>
+        <section className="card-grid">
+          <article className="card card-tint--teal">
             <div className="card-label"><span className="badge badge-pm">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </span>Record Other Utilities</div>
@@ -406,7 +406,7 @@ async function handleWaterMeterReading(unitId: string) {
             <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 8 }}>Creates bill record - tenants see this in Payment History</p>
           </article>
 
-          <article className="card" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' }}>
+          <article className="card card-tint--blue">
             <div className="card-label"><span className="badge badge-agent">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </span>Add Water Bill</div>
@@ -423,7 +423,7 @@ async function handleWaterMeterReading(unitId: string) {
             </form>
           </article>
 
-          <article className="card" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' }}>
+          <article className="card card-tint--amber">
             <div className="card-label"><span className="badge badge-agent">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
             </span>Water Meter Billing</div>
@@ -442,7 +442,7 @@ async function handleWaterMeterReading(unitId: string) {
                       <span style={{ width: 120, fontSize: '13px' }}>{properties.find(p => p.id === unit.property_id)?.name ?? '—'} — Unit {unit.unit_number}</span>
                       <input type="number" value={waterMeterReadings[unit.id] || ''} onChange={(e) => setWaterMeterReadings((prev) => ({ ...prev, [unit.id]: e.target.value }))} placeholder="Consumption (units)" style={{ flex: 1, padding: '6px' }} min="0" />
                       <span style={{ width: 100, fontSize: '12px', color: consumption > 0 ? 'var(--accent)' : 'var(--ink-3)' }}>{consumption > 0 ? `${consumption} units = ${billAmount.toLocaleString()} KSH` : '-'}</span>
-                      <button type="button" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id] || Number(waterMeterReadings[unit.id]) <= 0} style={{ padding: '6px 12px', fontSize: '12px' }}>Bill</button>
+                      <button type="button" onClick={() => handleWaterMeterReading(unit.id)} disabled={!waterMeterReadings[unit.id] || Number(waterMeterReadings[unit.id]) <= 0} className="action-button secondary" style={{ fontSize: '12px' }}>Bill</button>
                     </div>
                   );
                 })}
@@ -560,8 +560,8 @@ async function handleWaterMeterReading(unitId: string) {
                         {bill.balance > 0 && (
                           <button className="action-button primary" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4 }} onClick={() => handleShowPayForm(bill.id, bill.balance)}>Pay</button>
                         )}
-                        <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4, background: '#f59e0b', color: '#fff' }} onClick={() => handleShowEditForm(bill)}>Edit</button>
-                        <button className="action-button" style={{ padding: '4px 8px', fontSize: '11px', background: '#dc2626', color: '#fff' }} onClick={() => handleDeleteBill(bill.id)}>Delete</button>
+                        <button className="action-button warn" style={{ padding: '4px 8px', fontSize: '11px', marginRight: 4 }} onClick={() => handleShowEditForm(bill)}>Edit</button>
+                        <button className="action-button danger" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleDeleteBill(bill.id)}>Delete</button>
                       </td>
                     </tr>
                   ))}

@@ -93,8 +93,8 @@ export default function PropertiesPage() {
         </div>
 
         <section className="bento-section">
-          <div className="bento">
-            <article className="card" style={{ gridColumn: '1 / -1' }}>
+          <div className="bento-grid">
+            <article className="card card-full">
               <div className="landlord-stats">
                 <article className="landlord-stat">
                   <span>Total Properties</span>
@@ -230,6 +230,7 @@ export default function PropertiesPage() {
               {units.length === 0 ? (
                 <div className="landlord-empty">No units recorded for this property.</div>
               ) : (
+                <div className="table-shell">
                 <table className="landlord-table" style={{ marginTop: '10px' }}>
                   <thead>
                     <tr>
@@ -256,6 +257,7 @@ export default function PropertiesPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           </div>

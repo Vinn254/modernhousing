@@ -168,8 +168,8 @@ export default function AdminManagementPage() {
             {message && <p style={{ color: 'var(--accent)', margin: '0 0 16px' }}>{message}</p>}
             {error && <p style={{ color: '#dc2626', margin: '0 0 16px' }}>{error}</p>}
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+            <div className="table-shell" style={{ overflowX: 'auto' }}>
+              <table className="landlord-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--line)' }}>
                     <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 600, color: 'var(--ink-2)' }}>Name</th>
@@ -191,22 +191,14 @@ export default function AdminManagementPage() {
                       <td style={{ padding: '16px', color: 'var(--ink-3)' }}>{admin.email}</td>
                       <td style={{ padding: '16px', textTransform: 'capitalize' }}>{admin.role.replace('_', ' ')}</td>
                       <td style={{ padding: '16px' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '4px 12px',
-                          borderRadius: '999px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          background: admin.status === 'active' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
-                          color: admin.status === 'active' ? 'var(--accent)' : 'var(--amber)'
-                        }}>{admin.status}</span>
+                        <span className={`status-pill ${admin.status === 'active' ? 'status-active' : 'status-pending'}`}>{admin.status}</span>
                       </td>
                       <td style={{ padding: '16px', color: 'var(--ink-3)' }}>{new Date(admin.created_at).toLocaleDateString()}</td>
                       <td style={{ padding: '16px' }}>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => setSelectedAdmin(admin)}>View</button>
-                          {admin.status !== 'active' && <button className="btn btn-primary" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => handleApprove(admin)}>Approve</button>}
-                          <button className="btn btn-ghost" style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(220,38,38,0.1)', color: '#7f1212' }} onClick={() => handleDeactivate(admin)}>Deactivate</button>
+                          <button className="action-button secondary" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => setSelectedAdmin(admin)}>View</button>
+                          {admin.status !== 'active' && <button className="action-button primary" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => handleApprove(admin)}>Approve</button>}
+                          <button className="action-button danger" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => handleDeactivate(admin)}>Deactivate</button>
                         </div>
                       </td>
                     </tr>

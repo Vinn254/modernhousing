@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { generateAgreementPdf, downloadBlob, type AgreementItem } from '../../../lib/agreementPdf';
+import { DEFAULT_AGREEMENT_DESCRIPTION } from '../../../lib/leaseText';
+import AgreementItemsTable from '../../components/AgreementItemsTable';
 
 interface Tenant {
   id: string;
@@ -62,24 +64,6 @@ interface Bundle {
   created_at: string;
 }
 
-const DEFAULT_AGREEMENT_DESCRIPTION = `RENTAL LEASE AGREEMENT
-
-This Lease Agreement is made between the Landlord and the Tenant for the residential premises described below. The Tenant agrees to occupy the premises for residential use only and to pay rent in advance on the 1st day of each month.
-
-Payment schedule:
-- Due date: 1st to 6th of every month.
-- Reminder period: 7th to 10th of every month.
-- Penalty period: 11th to 15th of every month.
-The due date is always the 1st of every month and supersedes the date of moving into the apartment.
-
-Deposits: The Landlord acknowledges receipt of the first month's rent and a security deposit. The security deposit is refunded after a joint inspection on the vacating day, less any charges incurred by the Tenant. The security deposit cannot be used as a substitute for rent payment under any circumstances.
-
-Late charge: A late fee is due for any rent payment made after the 9th day of the month.
-
-Term and notice: Self-initiated vacating is on the 30th/31st of every month. A 30-day notice period must be issued or the deposit is forfeited.
-
-The Tenant agrees to keep the premises clean and in good working condition, to obey all applicable laws and association rules, and to review, tick and acknowledge each item below before submitting this agreement back to the Landlord for signature.`;
-
 export default function LandlordDocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [bundles, setBundles] = useState<Bundle[]>([]);
@@ -107,6 +91,11 @@ export default function LandlordDocumentsPage() {
   const [builderBusy, setBuilderBusy] = useState(false);
   const [expandedAgreement, setExpandedAgreement] = useState<string | null>(null);
   const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editItems, setEditItems] = useState<string[]>([]);
+  const [editBusy, setEditBusy] = useState(false);
 
   async function getAuthHeaders() {
     const { data } = await supabase.auth.getSession();
@@ -337,6 +326,48 @@ export default function LandlordDocumentsPage() {
     loadData();
   }
 
+  function startEditAgreement(agreement: Agreement) {
+    setError('');
+    setMessage('');
+    setEditingId(agreement.id);
+    setEditTitle(agreement.title);
+    setEditDescription(agreement.description ?? '');
+    setEditItems(agreement.selected_item_ids ?? []);
+  }
+
+  function toggleEditItem(itemId: string) {
+    setEditItems((prev) => (prev.includes(itemId) ? prev.filter((x) => x !== itemId) : [...prev, itemId]));
+  }
+
+  async function saveAgreementEdits() {
+    if (!editingId) return;
+    setEditBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const response = await fetch('/api/agreements', {
+        method: 'PATCH',
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({
+          id: editingId,
+          action: 'update',
+          title: editTitle,
+          description: editDescription,
+          selectedItemIds: editItems,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message ?? 'Unable to update agreement.');
+      setMessage('Agreement updated.');
+      setEditingId(null);
+      await loadData();
+    } catch (e: any) {
+      setError(e.message ?? 'Unable to update agreement.');
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
   async function deleteAgreement(id: string) {
     if (!confirm('Delete this agreement?')) return;
     const response = await fetch('/api/agreements', {
@@ -438,7 +469,7 @@ export default function LandlordDocumentsPage() {
             textOverflow: 'ellipsis',
             flex: 1,
             minWidth: 0,
-            maxWidth: '100%',
+            maxWidth: '100%'
           }}
         >
           {file ? file.name : 'Choose File'}
@@ -465,8 +496,8 @@ export default function LandlordDocumentsPage() {
           </div>
         </div>
 
-    <section className="card-grid" style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 20, width: '100%' }}>
-          <article className="card" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100)' }}>
+    <section className="card-grid">
+          <article className="card card-tint--teal" style={{ gridColumn: '1 / -1' }}>
             <div className="card-label">
               <span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -503,7 +534,7 @@ export default function LandlordDocumentsPage() {
           </article>
 
           {/* Tenancy Agreement Builder */}
-          <article className="card" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)', border: '1px solid #e2e8f0' }}>
+          <article className="card card-tint--neutral card-full">
             <div className="card-label">
               <span className="badge badge-pm">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -531,47 +562,58 @@ export default function LandlordDocumentsPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-2)' }}>Description (the agreement story — editable, varies per landlord)</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-2)' }}>Description — wording from the Springfield rental lease</label>
+                <button type="button" className="action-button secondary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => setBuilderDescription(DEFAULT_AGREEMENT_DESCRIPTION)}>
+                  Restore lease wording
+                </button>
+              </div>
               <textarea
                 value={builderDescription}
                 onChange={(e) => setBuilderDescription(e.target.value)}
                 rows={14}
-                placeholder="Write the tenancy description shown to the tenant..."
-                style={{ width: '100%', minWidth: 0, padding: 10, borderRadius: 8, border: '1px solid var(--line)', fontFamily: 'inherit', fontSize: '13px', background: '#fff' }}
+                placeholder="The tenancy description shown to the tenant..."
+                style={{ width: '100%', minWidth: 0, padding: 10, borderRadius: 8, border: '1px solid var(--line)', fontFamily: 'inherit', fontSize: '13px', lineHeight: 1.55 }}
               />
+              <p style={{ fontSize: '11px', color: 'var(--ink-3)' }}>
+                Pre-filled from the signed lease. Edit only the party-specific details (names, ID numbers, rent, dates) before sending.
+              </p>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
-              <label style={{ fontSize: '13px', fontWeight: 700 }}>Checklist items ({builderSelected.length} selected)</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" onClick={() => setBuilderSelected(itemLibrary.map((i) => i.id))} className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>Select all</button>
-                <button type="button" onClick={() => setBuilderSelected([])} className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>Clear</button>
+            <div className="builder-items-head">
+              <label style={{ fontSize: '13px', fontWeight: 700 }}>Checklist items ({builderSelected.length} of {itemLibrary.length} selected)</label>
+              <div className="builder-items-actions">
+                {libraryCategories.map((category) => {
+                  const ids = itemLibrary.filter((i) => i.category === category).map((i) => i.id);
+                  const selectedCount = ids.filter((id) => builderSelected.includes(id)).length;
+                  const allSelected = ids.length > 0 && selectedCount === ids.length;
+                  return (
+                    <button
+                      key={category}
+                      type="button"
+                      className="action-button secondary"
+                      onClick={() => toggleBuilderCategory(category)}
+                    >
+                      {allSelected ? 'Remove ' : 'Add '}
+                      {category.replace(/^Property Condition\s*-\s*/i, '')} ({selectedCount}/{ids.length})
+                    </button>
+                  );
+                })}
+                <button type="button" onClick={() => setBuilderSelected(itemLibrary.map((i) => i.id))} className="action-button secondary">Select all</button>
+                <button type="button" onClick={() => setBuilderSelected([])} className="action-button secondary">Clear</button>
               </div>
             </div>
 
-            <div style={{ maxHeight: 380, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, background: '#fff', marginBottom: 16 }}>
+            <div className="agreement-library">
               {itemLibrary.length === 0 && <p className="landlord-muted">Loading item library…</p>}
-              {libraryCategories.map((category) => {
-                const items = itemLibrary.filter((i) => i.category === category);
-                const allSel = items.every((i) => builderSelected.includes(i.id));
-                return (
-                  <div key={category} style={{ marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid #f1f5f9' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
-                      <input type="checkbox" checked={allSel} onChange={() => toggleBuilderCategory(category)} />
-                      <strong style={{ fontSize: '12px', color: 'var(--ink)' }}>{category}</strong>
-                      <span style={{ fontSize: '11px', color: 'var(--ink-3)' }}>({items.filter((i) => builderSelected.includes(i.id)).length}/{items.length})</span>
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 8, paddingLeft: 26 }}>
-                      {items.map((item) => (
-                        <label key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '12px', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, background: builderSelected.includes(item.id) ? 'rgba(13,148,136,0.08)' : 'transparent' }}>
-                          <input type="checkbox" checked={builderSelected.includes(item.id)} onChange={() => toggleBuilderItem(item.id)} style={{ marginTop: 2 }} />
-                          <span title={item.body_text ?? ''}>{item.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+              {itemLibrary.length > 0 && (
+                <AgreementItemsTable
+                  items={itemLibrary}
+                  mode="confirm"
+                  checked={builderSelected}
+                  onToggle={toggleBuilderItem}
+                />
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -581,7 +623,7 @@ export default function LandlordDocumentsPage() {
           </article>
 
           {/* Agreement Review */}
-          <article className="card" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)' }}>
+          <article className="card card-tint--violet" style={{ gridColumn: '1 / -1' }}>
             <div className="card-label">
               <span className="badge badge-agent">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -650,25 +692,75 @@ export default function LandlordDocumentsPage() {
               if (!ag) return null;
               const checkedSet = new Set(ag.tenant_checks ?? []);
               const items = ag.items ?? itemLibrary.filter((i) => ag.selected_item_ids.includes(i.id));
+              const isEditing = editingId === ag.id;
+
+              if (isEditing) {
+                return (
+                  <div className="agreement-preview agreement-preview--editing">
+                    <div className="agreement-edit-head">
+                      <h4>Edit agreement</h4>
+                      <div className="landlord-actions">
+                        <button type="button" className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => setEditingId(null)} disabled={editBusy}>Cancel</button>
+                        <button type="button" className="action-button primary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={saveAgreementEdits} disabled={editBusy}>{editBusy ? 'Saving…' : 'Save Changes'}</button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-2)' }}>Agreement title</label>
+                        <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} style={{ width: '100%', minWidth: 0 }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-2)' }}>Tenant</label>
+                        <input value={`${ag.tenant_name || '-'}${ag.property_name ? ` · ${ag.property_name}` : ''}${ag.unit_number ? ` · Unit ${ag.unit_number}` : ''}`} readOnly style={{ width: '100%', minWidth: 0 }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-2)' }}>Agreement wording</label>
+                        <button type="button" className="action-button secondary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => setEditDescription(DEFAULT_AGREEMENT_DESCRIPTION)}>Restore lease wording</button>
+                      </div>
+                      <textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        rows={14}
+                        style={{ width: '100%', minWidth: 0, padding: 10, borderRadius: 8, border: '1px solid var(--line)', fontFamily: 'inherit', fontSize: '13px', lineHeight: 1.55 }}
+                      />
+                      <p style={{ fontSize: '11px', color: 'var(--ink-3)' }}>
+                        Fill in the blanks (dates, ID numbers, KRA PINs, guarantor details) or rewrite any wording you need.
+                      </p>
+                    </div>
+
+                    <div className="builder-items-head">
+                      <label style={{ fontSize: '13px', fontWeight: 700 }}>Checklist items ({editItems.length} of {itemLibrary.length} selected)</label>
+                      <div className="builder-items-actions">
+                        <button type="button" className="action-button secondary" onClick={() => setEditItems(itemLibrary.map((i) => i.id))}>Select all</button>
+                        <button type="button" className="action-button secondary" onClick={() => setEditItems([])}>Clear</button>
+                      </div>
+                    </div>
+                    <div className="agreement-library">
+                      <AgreementItemsTable items={itemLibrary} mode="confirm" checked={editItems} onToggle={toggleEditItem} disabled={editBusy} />
+                    </div>
+                  </div>
+                );
+              }
+
               return (
-                <div style={{ marginTop: 16, padding: 16, background: 'rgba(255,255,255,0.7)', borderRadius: 10, border: '1px solid var(--line)' }}>
-                  <h4 style={{ marginBottom: 8 }}>{ag.title} — {ag.tenant_name}</h4>
-                  {ag.description && <p style={{ fontSize: '12px', whiteSpace: 'pre-wrap', marginBottom: 12, color: 'var(--ink-2)' }}>{ag.description}</p>}
+                <div className="agreement-preview">
+                  <div className="agreement-edit-head">
+                    <h4>{ag.title} — {ag.tenant_name}</h4>
+                    <button type="button" className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => startEditAgreement(ag)}>Edit</button>
+                  </div>
+                  {ag.description && <p className="agreement-body-text">{ag.description}</p>}
                   {ag.tenant_notes && <p style={{ fontSize: '12px', marginBottom: 12, fontStyle: 'italic' }}>Tenant notes: {ag.tenant_notes}</p>}
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
-                    {items.map((item) => (
-                      <li key={item.id} style={{ fontSize: '12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                        <span style={{ fontWeight: 700, color: checkedSet.has(item.id) ? '#16a34a' : '#9ca3af' }}>{checkedSet.has(item.id) ? '✔' : '○'}</span>
-                        <span><strong>{item.label}</strong>{item.body_text ? ` — ${item.body_text}` : ''}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <AgreementItemsTable items={items} mode="readonly" checked={[...checkedSet]} />
                 </div>
               );
             })()}
           </article>
 
-          <article className="card" style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100)' }}>
+          <article className="card card-tint--blue" style={{ gridColumn: '1 / -1' }}>
             <div className="card-label">
               <span className="badge badge-agent">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
