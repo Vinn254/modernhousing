@@ -276,7 +276,7 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
 
             {!loading && notifications.map((notif) => {
               const isUnread = notif.status !== 'read';
-              const isOverdue = notif.type === 'overdue' || notif.type === 'long_overdue';
+              const isOverdue = notif.type === 'overdue' || notif.type === 'long_overdue' || notif.type === 'rent_overdue';
               const timeAgo = formatTimeAgo(notif.created_at);
 
               return (
@@ -308,7 +308,16 @@ export default function NotificationBell({ role, userEmail, tenantId, agentId }:
                     {notif.type === 'long_overdue' && (
                       <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 700 }}>🚨 Long Overdue</span>
                     )}
-                    {!['long_overdue', 'overdue', 'rent_reminder', 'reply', 'complaint', 'rent_payment'].includes(notif.type || '') && (
+                    {notif.type === 'rent_new_month' && (
+                      <span style={{ color: '#0d9488', fontSize: '12px', fontWeight: 600 }}>🗓️ New Month</span>
+                    )}
+                    {notif.type === 'rent_due_soon' && (
+                      <span style={{ color: '#f59e0b', fontSize: '12px', fontWeight: 600 }}>🔔 Rent Due</span>
+                    )}
+                    {notif.type === 'rent_overdue' && (
+                      <span style={{ color: '#dc2626', fontSize: '12px', fontWeight: 700 }}>⚠️ Rent Overdue</span>
+                    )}
+                    {!['long_overdue', 'overdue', 'rent_reminder', 'reply', 'complaint', 'rent_payment', 'rent_new_month', 'rent_due_soon', 'rent_overdue'].includes(notif.type || '') && (
                       <span style={{ color: 'var(--accent)', fontSize: '12px' }}>💬 {(notif.type || 'message').replace(/_/g, ' ')}</span>
                     )}
                   </div>

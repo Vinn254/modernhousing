@@ -78,6 +78,71 @@ export async function GET(request: NextRequest) {
       (allUnits ?? []).forEach((u: any) => rentByUnit.set(u.id, Number(u.rent_amount) || 0));
     }
 
+    // --- Calendar-day rent notices: 1st (new month), 5th (due), 10th (overdue) ---
+    // These are tenant-facing reminders keyed to the calendar month, independent of
+    // the lease-based due-date logic below. Each stage fires at most once per tenant
+    // per month, and is skipped once the tenant has paid rent for the current month.
+    const dayOfMonth = todayStart.getDate();
+    const currentMonthKey = getMonthKey(todayStart); // YYYY-MM
+    const currentMonthLabel = monthLabel(todayStart); // e.g. "October 2026"
+    const stage = dayOfMonth === 1 ? 'rent_new_month' : dayOfMonth === 5 ? 'rent_due_soon' : dayOfMonth === 10 ? 'rent_overdue' : null;
+    let calendarNotices = 0;
+
+    if (stage) {
+      const monthStartIso = `${currentMonthKey}-01T00:00:00.000Z`;
+      for (const tenant of (tenants ?? []) as any[]) {
+        const rentAmount = Number(tenant.units?.rent_amount) || Number(tenant.rent_amount) || rentByUnit.get(tenant.unit_id) || 0;
+        if (rentAmount <= 0) continue;
+
+        const propertyId = tenant.units?.property_id || null;
+        const propertyName = tenant.units?.properties?.name || 'your property';
+
+        // Skip tenants who already paid rent for the current calendar month.
+        const { data: monthPayments } = await supabaseAdmin
+          .from('payments')
+          .select('month_due, balance_remaining')
+          .eq('tenant_id', tenant.id)
+          .in('transaction_type', ['rent', 'overdue'])
+          .not('month_due', 'is', null);
+        const paidThisMonth = (monthPayments ?? []).some((p: any) => {
+          const md = String(p.month_due || '');
+          const matches = md.substring(0, 7) === currentMonthKey || md.toLowerCase() === currentMonthLabel.toLowerCase();
+          return matches && Number(p.balance_remaining ?? 0) <= 0;
+        });
+        if (paidThisMonth) continue;
+
+        // Dedup: one notice of this stage per tenant per calendar month.
+        const { data: alreadySent } = await supabaseAdmin
+          .from('notifications')
+          .select('id')
+          .eq('tenant_id', tenant.id)
+          .eq('type', stage)
+          .eq('recipient', 'tenant')
+          .gte('created_at', monthStartIso);
+        if ((alreadySent ?? []).length > 0) continue;
+
+        let message = '';
+        if (stage === 'rent_new_month') {
+          message = `Happy new month! Your rent of KSH ${rentAmount} for ${currentMonthLabel} (${propertyName}) is now due. Please pay on or before the 6th to avoid late charges.`;
+        } else if (stage === 'rent_due_soon') {
+          message = `Rent reminder: your rent of KSH ${rentAmount} for ${currentMonthLabel} (${propertyName}) is due. Please pay now to avoid overdue penalties.`;
+        } else {
+          message = `Overdue notice: your rent of KSH ${rentAmount} for ${currentMonthLabel} (${propertyName}) is overdue. Please pay immediately to avoid penalties.`;
+        }
+
+        const { error: insertError } = await supabaseAdmin.from('notifications').insert({
+          recipient: 'tenant',
+          tenant_id: tenant.id,
+          property_id: propertyId,
+          type: stage,
+          message,
+          status: 'sent',
+          created_at: new Date().toISOString(),
+        });
+        if (!insertError) calendarNotices++;
+      }
+    }
+
     let notified = 0;
     const results: Array<{ tenant_id: string; full_name: string; days_overdue: number }> = [];
 
@@ -239,6 +304,7 @@ export async function GET(request: NextRequest) {
       checked_at: new Date().toISOString(),
       today: todayStart.toISOString().slice(0, 10),
       notifications_sent: notified,
+      calendar_notices_sent: calendarNotices,
       overdue_tenants: results,
     });
   } catch (error: any) {
