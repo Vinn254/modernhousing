@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     const codeCandidates = collectUnitCodeCandidates(requestBody, [
       'DocumentReferenceNumber',
       'AccountNumber',
+      'AdditionalInfo',
       'TransactionReferenceCode',
     ]);
     const institutionCode = requiredString(requestBody.InstitutionCode);
@@ -50,9 +51,14 @@ export async function POST(request: NextRequest) {
 
     if (
       !messageID || !connectionID || !connectionPassword || !serviceName || !bankReference || !transactionDate ||
-      !paymentDate || codeCandidates.length === 0 || !institutionCode || currency !== 'KES' || !Number.isFinite(amount) || amount <= 0 ||
+      !paymentDate || codeCandidates.length === 0 || !institutionCode || !Number.isFinite(amount) || amount <= 0 ||
       Number.isNaN(Date.parse(transactionDate)) || Number.isNaN(Date.parse(paymentDate))
     ) {
+      return response(messageID, '400', 'Invalid parameters', {}, 400);
+    }
+
+    // The spec documents Currency as empty on advice, so only a stated non-KES currency is rejected.
+    if (currency && currency !== 'KES') {
       return response(messageID, '400', 'Invalid parameters', {}, 400);
     }
 
@@ -99,17 +105,23 @@ export async function POST(request: NextRequest) {
       unitCode,
     });
 
+    // The spec requires the advice response to echo the request values, so prefer what the
+    // bank sent and fall back to our own resolved values.
+    const requestTransactionReference = requiredString(requestBody.TransactionReferenceCode) ?? bankReference;
+    const requestAccountName = requiredString(requestBody.AccountName) ?? tenant.tenantName;
+    const requestTotalAmount = requiredString(requestBody.TotalAmount) ?? amount.toFixed(2);
+
     return response(messageID, '200', 'Payment successfully received', {
-      TransactionReferenceCode: bankReference,
+      TransactionReferenceCode: requestTransactionReference,
       TransactionDate: transactionDate,
       TransactionAmount: amount.toFixed(2),
       AccountNumber: unitCode,
-      AccountName: tenant.tenantName,
-      InstitutionCode: credential.institutionCode,
-      InstitutionName: credential.institutionName,
-      Currency: 'KES',
+      AccountName: requestAccountName,
+      InstitutionCode: institutionCode,
+      InstitutionName: requiredString(requestBody.InstitutionName) ?? credential.institutionName,
+      Currency: currency ?? 'KES',
       AdditionalInfo: unitCode,
-      TotalAmount: amount.toFixed(2),
+      TotalAmount: requestTotalAmount,
     }, 200);
   } catch (error) {
     console.error('[coop/advise] error', error);

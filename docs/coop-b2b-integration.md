@@ -37,9 +37,19 @@ For Sarah Odongo, enter:
 
 The incoming `connectionID`, `connectionPassword`, `serviceName`, and request `InstitutionCode` must all match configured values. Do not expose these values to clients or commit them to source control.
 
+The spec's `../account` and `../advise/..` endpoint names are illustrative - the bank calls whatever full URLs are registered for the merchant, which are the `/api/coop/validate` and `/api/coop/advise` paths on this deployment.
+
 ## Callback behavior
 
-`/api/coop/advise` accepts the unit code from `DocumentReferenceNumber`, `AccountNumber` or `TransactionReferenceCode` (the first that matches a unit) and `PaymentReferenceCode` (or `TransactionReferenceCode` when the former is absent) as the bank transaction identity. The payment reference is unique, so repeat advice requests return HTTP/status code `402` and do not record a second payment.
+`/api/coop/advise` accepts the unit code from `DocumentReferenceNumber`, `AccountNumber`, `AdditionalInfo` or `TransactionReferenceCode` (the first that matches a unit) and `PaymentReferenceCode` (or `TransactionReferenceCode` when the former is absent) as the bank transaction identity. The payment reference is unique, so repeat advice requests return HTTP/status code `402` and do not record a second payment.
+
+## Field mapping against the B2B specification
+
+- **Validation request** carries the tenant identifier only in `TransactionReferenceCode` (the bank's spec calls it the student number / National ID / order number equivalent). `AccountNumber` and `DocumentReferenceNumber` are accepted as fallbacks for older partner builds.
+- **Advice request** carries the identifier in `DocumentReferenceNumber`, and `AccountNumber` / `AdditionalInfo` repeat it. `TransactionReferenceCode` on advice is the bank's own transaction reference, used as the duplicate key together with `PaymentReferenceCode`.
+- `InstitutionCode` is a **String** on Validation but an **Integer** on Advice. Both are accepted.
+- `Currency` is documented as empty on Advice; an empty value is treated as KES and only an explicit non-KES currency is rejected.
+- `PaymentReferenceCode` is documented as empty in the bank's current implementation, so the duplicate check falls back to `TransactionReferenceCode`.
 
 ## Which value must the bank send?
 

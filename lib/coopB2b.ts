@@ -44,6 +44,11 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function requiredString(value: unknown): string | null {
+  // The B2B spec sends InstitutionCode as an Integer on Payment Advice but as a
+  // String on Validation, so both have to be accepted.
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 

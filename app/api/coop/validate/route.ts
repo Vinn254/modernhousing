@@ -34,12 +34,12 @@ export async function POST(request: NextRequest) {
     const connectionID = requiredString(header.connectionID);
     const connectionPassword = requiredString(header.connectionPassword);
     const serviceName = requiredString(header.serviceName);
-    // The paybill account the tenant enters is the unit short code. Co-op has carried it
-    // in AccountNumber, DocumentReferenceNumber and TransactionReferenceCode, so try each.
+    // The spec sends the tenant identifier only in TransactionReferenceCode; older
+    // partner builds used the account fields, so they remain as fallbacks.
     const codeCandidates = collectUnitCodeCandidates(requestBody, [
+      'TransactionReferenceCode',
       'AccountNumber',
       'DocumentReferenceNumber',
-      'TransactionReferenceCode',
     ]);
     const transactionReference = requiredString(requestBody.TransactionReferenceCode);
     const transactionDate = requiredString(requestBody.TransactionDate);
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       AdditionalInfo: tenant.tenantName,
       AccountNumber: unitCode,
       AccountName: tenant.tenantName,
-      InstitutionCode: credential.institutionCode,
+      InstitutionCode: institutionCode,
       InstitutionName: credential.institutionName,
     }, 200);
   } catch (error) {
