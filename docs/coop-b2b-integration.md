@@ -43,6 +43,10 @@ The spec's `../account` and `../advise/..` endpoint names are illustrative - the
 
 `/api/coop/advise` accepts the unit code from `DocumentReferenceNumber`, `AccountNumber`, `AdditionalInfo` or `TransactionReferenceCode` (the first that matches a unit) and `PaymentReferenceCode` (or `TransactionReferenceCode` when the former is absent) as the bank transaction identity. The payment reference is unique, so repeat advice requests return HTTP/status code `402` and do not record a second payment.
 
+## Testing the callbacks
+
+[`docs/coop-b2b-postman_collection.json`](coop-b2b-postman_collection.json) imports into Postman with one request per interface plus a negative test. Set the collection variables `baseUrl`, `connectionID`, `connectionPassword`, `serviceName`, `institutionCode`, `customerRef` (a real unit short code) and `bankRef`, then run. Request 1 and 2 must return status `200`; request 3 must return `404`. Never store the real connection password in the collection file.
+
 ## Field mapping against the B2B specification
 
 - **Validation request** carries the tenant identifier only in `TransactionReferenceCode` (the bank's spec calls it the student number / National ID / order number equivalent). `AccountNumber` and `DocumentReferenceNumber` are accepted as fallbacks for older partner builds.

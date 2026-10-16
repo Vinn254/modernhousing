@@ -1,0 +1,132 @@
+{
+  "info": {
+    "name": "Co-operative Bank B2B - Springfield Systems",
+    "description": "getAccountValidation and sendAccountPaymentAdvise, shaped exactly per the B2B API specification v1.2 / v1.0. Set the variables before running: baseUrl plus the connectionID, connectionPassword, serviceName and InstitutionCode issued by the bank. Use a real registered customer identifier in TransactionReferenceCode.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://your-live-domain.vercel.app" },
+    { "key": "connectionID", "value": "TEST" },
+    { "key": "connectionPassword", "value": "CoopTest" },
+    { "key": "serviceName", "value": "IMMENSUS" },
+    { "key": "institutionCode", "value": "21000892" },
+    { "key": "customerRef", "value": "PASTE-A-REAL-UNIT-SHORT-CODE" },
+    { "key": "bankRef", "value": "408108311738" }
+  ],
+  "item": [
+    {
+      "name": "1. getAccountValidation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.test('HTTP status is 200', function () { pm.expect(pm.response.code).to.eql(200); });",
+              "pm.test('statusCode is 200', function () { pm.expect(json.header.statusCode).to.eql('200'); });",
+              "pm.test('messageID is echoed back', function () { pm.expect(json.header.messageID).to.be.a('string').and.to.have.lengthOf.at.least(1); });",
+              "pm.test('all nine response fields are present', function () {",
+              "  ['TransactionReferenceCode','TransactionDate','TotalAmount','Currency','AdditionalInfo','AccountNumber','AccountName','InstitutionCode','InstitutionName'].forEach(function (f) {",
+              "    pm.expect(json.response).to.have.property(f);",
+              "  });",
+              "});",
+              "pm.test('AccountNumber equals the reference we sent', function () {",
+              "  pm.expect(json.response.AccountNumber).to.eql(pm.collectionVariables.get('customerRef'));",
+              "});",
+              "pm.test('AccountName is populated', function () { pm.expect(json.response.AccountName).to.have.lengthOf.at.least(1); });",
+              "pm.test('TotalAmount defaults to 0', function () { pm.expect(Number(json.response.TotalAmount)).to.eql(0); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"header\": {\n    \"connectionID\": \"{{connectionID}}\",\n    \"connectionPassword\": \"{{connectionPassword}}\",\n    \"messageID\": \"{{$guid}}\",\n    \"serviceName\": \"{{serviceName}}\"\n  },\n  \"request\": {\n    \"TransactionReferenceCode\": \"{{customerRef}}\",\n    \"TransactionDate\": \"{{$isoTimestamp}}\",\n    \"InstitutionCode\": \"{{institutionCode}}\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/coop/validate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "coop", "validate"]
+        }
+      }
+    },
+    {
+      "name": "2. sendAccountPaymentAdvise",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.test('HTTP status is 200 (402 means the reference was already recorded)', function () {",
+              "  pm.expect([200, 402]).to.include(pm.response.code);",
+              "});",
+              "pm.test('response echoes the request values', function () {",
+              "  pm.expect(json.response.TransactionReferenceCode).to.eql('408108311738');",
+              "  pm.expect(json.response.AccountNumber).to.eql(pm.collectionVariables.get('customerRef'));",
+              "  pm.expect(json.response.TotalAmount).to.eql('500.0');",
+              "});",
+              "pm.test('required advice response fields are present', function () {",
+              "  ['TransactionReferenceCode','TransactionDate','TotalAmount','TransactionAmount','AccountNumber','AccountName','InstitutionCode','InstitutionName','Currency','AdditionalInfo'].forEach(function (f) {",
+              "    pm.expect(json.response).to.have.property(f);",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"header\": {\n    \"connectionID\": \"{{connectionID}}\",\n    \"connectionPassword\": \"{{connectionPassword}}\",\n    \"messageID\": \"{{$guid}}\",\n    \"serviceName\": \"{{serviceName}}\"\n  },\n  \"request\": {\n    \"TransactionReferenceCode\": \"{{bankRef}}\",\n    \"TransactionDate\": \"{{$isoTimestamp}}\",\n    \"TotalAmount\": \"500.0\",\n    \"Currency\": \"KES\",\n    \"DocumentReferenceNumber\": \"{{customerRef}}\",\n    \"BankCode\": \"00011\",\n    \"BranchCode\": \"00011001\",\n    \"PaymentDate\": \"{{$isoTimestamp}}\",\n    \"PaymentReferenceCode\": \"{{bankRef}}\",\n    \"PaymentCode\": \"1\",\n    \"PaymentMode\": \"1\",\n    \"PaymentAmount\": \"500.0\",\n    \"AdditionalInfo\": \"{{customerRef}}\",\n    \"AccountNumber\": \"{{customerRef}}\",\n    \"AccountName\": \"\",\n    \"InstitutionCode\": {{institutionCode}},\n    \"InstitutionName\": \"\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/coop/advise",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "coop", "advise"]
+        }
+      }
+    },
+    {
+      "name": "3. getAccountValidation - unknown reference (expects 404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var json = pm.response.json();",
+              "pm.test('statusCode is 404 for an unregistered identifier', function () {",
+              "  pm.expect(json.header.statusCode).to.eql('404');",
+              "});",
+              "pm.test('response envelope is still valid', function () {",
+              "  pm.expect(json.header.messageID).to.be.a('string');",
+              "  pm.expect(json.response).to.eql({});",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"header\": {\n    \"connectionID\": \"{{connectionID}}\",\n    \"connectionPassword\": \"{{connectionPassword}}\",\n    \"messageID\": \"{{$guid}}\",\n    \"serviceName\": \"{{serviceName}}\"\n  },\n  \"request\": {\n    \"TransactionReferenceCode\": \"ZZZ-DOES-NOT-EXIST\",\n    \"TransactionDate\": \"{{$isoTimestamp}}\",\n    \"InstitutionCode\": \"{{institutionCode}}\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/coop/validate",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "coop", "validate"]
+        }
+      }
+    }
+  ]
+}
