@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { rentTypeForStorage } from '../../../lib/rentTypes';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -92,6 +93,7 @@ function mapBillsWithTenant(data: any[]): any[] {
     penalty_fee: bill.penalty_fee ?? 0,
     balance: bill.balance,
     transaction_type: bill.transaction_type,
+    rent_type: bill.rent_type ?? null,
     transaction_number: bill.transaction_number,
     transaction_code: bill.transaction_code,
     payment_date: bill.payment_date,
@@ -203,6 +205,7 @@ export async function GET(request: NextRequest) {
           penalty_fee: bill.penalty_fee ?? 0,
           balance: bill.balance,
           transaction_type: bill.transaction_type,
+          rent_type: bill.rent_type ?? null,
           transaction_number: bill.transaction_number,
           transaction_code: bill.transaction_code,
           payment_date: bill.payment_date,
@@ -324,6 +327,9 @@ export async function POST(request: NextRequest) {
     created_at: paymentDate ? new Date(paymentDate).toISOString() : new Date().toISOString(),
   };
 
+  const rentType = rentTypeForStorage(body.rentType);
+  if (rentType) insertData.rent_type = rentType;
+
   const result = await supabaseAdmin.from('bills').insert(insertData);
 
   if (result.error) {
@@ -374,6 +380,8 @@ export async function PATCH(request: NextRequest) {
     reference_number: referenceNumber || null,
     created_at: paymentDate ? new Date(paymentDate).toISOString() : undefined,
   };
+
+  if (Object.prototype.hasOwnProperty.call(body, 'rentType')) updateData.rent_type = rentTypeForStorage(body.rentType);
 
   // Only set payment_date if provided
   if (paymentDate) {
@@ -472,6 +480,7 @@ export async function PUT(request: NextRequest) {
     payment_date: paymentDate || null,
     payment_method: paymentMethod || null,
     reference_number: referenceNumber || null,
+    ...(Object.prototype.hasOwnProperty.call(body, 'rentType') ? { rent_type: rentTypeForStorage(body.rentType) } : {}),
   };
 
   const result = await supabaseAdmin.from('bills')

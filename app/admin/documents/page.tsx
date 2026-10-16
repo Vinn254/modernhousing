@@ -5,6 +5,8 @@ import { supabase } from '../../../lib/supabaseClient';
 import { generateAgreementPdf, downloadBlob, type AgreementItem } from '../../../lib/agreementPdf';
 import { DEFAULT_AGREEMENT_DESCRIPTION } from '../../../lib/leaseText';
 import AgreementItemsTable from '../../components/AgreementItemsTable';
+import RentTypeSelect from '../../components/RentTypeSelect';
+import { rentTypeDefinition, rentTypeLabel } from '../../../lib/rentTypes';
 
 interface Tenant {
   id: string;
@@ -36,6 +38,7 @@ interface Agreement {
   tenant_address?: string;
   unit_number?: string;
   property_name?: string;
+  rent_type?: string | null;
   items?: AgreementItem[];
 }
 
@@ -87,6 +90,7 @@ export default function LandlordDocumentsPage() {
   const [builderTenantId, setBuilderTenantId] = useState('');
   const [builderTitle, setBuilderTitle] = useState('Tenancy Agreement');
   const [builderDescription, setBuilderDescription] = useState(DEFAULT_AGREEMENT_DESCRIPTION);
+  const [builderRentType, setBuilderRentType] = useState('');
   const [builderSelected, setBuilderSelected] = useState<string[]>([]);
   const [builderBusy, setBuilderBusy] = useState(false);
   const [expandedAgreement, setExpandedAgreement] = useState<string | null>(null);
@@ -95,6 +99,7 @@ export default function LandlordDocumentsPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editItems, setEditItems] = useState<string[]>([]);
+  const [editRentType, setEditRentType] = useState('');
   const [editBusy, setEditBusy] = useState(false);
 
   async function getAuthHeaders() {
@@ -268,6 +273,7 @@ export default function LandlordDocumentsPage() {
     setBuilderTenantId('');
     setBuilderTitle('Tenancy Agreement');
     setBuilderDescription(DEFAULT_AGREEMENT_DESCRIPTION);
+    setBuilderRentType('');
     setBuilderSelected([]);
   }
 
@@ -290,6 +296,7 @@ export default function LandlordDocumentsPage() {
             tenantId: tid,
             title: builderTitle,
             description: builderDescription,
+            rentType: builderRentType,
             selectedItemIds: builderSelected,
             send,
           }),
@@ -332,6 +339,7 @@ export default function LandlordDocumentsPage() {
     setEditingId(agreement.id);
     setEditTitle(agreement.title);
     setEditDescription(agreement.description ?? '');
+    setEditRentType(agreement.rent_type ?? '');
     setEditItems(agreement.selected_item_ids ?? []);
   }
 
@@ -353,6 +361,7 @@ export default function LandlordDocumentsPage() {
           action: 'update',
           title: editTitle,
           description: editDescription,
+          rentType: editRentType,
           selectedItemIds: editItems,
         }),
       });
@@ -388,6 +397,7 @@ export default function LandlordDocumentsPage() {
       const blob = await generateAgreementPdf({
         title: agreement.title,
         description: agreement.description,
+        rent_type: agreement.rent_type,
         items: agreement.items ?? itemLibrary.filter((i) => agreement.selected_item_ids.includes(i.id)),
         tenant_checks: agreement.tenant_checks ?? [],
         tenant_name: agreement.tenant_name,
@@ -559,6 +569,7 @@ export default function LandlordDocumentsPage() {
                 <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-2)' }}>Agreement title</label>
                 <input value={builderTitle} onChange={(e) => setBuilderTitle(e.target.value)} placeholder="Tenancy Agreement" style={{ width: '100%', minWidth: 0 }} />
               </div>
+              <RentTypeSelect value={builderRentType} onChange={setBuilderRentType} disabled={builderBusy} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
@@ -714,6 +725,7 @@ export default function LandlordDocumentsPage() {
                         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ink-2)' }}>Tenant</label>
                         <input value={`${ag.tenant_name || '-'}${ag.property_name ? ` · ${ag.property_name}` : ''}${ag.unit_number ? ` · Unit ${ag.unit_number}` : ''}`} readOnly style={{ width: '100%', minWidth: 0 }} />
                       </div>
+                      <RentTypeSelect value={editRentType} onChange={setEditRentType} disabled={editBusy} />
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -752,6 +764,12 @@ export default function LandlordDocumentsPage() {
                     <h4>{ag.title} — {ag.tenant_name}</h4>
                     <button type="button" className="action-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => startEditAgreement(ag)}>Edit</button>
                   </div>
+                  {ag.rent_type && (
+                    <p style={{ fontSize: '12px', marginBottom: 12 }}>
+                      <strong>Rent payment type:</strong> {rentTypeLabel(ag.rent_type)}
+                      {rentTypeDefinition(ag.rent_type) ? ` — ${rentTypeDefinition(ag.rent_type)}` : ''}
+                    </p>
+                  )}
                   {ag.description && <p className="agreement-body-text">{ag.description}</p>}
                   {ag.tenant_notes && <p style={{ fontSize: '12px', marginBottom: 12, fontStyle: 'italic' }}>Tenant notes: {ag.tenant_notes}</p>}
                   <AgreementItemsTable items={items} mode="readonly" checked={[...checkedSet]} />

@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
+import RentTypeSelect from '../../components/RentTypeSelect';
+import { rentTypeLabel } from '../../../lib/rentTypes';
 
 interface Property {
   id: string;
@@ -43,6 +45,7 @@ interface Bill {
   penalty_fee: number;
   balance: number;
   transaction_type: string;
+  rent_type?: string | null;
   transaction_number: string;
   transaction_code: string;
   payment_date: string;
@@ -99,6 +102,7 @@ function TenantsPageContent() {
   const [directPaymentForm, setDirectPaymentForm] = useState({
     tenantId: '',
     transactionType: 'rent',
+    rentType: '',
     monthDue: '',
     amount: '',
     paymentMethod: 'Cash',
@@ -473,6 +477,7 @@ function formatDate(dateStr: string): string {
         paidAmount: Number(directPaymentForm.amount),
         penaltyFee: 0,
         transactionType: directPaymentForm.transactionType,
+        rentType: directPaymentForm.rentType,
         paymentMethod: directPaymentForm.paymentMethod,
         referenceNumber: directPaymentForm.referenceNumber,
       }),
@@ -484,7 +489,7 @@ function formatDate(dateStr: string): string {
       return;
     }
     setMessage('Direct payment recorded.');
-    setDirectPaymentForm({ tenantId: '', transactionType: 'rent', monthDue: '', amount: '', paymentMethod: 'Cash', referenceNumber: '' });
+    setDirectPaymentForm({ tenantId: '', transactionType: 'rent', rentType: '', monthDue: '', amount: '', paymentMethod: 'Cash', referenceNumber: '' });
     if (selectedTenant) await loadBills(selectedTenant.id);
   }
 
@@ -827,6 +832,12 @@ function formatDate(dateStr: string): string {
                         {transactionTypes.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
                       </select>
                     </div>
+                    {directPaymentForm.transactionType === 'rent' && (
+                      <RentTypeSelect
+                        value={directPaymentForm.rentType}
+                        onChange={value => setDirectPaymentForm(f => ({ ...f, rentType: value }))}
+                      />
+                    )}
                     <div className="field-group">
                       <label>Month Due</label>
                       <input type="month" value={directPaymentForm.monthDue} onChange={e => setDirectPaymentForm(f => ({ ...f, monthDue: e.target.value }))} />
@@ -915,7 +926,12 @@ function formatDate(dateStr: string): string {
                           <td>{bill.due_amount.toLocaleString()}</td>
                           <td>{bill.paid_amount?.toLocaleString() || '-'}</td>
                           <td style={{ color: bill.balance > 0 ? 'var(--error)' : 'var(--accent)' }}>{bill.balance?.toLocaleString() ?? '0'}</td>
-                          <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span></td>
+                          <td>
+                            <span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{bill.transaction_type}</span>
+                            {bill.rent_type && (
+                              <div style={{ fontSize: '10px', color: 'var(--ink-3)' }}>{rentTypeLabel(bill.rent_type)}</div>
+                            )}
+                          </td>
                           <td style={{ fontSize: '12px' }}>{bill.transaction_number || '-'}</td>
                           <td>{bill.payment_date ? new Date(bill.payment_date).toLocaleDateString('en-GB') : '-'}</td>
                           <td>

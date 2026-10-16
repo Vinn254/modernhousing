@@ -5,6 +5,7 @@
 // rooms x [condition on commencement | comments | condition on end | comments].
 
 import { CATEGORY_LEASE, CONDITION_COLUMNS, LEASE_LANDLORD, LEASE_ADDRESS } from './leaseText';
+import { rentTypeLabel } from './rentTypes';
 
 export interface AgreementItem {
   id: string;
@@ -17,6 +18,7 @@ export interface AgreementItem {
 export interface AgreementForPdf {
   title?: string;
   description?: string | null;
+  rent_type?: string | null;
   items?: AgreementItem[];
   tenant_checks?: string[];
   tenant_name?: string;
@@ -237,6 +239,7 @@ export async function generateAgreementPdf(agreement: AgreementForPdf): Promise<
   detail('Property:', agreement.property_name);
   detail('Unit:', agreement.unit_number);
   detail('Address:', agreement.tenant_address);
+  if (agreement.rent_type) detail('Rent type:', rentTypeLabel(agreement.rent_type) ?? undefined);
 
   y = Math.min(pictureBottom, dy) - 18;
   page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_WIDTH - MARGIN, y }, thickness: 0.5, color: rgb(0.8, 0.8, 0.8) });

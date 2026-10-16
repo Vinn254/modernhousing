@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logAuditEvent } from '../../../lib/auditLogger';
+import { rentTypeForStorage } from '../../../lib/rentTypes';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -229,6 +230,9 @@ export async function POST(request: NextRequest) {
     transaction_code: transCode ?? null,
   };
 
+  const rentType = rentTypeForStorage(body.rentType);
+  if (rentType) insertData.rent_type = rentType;
+
   // Resolve tenant context for admin_email and property_id
   const { data: tenant } = await supabaseAdmin
     .from('tenants')
@@ -401,6 +405,7 @@ const finalBalanceRemaining = balance !== undefined ? Number(balance) : (Number(
     month_due: monthDue ?? null,
     due_amount: Number(dueAmount) || null,
     transaction_code: transCode ?? null,
+    ...(Object.prototype.hasOwnProperty.call(body, 'rentType') ? { rent_type: rentTypeForStorage(body.rentType) } : {}),
   };
 
   const updateResult = await supabaseAdmin.from('payments')

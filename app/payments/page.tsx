@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import RentTypeSelect from '../components/RentTypeSelect';
+import { rentTypeLabel } from '../../lib/rentTypes';
 
 const Sparkline = lazy(() => import('../components/Sparkline'));
 
@@ -27,6 +29,7 @@ interface Payment {
   unit: string;
   description: string;
   transaction_type: string;
+  rent_type?: string | null;
   amount: number;
   balance_remaining: number;
   status: string;
@@ -302,6 +305,7 @@ export default function PaymentsPage() {
     referenceNumber: '',
     transactionCode: '',
     transType: 'rent',
+    rentType: '',
     source: 'bills' as 'bills' | 'payments',
   });
 
@@ -325,6 +329,7 @@ export default function PaymentsPage() {
           unit: b.unit_number || '—',
           description: b.description,
           transaction_type: b.transaction_type,
+          rent_type: b.rent_type ?? null,
           amount: b.paid_amount || 0,
           due_amount: b.due_amount || 0,
           month_due: b.month_due,
@@ -350,6 +355,7 @@ export default function PaymentsPage() {
         unit: p.unit || '—',
         description: p.description,
         transaction_type: p.transaction_type || 'rent',
+        rent_type: p.rent_type ?? null,
         amount: p.amount || 0,
         due_amount: p.due_amount || 0,
         month_due: p.month_due,
@@ -614,6 +620,7 @@ allPayments.sort((a, b) => {
       referenceNumber: (payment as any).transaction_number || '',
       transactionCode: (payment as any).transaction_code || '',
       transType: (payment as any).transaction_type || 'rent',
+      rentType: (payment as any).rent_type ?? '',
       source: payment.source ?? 'bills',
     });
     setShowEditForm(true);
@@ -644,6 +651,7 @@ allPayments.sort((a, b) => {
         paidAmount: Number(editForm.paidAmount),
         penaltyFee: Number(editForm.penaltyFee),
         transactionType: editForm.transType,
+        rentType: editForm.rentType,
         paymentDate: editForm.paymentDate,
         paymentMethod: editForm.paymentMethod,
         referenceNumber: editForm.referenceNumber,
@@ -1101,6 +1109,7 @@ allPayments.sort((a, b) => {
                 <select value={editForm.transType} onChange={e => setEditForm(f => ({ ...f, transType: e.target.value }))}>
                   {transactionTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
+                <RentTypeSelect value={editForm.rentType} onChange={value => setEditForm(f => ({ ...f, rentType: value }))} />
                 <input type="month" value={editForm.monthDue} onChange={e => setEditForm(f => ({ ...f, monthDue: e.target.value }))} placeholder="Month Due" />
                 <input type="number" step="0.01" value={editForm.dueAmount} onChange={e => setEditForm(f => ({ ...f, dueAmount: e.target.value }))} placeholder="Due Amount" />
                 <input type="number" step="0.01" value={editForm.paidAmount} onChange={e => setEditForm(f => ({ ...f, paidAmount: e.target.value }))} placeholder="Paid Amount" />
@@ -1244,7 +1253,12 @@ allPayments.sort((a, b) => {
                               </span>
                             )}
                           </td>
-                          <td style={{ textTransform: 'capitalize' }}>{(payment as any).transaction_type || 'rent'}</td>
+                          <td style={{ textTransform: 'capitalize' }}>
+                            {(payment as any).transaction_type || 'rent'}
+                            {(payment as any).rent_type && (
+                              <div style={{ fontSize: '10px', color: 'var(--ink-3)', textTransform: 'none' }}>{rentTypeLabel((payment as any).rent_type)}</div>
+                            )}
+                          </td>
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
                           <td>{(payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—')}</td>
                           <td>

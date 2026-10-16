@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { supabase } from '../../../lib/supabaseClient';
+import { RENT_PAYMENT_TYPES, RENT_PAYMENT_TYPES_NOTE, rentTypeLabel } from '../../../lib/rentTypes';
 
 interface Bill {
   id: string;
@@ -12,6 +13,7 @@ interface Bill {
   paid_amount: number;
   penalty_fee: number;
   transaction_type: string;
+  rent_type?: string | null;
   payment_date: string;
   transaction_number?: string;
   transaction_code?: string;
@@ -109,6 +111,7 @@ export default function TenantPaymentsPage() {
         paid_amount: Number(b.paid_amount) || 0,
         penalty_fee: Number(b.penalty_fee) || 0,
         transaction_type: b.transaction_type,
+        rent_type: b.rent_type ?? null,
         payment_date: b.payment_date,
         transaction_number: b.transaction_number,
         transaction_code: b.transaction_code,
@@ -126,6 +129,7 @@ export default function TenantPaymentsPage() {
         paid_amount: Number(p.amount) || 0,
         penalty_fee: 0,
         transaction_type: p.transaction_type || 'rent',
+        rent_type: p.rent_type ?? null,
         payment_date: p.paid_at?.split('T')[0] || null,
         transaction_code: p.transaction_code,
         created_at: p.paid_at || p.created_at,
@@ -227,6 +231,8 @@ const getTypeLabel = (type: string) => {
     return map[type] || type;
   };
 
+  const billTypeLabel = (bill: Bill) => rentTypeLabel(bill.rent_type) ?? getTypeLabel(bill.transaction_type);
+
   async function generateStatementPDF(billsList: Bill[], title: string, totalBalance: number) {
     const pdfDoc = await PDFDocument.create();
     let currentPage = pdfDoc.addPage([612, 792]);
@@ -301,7 +307,7 @@ const getTypeLabel = (type: string) => {
     const billWithBal = calculateWithRunningBalance([bill])[0];
     page.drawText(bill.month_due || '-', { x: 40, y, size: 8, font });
     page.drawText(bill.description.substring(0, 20), { x: 120, y, size: 8, font });
-    page.drawText(getTypeLabel(bill.transaction_type).substring(0, 10), { x: 200, y, size: 8, font });
+    page.drawText(billTypeLabel(bill).substring(0, 18), { x: 200, y, size: 8, font });
     page.drawText(String(bill.due_amount), { x: 260, y, size: 8, font, color: rgb(0.2, 0.2, 0.2) });
     page.drawText(String(bill.paid_amount), { x: 310, y, size: 8, font, color: rgb(0.1, 0.5, 0.1) });
     page.drawText(String(bill.penalty_fee || 0), { x: 360, y, size: 8, font, color: rgb(0.7, 0.1, 0.1) });
@@ -374,6 +380,19 @@ const getTypeLabel = (type: string) => {
       )}
 
       <section className="card" style={{ marginTop: 24 }}>
+        <div className="card-label">Types of Rent Payment</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px 20px', marginTop: 10 }}>
+          {RENT_PAYMENT_TYPES.map(type => (
+            <div key={type.value} style={{ fontSize: '12px', lineHeight: 1.5 }}>
+              <strong>{type.label}</strong>
+              <div style={{ color: 'var(--ink-2)' }}>{type.definition}</div>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: '11px', color: 'var(--ink-3)', marginTop: 14, marginBottom: 0 }}>{RENT_PAYMENT_TYPES_NOTE}</p>
+      </section>
+
+      <section className="card" style={{ marginTop: 24 }}>
         <div className="card-label">{activeTab === 'payments' ? 'RENT PAYMENT HISTORY' : activeTab === 'utilities' ? 'UTILITY BILL HISTORY' : 'INVOICES'}</div>
         {activeTab === 'invoices' ? (
           invoices.length === 0 ? (
@@ -443,7 +462,7 @@ const getTypeLabel = (type: string) => {
                         <tr key={bill.id} style={{ backgroundColor: (() => { const mk = (bill.month_due || '').split(' ')[0]?.toLowerCase() || ''; return monthRowColors.get(mk) || ''; })() }}>
                           <td style={{ textTransform: 'capitalize' }}>{(() => { const parts = (bill.month_due || '').trim().split(' '); return parts.length > 2 ? parts.slice(0, 2).join(' ') : bill.month_due; })() || '-'}</td>
                           <td>{bill.description}</td>
-                          <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{getTypeLabel(bill.transaction_type)}</span></td>
+                          <td><span style={{ textTransform: 'capitalize', fontSize: '11px' }}>{billTypeLabel(bill)}</span></td>
                           <td>{formatCurrency(bill.due_amount)}</td>
                           <td>{formatCurrency(bill.paid_amount)}</td>
                           <td>{formatCurrency(bill.penalty_fee || 0)}</td>

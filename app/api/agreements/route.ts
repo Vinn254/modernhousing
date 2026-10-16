@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { rentTypeForStorage } from '../../../lib/rentTypes';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -189,7 +190,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { tenantId, title, description, selectedItemIds, send } = body;
+    const { tenantId, title, description, selectedItemIds, send, rentType } = body;
     if (!tenantId) {
       return NextResponse.json({ message: 'A tenant is required.' }, { status: 400 });
     }
@@ -226,6 +227,7 @@ export async function POST(request: NextRequest) {
     const landlordEmail = profile?.email ?? authContext.email ?? null;
 
     const status = send ? 'sent' : 'draft';
+    const rentTypeValue = rentTypeForStorage(rentType);
     const { data: created, error: insertError } = await client
       .from('tenancy_agreements')
       .insert({
@@ -239,6 +241,7 @@ export async function POST(request: NextRequest) {
         selected_item_ids: selectedItemIds,
         status,
         sent_at: send ? new Date().toISOString() : null,
+        ...(rentTypeValue ? { rent_type: rentTypeValue } : {}),
       })
       .select()
       .single();
@@ -344,6 +347,7 @@ export async function PATCH(request: NextRequest) {
       if (typeof body.title === 'string') update.title = body.title.trim();
       if (typeof body.description === 'string') update.description = body.description;
       if (Array.isArray(body.selectedItemIds)) update.selected_item_ids = body.selectedItemIds;
+      if (Object.prototype.hasOwnProperty.call(body, 'rentType')) update.rent_type = rentTypeForStorage(body.rentType);
       const { data: updated, error } = await client
         .from('tenancy_agreements').update(update).eq('id', id).select().single();
       if (error) throw error;

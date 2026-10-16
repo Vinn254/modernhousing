@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { generateAgreementPdf, downloadBlob, type AgreementItem } from '../../../lib/agreementPdf';
 import AgreementItemsTable from '../../components/AgreementItemsTable';
+import { rentTypeDefinition, rentTypeLabel } from '../../../lib/rentTypes';
 
 interface AgreementDocument {
   id: string;
@@ -19,6 +20,7 @@ interface MyAgreement {
   id: string;
   title: string;
   description?: string | null;
+  rent_type?: string | null;
   selected_item_ids: string[];
   tenant_checks: string[];
   tenant_acknowledged: boolean;
@@ -215,6 +217,7 @@ export default function TenantDocumentsPage() {
       const blob = await generateAgreementPdf({
         title: ag.title,
         description: ag.description,
+        rent_type: ag.rent_type,
         items: ag.items ?? [],
         tenant_checks: checkedItems[ag.id] ?? ag.tenant_checks ?? [],
         tenant_name: ag.tenant_name,
@@ -303,6 +306,13 @@ export default function TenantDocumentsPage() {
                         </span>
                       </div>
                       <h3 style={{ marginBottom: 8 }}>{ag.title}</h3>
+
+                      {ag.rent_type && (
+                        <p style={{ fontSize: '12px', marginBottom: 10 }}>
+                          <strong>Rent payment type:</strong> {rentTypeLabel(ag.rent_type)}
+                          {rentTypeDefinition(ag.rent_type) ? ` — ${rentTypeDefinition(ag.rent_type)}` : ''}
+                        </p>
+                      )}
 
                       {ag.description && (
                         <div className="agreement-body">
