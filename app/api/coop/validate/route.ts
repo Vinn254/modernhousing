@@ -19,9 +19,15 @@ export async function POST(request: NextRequest) {
   let messageID = '';
 
   try {
-    const payload: unknown = await request.json();
+    let payload: unknown;
+    try {
+      payload = await request.json();
+    } catch (parseError) {
+      console.warn('[coop/validate] body is not valid JSON', { error: (parseError as Error).message });
+      return response('', '400', 'Invalid parameters', {}, 400);
+    }
     if (!isRecord(payload)) {
-      return response(messageID, '400', 'Invalid parameters', {}, 400);
+      return response('', '400', 'Invalid parameters', {}, 400);
     }
 
     const header = payload.header;
