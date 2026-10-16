@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  authenticateHeader,
+  authenticateHeaderAll,
   candidateCredentials,
   collectUnitCodeCandidates,
   isRecord,
@@ -8,6 +8,9 @@ import {
   requiredString,
   resolveTenantFromUnitCodes,
   supabaseAdmin,
+  type CoopCredentials,
+  type TenantPaymentContext,
+  type UnitCodeCandidate,
 } from '../../../../lib/coopB2b';
 
 function response(messageID: string, statusCode: string, statusDescription: string, body: Record<string, unknown>, status: number) {
@@ -69,9 +72,15 @@ export async function POST(request: NextRequest) {
     }
 
     const credentials = await candidateCredentials();
-    const credential = authenticateHeader({ connectionID, connectionPassword, messageID, serviceName }, institutionCode, credentials);
-    if (!credential) {
+    const matches = authenticateHeaderAll({ connectionID, connectionPassword, messageID, serviceName }, institutionCode, credentials);
+    if (matches.length === 0) {
       return response(messageID, '401', 'Unauthorized', {}, 401);
+    }
+    if (matches.length > 1) {
+      console.warn('[coop/advise] credentials are configured for more than one organization', {
+        messageID,
+        organizations: matches.map((match) => match.organizationId ?? 'env'),
+      });
     }
 
     const { data: existingPayment, error: existingPaymentError } = await supabaseAdmin
@@ -86,22 +95,35 @@ export async function POST(request: NextRequest) {
       return response(messageID, '402', 'Duplicate transaction', {}, 402);
     }
 
-    const lookup = await resolveTenantFromUnitCodes(codeCandidates, credential.organizationId);
-    if (lookup.status !== 'found') {
+    let matched: { credential: CoopCredentials; tenant: TenantPaymentContext; candidate: UnitCodeCandidate } | null = null;
+    let lastReason = 'unit_not_found';
+    let lastPropertyOrg: string | null = null;
+    for (const credential of matches) {
+      const lookup = await resolveTenantFromUnitCodes(codeCandidates, credential.organizationId);
+      if (lookup.status === 'found') {
+        matched = { credential, tenant: lookup.tenant, candidate: lookup.candidate };
+        break;
+      }
+      lastReason = lookup.status;
+      lastPropertyOrg = lookup.status === 'organization_mismatch' ? lookup.propertyOrganizationId : null;
+    }
+
+    if (!matched) {
       console.warn('[coop/advise] rejected', {
         messageID,
-        reason: lookup.status,
+        reason: lastReason,
         tried: codeCandidates.map((candidate) => `${candidate.field}=${candidate.value}`),
         bankReference,
-        organizationId: credential.organizationId ?? null,
-        ...(lookup.status === 'organization_mismatch' ? { propertyOrganizationId: lookup.propertyOrganizationId } : {}),
+        organizationsTried: matches.map((match) => match.organizationId ?? 'env'),
+        ...(lastPropertyOrg ? { propertyOrganizationId: lastPropertyOrg } : {}),
       });
       return response(messageID, '404', 'Unit code not found', {}, 404);
     }
 
-    const tenant = lookup.tenant;
-    const unitCode = lookup.candidate.value;
-    console.log('[coop/advise] matched', { messageID, field: lookup.candidate.field, unitCode, bankReference, amount });
+    const credential = matched.credential;
+    const tenant = matched.tenant;
+    const unitCode = matched.candidate.value;
+    console.log('[coop/advise] matched', { messageID, field: matched.candidate.field, unitCode, bankReference, amount });
 
     await recordCoopPayment({
       tenant,

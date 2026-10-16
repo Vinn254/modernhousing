@@ -68,4 +68,6 @@ Matching trims surrounding spaces and ignores case. A `404` is returned for any 
 
 Rejections are written by `console.warn` from the `/api/coop/validate` and `/api/coop/advise` functions; read them in Vercel **Observability → Logs** (or `vercel logs <deployment>`) while the bank replays a request, and the log names every field and value that was tried.
 
+Sandbox credentials are often entered for more than one landlord. When several `payment_settings` rows answer to the same connection, every one of them is tried in turn and the rejection log lists `organizationsTried`, so a code belonging to a second organization still validates.
+
 Successful advice is recorded as a `rent` payment in KES and creates notifications for both the tenant and the landlord, so the payment appears in each side's payment history and notification bell automatically. Only rent is handled for now; bills are not touched by this flow. Validation and advice return the supplied `messageID` in their response header.

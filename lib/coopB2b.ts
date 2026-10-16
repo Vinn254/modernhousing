@@ -100,17 +100,21 @@ export async function candidateCredentials(): Promise<CoopCredentials[]> {
   return candidates;
 }
 
-export function authenticateHeader(
+// The bank's sandbox credentials are frequently pasted onto more than one
+// landlord's settings, so several rows can answer to the same connection. Each
+// match has to be tried, because whichever row is picked decides which
+// organization the unit code is searched in.
+export function authenticateHeaderAll(
   header: CoopRequestHeader,
   institutionCode: string,
   credentials: CoopCredentials[],
-): CoopCredentials | null {
-  return credentials.find((candidate) =>
+): CoopCredentials[] {
+  return credentials.filter((candidate) =>
     safeEqual(header.connectionID, candidate.connectionId) &&
     safeEqual(header.connectionPassword, candidate.connectionPassword) &&
     safeEqual(header.serviceName, candidate.serviceName) &&
     safeEqual(institutionCode, candidate.institutionCode),
-  ) ?? null;
+  );
 }
 
 export type UnitCodeCandidate = { field: string; value: string };

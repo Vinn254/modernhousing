@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  authenticateHeader,
+  authenticateHeaderAll,
   candidateCredentials,
   collectUnitCodeCandidates,
   isRecord,
@@ -56,39 +56,53 @@ export async function POST(request: NextRequest) {
     }
 
     const credentials = await candidateCredentials();
-    const credential = authenticateHeader({ connectionID, connectionPassword, messageID, serviceName }, institutionCode, credentials);
-    if (!credential) {
+    const matches = authenticateHeaderAll({ connectionID, connectionPassword, messageID, serviceName }, institutionCode, credentials);
+    if (matches.length === 0) {
       return response(messageID, '401', 'Unauthorized', {}, 401);
     }
-
-    const lookup = await resolveTenantFromUnitCodes(codeCandidates, credential.organizationId);
-    if (lookup.status !== 'found') {
-      console.warn('[coop/validate] rejected', {
+    if (matches.length > 1) {
+      console.warn('[coop/validate] credentials are configured for more than one organization', {
         messageID,
-        reason: lookup.status,
-        tried: codeCandidates.map((candidate) => `${candidate.field}=${candidate.value}`),
-        institutionCode,
-        organizationId: credential.organizationId ?? null,
-        ...(lookup.status === 'organization_mismatch' ? { propertyOrganizationId: lookup.propertyOrganizationId } : {}),
+        organizations: matches.map((match) => match.organizationId ?? 'env'),
       });
-      return response(messageID, '404', 'Unit code not found', {}, 404);
     }
 
-    const tenant = lookup.tenant;
-    const unitCode = lookup.candidate.value;
-    console.log('[coop/validate] matched', { messageID, field: lookup.candidate.field, unitCode, tenantName: tenant.tenantName });
+    let lastReason = 'unit_not_found';
+    let lastPropertyOrg: string | null = null;
+    for (const credential of matches) {
+      const lookup = await resolveTenantFromUnitCodes(codeCandidates, credential.organizationId);
+      if (lookup.status !== 'found') {
+        lastReason = lookup.status;
+        lastPropertyOrg = lookup.status === 'organization_mismatch' ? lookup.propertyOrganizationId : null;
+        continue;
+      }
 
-    return response(messageID, '200', 'Successfully validated customer', {
-      TransactionReferenceCode: transactionReference ?? unitCode,
-      TransactionDate: transactionDate,
-      TotalAmount: 0,
-      Currency: 'KES',
-      AdditionalInfo: tenant.tenantName,
-      AccountNumber: unitCode,
-      AccountName: tenant.tenantName,
-      InstitutionCode: institutionCode,
-      InstitutionName: credential.institutionName,
-    }, 200);
+      const tenant = lookup.tenant;
+      const unitCode = lookup.candidate.value;
+      console.log('[coop/validate] matched', { messageID, field: lookup.candidate.field, unitCode, tenantName: tenant.tenantName });
+
+      return response(messageID, '200', 'Successfully validated customer', {
+        TransactionReferenceCode: transactionReference ?? unitCode,
+        TransactionDate: transactionDate,
+        TotalAmount: 0,
+        Currency: 'KES',
+        AdditionalInfo: tenant.tenantName,
+        AccountNumber: unitCode,
+        AccountName: tenant.tenantName,
+        InstitutionCode: institutionCode,
+        InstitutionName: credential.institutionName,
+      }, 200);
+    }
+
+    console.warn('[coop/validate] rejected', {
+      messageID,
+      reason: lastReason,
+      tried: codeCandidates.map((candidate) => `${candidate.field}=${candidate.value}`),
+      institutionCode,
+      organizationsTried: matches.map((match) => match.organizationId ?? 'env'),
+      ...(lastPropertyOrg ? { propertyOrganizationId: lastPropertyOrg } : {}),
+    });
+    return response(messageID, '404', 'Unit code not found', {}, 404);
   } catch (error) {
     console.error('[coop/validate] error', error);
     return response(messageID, '405', 'Server error', {}, 405);
