@@ -51,6 +51,15 @@ async function getAuthHeaders() {
   return headers;
 }
 
+// One column covers both: the tenancy-agreement style payment type when it is
+// recorded, otherwise the older billing category (rent, overdue, deposit…).
+function paymentTypeLabel(payment: Payment): string {
+  const rentType = rentTypeLabel(payment.rent_type);
+  if (rentType) return rentType;
+  const legacy = payment.transaction_type || 'rent';
+  return legacy.replace(/_/g, ' ').replace(/^\w/, (letter) => letter.toUpperCase());
+}
+
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
@@ -817,7 +826,7 @@ allPayments.sort((a, b) => {
 
     const columns: StatementColumn[] = [
       { header: 'Tenant', min: 94, align: 'left', value: (p) => p.tenant, color: () => ink },
-      { header: 'Rent Type', min: 88, align: 'left', value: (p) => rentTypeLabel((p as any).rent_type) ?? '—', color: () => ink },
+      { header: 'Type', min: 88, align: 'left', value: (p) => paymentTypeLabel(p), color: () => ink },
       { header: 'Month Due', min: 74, align: 'left', value: (p) => (p as any).month_due || p.description || '—', color: () => ink },
       { header: 'Trans Code', min: 92, align: 'left', value: (p) => ((p as any).transaction_code ? String((p as any).transaction_code) : '—'), color: () => rgb(0.1, 0.3, 0.6) },
       { header: 'Due', min: 56, align: 'right', value: (p) => money((p as any).due_amount || p.amount), color: () => ink },
@@ -1252,13 +1261,12 @@ allPayments.sort((a, b) => {
                   <thead>
                     <tr>
                       <th>Tenant</th>
-                      <th>Rent Type</th>
+                      <th>Type</th>
                       <th>Month Due</th>
                       <th>Bank Reference</th>
                       <th>Due</th>
                       <th>Paid</th>
                       <th>Balance</th>
-                      <th>Type</th>
                       <th>Trans #</th>
                       <th>Date</th>
                       <th>Actions</th>
@@ -1289,7 +1297,7 @@ allPayments.sort((a, b) => {
                               </span>
                             </div>
                           </td>
-                          <td style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>{rentTypeLabel((payment as any).rent_type) ?? '—'}</td>
+                          <td style={{ fontSize: '12px', whiteSpace: 'nowrap', textTransform: 'none' }}>{paymentTypeLabel(payment)}</td>
                           <td>{(payment as any).month_due || payment.description}</td>
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
                           <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
@@ -1311,9 +1319,6 @@ allPayments.sort((a, b) => {
                                 {formatCurrency((payment as any).running_balance ?? payment.balance_remaining)}
                               </span>
                             )}
-                          </td>
-                          <td style={{ textTransform: 'capitalize' }}>
-                            {(payment as any).transaction_type || 'rent'}
                           </td>
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
                           <td>{(payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—')}</td>
