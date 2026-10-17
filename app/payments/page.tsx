@@ -685,8 +685,12 @@ allPayments.sort((a, b) => {
     }
 
     const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+    const PAGE_WIDTH = 700;
+    const PAGE_HEIGHT = 841.89;
+    const LEFT = 40;
+    const RIGHT = 660;
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([700, 841.89]);
+    let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
@@ -694,18 +698,17 @@ allPayments.sort((a, b) => {
       ? tenants.find((t) => (t.email || t.full_name || '').toLowerCase() === selectedTenantKey.toLowerCase())
       : undefined;
 
-    let y = 800;
     const docId = `STMT-${Date.now().toString().slice(-8)}`;
     const dateStr = new Date().toLocaleDateString('en-GB');
 
     const navy = rgb(0.11, 0.23, 0.52);
     const teal = rgb(0.05, 0.55, 0.55);
     const grayText = rgb(0.4, 0.42, 0.47);
-    const LEFT = 50;
-    const RIGHT = 650;
+    const ink = rgb(0.12, 0.13, 0.16);
+    let y = 800;
 
     // Top accent bar
-    page.drawRectangle({ x: 0, y: 841.89 - 8, width: 700, height: 8, color: navy });
+    page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 8, width: PAGE_WIDTH, height: 8, color: navy });
 
     // Header: title/subtitle left, meta right-aligned
     page.drawText('SPRINGFIELD SYSTEMS', { x: LEFT, y: 790, font: boldFont, size: 22, color: navy });
@@ -801,50 +804,109 @@ allPayments.sort((a, b) => {
     // The tenant profile box above already names the tenant, so the repeated
     // "Tenant" column is dropped for single-tenant statements.
     const showTenantColumn = !selectedTenant;
-    const headers = showTenantColumn
-      ? ['Tenant', 'Month Due', 'Trans Code', 'Due', 'Paid', 'Running Balance', 'Date']
-      : ['Month Due', 'Trans Code', 'Due', 'Paid', 'Running Balance', 'Date'];
-    const colX = showTenantColumn
-      ? [50, 190, 280, 365, 445, 520, 580]
-      : [50, 210, 330, 405, 480, 570];
-    headers.forEach((h, i) => {
-      page.drawText(h, { x: colX[i], y, font: boldFont, size: 10, color: rgb(0.25, 0.25, 0.25) });
-    });
-    y -= 22;
-    page.drawLine({ start: { x: 50, y }, end: { x: 650, y }, thickness: 1, color: rgb(0.6, 0.6, 0.6) });
-    y -= 18;
+    const money = (value: unknown) => formatCurrency(Number(value) || 0).replace('KES', '').trim();
+    const rowDate = (payment: Payment) => (payment as any).source === 'bills'
+      ? ((payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString('en-GB') : '—')
+      : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—');
 
-    recordsToDownload.forEach((payment, idx) => {
-      if (idx % 2 === 0) {
-        page.drawRectangle({ x: 48, y: y - 4, width: 604, height: 16, color: rgb(0.97, 0.97, 0.98), opacity: 0.7 });
+    type Rgb = ReturnType<typeof rgb>;
+    interface StatementColumn {
+      header: string;
+      min: number;
+      align: 'left' | 'right';
+      value: (payment: Payment) => string;
+      color: (payment: Payment) => Rgb;
+      tenantOnly?: boolean;
+    }
+
+    const allColumns: StatementColumn[] = [
+      { header: 'Tenant', min: 94, align: 'left', tenantOnly: true, value: (p) => p.tenant, color: () => ink },
+      { header: 'Rent Type', min: 88, align: 'left', value: (p) => rentTypeLabel((p as any).rent_type) ?? '—', color: () => ink },
+      { header: 'Month Due', min: 74, align: 'left', value: (p) => (p as any).month_due || p.description || '—', color: () => ink },
+      { header: 'Trans Code', min: 92, align: 'left', value: (p) => ((p as any).transaction_code ? String((p as any).transaction_code) : '—'), color: () => rgb(0.1, 0.3, 0.6) },
+      { header: 'Due', min: 56, align: 'right', value: (p) => money((p as any).due_amount || p.amount), color: () => ink },
+      { header: 'Paid', min: 56, align: 'right', value: (p) => money(p.amount), color: () => rgb(0.1, 0.4, 0.1) },
+      { header: 'Running Bal.', min: 64, align: 'right', value: (p) => money((p as any).running_balance ?? p.balance_remaining), color: (p) => (((p as any).running_balance ?? p.balance_remaining) < 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1)) },
+      { header: 'Date', min: 50, align: 'left', value: rowDate, color: () => ink },
+    ];
+    const columns = allColumns.filter((column) => !column.tenantOnly || showTenantColumn);
+
+    // Each column keeps the width its longest realistic value needs, then any
+    // space left over is shared out in proportion, so the table always fills
+    // the page without clipping a cell.
+    const tableWidth = RIGHT - LEFT;
+    const sumMin = columns.reduce((sum, column) => sum + column.min, 0);
+    const leftover = Math.max(0, tableWidth - sumMin);
+    const columnWidths = columns.map((column) => column.min + leftover * (column.min / sumMin));
+    const columnX: number[] = [];
+    columnWidths.reduce((acc, width, index) => {
+      columnX[index] = LEFT + acc;
+      return acc + width;
+    }, 0);
+
+    const fitText = (text: string, size: number, maxWidth: number, bold = false) => {
+      const activeFont = bold ? boldFont : font;
+      if (activeFont.widthOfTextAtSize(text, size) <= maxWidth) return text;
+      let trimmed = text;
+      while (trimmed.length > 1 && activeFont.widthOfTextAtSize(`${trimmed}...`, size) > maxWidth) {
+        trimmed = trimmed.slice(0, -1);
       }
-      let ci = 0;
-      if (showTenantColumn) {
-        page.drawText(payment.tenant.substring(0, 25), { x: colX[ci], y, font, size: 9, color: rgb(0.1, 0.1, 0.1) });
-        ci += 1;
+      return `${trimmed}...`;
+    };
+
+    const cellX = (index: number, text: string, size: number, bold = false) => {
+      const width = (bold ? boldFont : font).widthOfTextAtSize(text, size);
+      return columns[index].align === 'right'
+        ? columnX[index] + columnWidths[index] - 8 - width
+        : columnX[index] + 5;
+    };
+
+    const ROW_HEIGHT = 17;
+    const BOTTOM_LIMIT = 86;
+
+    function drawTableHead(topY: number) {
+      page.drawRectangle({ x: LEFT, y: topY - 6, width: tableWidth, height: 20, color: rgb(0.93, 0.95, 0.98) });
+      columns.forEach((column, index) => {
+        const label = fitText(column.header, 8.5, columnWidths[index] - 10, true);
+        page.drawText(label, { x: cellX(index, label, 8.5, true), y: topY, font: boldFont, size: 8.5, color: navy });
+      });
+      return topY - 24;
+    }
+
+    function startContinuationPage() {
+      page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      const subtitle = `${selectedTenant ? selectedTenant.full_name : 'All tenants'} — Payment Statement (${docId})`;
+      page.drawText(fitText(subtitle, 10, tableWidth, true), { x: LEFT, y: PAGE_HEIGHT - 52, font: boldFont, size: 10, color: navy });
+      return drawTableHead(PAGE_HEIGHT - 78);
+    }
+
+    y = drawTableHead(y);
+    recordsToDownload.forEach((payment, index) => {
+      if (y < BOTTOM_LIMIT) y = startContinuationPage();
+      if (index % 2 === 0) {
+        page.drawRectangle({ x: LEFT, y: y - 5, width: tableWidth, height: ROW_HEIGHT - 1, color: rgb(0.975, 0.978, 0.985) });
       }
-      page.drawText((payment as any).month_due || payment.description || '—', { x: colX[ci], y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-      ci += 1;
-      page.drawText((payment as any).transaction_code ? String((payment as any).transaction_code).substring(0, 10) : '—', { x: colX[ci], y, font, size: 9, color: rgb(0.1, 0.3, 0.6) });
-      ci += 1;
-      page.drawText(formatCurrency((payment as any).due_amount || payment.amount).replace('KES', ''), { x: colX[ci], y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-      ci += 1;
-      page.drawText(formatCurrency(payment.amount).replace('KES', ''), { x: colX[ci], y, font, size: 9, color: rgb(0.1, 0.4, 0.1) });
-      ci += 1;
-      page.drawText(formatCurrency((payment as any).running_balance ?? payment.balance_remaining).replace('KES', ''), { x: colX[ci], y, font, size: 9, color: ((payment as any).running_balance ?? payment.balance_remaining) < 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1) });
-      ci += 1;
-      page.drawText((payment as any).source === 'bills'
-        ? ((payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString('en-GB') : '—')
-        : (payment.created_at ? new Date(payment.created_at).toLocaleDateString('en-GB') : '—'), { x: colX[ci], y, font, size: 9, color: rgb(0.2, 0.2, 0.2) });
-      y -= 16;
+      columns.forEach((column, columnIndex) => {
+        const text = fitText(column.value(payment), 8.5, columnWidths[columnIndex] - 10);
+        page.drawText(text, { x: cellX(columnIndex, text, 8.5), y, font, size: 8.5, color: column.color(payment) });
+      });
+      y -= ROW_HEIGHT;
     });
 
-    y -= 12;
-    page.drawRectangle({ x: 50, y: y - 10, width: 500, height: 12, color: rgb(0.94, 0.94, 0.96) });
-    page.drawText(`Total Paid: ${formatCurrency(totalPaid)}`, { x: 50, y, font: boldFont, size: 11, color: rgb(0.1, 0.4, 0.2) });
-    page.drawText(`Outstanding: ${formatCurrency(finalBalance)}`, { x: 200, y, font: boldFont, size: 11, color: rgb(0.6, 0.2, 0.2) });
-    y -= 40;
-    page.drawText('This is an official payment record. Verify at springfield-systems.com', { x: 50, y, font, size: 8, color: rgb(0.5, 0.5, 0.5) });
+    if (y < BOTTOM_LIMIT + 30) y = startContinuationPage();
+    y -= 10;
+    page.drawLine({ start: { x: LEFT, y: y + 10 }, end: { x: RIGHT, y: y + 10 }, thickness: 1, color: rgb(0.55, 0.6, 0.68) });
+    const totalLine = `Total Paid: KES ${money(totalPaid)}`;
+    const outstandingLine = `Outstanding: KES ${money(finalBalance)}`;
+    page.drawText(totalLine, { x: LEFT + 4, y, font: boldFont, size: 10.5, color: rgb(0.1, 0.4, 0.2) });
+    page.drawText(outstandingLine, { x: RIGHT - 8 - boldFont.widthOfTextAtSize(outstandingLine, 10.5), y, font: boldFont, size: 10.5, color: rgb(0.6, 0.2, 0.2) });
+
+    const pageTotal = pdfDoc.getPageCount();
+    pdfDoc.getPages().forEach((sheet, index) => {
+      const pageNumber = `Page ${index + 1} of ${pageTotal}`;
+      sheet.drawText('This is an official payment record. Verify at springfield-systems.com', { x: LEFT, y: 42, font, size: 8, color: rgb(0.5, 0.5, 0.5) });
+      sheet.drawText(pageNumber, { x: RIGHT - font.widthOfTextAtSize(pageNumber, 8), y: 42, font, size: 8, color: rgb(0.5, 0.5, 0.5) });
+    });
 
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
