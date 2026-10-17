@@ -801,9 +801,6 @@ allPayments.sort((a, b) => {
     const totalPaid = recordsToDownload.reduce((sum, p) => sum + (p.amount || 0), 0);
     const finalBalance = recordsToDownload.length > 0 ? (recordsToDownload[recordsToDownload.length - 1] as any).running_balance ?? recordsToDownload[recordsToDownload.length - 1].balance_remaining : 0;
 
-    // The tenant profile box above already names the tenant, so the repeated
-    // "Tenant" column is dropped for single-tenant statements.
-    const showTenantColumn = !selectedTenant;
     const money = (value: unknown) => formatCurrency(Number(value) || 0).replace('KES', '').trim();
     const rowDate = (payment: Payment) => (payment as any).source === 'bills'
       ? ((payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString('en-GB') : '—')
@@ -816,11 +813,10 @@ allPayments.sort((a, b) => {
       align: 'left' | 'right';
       value: (payment: Payment) => string;
       color: (payment: Payment) => Rgb;
-      tenantOnly?: boolean;
     }
 
-    const allColumns: StatementColumn[] = [
-      { header: 'Tenant', min: 94, align: 'left', tenantOnly: true, value: (p) => p.tenant, color: () => ink },
+    const columns: StatementColumn[] = [
+      { header: 'Tenant', min: 94, align: 'left', value: (p) => p.tenant, color: () => ink },
       { header: 'Rent Type', min: 88, align: 'left', value: (p) => rentTypeLabel((p as any).rent_type) ?? '—', color: () => ink },
       { header: 'Month Due', min: 74, align: 'left', value: (p) => (p as any).month_due || p.description || '—', color: () => ink },
       { header: 'Trans Code', min: 92, align: 'left', value: (p) => ((p as any).transaction_code ? String((p as any).transaction_code) : '—'), color: () => rgb(0.1, 0.3, 0.6) },
@@ -829,7 +825,6 @@ allPayments.sort((a, b) => {
       { header: 'Running Bal.', min: 64, align: 'right', value: (p) => money((p as any).running_balance ?? p.balance_remaining), color: (p) => (((p as any).running_balance ?? p.balance_remaining) < 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1)) },
       { header: 'Date', min: 50, align: 'left', value: rowDate, color: () => ink },
     ];
-    const columns = allColumns.filter((column) => !column.tenantOnly || showTenantColumn);
 
     // Each column keeps the width its longest realistic value needs, then any
     // space left over is shared out in proportion, so the table always fills
@@ -1257,6 +1252,7 @@ allPayments.sort((a, b) => {
                   <thead>
                     <tr>
                       <th>Tenant</th>
+                      <th>Rent Type</th>
                       <th>Month Due</th>
                       <th>Bank Reference</th>
                       <th>Due</th>
@@ -1293,6 +1289,7 @@ allPayments.sort((a, b) => {
                               </span>
                             </div>
                           </td>
+                          <td style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>{rentTypeLabel((payment as any).rent_type) ?? '—'}</td>
                           <td>{(payment as any).month_due || payment.description}</td>
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
                           <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
@@ -1317,9 +1314,6 @@ allPayments.sort((a, b) => {
                           </td>
                           <td style={{ textTransform: 'capitalize' }}>
                             {(payment as any).transaction_type || 'rent'}
-                            {(payment as any).rent_type && (
-                              <div style={{ fontSize: '10px', color: 'var(--ink-3)', textTransform: 'none' }}>{rentTypeLabel((payment as any).rent_type)}</div>
-                            )}
                           </td>
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_number || '—'}</td>
                           <td>{(payment as any).payment_date ? new Date((payment as any).payment_date).toLocaleDateString() : (payment.created_at ? new Date(payment.created_at).toLocaleDateString() : '—')}</td>
