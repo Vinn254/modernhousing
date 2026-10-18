@@ -1,30 +1,18 @@
-const CACHE_NAME = 'springfield-v1';
-const ASSETS = [
-  '/',
-  '/index',
-  '/manifest.json',
-  '/favicon.ico'
-];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
-  self.skipWaiting();
-});
+// Phones and laptops that visited between 26 July and 2 September 2026 had this
+// file registered as a cache-first service worker, and it stays installed even
+// though the app no longer registers it. Its old fetch handler served cached
+// HTML for every request and answered failed requests with the cached
+// homepage, so a rebuilt deployment leaves those devices running stale page
+// HTML plus HTML-as-JavaScript, which crashes the app. This replacement does
+// one job: delete everything the old worker stored and unregister itself.
+self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
-      if (response && response.status === 200) {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-      }
-      return response;
-    }).catch(() => caches.match('/')))
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
+    await self.registration.unregister();
+    const windows = await self.clients.matchAll({ type: 'window' });
+    windows.forEach((windowClient) => windowClient.navigate(windowClient.url));
+  })());
 });
