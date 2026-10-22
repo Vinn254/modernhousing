@@ -5,7 +5,8 @@ import {
   collectUnitCodeCandidates,
   isRecord,
   requiredString,
-  resolveTenantFromUnitCodes,
+  withOrganization,
+  lookupUnitTenant,
 } from '../../../../lib/coopB2b';
 
 function response(messageID: string, statusCode: string, statusDescription: string, body: Record<string, unknown>, status: number) {
@@ -67,10 +68,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let lastReason = 'unit_not_found';
+    // One lookup serves every authenticated organization: the bank's gateway
+    // times out while a cold function re-runs the same four queries per match.
+    // Validation never notifies a landlord, so the profile lookup is skipped too.
+    const unitLookup = await lookupUnitTenant(codeCandidates, { includeLandlordEmail: false });
+
+    let lastReason: string = unitLookup.status;
     let lastPropertyOrg: string | null = null;
     for (const credential of matches) {
-      const lookup = await resolveTenantFromUnitCodes(codeCandidates, credential.organizationId);
+      const lookup = withOrganization(unitLookup, credential.organizationId);
       if (lookup.status !== 'found') {
         lastReason = lookup.status;
         lastPropertyOrg = lookup.status === 'organization_mismatch' ? lookup.propertyOrganizationId : null;

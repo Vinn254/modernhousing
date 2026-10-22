@@ -126,7 +126,41 @@ export type UnitCodeLookup =
   | { status: 'unit_has_no_property'; candidate: UnitCodeCandidate }
   | { status: 'organization_mismatch'; candidate: UnitCodeCandidate; propertyOrganizationId: string | null };
 
+// The unit, tenant, property and landlord profile are looked up once, without
+// regard to organization, because the bank's credentials can be pasted onto
+// several landlords' payment_settings rows and each retry used to re-run every
+// query. Co-op's reply gateway times out well before that finishes.
+export type UnitTenantLookup =
+  | {
+      status: 'found';
+      tenant: TenantPaymentContext;
+      candidate: UnitCodeCandidate;
+      propertyOrganizationId: string | null;
+    }
+  | { status: 'unit_not_found'; candidates: UnitCodeCandidate[] }
+  | { status: 'unit_has_no_tenant'; candidate: UnitCodeCandidate }
+  | { status: 'unit_has_no_property'; candidate: UnitCodeCandidate };
+
 type UnitRow = { id: string; short_code: string | null; property_id: string | null };
+
+// Applies an authenticated credential's organization to the shared lookup result
+// so the routes keep their per-organization behaviour with no extra queries.
+export function withOrganization(
+  lookup: UnitTenantLookup,
+  organizationId: string | null,
+): UnitCodeLookup {
+  if (lookup.status !== 'found') {
+    return lookup;
+  }
+  if (organizationId && lookup.propertyOrganizationId !== organizationId) {
+    return {
+      status: 'organization_mismatch',
+      candidate: lookup.candidate,
+      propertyOrganizationId: lookup.propertyOrganizationId,
+    };
+  }
+  return { status: 'found', tenant: lookup.tenant, candidate: lookup.candidate };
+}
 
 function normalizeCode(value: string) {
   return value.trim().toLowerCase();
@@ -154,10 +188,11 @@ export function collectUnitCodeCandidates(
   return candidates;
 }
 
-export async function resolveTenantFromUnitCodes(
+export async function lookupUnitTenant(
   candidates: UnitCodeCandidate[],
-  organizationId: string | null,
-): Promise<UnitCodeLookup> {
+  options: { includeLandlordEmail?: boolean } = {},
+): Promise<UnitTenantLookup> {
+  const includeLandlordEmail = options.includeLandlordEmail ?? true;
   const variants = [...new Set(candidates.flatMap((candidate) => [candidate.value, candidate.value.toUpperCase(), candidate.value.toLowerCase()]))];
   if (variants.length === 0) {
     return { status: 'unit_not_found', candidates };
@@ -219,12 +254,8 @@ export async function resolveTenantFromUnitCodes(
     return { status: 'unit_has_no_property', candidate: matched };
   }
 
-  if (organizationId && property.organization_id !== organizationId) {
-    return { status: 'organization_mismatch', candidate: matched, propertyOrganizationId: property.organization_id ?? null };
-  }
-
   let landlordEmail: string | null = null;
-  if (property.created_by) {
+  if (includeLandlordEmail && property.created_by) {
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('email')
@@ -239,7 +270,7 @@ export async function resolveTenantFromUnitCodes(
 
   // Legacy properties may have no created_by. Fall back to the organization's
   // project manager so landlord notifications and payment attribution still work.
-  if (!landlordEmail && property.organization_id) {
+  if (includeLandlordEmail && !landlordEmail && property.organization_id) {
     const { data: orgProfiles, error: orgProfileError } = await supabaseAdmin
       .from('profiles')
       .select('email')
@@ -256,6 +287,7 @@ export async function resolveTenantFromUnitCodes(
   return {
     status: 'found',
     candidate: matched,
+    propertyOrganizationId: property.organization_id ?? null,
     tenant: {
       tenantId: tenant.id,
       tenantName: tenant.full_name,

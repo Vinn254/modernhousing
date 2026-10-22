@@ -6,7 +6,8 @@ import {
   isRecord,
   recordCoopPayment,
   requiredString,
-  resolveTenantFromUnitCodes,
+  withOrganization,
+  lookupUnitTenant,
   supabaseAdmin,
   type CoopCredentials,
   type TenantPaymentContext,
@@ -88,11 +89,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const { data: existingPayment, error: existingPaymentError } = await supabaseAdmin
-      .from('payments')
-      .select('id')
-      .eq('coop_payment_reference', transactionReference)
-      .maybeSingle();
+    // The duplicate check and the customer lookup are independent, so they run
+    // together: the bank's reply gateway closes the connection while a cold
+    // function is still answering these queries one after another.
+    const [duplicateResult, unitLookup] = await Promise.all([
+      supabaseAdmin
+        .from('payments')
+        .select('id')
+        .eq('coop_payment_reference', transactionReference)
+        .maybeSingle(),
+      lookupUnitTenant(codeCandidates),
+    ]);
+
+    const { data: existingPayment, error: existingPaymentError } = duplicateResult;
     if (existingPaymentError) {
       throw existingPaymentError;
     }
@@ -101,10 +110,10 @@ export async function POST(request: NextRequest) {
     }
 
     let matched: { credential: CoopCredentials; tenant: TenantPaymentContext; candidate: UnitCodeCandidate } | null = null;
-    let lastReason = 'unit_not_found';
+    let lastReason: string = unitLookup.status;
     let lastPropertyOrg: string | null = null;
     for (const credential of matches) {
-      const lookup = await resolveTenantFromUnitCodes(codeCandidates, credential.organizationId);
+      const lookup = withOrganization(unitLookup, credential.organizationId);
       if (lookup.status === 'found') {
         matched = { credential, tenant: lookup.tenant, candidate: lookup.candidate };
         break;
