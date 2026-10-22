@@ -66,6 +66,11 @@ export async function POST(request: NextRequest) {
       return response(messageID, '400', 'Invalid parameters', {}, 400);
     }
 
+    // The bank's duplicate checker runs against TransactionReferenceCode only on
+    // this leg, so that is the value we test for repeats and store as the Co-op
+    // reference, even when a PaymentReferenceCode also arrives.
+    const transactionReference = requiredString(requestBody.TransactionReferenceCode) ?? bankReference;
+
     // The spec documents Currency as empty on advice, so only a stated non-KES currency is rejected.
     if (currency && currency !== 'KES') {
       return response(messageID, '400', 'Invalid parameters', {}, 400);
@@ -86,7 +91,7 @@ export async function POST(request: NextRequest) {
     const { data: existingPayment, error: existingPaymentError } = await supabaseAdmin
       .from('payments')
       .select('id')
-      .eq('coop_payment_reference', bankReference)
+      .eq('coop_payment_reference', transactionReference)
       .maybeSingle();
     if (existingPaymentError) {
       throw existingPaymentError;
@@ -130,17 +135,17 @@ export async function POST(request: NextRequest) {
       amount,
       paymentDate: new Date(paymentDate),
       bankReference,
+      transactionReference,
       unitCode,
     });
 
     // The spec requires the advice response to echo the request values, so prefer what the
     // bank sent and fall back to our own resolved values.
-    const requestTransactionReference = requiredString(requestBody.TransactionReferenceCode) ?? bankReference;
     const requestAccountName = requiredString(requestBody.AccountName) ?? tenant.tenantName;
     const requestTotalAmount = requiredString(requestBody.TotalAmount) ?? amount.toFixed(2);
 
     return response(messageID, '200', 'Payment successfully received', {
-      TransactionReferenceCode: requestTransactionReference,
+      TransactionReferenceCode: transactionReference,
       TransactionDate: transactionDate,
       TransactionAmount: amount.toFixed(2),
       AccountNumber: unitCode,

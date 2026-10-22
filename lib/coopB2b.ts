@@ -274,12 +274,14 @@ export async function recordCoopPayment({
   amount,
   paymentDate,
   bankReference,
+  transactionReference,
   unitCode,
 }: {
   tenant: TenantPaymentContext;
   amount: number;
   paymentDate: Date;
   bankReference: string;
+  transactionReference: string;
   unitCode: string;
 }) {
   const monthDue = monthDueFor(paymentDate);
@@ -288,7 +290,7 @@ export async function recordCoopPayment({
     amount,
     transaction_type: 'rent',
     transaction_code: bankReference,
-    coop_payment_reference: bankReference,
+    coop_payment_reference: transactionReference,
     description: 'Co-operative Bank M-Pesa Payment',
     balance_remaining: 0,
     month_due: monthDue,
