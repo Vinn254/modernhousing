@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { resolveIncomingPaymentCharge } from './rentLedger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -319,23 +320,34 @@ export async function recordCoopPayment({
   unitCode: string;
 }) {
   const monthDue = monthDueFor(paymentDate);
-  const { error: paymentError } = await supabaseAdmin.from('payments').insert({
+  // The bank only tells us what was sent. The month's rent is charged once, so a
+  // posting that lands on an already-billed month carries no charge and reads as
+  // rent in advance, which the running balance applies to the next month.
+  const charge = await resolveIncomingPaymentCharge({
+    tenantId: tenant.tenantId,
+    monthDue,
+    rentAmount: tenant.rentAmount,
+  });
+  const dueAmount = tenant.rentAmount > 0 ? charge.dueAmount : amount;
+
+  const paymentRow: Record<string, unknown> = {
     tenant_id: tenant.tenantId,
     amount,
     transaction_type: 'rent',
     transaction_code: bankReference,
     coop_payment_reference: transactionReference,
     description: 'Co-operative Bank M-Pesa Payment',
-    balance_remaining: 0,
-    // The bank only tells us what was sent, so the statement's Due column has to
-    // come from the unit's rent; an unpriced unit falls back to the amount paid.
-    due_amount: tenant.rentAmount || amount,
+    balance_remaining: amount - dueAmount,
+    due_amount: dueAmount,
     month_due: monthDue,
     paid_at: paymentDate.toISOString(),
     transaction_number: `COOP-${bankReference}`,
     admin_email: tenant.landlordEmail,
     property_id: tenant.propertyId,
-  });
+  };
+  if (charge.rentType) paymentRow.rent_type = charge.rentType;
+
+  const { error: paymentError } = await supabaseAdmin.from('payments').insert(paymentRow);
 
   if (paymentError) {
     throw paymentError;
@@ -347,7 +359,9 @@ export async function recordCoopPayment({
     property_id: tenant.propertyId,
     admin_email: tenant.landlordEmail,
     type: 'rent_payment',
-    message: `Your rent payment of KSH ${amount} for ${monthDue} was received successfully.`,
+    message: charge.chargedAlready
+      ? `Your payment of KSH ${amount} was received and recorded as rent in advance.`
+      : `Your rent payment of KSH ${amount} for ${monthDue} was received successfully.`,
     status: 'sent',
     created_at: new Date().toISOString(),
   }];

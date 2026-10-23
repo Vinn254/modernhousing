@@ -125,7 +125,7 @@ export default function TenantPaymentsPage() {
         id: p.id,
         description: p.description,
         month_due: p.month_due,
-        due_amount: Number(p.due_amount) || Number(p.amount) || 0,
+        due_amount: p.due_amount === null || p.due_amount === undefined ? Number(p.amount) || 0 : Number(p.due_amount),
         paid_amount: Number(p.amount) || 0,
         penalty_fee: 0,
         transaction_type: p.transaction_type || 'rent',

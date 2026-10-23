@@ -60,6 +60,12 @@ function paymentTypeLabel(payment: Payment): string {
   return legacy.replace(/_/g, ' ').replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
+// A payment that lands on an already-billed month carries no charge, so zero has
+// to survive: falling back to the amount paid would bill the month twice.
+function dueOf(payment: Payment): number {
+  return Number(payment.due_amount ?? payment.amount) || 0;
+}
+
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
@@ -225,10 +231,10 @@ export default function PaymentsPage() {
     let runningBalance = 0;
     return paymentsList.map(payment => {
       const isOverdue = (payment as any).transaction_type === 'overdue';
-      const billBalance = isOverdue ? 0 : ((payment as any).due_amount || payment.amount || 0) - (payment.amount || 0) - ((payment as any).penalty_fee || 0);
+      const billBalance = isOverdue ? 0 : dueOf(payment) - (payment.amount || 0) - ((payment as any).penalty_fee || 0);
       const contribution = isOverdue
         ? (payment.amount || 0)
-        : (payment.amount || 0) - ((payment as any).due_amount || payment.amount || 0) - ((payment as any).penalty_fee || 0);
+        : (payment.amount || 0) - dueOf(payment) - ((payment as any).penalty_fee || 0);
       runningBalance += contribution;
       return { ...payment, running_balance: runningBalance };
     });
@@ -275,7 +281,7 @@ export default function PaymentsPage() {
         const isOverdue = p.transaction_type === 'overdue';
         const contribution = isOverdue
           ? (p.amount || 0)
-          : (p.amount || 0) - ((p as any).due_amount || p.amount || 0) - ((p as any).penalty_fee || 0);
+          : (p.amount || 0) - dueOf(p) - ((p as any).penalty_fee || 0);
         runningBalance += contribution;
         result.push({ ...p, running_balance: runningBalance });
       });
@@ -571,7 +577,7 @@ allPayments.sort((a, b) => {
       return;
     }
 
-    setMessage('Payment recorded successfully.');
+    setMessage(result.message || 'Payment recorded successfully.');
     setTenantId('');
     setManualMonth('');
     setManualDueAmount('');
@@ -619,7 +625,7 @@ allPayments.sort((a, b) => {
       billId: payment.id,
       tenantId: tenants.find(t => t.full_name === payment.tenant)?.id || '',
       monthDue: monthDueValue,
-      dueAmount: String((payment as any).due_amount || payment.amount),
+      dueAmount: String(dueOf(payment)),
       paidAmount: String(payment.amount),
       penaltyFee: '0',
       balanceRemaining: String(payment.balance_remaining),
@@ -829,7 +835,7 @@ allPayments.sort((a, b) => {
       { header: 'Type', min: 88, align: 'left', value: (p) => paymentTypeLabel(p), color: () => ink },
       { header: 'Month Due', min: 74, align: 'left', value: (p) => (p as any).month_due || p.description || '—', color: () => ink },
       { header: 'Trans Code', min: 92, align: 'left', value: (p) => ((p as any).transaction_code ? String((p as any).transaction_code) : '—'), color: () => rgb(0.1, 0.3, 0.6) },
-      { header: 'Due', min: 56, align: 'right', value: (p) => money((p as any).due_amount || p.amount), color: () => ink },
+      { header: 'Due', min: 56, align: 'right', value: (p) => money(dueOf(p)), color: () => ink },
       { header: 'Paid', min: 56, align: 'right', value: (p) => money(p.amount), color: () => rgb(0.1, 0.4, 0.1) },
       { header: 'Running Bal.', min: 64, align: 'right', value: (p) => money((p as any).running_balance ?? p.balance_remaining), color: (p) => (((p as any).running_balance ?? p.balance_remaining) < 0 ? rgb(0.7, 0.1, 0.1) : rgb(0.1, 0.4, 0.1)) },
       { header: 'Date', min: 50, align: 'left', value: rowDate, color: () => ink },
@@ -1300,7 +1306,7 @@ allPayments.sort((a, b) => {
                           <td style={{ fontSize: '12px', whiteSpace: 'nowrap', textTransform: 'none' }}>{paymentTypeLabel(payment)}</td>
                           <td>{(payment as any).month_due || payment.description}</td>
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
-                          <td>{formatCurrency((payment as any).due_amount || payment.amount)}</td>
+                          <td>{formatCurrency(dueOf(payment))}</td>
                           <td>{formatCurrency(payment.amount)}</td>
                           <td style={{ color: ((payment as any).running_balance ?? 0) < 0 ? '#dc2626' : 'var(--accent)' }}>
                             {editingBalanceId === payment.id ? (

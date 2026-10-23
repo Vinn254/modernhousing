@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { rentTypeForStorage } from '../../../lib/rentTypes';
+import { resolveIncomingPaymentCharge } from '../../../lib/rentLedger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -296,17 +297,40 @@ export async function POST(request: NextRequest) {
 
   // For rent transactions, fetch unit rent amount if not provided
   let finalDueAmount = dueAmount;
-  if ((transactionType === 'rent' || !transactionType) && !dueAmount && unitId) {
-    const { data: unit } = await supabaseAdmin
-      .from('units')
-      .select('rent_amount')
-      .eq('id', unitId)
-      .single();
-    finalDueAmount = unit?.rent_amount || 0;
+  let advanceCredit = false;
+  if ((transactionType === 'rent' || !transactionType) && monthDue) {
+    let rentAmount = 0;
+    if (unitId) {
+      const { data: unit } = await supabaseAdmin
+        .from('units')
+        .select('rent_amount')
+        .eq('id', unitId)
+        .maybeSingle();
+      rentAmount = Number(unit?.rent_amount) || 0;
+    } else {
+      const { data: tenantRow } = await supabaseAdmin
+        .from('tenants')
+        .select('units(rent_amount)')
+        .eq('id', tenantId)
+        .maybeSingle();
+      rentAmount = Number((tenantRow as any)?.units?.rent_amount) || 0;
+    }
+
+    if (!finalDueAmount && rentAmount) finalDueAmount = rentAmount;
+
+    // A month is billed once: money arriving for a month that already carries
+    // its rent is a credit, not a second charge.
+    const charge = await resolveIncomingPaymentCharge({ tenantId, monthDue, rentAmount });
+    if (charge.chargedAlready) {
+      finalDueAmount = 0;
+      advanceCredit = true;
+    }
   }
 
   // Calculate balance: due_amount - paid_amount (or use provided balance)
-  const calculatedBalance = balanceRemaining !== undefined ? Number(balanceRemaining) : (Number(finalDueAmount) || 0) - (Number(paidAmount) || 0);
+  const calculatedBalance = advanceCredit
+    ? 0 - (Number(paidAmount) || 0)
+    : balanceRemaining !== undefined ? Number(balanceRemaining) : (Number(finalDueAmount) || 0) - (Number(paidAmount) || 0);
 
   const insertData: any = {
     tenant_id: tenantId,
@@ -327,7 +351,7 @@ export async function POST(request: NextRequest) {
     created_at: paymentDate ? new Date(paymentDate).toISOString() : new Date().toISOString(),
   };
 
-  const rentType = rentTypeForStorage(body.rentType);
+  const rentType = rentTypeForStorage(body.rentType) ?? (advanceCredit ? 'rent_in_advance' : null);
   if (rentType) insertData.rent_type = rentType;
 
   const result = await supabaseAdmin.from('bills').insert(insertData);
@@ -336,7 +360,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: result.error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ message: 'Bill recorded.', bill: result.data?.[0] }, { status: 201 });
+  return NextResponse.json({
+    message: advanceCredit
+      ? `Recorded as rent in advance — ${monthDue} is already billed.`
+      : 'Bill recorded.',
+    bill: result.data?.[0],
+  }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {
