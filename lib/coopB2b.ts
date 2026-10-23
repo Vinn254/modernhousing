@@ -31,6 +31,7 @@ export type TenantPaymentContext = {
   tenantName: string;
   propertyId: string | null;
   landlordEmail: string | null;
+  rentAmount: number;
 };
 
 function safeEqual(actual: string, expected: string) {
@@ -141,7 +142,7 @@ export type UnitTenantLookup =
   | { status: 'unit_has_no_tenant'; candidate: UnitCodeCandidate }
   | { status: 'unit_has_no_property'; candidate: UnitCodeCandidate };
 
-type UnitRow = { id: string; short_code: string | null; property_id: string | null };
+type UnitRow = { id: string; short_code: string | null; property_id: string | null; rent_amount: number | null };
 
 // Applies an authenticated credential's organization to the shared lookup result
 // so the routes keep their per-organization behaviour with no extra queries.
@@ -200,7 +201,7 @@ export async function lookupUnitTenant(
 
   const { data: unitData, error: unitError } = await supabaseAdmin
     .from('units')
-    .select('id, short_code, property_id')
+    .select('id, short_code, property_id, rent_amount')
     .in('short_code', variants);
   if (unitError) {
     throw unitError;
@@ -222,7 +223,7 @@ export async function lookupUnitTenant(
 
   const { data: tenantData, error: tenantError } = await supabaseAdmin
     .from('tenants')
-    .select('id, full_name, unit_id, created_at')
+    .select('id, full_name, unit_id, rent_amount, created_at')
     .in('unit_id', matchedUnits.map((unit) => unit.id))
     .order('created_at', { ascending: false })
     .limit(1);
@@ -230,7 +231,7 @@ export async function lookupUnitTenant(
     throw tenantError;
   }
 
-  const tenant = (tenantData ?? [])[0] as { id: string; full_name: string; unit_id: string | null } | undefined;
+  const tenant = (tenantData ?? [])[0] as { id: string; full_name: string; unit_id: string | null; rent_amount: number | null } | undefined;
   if (!tenant) {
     return { status: 'unit_has_no_tenant', candidate: matched };
   }
@@ -293,6 +294,7 @@ export async function lookupUnitTenant(
       tenantName: tenant.full_name,
       propertyId,
       landlordEmail,
+      rentAmount: Number(unit.rent_amount) || Number(tenant.rent_amount) || 0,
     },
   };
 }
@@ -325,6 +327,9 @@ export async function recordCoopPayment({
     coop_payment_reference: transactionReference,
     description: 'Co-operative Bank M-Pesa Payment',
     balance_remaining: 0,
+    // The bank only tells us what was sent, so the statement's Due column has to
+    // come from the unit's rent; an unpriced unit falls back to the amount paid.
+    due_amount: tenant.rentAmount || amount,
     month_due: monthDue,
     paid_at: paymentDate.toISOString(),
     transaction_number: `COOP-${bankReference}`,
