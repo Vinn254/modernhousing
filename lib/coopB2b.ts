@@ -223,7 +223,7 @@ export async function lookupUnitTenant(
 
   const { data: tenantData, error: tenantError } = await supabaseAdmin
     .from('tenants')
-    .select('id, full_name, unit_id, rent_amount, created_at')
+    .select('id, full_name, unit_id, created_at')
     .in('unit_id', matchedUnits.map((unit) => unit.id))
     .order('created_at', { ascending: false })
     .limit(1);
@@ -231,7 +231,7 @@ export async function lookupUnitTenant(
     throw tenantError;
   }
 
-  const tenant = (tenantData ?? [])[0] as { id: string; full_name: string; unit_id: string | null; rent_amount: number | null } | undefined;
+  const tenant = (tenantData ?? [])[0] as { id: string; full_name: string; unit_id: string | null } | undefined;
   if (!tenant) {
     return { status: 'unit_has_no_tenant', candidate: matched };
   }
@@ -294,7 +294,7 @@ export async function lookupUnitTenant(
       tenantName: tenant.full_name,
       propertyId,
       landlordEmail,
-      rentAmount: Number(unit.rent_amount) || Number(tenant.rent_amount) || 0,
+      rentAmount: Number(unit.rent_amount) || 0,
     },
   };
 }
