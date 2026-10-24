@@ -2,11 +2,6 @@
 
 ## Workflow Overview
 
-### User Roles
-- **Super Admin**: Manages landlords, agents, and properties
-- **Admin/Landlord**: Manages tenants, units, payments, and utilities
-- **Agent**: Handles tenant assignments for specific properties
-- **Tenant**: Views rent/utility bills, makes payments via M-Pesa
 
 ### Water Meter Billing
 1. Navigate to Utilities page
@@ -38,6 +33,3 @@ npm install
 npm run dev
 ```
 
-## PWA Support
-- Installable as mobile/desktop app via browser menu
-- Manifest configured at `/public/manifest.json`
