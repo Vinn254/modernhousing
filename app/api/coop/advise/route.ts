@@ -22,6 +22,16 @@ function response(messageID: string, statusCode: string, statusDescription: stri
   }, { status });
 }
 
+export async function GET() {
+  // The bank's connectivity probe opens the callback URL in a browser, and a
+  // bare 405 reads as "service unreachable" on their side.
+  return NextResponse.json({
+    service: 'coop-b2b-advise',
+    status: 'reachable',
+    note: 'Connectivity check OK. B2B messages must be sent via POST.',
+  });
+}
+
 export async function POST(request: NextRequest) {
   let messageID = '';
 
