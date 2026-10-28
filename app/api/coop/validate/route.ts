@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   authenticateHeaderAll,
+  authMismatchReport,
   candidateCredentials,
   collectUnitCodeCandidates,
   isRecord,
@@ -59,6 +60,10 @@ export async function POST(request: NextRequest) {
     const credentials = await candidateCredentials();
     const matches = authenticateHeaderAll({ connectionID, connectionPassword, messageID, serviceName }, institutionCode, credentials);
     if (matches.length === 0) {
+      console.warn('[coop/validate] unauthorized', {
+        messageID,
+        report: authMismatchReport({ connectionID, connectionPassword, messageID, serviceName }, institutionCode, credentials),
+      });
       return response(messageID, '401', 'Unauthorized', {}, 401);
     }
     if (matches.length > 1) {

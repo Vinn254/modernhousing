@@ -119,6 +119,29 @@ export function authenticateHeaderAll(
   );
 }
 
+// Reports which of the four shared-secret fields failed for each configured
+// credential, without ever printing a password, so a bank-side "Unauthorized"
+// can be pinned to the exact field that differs.
+export function authMismatchReport(
+  header: CoopRequestHeader,
+  institutionCode: string,
+  credentials: CoopCredentials[],
+) {
+  return credentials.map((candidate) => ({
+    source: candidate.organizationId ?? 'env',
+    configuredConnectionId: candidate.connectionId,
+    configuredServiceName: candidate.serviceName,
+    configuredInstitutionCode: candidate.institutionCode,
+    receivedConnectionId: header.connectionID,
+    receivedServiceName: header.serviceName,
+    receivedInstitutionCode: institutionCode,
+    connectionIdMatch: safeEqual(header.connectionID, candidate.connectionId),
+    passwordMatch: safeEqual(header.connectionPassword, candidate.connectionPassword),
+    serviceNameMatch: safeEqual(header.serviceName, candidate.serviceName),
+    institutionCodeMatch: safeEqual(institutionCode, candidate.institutionCode),
+  }));
+}
+
 export type UnitCodeCandidate = { field: string; value: string };
 
 export type UnitCodeLookup =
