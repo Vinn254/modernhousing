@@ -92,6 +92,23 @@ export default function AppHeader() {
     return () => document.body.classList.remove('sidebar-open');
   }, [sidebarOpen]);
 
+  // Pages that render no app shell at all.
+  const shellHidden =
+    pathname === '/' ||
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname === '/forgot-password' ||
+    pathname === '/reset-password' ||
+    pathname.startsWith('/tenant/register');
+
+  // The drawer's body class outlives the sidebar markup: on logout (the Logout
+  // button sits inside the open drawer) or on a shell-less page the header renders
+  // nothing, so a still-"open" drawer would keep shoving the page sideways with
+  // empty space where the sidebar used to be.
+  useEffect(() => {
+    if (!user || shellHidden) setSidebarOpen(false);
+  }, [user, shellHidden]);
+
   const resolveRole = (currentUser: any): Role => {
     if (currentUser?.email === 'vin.oumaotieno@gmail.com') return 'super_admin';
     const metadataRole = currentUser?.user_metadata?.role;
@@ -142,7 +159,7 @@ export default function AppHeader() {
     router.replace('/');
   };
 
-  const shouldHideHeader = pathname === '/' || pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/reset-password' || pathname.startsWith('/tenant/register');
+  const shouldHideHeader = shellHidden;
 
   if (shouldHideHeader || !user || !roleLoaded) return null;
 
