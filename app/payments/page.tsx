@@ -66,6 +66,49 @@ function dueOf(payment: Payment): number {
   return Number(payment.due_amount ?? payment.amount) || 0;
 }
 
+const MONTH_NAMES_LOWER = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+
+function parseMonthDueParts(monthDue?: string | null): { year: number; month: number } | null {
+  if (!monthDue) return null;
+  const trimmed = monthDue.trim();
+  const ymd = trimmed.match(/^(\d{4})-(\d{1,2})$/);
+  if (ymd) return { year: parseInt(ymd[1], 10), month: parseInt(ymd[2], 10) };
+  const parts = trimmed.split(' ');
+  const monthIdx = MONTH_NAMES_LOWER.indexOf((parts[0] || '').toLowerCase());
+  const year = Number(parts[1]) || 0;
+  if (monthIdx >= 0 && year) return { year, month: monthIdx + 1 };
+  return null;
+}
+
+// The bank date is the day the money actually moved: prefer the recorded payment
+// date, then the paid/created timestamp. Used so the ledger rows line up in the
+// order the bank sees them rather than the order the months happen to sort in.
+function bankDateMs(payment: any): number {
+  const raw = payment?.payment_date || payment?.paid_at || payment?.created_at;
+  if (!raw) return 0;
+  const time = new Date(raw).getTime();
+  return isNaN(time) ? 0 : time;
+}
+
+// A "Rent in advance" row is money the landlord is still holding for the tenant, so
+// it shows green. Rent falls due on the 10th; once the 10th of the month after the
+// advance's month_due has passed, that money is treated as applied to the rent it
+// covers — the landlord has deducted it — so the row turns red.
+function advanceState(payment: any): 'green' | 'red' | null {
+  if ((payment?.rent_type || '').toString().toLowerCase() !== 'rent_in_advance') return null;
+  const parsed = parseMonthDueParts(payment?.month_due);
+  if (!parsed) return 'green';
+  const threshold = new Date(parsed.year, parsed.month, 10); // 10th of the following month
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today.getTime() > threshold.getTime() ? 'red' : 'green';
+}
+
+const ADVANCE_SCREEN_COLORS = {
+  green: { bg: '#dcfce7', ink: '#15803d' },
+  red: { bg: '#fee2e2', ink: '#b91c1c' },
+} as const;
+
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
@@ -257,6 +300,8 @@ export default function PaymentsPage() {
     };
     
     const sorted = [...visiblePayments].sort((a, b) => {
+      const dateDiff = bankDateMs(a) - bankDateMs(b);
+      if (dateDiff !== 0) return dateDiff;
       const aKey = parseMonthDue((a as any).month_due);
       const bKey = parseMonthDue((b as any).month_due);
       if (aKey.year !== bKey.year) return aKey.year - bKey.year;
@@ -891,14 +936,22 @@ allPayments.sort((a, b) => {
     }
 
     y = drawTableHead(y);
+    const ADVANCE_PDF = {
+      green: { bg: rgb(0.85, 0.96, 0.87), ink: rgb(0.08, 0.45, 0.18) },
+      red: { bg: rgb(0.99, 0.88, 0.88), ink: rgb(0.7, 0.1, 0.1) },
+    };
     recordsToDownload.forEach((payment, index) => {
       if (y < BOTTOM_LIMIT) y = startContinuationPage();
-      if (index % 2 === 0) {
+      const adv = advanceState(payment);
+      if (adv) {
+        page.drawRectangle({ x: LEFT, y: y - 5, width: tableWidth, height: ROW_HEIGHT - 1, color: ADVANCE_PDF[adv].bg });
+      } else if (index % 2 === 0) {
         page.drawRectangle({ x: LEFT, y: y - 5, width: tableWidth, height: ROW_HEIGHT - 1, color: rgb(0.975, 0.978, 0.985) });
       }
       columns.forEach((column, columnIndex) => {
         const text = fitText(column.value(payment), 8.5, columnWidths[columnIndex] - 10);
-        page.drawText(text, { x: cellX(columnIndex, text, 8.5), y, font, size: 8.5, color: column.color(payment) });
+        const color = adv && columnIndex === 1 ? ADVANCE_PDF[adv].ink : column.color(payment);
+        page.drawText(text, { x: cellX(columnIndex, text, 8.5), y, font, size: 8.5, color });
       });
       y -= ROW_HEIGHT;
     });
@@ -1281,7 +1334,9 @@ allPayments.sort((a, b) => {
                   <tbody>
                     {paymentsWithPerTenantBalance.map((payment) => {
                       const monthKey = (payment.month_due || '').split(' ')[0]?.toLowerCase() || '';
-                      const rowColor = monthRowColors.get(monthKey) || '#ffffff';
+                      const adv = advanceState(payment);
+                      const advance = adv ? ADVANCE_SCREEN_COLORS[adv] : null;
+                      const rowColor = advance ? advance.bg : (monthRowColors.get(monthKey) || '#ffffff');
                       const initials = ((payment.tenant || '').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '?');
                       const colors = ['#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#14b8a6'];
                       const colorIndex = payment.tenant ? payment.tenant.charCodeAt(0) % colors.length : 0;
@@ -1303,7 +1358,7 @@ allPayments.sort((a, b) => {
                               </span>
                             </div>
                           </td>
-                          <td style={{ fontSize: '12px', whiteSpace: 'nowrap', textTransform: 'none' }}>{paymentTypeLabel(payment)}</td>
+                          <td style={{ fontSize: '12px', whiteSpace: 'nowrap', textTransform: 'none', color: advance ? advance.ink : undefined, fontWeight: advance ? 700 : undefined }}>{paymentTypeLabel(payment)}</td>
                           <td>{(payment as any).month_due || payment.description}</td>
                           <td style={{ fontSize: '12px' }}>{(payment as any).transaction_code || '—'}</td>
                           <td>{formatCurrency(dueOf(payment))}</td>
