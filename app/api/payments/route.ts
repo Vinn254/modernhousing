@@ -53,7 +53,7 @@ async function getAuthContext(request: NextRequest) {
   }
 
   if (!sessionUser) {
-    return { isSuperAdmin: false, userId: undefined, organizationId: null, userEmail: undefined };
+    return { isSuperAdmin: false, userId: undefined, organizationId: null, userEmail: undefined, role: 'user', agentPropertyId: null, tenantId: null };
   }
 
   const userMetadata = sessionUser.user_metadata || {};
@@ -74,7 +74,75 @@ async function getAuthContext(request: NextRequest) {
     userId: sessionUser.id,
     organizationId: orgId,
     userEmail: sessionUser.email,
+    role: String(userMetadata.role ?? 'user'),
+    agentPropertyId: userMetadata.property_id ?? null,
+    tenantId: userMetadata.tenant_id ?? null,
   };
+}
+
+type AuthContext = Awaited<ReturnType<typeof getAuthContext>>;
+
+// The set of properties this caller may see payments for, or null for super admin
+// (everything). Landlords get the properties they created, falling back to their
+// organization; agents get only the single property they are assigned to.
+async function accessiblePropertyIds(auth: AuthContext): Promise<Set<string> | null> {
+  if (auth.isSuperAdmin) return null;
+  if (auth.role === 'agent') {
+    return new Set(auth.agentPropertyId ? [String(auth.agentPropertyId)] : []);
+  }
+  const { data } = await supabaseAdmin
+    .from('properties')
+    .select('id')
+    .eq('created_by', auth.userId ?? '');
+  let ids = (data ?? []).map((p: any) => String(p.id));
+  if (ids.length === 0 && auth.organizationId) {
+    const { data: orgProps } = await supabaseAdmin
+      .from('properties')
+      .select('id')
+      .eq('organization_id', auth.organizationId);
+    ids = (orgProps ?? []).map((p: any) => String(p.id));
+  }
+  return new Set(ids);
+}
+
+async function propertyIdOfTenant(tenantId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('tenants')
+    .select('units(property_id)')
+    .eq('id', tenantId)
+    .maybeSingle();
+  return (data as any)?.units?.property_id ?? null;
+}
+
+// A tenant record belongs to whoever owns the property its unit sits in. Tenants
+// may always see their own row; everyone else must own the property.
+async function canAccessTenant(auth: AuthContext, tenantId: string): Promise<boolean> {
+  if (auth.role === 'tenant' && auth.tenantId && auth.tenantId === tenantId) return true;
+
+  const allowed = await accessiblePropertyIds(auth);
+  if (allowed === null) return true;
+
+  const propertyId = await propertyIdOfTenant(tenantId);
+  if (propertyId && allowed.has(propertyId)) return true;
+
+  if (auth.role === 'tenant' && auth.userEmail) {
+    const { data } = await supabaseAdmin.from('tenants').select('email').eq('id', tenantId).maybeSingle();
+    if (data?.email && String(data.email).toLowerCase() === String(auth.userEmail).toLowerCase()) return true;
+  }
+  return false;
+}
+
+async function canAccessPayment(auth: AuthContext, paymentId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('payments')
+    .select('tenant_id, property_id')
+    .eq('id', paymentId)
+    .maybeSingle();
+  if (!data) return false;
+  if (data.tenant_id) return canAccessTenant(auth, data.tenant_id);
+  const allowed = await accessiblePropertyIds(auth);
+  if (allowed === null) return true;
+  return Boolean(data.property_id && allowed.has(String(data.property_id)));
 }
 
 export async function GET(request: NextRequest) {
@@ -95,6 +163,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (effectiveTenantId) {
+      if (!(await canAccessTenant(authContext, effectiveTenantId))) {
+        return NextResponse.json({ payments: [], message: 'Not authorized to view this tenant.' }, { status: 403 });
+      }
       const { data, error } = await supabaseAdmin
         .from('payments')
         .select('*, tenants(full_name, email, units(property_id))')
@@ -112,6 +183,10 @@ export async function GET(request: NextRequest) {
 
     // If propertyId is passed, filter by it (for agent dashboard)
     if (propertyId) {
+      const allowed = await accessiblePropertyIds(authContext);
+      if (allowed !== null && !allowed.has(propertyId)) {
+        return NextResponse.json({ payments: [], message: 'Not authorized to view this property.' }, { status: 403 });
+      }
       const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', propertyId);
       const unitIds = (units ?? []).map((u: any) => u.id);
       
@@ -215,6 +290,10 @@ export async function POST(request: NextRequest) {
 
   if (!tenantId || !paidAmount) {
     return NextResponse.json({ message: 'Missing required payment fields.' }, { status: 400 });
+  }
+
+  if (!(await canAccessTenant(authContext, tenantId))) {
+    return NextResponse.json({ message: 'Not authorized to record payments for this tenant.' }, { status: 403 });
   }
 
   const insertData: any = {
@@ -328,6 +407,10 @@ const body = await request.json();
     return NextResponse.json({ message: 'Payment ID is required.' }, { status: 400 });
   }
 
+  if (!(await canAccessPayment(authContext, id))) {
+    return NextResponse.json({ message: 'Payment not found or not authorized.' }, { status: 403 });
+  }
+
   const deleteResult = await supabaseAdmin.from('payments')
     .delete()
     .eq('id', id)
@@ -380,6 +463,16 @@ export async function PUT(request: NextRequest) {
 
   if (!id) {
     return NextResponse.json({ message: 'Payment ID is required.' }, { status: 400 });
+  }
+
+  if (!(await canAccessPayment(authContext, id))) {
+    return NextResponse.json({ message: 'Payment not found or not authorized.' }, { status: 403 });
+  }
+
+  // Re-pointing a payment at another tenant must stay inside the caller's own
+  // properties, otherwise an edit could move money across landlords.
+  if (tenantId && !(await canAccessTenant(authContext, tenantId))) {
+    return NextResponse.json({ message: 'Not authorized to move this payment to that tenant.' }, { status: 403 });
   }
 
   // Validate transaction type - only allow rent, overdue, deposit

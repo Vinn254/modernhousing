@@ -79,6 +79,69 @@ async function getAuthContext(request: NextRequest) {
   };
 }
 
+type AuthContext = Awaited<ReturnType<typeof getAuthContext>>;
+
+// The properties this caller may see bills for, or null for super admin (all).
+// Landlords get the properties they created (organization as fallback); agents
+// get only their single assigned property. Keeps one landlord's ledger from
+// being readable or writable through another landlord's ids.
+async function accessiblePropertyIds(auth: AuthContext): Promise<Set<string> | null> {
+  if (auth.isSuperAdmin) return null;
+  const metadata = auth.sessionUser?.user_metadata || {};
+  if (String(metadata.role ?? 'user') === 'agent') {
+    return new Set(metadata.property_id ? [String(metadata.property_id)] : []);
+  }
+  const { data } = await supabaseAdmin
+    .from('properties')
+    .select('id')
+    .eq('created_by', auth.userId ?? '');
+  let ids = (data ?? []).map((p: any) => String(p.id));
+  if (ids.length === 0 && auth.organizationId) {
+    const { data: orgProps } = await supabaseAdmin
+      .from('properties')
+      .select('id')
+      .eq('organization_id', auth.organizationId);
+    ids = (orgProps ?? []).map((p: any) => String(p.id));
+  }
+  return new Set(ids);
+}
+
+async function propertyIdOfTenant(tenantId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('tenants')
+    .select('units(property_id)')
+    .eq('id', tenantId)
+    .maybeSingle();
+  return (data as any)?.units?.property_id ?? null;
+}
+
+async function canAccessTenant(auth: AuthContext, tenantId: string): Promise<boolean> {
+  if (auth.tenantId && auth.tenantId === tenantId) return true;
+  const allowed = await accessiblePropertyIds(auth);
+  if (allowed === null) return true;
+  const propertyId = await propertyIdOfTenant(tenantId);
+  if (propertyId && allowed.has(propertyId)) return true;
+  const metadata = auth.sessionUser?.user_metadata || {};
+  if (String(metadata.role ?? 'user') === 'tenant' && auth.sessionUser?.email) {
+    const { data } = await supabaseAdmin.from('tenants').select('email').eq('id', tenantId).maybeSingle();
+    if (data?.email && String(data.email).toLowerCase() === String(auth.sessionUser.email).toLowerCase()) return true;
+  }
+  return false;
+}
+
+async function canAccessBill(auth: AuthContext, billId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('bills')
+    .select('tenant_id, property_id')
+    .eq('id', billId)
+    .maybeSingle();
+  if (!data) return false;
+  if (data.tenant_id) return canAccessTenant(auth, data.tenant_id);
+  const allowed = await accessiblePropertyIds(auth);
+  if (allowed === null) return true;
+  return Boolean(data.property_id && allowed.has(String(data.property_id)));
+}
+
 function mapBillsWithTenant(data: any[]): any[] {
   return data.map((bill: any) => ({
     id: bill.id,
@@ -124,6 +187,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (effectiveTenantId) {
+      if (!(await canAccessTenant(authContext, effectiveTenantId))) {
+        return NextResponse.json({ bills: [], message: 'Not authorized to view this tenant.' }, { status: 403 });
+      }
       const { data, error } = await supabaseAdmin
         .from('bills')
         .select(`*`)
@@ -178,6 +244,10 @@ export async function GET(request: NextRequest) {
 
     // For landlords with property_id parameter
     if (propertyId) {
+      const allowed = await accessiblePropertyIds(authContext);
+      if (allowed !== null && !allowed.has(propertyId)) {
+        return NextResponse.json({ bills: [], message: 'Not authorized to view this property.' }, { status: 403 });
+      }
       const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', propertyId);
       const unitIds = (units ?? []).map((u: any) => u.id);
 
@@ -295,6 +365,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Missing required bill fields.' }, { status: 400 });
   }
 
+  if (!(await canAccessTenant(authContext, tenantId))) {
+    return NextResponse.json({ message: 'Not authorized to bill this tenant.' }, { status: 403 });
+  }
+
   // For rent transactions, fetch unit rent amount if not provided
   let finalDueAmount = dueAmount;
   let advanceCredit = false;
@@ -369,6 +443,12 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const authContext = await getAuthContext(request);
+
+  if (!authContext.userId) {
+    return NextResponse.json({ message: 'Authentication required.' }, { status: 401 });
+  }
+
   const body = await request.json();
   const {
     id,
@@ -388,6 +468,14 @@ export async function PATCH(request: NextRequest) {
 
   if (!id) {
     return NextResponse.json({ message: 'Bill ID is required.' }, { status: 400 });
+  }
+
+  if (!(await canAccessBill(authContext, id))) {
+    return NextResponse.json({ message: 'Bill not found or not authorized.' }, { status: 403 });
+  }
+
+  if (tenantId && !(await canAccessTenant(authContext, tenantId))) {
+    return NextResponse.json({ message: 'Not authorized to move this bill to that tenant.' }, { status: 403 });
   }
 
   // Calculate balance: due_amount - paid_amount (or use provided balance)
@@ -443,6 +531,10 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ message: 'Bill ID is required.' }, { status: 400 });
   }
 
+  if (!(await canAccessBill(authContext, id))) {
+    return NextResponse.json({ message: 'Bill not found or not authorized.' }, { status: 403 });
+  }
+
   const result = await supabaseAdmin.from('bills')
     .delete()
     .eq('id', id)
@@ -488,6 +580,14 @@ export async function PUT(request: NextRequest) {
 
   if (!id) {
     return NextResponse.json({ message: 'Bill ID is required.' }, { status: 400 });
+  }
+
+  if (!(await canAccessBill(authContext, id))) {
+    return NextResponse.json({ message: 'Bill not found or not authorized.' }, { status: 403 });
+  }
+
+  if (tenantId && !(await canAccessTenant(authContext, tenantId))) {
+    return NextResponse.json({ message: 'Not authorized to move this bill to that tenant.' }, { status: 403 });
   }
 
   // Calculate balance: due_amount - paid_amount (or use provided balanceRemaining)
