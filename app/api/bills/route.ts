@@ -95,15 +95,18 @@ async function accessiblePropertyIds(auth: AuthContext): Promise<Set<string> | n
     .from('properties')
     .select('id')
     .eq('created_by', auth.userId ?? '');
-  let ids = (data ?? []).map((p: any) => String(p.id));
-  if (ids.length === 0 && auth.organizationId) {
+  const ids = new Set((data ?? []).map((p: any) => String(p.id)));
+  // Union, not fallback: a landlord can own some properties outright and hold
+  // others only through their organization (older rows have no created_by), and
+  // both sets must stay visible or those tenants' bills silently vanish.
+  if (auth.organizationId) {
     const { data: orgProps } = await supabaseAdmin
       .from('properties')
       .select('id')
       .eq('organization_id', auth.organizationId);
-    ids = (orgProps ?? []).map((p: any) => String(p.id));
+    (orgProps ?? []).forEach((p: any) => ids.add(String(p.id)));
   }
-  return new Set(ids);
+  return ids;
 }
 
 async function propertyIdOfTenant(tenantId: string): Promise<string | null> {
@@ -121,7 +124,12 @@ async function canAccessTenant(auth: AuthContext, tenantId: string): Promise<boo
   if (allowed === null) return true;
   const propertyId = await propertyIdOfTenant(tenantId);
   if (propertyId && allowed.has(propertyId)) return true;
+  // A legacy account whose properties resolve to an empty scope (no created_by
+  // and no organization) must keep its previous access rather than be locked out
+  // of its own bills; scoped accounts stay strictly isolated. Tenants never fail
+  // open — they only ever see their own row.
   const metadata = auth.sessionUser?.user_metadata || {};
+  if (allowed.size === 0 && String(metadata.role ?? 'user') !== 'tenant') return true;
   if (String(metadata.role ?? 'user') === 'tenant' && auth.sessionUser?.email) {
     const { data } = await supabaseAdmin.from('tenants').select('email').eq('id', tenantId).maybeSingle();
     if (data?.email && String(data.email).toLowerCase() === String(auth.sessionUser.email).toLowerCase()) return true;

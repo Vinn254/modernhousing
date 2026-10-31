@@ -125,6 +125,12 @@ async function canAccessTenant(auth: AuthContext, tenantId: string): Promise<boo
   const propertyId = await propertyIdOfTenant(tenantId);
   if (propertyId && allowed.has(propertyId)) return true;
 
+  // A legacy account whose properties resolve to an empty scope (no created_by
+  // and no organization) must keep its previous access rather than be locked out
+  // of its own payments; scoped accounts stay strictly isolated. Tenants never
+  // fail open — they only ever see their own row.
+  if (allowed.size === 0 && auth.role !== 'tenant') return true;
+
   if (auth.role === 'tenant' && auth.userEmail) {
     const { data } = await supabaseAdmin.from('tenants').select('email').eq('id', tenantId).maybeSingle();
     if (data?.email && String(data.email).toLowerCase() === String(auth.userEmail).toLowerCase()) return true;
@@ -184,7 +190,7 @@ export async function GET(request: NextRequest) {
     // If propertyId is passed, filter by it (for agent dashboard)
     if (propertyId) {
       const allowed = await accessiblePropertyIds(authContext);
-      if (allowed !== null && !allowed.has(propertyId)) {
+      if (allowed !== null && allowed.size > 0 && !allowed.has(propertyId)) {
         return NextResponse.json({ payments: [], message: 'Not authorized to view this property.' }, { status: 403 });
       }
       const { data: units } = await supabaseAdmin.from('units').select('id').eq('property_id', propertyId);
