@@ -960,9 +960,16 @@ allPayments.sort((a, b) => {
     y -= 10;
     page.drawLine({ start: { x: LEFT, y: y + 10 }, end: { x: RIGHT, y: y + 10 }, thickness: 1, color: rgb(0.55, 0.6, 0.68) });
     const totalLine = `Total Paid: KES ${money(totalPaid)}`;
-    const outstandingLine = `Outstanding: KES ${money(finalBalance)}`;
+    // A positive running balance is money the landlord still holds for the tenant
+    // (advance / credit); only a negative balance is rent the tenant actually owes.
+    const creditHeld = finalBalance > 0 ? finalBalance : 0;
+    const owedByTenant = finalBalance < 0 ? -finalBalance : 0;
+    const balanceLine = creditHeld > 0
+      ? `Advance credit held: KES ${money(creditHeld)}`
+      : `Outstanding: KES ${money(owedByTenant)}`;
+    const balanceColor = creditHeld > 0 ? rgb(0.1, 0.4, 0.2) : rgb(0.6, 0.2, 0.2);
     page.drawText(totalLine, { x: LEFT + 4, y, font: boldFont, size: 10.5, color: rgb(0.1, 0.4, 0.2) });
-    page.drawText(outstandingLine, { x: RIGHT - 8 - boldFont.widthOfTextAtSize(outstandingLine, 10.5), y, font: boldFont, size: 10.5, color: rgb(0.6, 0.2, 0.2) });
+    page.drawText(balanceLine, { x: RIGHT - 8 - boldFont.widthOfTextAtSize(balanceLine, 10.5), y, font: boldFont, size: 10.5, color: balanceColor });
 
     const pageTotal = pdfDoc.getPageCount();
     pdfDoc.getPages().forEach((sheet, index) => {
