@@ -95,7 +95,7 @@ async function accessiblePropertyIds(auth: AuthContext): Promise<Set<string> | n
     .from('properties')
     .select('id')
     .eq('created_by', auth.userId ?? '');
-  const ids = new Set((data ?? []).map((p: any) => String(p.id)));
+  const ids = new Set<string>((data ?? []).map((p: any) => String(p.id)));
   // Union, not fallback: a landlord can own some properties outright and hold
   // others only through their organization (older rows have no created_by), and
   // both sets must stay visible or those tenants' bills silently vanish.
