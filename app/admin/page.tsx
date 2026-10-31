@@ -57,8 +57,6 @@ export default function AdminDashboard() {
       const byTenant = new Map<string, any>();
       mergedPayments.forEach((p: any) => {
         if (nonPaymentTypes.includes(p.transaction_type)) return;
-        const balance = Number(p.balance_remaining || 0);
-        if (balance < 0) return;
         const tid = String(p.tenant_id || '');
         if (!tid) return;
         if (!byTenant.has(tid)) {
@@ -69,10 +67,20 @@ export default function AdminDashboard() {
             total_paid: 0,
             balance_remaining: 0,
             paid_overdue_amount: 0,
+            advance_credit: 0,
             last_payment: p.created_at || null,
           });
         }
         const entry = byTenant.get(tid);
+        const isAdvance = p.rent_type === 'rent_in_advance' || p.transaction_type === 'rent_in_advance';
+        // Money the tenant paid ahead of any bill is a credit the landlord holds;
+        // it must offset what they would otherwise show as owing. Counted before
+        // the negative-balance skip so advance bills (negative balance) still count.
+        if (isAdvance) {
+          entry.advance_credit += Number(p.paid_amount ?? p.amount ?? 0);
+        }
+        const balance = Number(p.balance_remaining || 0);
+        if (balance < 0) return;
         if (p.transaction_type === 'rent' || p.transaction_type === 'deposit') {
           entry.balance_remaining += Math.abs(balance);
         }
@@ -86,7 +94,7 @@ export default function AdminDashboard() {
       });
       const owedTenants = Array.from(byTenant.values()).map((entry: any) => ({
         ...entry,
-        net_balance: Math.max(entry.balance_remaining - entry.paid_overdue_amount, 0),
+        net_balance: Math.max(entry.balance_remaining - entry.paid_overdue_amount - entry.advance_credit, 0),
       }));
       setRentOwedByTenant(owedTenants);
       setTotalOwed(owedTenants.reduce((sum: number, t: any) => sum + Number(t.net_balance || 0), 0));
@@ -284,7 +292,7 @@ export default function AdminDashboard() {
 {rentOwedByTenant.some(t => t.net_balance > 0) ? (
                  <div className="table-shell" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
                    <table className="landlord-table">
-                     <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Paid Overdue</th><th>Balance</th><th>Outstanding Balance</th><th>Last Payment</th></tr></thead>
+                     <thead><tr><th>Tenant</th><th>Unit</th><th>Total Paid</th><th>Paid Overdue</th><th>Balance</th><th>Advance Credit</th><th>Outstanding Balance</th><th>Last Payment</th></tr></thead>
                      <tbody>{rentOwedByTenant.filter(t => t.net_balance > 0).map(t => (
                        <tr key={t.id}>
                          <td>{t.full_name}</td>
@@ -292,6 +300,7 @@ export default function AdminDashboard() {
                          <td>{formatCurrency(t.total_paid)}</td>
                          <td>{t.paid_overdue_amount > 0 ? formatCurrency(t.paid_overdue_amount) : '—'}</td>
                          <td>{formatCurrency(t.balance_remaining)}</td>
+                         <td style={{ color: t.advance_credit > 0 ? 'var(--accent)' : undefined }}>{t.advance_credit > 0 ? formatCurrency(t.advance_credit) : '—'}</td>
                          <td style={{ color: 'var(--error)' }}>{formatCurrency(t.net_balance)}</td>
                          <td>{t.last_payment ? new Date(t.last_payment).toLocaleDateString() : '—'}</td>
                        </tr>
