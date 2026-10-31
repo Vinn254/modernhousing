@@ -298,37 +298,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ bills: [] });
     }
 
-    // For landlords - filter by properties created_by
+    // For landlords - properties they created plus any held through their organization
     if (authContext.userId) {
-      const { data: createdProps } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('created_by', authContext.userId);
-      let propIds = (createdProps ?? []).map((p: any) => p.id);
+      const allowed = await accessiblePropertyIds(authContext);
+      const propIds = allowed === null ? null : [...allowed];
 
-      // Fallback to organization_id if no properties found via created_by
-      if (propIds.length === 0 && authContext.organizationId) {
-        const { data: orgProps } = await supabaseAdmin
-          .from('properties')
-          .select('id')
-          .eq('organization_id', authContext.organizationId);
-        propIds = (orgProps ?? []).map((p: any) => p.id);
-      }
+      if (propIds === null || propIds.length > 0) {
+        let scopeFilters: string[] | null = null;
+        if (propIds !== null) {
+          const { data: propUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+          const unitIds = (propUnits ?? []).map((u: any) => u.id);
+          let tenantIds: string[] = [];
+          if (unitIds.length > 0) {
+            const { data: propTenants } = await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds);
+            tenantIds = (propTenants ?? []).map((t: any) => String(t.id));
+          }
 
-      if (propIds.length > 0) {
-        const { data: propUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
-        const unitIds = (propUnits ?? []).map((u: any) => u.id);
-        const { data: orgTenants } = await supabaseAdmin
-          .from('tenants')
-          .select('id')
-          .in('unit_id', unitIds);
-        const tenantIds = (orgTenants ?? []).map((t: any) => t.id);
+          // A bill is scoped by its tenant, but rows recorded against a property
+          // whose tenant link has since moved still belong to that property's owner.
+          const quoted = (values: string[]) => values.map((value) => `"${value}"`).join(',');
+          scopeFilters = [`property_id.in.(${quoted(propIds)})`];
+          if (tenantIds.length > 0) scopeFilters.push(`tenant_id.in.(${quoted(tenantIds)})`);
+        }
 
-        const { data, error } = await supabaseAdmin
+        let query = supabaseAdmin
           .from('bills')
           .select(`*, tenants(full_name, email, units(unit_number, properties(name)))`)
-          .in('tenant_id', tenantIds)
           .order('created_at', { ascending: false });
+        if (scopeFilters) query = query.or(scopeFilters.join(','));
+
+        const { data, error } = await query;
 
         if (error) throw error;
 

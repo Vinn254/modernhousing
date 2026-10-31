@@ -94,6 +94,38 @@ async function getAuthContext(request: NextRequest) {
   };
 }
 
+function normalizeShortCode(value: unknown) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+// A unit's short code is the only thing the bank sends back on a paybill payment,
+// so it has to point at exactly one unit platform-wide. Two landlords both calling
+// a unit "UNIT-1" means a tenant's money can land on the wrong property, which is
+// why each landlord needs their own distinct naming.
+async function findShortCodeClash(shortCode: string, excludeUnitId?: string) {
+  const normalized = normalizeShortCode(shortCode);
+  if (!normalized) return null;
+
+  const { data } = await supabaseAdmin
+    .from('units')
+    .select('id, unit_number, short_code, properties(name)')
+    .ilike('short_code', normalized)
+    .limit(5);
+
+  const clash = (data ?? []).find((unit: any) =>
+    unit.id !== excludeUnitId && normalizeShortCode(unit.short_code) === normalized);
+
+  if (!clash) return null;
+  return { unitNumber: clash.unit_number as string, propertyName: (clash as any).properties?.name ?? null };
+}
+
+function shortCodeClashMessage(shortCode: string, clash: { unitNumber: string; propertyName: string | null }) {
+  const where = clash.propertyName ? ` at ${clash.propertyName}` : '';
+  const initials = (clash.propertyName ?? '').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase();
+  const suggestion = initials ? ` Try "${initials}-${String(shortCode).trim().toUpperCase()}".` : ' Prefix it with your property initials.';
+  return `Unit code "${String(shortCode).trim()}" is already used by unit ${clash.unitNumber}${where}.${suggestion}`;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const authContext = await getAuthContext(request);
@@ -229,14 +261,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for duplicate short code
-    const { data: existingUnit } = await supabaseAdmin
-      .from('units')
-      .select('id, unit_number')
-      .eq('short_code', String(shortCode).trim())
-      .maybeSingle();
-
-    if (existingUnit) {
-      return NextResponse.json({ message: `Short code "${shortCode}" is already in use by unit ${existingUnit.unit_number}.` }, { status: 400 });
+    const clash = await findShortCodeClash(String(shortCode));
+    if (clash) {
+      return NextResponse.json({ message: shortCodeClashMessage(String(shortCode), clash) }, { status: 409 });
     }
 
     const insertData: any = {
@@ -321,7 +348,17 @@ export async function PATCH(request: NextRequest) {
     if (agentEmail !== undefined) updates.agent_email = agentEmail;
     if (occupancyStatus !== undefined) updates.occupancy_status = occupancyStatus;
     if (unitType !== undefined) updates.unit_type = unitType;
-    if (shortCode !== undefined) updates.short_code = String(shortCode).trim();
+    if (shortCode !== undefined) {
+      const trimmedCode = String(shortCode).trim();
+      if (!trimmedCode) {
+        return NextResponse.json({ message: 'Short code is required for each unit.' }, { status: 400 });
+      }
+      const clash = await findShortCodeClash(trimmedCode, id);
+      if (clash) {
+        return NextResponse.json({ message: shortCodeClashMessage(trimmedCode, clash) }, { status: 409 });
+      }
+      updates.short_code = trimmedCode;
+    }
 
     const result = await supabaseAdmin.from('units').update(updates).eq('id', id).select().single();
 

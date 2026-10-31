@@ -86,12 +86,12 @@ export async function POST(request: NextRequest) {
     // One lookup serves every authenticated organization: the bank's gateway
     // times out while a cold function re-runs the same four queries per match.
     // Validation never notifies a landlord, so the profile lookup is skipped too.
-    const unitLookup = await lookupUnitTenant(codeCandidates, { includeLandlordEmail: false });
+    const unitLookup = await lookupUnitTenant(codeCandidates);
 
     let lastReason: string = unitLookup.status;
     let lastPropertyOrg: string | null = null;
     for (const credential of matches) {
-      const lookup = withOrganization(unitLookup, credential.organizationId);
+      const lookup = await withOrganization(unitLookup, credential.organizationId);
       if (lookup.status !== 'found') {
         lastReason = lookup.status;
         lastPropertyOrg = lookup.status === 'organization_mismatch' ? lookup.propertyOrganizationId : null;

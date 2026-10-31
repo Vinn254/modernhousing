@@ -151,40 +151,84 @@ export type UnitCodeLookup =
   | { status: 'unit_has_no_property'; candidate: UnitCodeCandidate }
   | { status: 'organization_mismatch'; candidate: UnitCodeCandidate; propertyOrganizationId: string | null };
 
-// The unit, tenant, property and landlord profile are looked up once, without
-// regard to organization, because the bank's credentials can be pasted onto
-// several landlords' payment_settings rows and each retry used to re-run every
-// query. Co-op's reply gateway times out well before that finishes.
+// One unit code can exist on several landlords' properties, so the lookup keeps
+// every unit that carries the code plus the property that owns it. The paying
+// landlord's organization then picks the right one out of that list.
+export type UnitResolution = {
+  unitId: string;
+  propertyId: string;
+  propertyOrganizationId: string | null;
+  propertyCreatedBy: string | null;
+  rentAmount: number;
+  tenantId: string;
+  tenantName: string;
+  tenantCreatedAt: string | null;
+};
+
+// The units, tenants and properties are looked up once, without regard to
+// organization, because the bank's credentials can be pasted onto several
+// landlords' payment_settings rows and each retry used to re-run every query.
+// Co-op's reply gateway times out well before that finishes.
 export type UnitTenantLookup =
-  | {
-      status: 'found';
-      tenant: TenantPaymentContext;
-      candidate: UnitCodeCandidate;
-      propertyOrganizationId: string | null;
-    }
+  | { status: 'found'; candidate: UnitCodeCandidate; resolutions: UnitResolution[] }
   | { status: 'unit_not_found'; candidates: UnitCodeCandidate[] }
   | { status: 'unit_has_no_tenant'; candidate: UnitCodeCandidate }
   | { status: 'unit_has_no_property'; candidate: UnitCodeCandidate };
 
 type UnitRow = { id: string; short_code: string | null; property_id: string | null; rent_amount: number | null };
 
+async function landlordEmailForResolution(resolution: UnitResolution): Promise<string | null> {
+  return landlordEmailFromProperty(resolution.propertyCreatedBy, resolution.propertyOrganizationId);
+}
+
 // Applies an authenticated credential's organization to the shared lookup result
 // so the routes keep their per-organization behaviour with no extra queries.
-export function withOrganization(
+export async function withOrganization(
   lookup: UnitTenantLookup,
   organizationId: string | null,
-): UnitCodeLookup {
+  options: { includeLandlordEmail?: boolean } = {},
+): Promise<UnitCodeLookup> {
   if (lookup.status !== 'found') {
     return lookup;
   }
-  if (organizationId && lookup.propertyOrganizationId !== organizationId) {
+
+  const inScope = organizationId
+    ? lookup.resolutions.filter((resolution) => resolution.propertyOrganizationId === organizationId)
+    : lookup.resolutions;
+
+  if (inScope.length === 0) {
     return {
       status: 'organization_mismatch',
       candidate: lookup.candidate,
-      propertyOrganizationId: lookup.propertyOrganizationId,
+      propertyOrganizationId: lookup.resolutions[0]?.propertyOrganizationId ?? null,
     };
   }
-  return { status: 'found', tenant: lookup.tenant, candidate: lookup.candidate };
+
+  // Duplicates inside one landlord are a data problem, not a reason to refuse a
+  // payment that has already left the tenant's phone: fall back to the newest
+  // tenant on that code, which is what the lookup did before it was scoped.
+  const resolution = [...inScope].sort((a, b) =>
+    String(b.tenantCreatedAt ?? '').localeCompare(String(a.tenantCreatedAt ?? '')),
+  )[0];
+
+  if (inScope.length > 1) {
+    console.warn('[coop] more than one unit shares this short code for this organization', {
+      code: lookup.candidate.value,
+      organizationId: organizationId ?? 'env',
+      unitIds: inScope.map((row) => row.unitId),
+      chosenUnitId: resolution.unitId,
+    });
+  }
+
+  const tenant: TenantPaymentContext = {
+    tenantId: resolution.tenantId,
+    tenantName: resolution.tenantName,
+    propertyId: resolution.propertyId,
+    rentAmount: resolution.rentAmount,
+    landlordEmail: options.includeLandlordEmail ? await landlordEmailForResolution(resolution) : null,
+  };
+
+  return { status: 'found', tenant, candidate: lookup.candidate };
 }
 
 function normalizeCode(value: string) {
@@ -213,12 +257,79 @@ export function collectUnitCodeCandidates(
   return candidates;
 }
 
+// The organization's manager is who landlord notifications and payment
+// attribution belong to. Older rows stored that person under 'admin' rather than
+// 'project_manager', so an exact single-role match silently returned nobody.
+const ORG_LANDLORD_ROLE_ORDER = ['project_manager', 'admin', 'super_admin'];
+
+export async function organizationLandlordEmail(organizationId: string): Promise<string | null> {
+  const { data: orgProfiles, error } = await supabaseAdmin
+    .from('profiles')
+    .select('email, role')
+    .eq('organization_id', organizationId);
+
+  if (error) {
+    throw error;
+  }
+
+  const ranked = (orgProfiles ?? [])
+    .filter((profile: any) => profile.email)
+    .sort((a: any, b: any) => {
+      const rankA = ORG_LANDLORD_ROLE_ORDER.indexOf(String(a.role));
+      const rankB = ORG_LANDLORD_ROLE_ORDER.indexOf(String(b.role));
+      return (rankA < 0 ? ORG_LANDLORD_ROLE_ORDER.length : rankA) - (rankB < 0 ? ORG_LANDLORD_ROLE_ORDER.length : rankB);
+    });
+
+  return ranked[0]?.email ?? null;
+}
+
+async function landlordEmailFromProperty(createdBy: string | null, organizationId: string | null): Promise<string | null> {
+  if (createdBy) {
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('email')
+      .eq('user_id', createdBy)
+      .maybeSingle();
+
+    if (profileError) {
+      throw profileError;
+    }
+    if (profile?.email) return profile.email;
+  }
+
+  if (!organizationId) return null;
+  return organizationLandlordEmail(organizationId);
+}
+
+// Landlord email for a property: its creator when there is one, otherwise the
+// manager of the organization that holds it.
+export async function propertyLandlordEmail(propertyId: string | null): Promise<string | null> {
+  if (!propertyId) return null;
+
+  const { data: property, error } = await supabaseAdmin
+    .from('properties')
+    .select('created_by, organization_id')
+    .eq('id', propertyId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+  if (!property) return null;
+
+  return landlordEmailFromProperty(property.created_by ?? null, property.organization_id ?? null);
+}
+
 export async function lookupUnitTenant(
   candidates: UnitCodeCandidate[],
-  options: { includeLandlordEmail?: boolean } = {},
 ): Promise<UnitTenantLookup> {
-  const includeLandlordEmail = options.includeLandlordEmail ?? true;
-  const variants = [...new Set(candidates.flatMap((candidate) => [candidate.value, candidate.value.toUpperCase(), candidate.value.toLowerCase()]))];
+  const variants = [...new Set(candidates.flatMap((candidate) => [
+    candidate.value,
+    candidate.value.toUpperCase(),
+    candidate.value.toLowerCase(),
+    candidate.value.replace(/[\s\-_]/g, ''),
+    candidate.value.replace(/[\s\-_]/g, '').toUpperCase(),
+  ]))];
   if (variants.length === 0) {
     return { status: 'unit_not_found', candidates };
   }
@@ -232,95 +343,121 @@ export async function lookupUnitTenant(
   }
 
   const units = (unitData ?? []) as UnitRow[];
+  // The bank echoes back whatever the tenant typed, so spacing and case both
+  // vary; compare on a stripped, lower-cased form of the stored code.
+  const codeKey = (value: string) => normalizeCode(value).replace(/[\s\-_]/g, '');
   const matched = candidates.find((candidate) =>
-    units.some((unit) => normalizeCode(unit.short_code ?? '') === normalizeCode(candidate.value)),
+    units.some((unit) => codeKey(unit.short_code ?? '') === codeKey(candidate.value)),
   );
 
   if (!matched) {
     return { status: 'unit_not_found', candidates };
   }
 
-  const matchedUnits = units.filter((unit) => normalizeCode(unit.short_code ?? '') === normalizeCode(matched.value));
-  if (matchedUnits.length > 1) {
-    console.warn('[coop] more than one unit shares this short code', { code: matched.value, unitIds: matchedUnits.map((unit) => unit.id) });
-  }
+  const matchedUnits = units.filter((unit) => codeKey(unit.short_code ?? '') === codeKey(matched.value));
 
+  // Every unit carrying the code is resolved, not just the first: the same code
+  // can exist on two landlords' properties and only the paying landlord's copy
+  // may take the money.
   const { data: tenantData, error: tenantError } = await supabaseAdmin
     .from('tenants')
     .select('id, full_name, unit_id, created_at')
     .in('unit_id', matchedUnits.map((unit) => unit.id))
-    .order('created_at', { ascending: false })
-    .limit(1);
+    .order('created_at', { ascending: false });
   if (tenantError) {
     throw tenantError;
   }
 
-  const tenant = (tenantData ?? [])[0] as { id: string; full_name: string; unit_id: string | null } | undefined;
-  if (!tenant) {
+  const tenants = (tenantData ?? []) as { id: string; full_name: string; unit_id: string | null; created_at: string | null }[];
+  if (tenants.length === 0) {
     return { status: 'unit_has_no_tenant', candidate: matched };
   }
 
-  const unit = matchedUnits.find((row) => row.id === tenant.unit_id) ?? matchedUnits[0];
-  if (!unit.property_id) {
+  const propertyIds = [...new Set(matchedUnits.map((unit) => unit.property_id).filter(Boolean))] as string[];
+  if (propertyIds.length === 0) {
     return { status: 'unit_has_no_property', candidate: matched };
   }
-  const propertyId = unit.property_id;
 
-  const { data: property, error: propertyError } = await supabaseAdmin
+  const { data: propertyData, error: propertyError } = await supabaseAdmin
     .from('properties')
-    .select('organization_id, created_by')
-    .eq('id', propertyId)
-    .maybeSingle();
+    .select('id, organization_id, created_by')
+    .in('id', propertyIds);
   if (propertyError) {
     throw propertyError;
   }
 
-  if (!property) {
+  const propertiesById = new Map<string, { organization_id: string | null; created_by: string | null }>();
+  (propertyData ?? []).forEach((property: any) => {
+    propertiesById.set(String(property.id), {
+      organization_id: property.organization_id ?? null,
+      created_by: property.created_by ?? null,
+    });
+  });
+
+  const resolutions: UnitResolution[] = [];
+  for (const unit of matchedUnits) {
+    if (!unit.property_id) continue;
+    const property = propertiesById.get(String(unit.property_id));
+    if (!property) continue;
+
+    // A unit's newest tenant row is the one currently holding it.
+    const tenant = tenants.find((row) => row.unit_id === unit.id);
+    if (!tenant) continue;
+
+    resolutions.push({
+      unitId: unit.id,
+      propertyId: String(unit.property_id),
+      propertyOrganizationId: property.organization_id,
+      propertyCreatedBy: property.created_by,
+      rentAmount: Number(unit.rent_amount) || 0,
+      tenantId: tenant.id,
+      tenantName: tenant.full_name,
+      tenantCreatedAt: tenant.created_at ?? null,
+    });
+  }
+
+  if (resolutions.length === 0) {
     return { status: 'unit_has_no_property', candidate: matched };
   }
 
-  let landlordEmail: string | null = null;
-  if (includeLandlordEmail && property.created_by) {
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('email')
-      .eq('user_id', property.created_by)
-      .maybeSingle();
+  return { status: 'found', candidate: matched, resolutions };
+}
 
-    if (profileError) {
-      throw profileError;
-    }
-    landlordEmail = profile?.email ?? null;
+// Resolves the tenant currently holding a unit by its paybill code. The SBM and
+// M-Pesa callbacks carry no organization, so the newest tenant on that code wins.
+export async function findTenantIdByUnitCode(unitCode: string): Promise<string | null> {
+  const lookup = await lookupUnitTenant([{ field: 'AccountNumber', value: unitCode }]);
+  if (lookup.status !== 'found') {
+    return null;
+  }
+  const resolved = await withOrganization(lookup, null);
+  return resolved.status === 'found' ? resolved.tenant.tenantId : null;
+}
+
+// Units created while registering a tenant arrive with no paybill code, and a unit
+// without one can never receive a bank payment. Derive a code from the unit number
+// and keep it unique platform-wide, which is what the bank matching relies on.
+export async function generateUniqueShortCode(unitNumber: string): Promise<string> {
+  const base = normalizeCode(unitNumber)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toUpperCase() || 'UNIT';
+
+  const { data: existing } = await supabaseAdmin
+    .from('units')
+    .select('short_code')
+    .ilike('short_code', `${base}%`)
+    .limit(200);
+
+  const taken = new Set((existing ?? []).map((unit: any) => normalizeCode(unit.short_code ?? '')));
+  if (!taken.has(base.toLowerCase())) return base;
+
+  for (let suffix = 2; suffix < 500; suffix += 1) {
+    const candidate = `${base}-${suffix}`;
+    if (!taken.has(candidate.toLowerCase())) return candidate;
   }
 
-  // Legacy properties may have no created_by. Fall back to the organization's
-  // project manager so landlord notifications and payment attribution still work.
-  if (includeLandlordEmail && !landlordEmail && property.organization_id) {
-    const { data: orgProfiles, error: orgProfileError } = await supabaseAdmin
-      .from('profiles')
-      .select('email')
-      .eq('organization_id', property.organization_id)
-      .eq('role', 'project_manager')
-      .limit(1);
-
-    if (orgProfileError) {
-      throw orgProfileError;
-    }
-    landlordEmail = orgProfiles?.[0]?.email ?? null;
-  }
-
-  return {
-    status: 'found',
-    candidate: matched,
-    propertyOrganizationId: property.organization_id ?? null,
-    tenant: {
-      tenantId: tenant.id,
-      tenantName: tenant.full_name,
-      propertyId,
-      landlordEmail,
-      rentAmount: Number(unit.rent_amount) || 0,
-    },
-  };
+  return `${base}-${Date.now().toString().slice(-6)}`;
 }
 
 export function monthDueFor(paymentDate: Date) {

@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     let lastReason: string = unitLookup.status;
     let lastPropertyOrg: string | null = null;
     for (const credential of matches) {
-      const lookup = withOrganization(unitLookup, credential.organizationId);
+      const lookup = await withOrganization(unitLookup, credential.organizationId, { includeLandlordEmail: true });
       if (lookup.status === 'found') {
         matched = { credential, tenant: lookup.tenant, candidate: lookup.candidate };
         break;

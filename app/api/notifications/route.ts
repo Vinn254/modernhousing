@@ -65,6 +65,32 @@ async function getAuthContext(request: NextRequest): Promise<NotificationAuthCon
   return { userId: user.id, email: user.email, role, tenantId };
 }
 
+// Properties a landlord can see notifications for: the ones they created plus
+// any held through their organization (older rows carry no created_by).
+async function accessiblePropertyIds(auth: NotificationAuthContext): Promise<string[]> {
+  const { data } = await supabaseAdmin
+    .from('properties')
+    .select('id')
+    .eq('created_by', auth.userId);
+  const ids = new Set<string>((data ?? []).map((property: any) => String(property.id)));
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('organization_id')
+    .eq('user_id', auth.userId)
+    .maybeSingle();
+
+  if (profile?.organization_id) {
+    const { data: orgProps } = await supabaseAdmin
+      .from('properties')
+      .select('id')
+      .eq('organization_id', profile.organization_id);
+    (orgProps ?? []).forEach((property: any) => ids.add(String(property.id)));
+  }
+
+  return [...ids];
+}
+
 function notificationScope(query: any, auth: NotificationAuthContext) {
   if (auth.role === 'super_admin') {
     return query;
@@ -316,7 +342,19 @@ export async function GET(request: NextRequest) {
     }
 
     if (adminEmail) {
-      query = query.eq('admin_email', adminEmail);
+      if (recipient === 'landlord' || recipient === 'project_manager') {
+        // A payment notification is addressed to the property's manager, but rows
+        // written before that resolution worked carry no admin_email at all. Those
+        // still belong to whoever owns the property, so match either.
+        const propIds = authContext.role === 'super_admin' ? [] : await accessiblePropertyIds(authContext);
+        const clauses = [`admin_email.eq."${adminEmail}"`];
+        if (propIds.length > 0) {
+          clauses.push(`property_id.in.(${propIds.map((id) => `"${id}"`).join(',')})`);
+        }
+        query = query.or(clauses.join(','));
+      } else {
+        query = query.eq('admin_email', adminEmail);
+      }
     }
 
     const { data, error } = await query;

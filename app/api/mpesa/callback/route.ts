@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import '../../../../lib/consoleGuard';
+import { findTenantIdByUnitCode, propertyLandlordEmail } from '../../../../lib/coopB2b';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -61,13 +62,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (!tenantId && unitShortCode) {
-      const { data: unitRow } = await supabaseAdmin
-        .from('units')
-        .select('tenant_id')
-        .eq('short_code', unitShortCode)
-        .maybeSingle();
-
-      tenantId = unitRow?.tenant_id ?? null;
+      // Units carry no tenant column; the tenant is whoever currently holds the
+      // unit that this code belongs to.
+      tenantId = await findTenantIdByUnitCode(unitShortCode);
+      if (!tenantId) {
+        console.warn('[mpesa/callback] unit code did not resolve to a tenant', { unitShortCode });
+      }
     }
 
     const amount = body.CallbackMetadata?.Item?.find((i: any) => i.Name === 'Amount')?.Value ?? 0;
@@ -93,25 +93,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     const propertyId = tenant?.units?.property_id ?? null;
-    let landlordEmail: string | null = null;
-
-    if (propertyId) {
-      const { data: prop } = await supabaseAdmin
-        .from('properties')
-        .select('created_by')
-        .eq('id', propertyId)
-        .maybeSingle();
-
-      const createdBy = prop?.created_by;
-      if (createdBy) {
-        const { data: adminProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('email')
-          .eq('user_id', createdBy)
-          .maybeSingle();
-        landlordEmail = adminProfile?.email ?? null;
-      }
-    }
+    const landlordEmail = await propertyLandlordEmail(propertyId);
 
     const desc = descriptionForType[paymentType] ?? 'Rent Payment';
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import '../../../../lib/consoleGuard';
 import { decryptIpnPayload, encryptIpnResponse } from '../../../../lib/sbmCrypto';
+import { findTenantIdByUnitCode, propertyLandlordEmail } from '../../../../lib/coopB2b';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -114,24 +115,7 @@ async function resolveTenantContext(tenantId: string) {
     .maybeSingle();
 
   const propertyId = tenant?.units?.property_id ?? null;
-  let landlordEmail: string | null = null;
-
-  if (propertyId) {
-    const { data: prop } = await supabaseAdmin
-      .from('properties')
-      .select('created_by')
-      .eq('id', propertyId)
-      .maybeSingle();
-
-    if (prop?.created_by) {
-      const { data: adminProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('email')
-        .eq('user_id', prop.created_by)
-        .maybeSingle();
-      landlordEmail = adminProfile?.email ?? null;
-    }
-  }
+  const landlordEmail = await propertyLandlordEmail(propertyId);
 
   return { tenant, propertyId, landlordEmail };
 }
@@ -264,12 +248,12 @@ export async function POST(request: NextRequest) {
     let tenantId = parsedTenantId;
 
     if (!tenantId && unitShortCode) {
-      const { data: unitRow } = await supabaseAdmin
-        .from('units')
-        .select('tenant_id')
-        .eq('short_code', unitShortCode)
-        .maybeSingle();
-      tenantId = unitRow?.tenant_id ?? null;
+      // Units carry no tenant column; the tenant is whoever currently holds the
+      // unit that this code belongs to.
+      tenantId = await findTenantIdByUnitCode(unitShortCode);
+      if (!tenantId) {
+        console.warn('[sbm/ipn] unit code did not resolve to a tenant', { unitShortCode, reference: item.reference ?? '' });
+      }
     }
 
     if (!tenantId) {

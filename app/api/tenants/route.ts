@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logAuditEvent } from '../../../lib/auditLogger';
+import { generateUniqueShortCode } from '../../../lib/coopB2b';
 import { randomUUID } from 'crypto';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -352,6 +353,7 @@ export async function POST(request: NextRequest) {
       unit_number: unitNumber,
       rent_amount: 0,
       occupancy_status: 'occupied',
+      short_code: await generateUniqueShortCode(String(unitNumber)),
     }).select('id').single();
 
     if (unitResult.error) {
@@ -364,6 +366,7 @@ export async function POST(request: NextRequest) {
       unit_number: 'Unit',
       rent_amount: 0,
       occupancy_status: 'occupied',
+      short_code: await generateUniqueShortCode('Unit'),
     }).select('id').single();
 
     if (unitResult.error) {

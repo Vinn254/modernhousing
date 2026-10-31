@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logAuditEvent } from '../../../lib/auditLogger';
 import { rentTypeForStorage } from '../../../lib/rentTypes';
+import { propertyLandlordEmail } from '../../../lib/coopB2b';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -83,8 +84,8 @@ async function getAuthContext(request: NextRequest) {
 type AuthContext = Awaited<ReturnType<typeof getAuthContext>>;
 
 // The set of properties this caller may see payments for, or null for super admin
-// (everything). Landlords get the properties they created, falling back to their
-// organization; agents get only the single property they are assigned to.
+// (everything). Landlords get the properties they created plus any held through
+// their organization; agents get only the single property they are assigned to.
 async function accessiblePropertyIds(auth: AuthContext): Promise<Set<string> | null> {
   if (auth.isSuperAdmin) return null;
   if (auth.role === 'agent') {
@@ -94,15 +95,18 @@ async function accessiblePropertyIds(auth: AuthContext): Promise<Set<string> | n
     .from('properties')
     .select('id')
     .eq('created_by', auth.userId ?? '');
-  let ids = (data ?? []).map((p: any) => String(p.id));
-  if (ids.length === 0 && auth.organizationId) {
+  const ids = new Set<string>((data ?? []).map((p: any) => String(p.id)));
+  // Union, not fallback: a landlord can own some properties outright and hold
+  // others only through their organization (older rows have no created_by), and
+  // both sets must stay visible or those tenants' payments silently vanish.
+  if (auth.organizationId) {
     const { data: orgProps } = await supabaseAdmin
       .from('properties')
       .select('id')
       .eq('organization_id', auth.organizationId);
-    ids = (orgProps ?? []).map((p: any) => String(p.id));
+    (orgProps ?? []).forEach((p: any) => ids.add(String(p.id)));
   }
-  return new Set(ids);
+  return ids;
 }
 
 async function propertyIdOfTenant(tenantId: string): Promise<string | null> {
@@ -217,39 +221,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ payments: [] });
     }
 
-    // Landlords: filter by properties they CREATED (fallback to org_id)
+    // Landlords: properties they created plus any held through their organization
+    const allowed = await accessiblePropertyIds(authContext);
     let propIds: string[] = [];
-    if (!authContext.isSuperAdmin) {
-      const { data: userProps } = await supabaseAdmin
-        .from('properties')
-        .select('id')
-        .eq('created_by', authContext.userId ?? '');
-      propIds = (userProps ?? []).map((p: any) => p.id);
-      
-      // Fallback: organization_id for backwards compatibility
-      if (propIds.length === 0 && authContext.organizationId) {
-        const { data: orgProps } = await supabaseAdmin
-          .from('properties')
-          .select('id')
-          .eq('organization_id', authContext.organizationId);
-        propIds = (orgProps ?? []).map((p: any) => p.id);
-      }
-    } else {
+    if (allowed === null) {
       const { data: allProps } = await supabaseAdmin.from('properties').select('id');
-      propIds = (allProps ?? []).map((p: any) => p.id);
+      propIds = (allProps ?? []).map((p: any) => String(p.id));
+    } else {
+      propIds = [...allowed];
     }
 
     if (propIds.length > 0) {
-      const { data: orgTenants } = await supabaseAdmin
-        .from('tenants')
-        .select('id')
-        .in('unit_id', (await supabaseAdmin.from('units').select('id').in('property_id', propIds)).data?.map((u: any) => u.id) ?? []);
-      const tenantIds = (orgTenants ?? []).map((t: any) => t.id);
+      const { data: propUnits } = await supabaseAdmin.from('units').select('id').in('property_id', propIds);
+      const unitIds = (propUnits ?? []).map((u: any) => u.id);
+      let tenantIds: string[] = [];
+      if (unitIds.length > 0) {
+        const { data: propTenants } = await supabaseAdmin.from('tenants').select('id').in('unit_id', unitIds);
+        tenantIds = (propTenants ?? []).map((t: any) => String(t.id));
+      }
+
+      // A payment is scoped by its tenant, but rows recorded against a property
+      // whose tenant link has since moved still belong to that property's owner.
+      const quoted = (values: string[]) => values.map((value) => `"${value}"`).join(',');
+      const scopeFilters = [`property_id.in.(${quoted(propIds)})`];
+      if (tenantIds.length > 0) scopeFilters.push(`tenant_id.in.(${quoted(tenantIds)})`);
 
       const { data, error } = await supabaseAdmin
         .from('payments')
         .select('*, tenants(full_name, email, units(property_id))')
-        .in('tenant_id', tenantIds)
+        .or(scopeFilters.join(','))
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -326,26 +326,13 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   const propertyId = tenant?.units?.property_id ?? null;
-  let landlordEmail: string | null = null;
+  const landlordEmail = await propertyLandlordEmail(propertyId);
+  // Whoever owns the property is who the landlord notification belongs to; when
+  // that cannot be resolved the person recording the payment is the next best
+  // attribution, and without one of the two the payment is recorded silently.
+  const notifyEmail = landlordEmail || authContext.userEmail || null;
 
-  if (tenant?.units?.property_id) {
-    const { data: prop } = await supabaseAdmin
-      .from('properties')
-      .select('created_by')
-      .eq('id', tenant.units.property_id)
-      .maybeSingle();
-
-    if (prop?.created_by) {
-      const { data: adminProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('email')
-        .eq('user_id', prop.created_by)
-        .maybeSingle();
-      landlordEmail = adminProfile?.email ?? null;
-    }
-  }
-
-  insertData.admin_email = landlordEmail || authContext.userEmail || null;
+  insertData.admin_email = notifyEmail;
   insertData.property_id = propertyId || null;
 
 const result = await supabaseAdmin.from('payments').insert(insertData);
@@ -366,34 +353,40 @@ const result = await supabaseAdmin.from('payments').insert(insertData);
       { tenant_id: tenantId, amount: paidAmount, type: transactionType }
     );
 
+  const notificationInserts: any[] = [];
+
   if (tenant?.email) {
-    const notificationInserts: any[] = [
-      {
-        recipient: 'tenant',
-        tenant_id: tenantId,
-        property_id: propertyId,
-        admin_email: landlordEmail || authContext.userEmail || null,
-        type: 'rent_payment',
-        message: `Rent payment of KSH ${paidAmount} recorded.`,
-        status: 'sent',
-        created_at: new Date().toISOString(),
-      },
-    ];
+    notificationInserts.push({
+      recipient: 'tenant',
+      tenant_id: tenantId,
+      property_id: propertyId,
+      admin_email: notifyEmail,
+      type: 'rent_payment',
+      message: `Rent payment of KSH ${paidAmount} recorded.`,
+      status: 'sent',
+      created_at: new Date().toISOString(),
+    });
+  }
 
-    if (landlordEmail && landlordEmail !== tenant?.email) {
-      notificationInserts.push({
-        recipient: 'project_manager',
-        tenant_id: tenantId,
-        property_id: propertyId,
-        admin_email: landlordEmail,
-        type: 'rent_payment',
-        message: `Rent payment of KSH ${paidAmount} recorded for tenant ${tenant?.full_name || 'Tenant'}.`,
-        status: 'sent',
-        created_at: new Date().toISOString(),
-      });
+  if (notifyEmail && notifyEmail !== tenant?.email) {
+    notificationInserts.push({
+      recipient: 'project_manager',
+      tenant_id: tenantId,
+      property_id: propertyId,
+      admin_email: notifyEmail,
+      type: 'rent_payment',
+      message: `Rent payment of KSH ${paidAmount} recorded for tenant ${tenant?.full_name || 'Tenant'}.`,
+      status: 'sent',
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  if (notificationInserts.length > 0) {
+    const { error: notificationError } = await supabaseAdmin.from('notifications').insert(notificationInserts);
+    if (notificationError) {
+      // The payment itself is recorded; a missing notification must not fail the request.
+      console.error('[payments] notification insert failed', notificationError);
     }
-
-    await supabaseAdmin.from('notifications').insert(notificationInserts);
   }
 
   return NextResponse.json({ message: 'Payment recorded.', payment: result.data?.[0] }, { status: 201 });
