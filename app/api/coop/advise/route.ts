@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
   let messageID = '';
 
   console.log('[coop/advise] inbound', {
+    sourceIp: (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown',
     acceptEncoding: request.headers.get('accept-encoding') ?? 'none',
     userAgent: request.headers.get('user-agent') ?? 'none',
     contentType: request.headers.get('content-type') ?? 'none',
