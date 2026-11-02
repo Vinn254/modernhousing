@@ -22,30 +22,50 @@ function response(messageID: string, statusCode: string, statusDescription: stri
   });
 }
 
-export async function GET() {
+function sourceIpOf(request: NextRequest) {
+  return (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown';
+}
+
+export async function GET(request: NextRequest) {
   // The bank's connectivity probe opens the callback URL in a browser, and a
-  // bare 405 reads as "service unreachable" on their side.
-  return NextResponse.json({
-    service: 'coop-b2b-validate',
-    status: 'reachable',
-    note: 'Connectivity check OK. B2B messages must be sent via POST.',
+  // bare 405 reads as "service unreachable" on their side. A GET carrying a
+  // B2B body is still validated: their gateway has been seen issuing legs as
+  // GET, and the stub reply would break the transaction mid-flow.
+  const rawBody = await request.text().catch(() => '');
+  if (!rawBody.trim()) {
+    console.log('[coop/validate] inbound GET probe', { sourceIp: sourceIpOf(request) });
+    return NextResponse.json({
+      service: 'coop-b2b-validate',
+      status: 'reachable',
+      note: 'Connectivity check OK. B2B messages must be sent via POST.',
+    });
+  }
+  console.warn('[coop/validate] validation arrived on GET, processing anyway', {
+    sourceIp: sourceIpOf(request),
+    userAgent: request.headers.get('user-agent') ?? 'none',
+    contentType: request.headers.get('content-type') ?? 'none',
   });
+  return handleValidate(rawBody);
 }
 
 export async function POST(request: NextRequest) {
-  let messageID = '';
-
   console.log('[coop/validate] inbound', {
-    sourceIp: (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown',
+    sourceIp: sourceIpOf(request),
     acceptEncoding: request.headers.get('accept-encoding') ?? 'none',
     userAgent: request.headers.get('user-agent') ?? 'none',
     contentType: request.headers.get('content-type') ?? 'none',
   });
+  const rawBody = await request.text().catch(() => '');
+  return handleValidate(rawBody);
+}
+
+async function handleValidate(rawBody: string) {
+  let messageID = '';
 
   try {
     let payload: unknown;
     try {
-      payload = await request.json();
+      payload = JSON.parse(rawBody);
     } catch (parseError) {
       console.warn('[coop/validate] body is not valid JSON', { error: (parseError as Error).message });
       return response('', '400', 'Invalid parameters', {}, 400);
