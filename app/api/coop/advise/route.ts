@@ -27,30 +27,50 @@ function response(messageID: string, statusCode: string, statusDescription: stri
   });
 }
 
-export async function GET() {
+function sourceIpOf(request: NextRequest) {
+  return (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown';
+}
+
+export async function GET(request: NextRequest) {
   // The bank's connectivity probe opens the callback URL in a browser, and a
-  // bare 405 reads as "service unreachable" on their side.
-  return NextResponse.json({
-    service: 'coop-b2b-advise',
-    status: 'reachable',
-    note: 'Connectivity check OK. B2B messages must be sent via POST.',
+  // bare 405 reads as "service unreachable" on their side. A GET carrying a
+  // B2B body is still processed: an advice answered with the bare 200 stub
+  // looks like success to the bank while the payment is silently swallowed.
+  const rawBody = await request.text().catch(() => '');
+  if (!rawBody.trim()) {
+    console.log('[coop/advise] inbound GET probe', { sourceIp: sourceIpOf(request) });
+    return NextResponse.json({
+      service: 'coop-b2b-advise',
+      status: 'reachable',
+      note: 'Connectivity check OK. B2B messages must be sent via POST.',
+    });
+  }
+  console.warn('[coop/advise] advice arrived on GET, processing anyway', {
+    sourceIp: sourceIpOf(request),
+    userAgent: request.headers.get('user-agent') ?? 'none',
+    contentType: request.headers.get('content-type') ?? 'none',
   });
+  return handleAdvice(rawBody);
 }
 
 export async function POST(request: NextRequest) {
-  let messageID = '';
-
   console.log('[coop/advise] inbound', {
-    sourceIp: (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown',
+    sourceIp: sourceIpOf(request),
     acceptEncoding: request.headers.get('accept-encoding') ?? 'none',
     userAgent: request.headers.get('user-agent') ?? 'none',
     contentType: request.headers.get('content-type') ?? 'none',
   });
+  const rawBody = await request.text().catch(() => '');
+  return handleAdvice(rawBody);
+}
+
+async function handleAdvice(rawBody: string) {
+  let messageID = '';
 
   try {
     let payload: unknown;
     try {
-      payload = await request.json();
+      payload = JSON.parse(rawBody);
     } catch (parseError) {
       console.warn('[coop/advise] body is not valid JSON', { error: (parseError as Error).message });
       return response('', '400', 'Invalid parameters', {}, 400);
