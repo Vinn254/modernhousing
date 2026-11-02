@@ -19,7 +19,12 @@ function response(messageID: string, statusCode: string, statusDescription: stri
   return NextResponse.json({
     header: { messageID, statusCode, statusDescription },
     response: body,
-  }, { status });
+  }, {
+    status,
+    // The bank's legacy gateway has been seen feeding compressed bytes to its
+    // JSON-to-XML converter; forbidding transformation keeps the body plain.
+    headers: { 'Cache-Control': 'no-store, no-transform' },
+  });
 }
 
 export async function GET() {
@@ -34,6 +39,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   let messageID = '';
+
+  console.log('[coop/advise] inbound', {
+    acceptEncoding: request.headers.get('accept-encoding') ?? 'none',
+    userAgent: request.headers.get('user-agent') ?? 'none',
+    contentType: request.headers.get('content-type') ?? 'none',
+  });
 
   try {
     let payload: unknown;
