@@ -85,6 +85,14 @@ async function handleAdvice(rawBody: string) {
       return response('', '400', 'Invalid parameters', {}, 400);
     }
 
+    // The bank asks us to trace messageIDs by returning the advise verbatim;
+    // the password is masked out because these logs are shared in tickets.
+    const inboundHeader = payload.header;
+    console.log('[coop/advise] request payload', {
+      header: isRecord(inboundHeader) ? { ...inboundHeader, connectionPassword: '***' } : inboundHeader,
+      request: payload.request,
+    });
+
     const header = payload.header;
     const requestBody = payload.request;
     if (!isRecord(header) || !isRecord(requestBody)) {
