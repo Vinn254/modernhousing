@@ -11,14 +11,20 @@ import {
 } from '../../../../lib/coopB2b';
 
 function response(messageID: string, statusCode: string, statusDescription: string, body: Record<string, unknown>, status: number) {
-  return NextResponse.json({
+  const payload = {
     header: { messageID, statusCode, statusDescription },
     response: body,
-  }, {
+  };
+  console.log('[coop/validate] response payload', payload);
+  return NextResponse.json(payload, {
     status,
-    // The bank's legacy gateway has been seen feeding compressed bytes to its
-    // JSON-to-XML converter; forbidding transformation keeps the body plain.
-    headers: { 'Cache-Control': 'no-store, no-transform' },
+    headers: {
+      // The bank's legacy gateway has been seen feeding compressed bytes to its
+      // JSON-to-XML converter; forbidding transformation keeps the body plain.
+      'Cache-Control': 'no-store, no-transform',
+      // Identity stops the edge from gzipping, so their converter sees plain JSON.
+      'Content-Encoding': 'identity',
+    },
   });
 }
 
