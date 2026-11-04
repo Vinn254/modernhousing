@@ -73,12 +73,23 @@ async function handleValidate(rawBody: string) {
     try {
       payload = JSON.parse(rawBody);
     } catch (parseError) {
-      console.warn('[coop/validate] body is not valid JSON', { error: (parseError as Error).message });
+      console.warn('[coop/validate] body is not valid JSON', {
+        error: (parseError as Error).message,
+        raw: rawBody.slice(0, 1000).replace(/"connectionPassword"\s*:\s*"[^"]*"/gi, '"connectionPassword":"***"'),
+      });
       return response('', '400', 'Invalid parameters', {}, 400);
     }
     if (!isRecord(payload)) {
       return response('', '400', 'Invalid parameters', {}, 400);
     }
+
+    // Same trace capability as advise: the bank asks us to return what their
+    // test sent; the password is masked because logs are shared in tickets.
+    const inboundHeader = payload.header;
+    console.log('[coop/validate] request payload', {
+      header: isRecord(inboundHeader) ? { ...inboundHeader, connectionPassword: '***' } : inboundHeader,
+      request: payload.request,
+    });
 
     const header = payload.header;
     const requestBody = payload.request;

@@ -78,7 +78,10 @@ async function handleAdvice(rawBody: string) {
     try {
       payload = JSON.parse(rawBody);
     } catch (parseError) {
-      console.warn('[coop/advise] body is not valid JSON', { error: (parseError as Error).message });
+      console.warn('[coop/advise] body is not valid JSON', {
+        error: (parseError as Error).message,
+        raw: rawBody.slice(0, 1000).replace(/"connectionPassword"\s*:\s*"[^"]*"/gi, '"connectionPassword":"***"'),
+      });
       return response('', '400', 'Invalid parameters', {}, 400);
     }
     if (!isRecord(payload)) {
