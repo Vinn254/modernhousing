@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import '../../../../lib/consoleGuard';
 import { decryptIpnPayload, encryptIpnResponse } from '../../../../lib/sbmCrypto';
 import { findTenantIdByUnitCode, propertyLandlordEmail } from '../../../../lib/coopB2b';
 
@@ -188,7 +187,7 @@ export async function POST(request: NextRequest) {
 
   let decrypted: any = null;
   let matchedCredentials: SbmCredentials | null = null;
-  let decryptError: unknown = null;
+  const decryptErrors: string[] = [];
 
   for (const credentials of candidates) {
     try {
@@ -197,12 +196,17 @@ export async function POST(request: NextRequest) {
       break;
     } catch (error) {
       // try next candidate secret key
-      decryptError = error;
+      decryptErrors.push(error instanceof Error ? error.message : 'unknown decryption error');
     }
   }
 
   if (!decrypted || !matchedCredentials) {
-    console.error('[sbm/ipn] unable to decrypt request', decryptError instanceof Error ? decryptError.message : 'unknown decryption error');
+    console.error('[sbm/ipn] unable to decrypt request', {
+      candidateCount: candidates.length,
+      errors: decryptErrors,
+      bodyLength: rawBody.length,
+      bodyPreview: rawBody.slice(0, 80),
+    });
     const encryptedResponse = encryptIpnResponse({
       status: '99',
       reference: '',
